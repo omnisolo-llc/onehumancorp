@@ -1,22 +1,8 @@
-use async_trait::async_trait;
 #[path = "store.rs"]
 pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
-
-struct WorkerConflictResolver {
-    client: crate::minimax::LocalLLMClient,
-}
-#[async_trait::async_trait]
-impl ohc_builtin_agent::memory_store::ConflictResolver for WorkerConflictResolver {
-    async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
-        let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
-        let merged = self.client.reason(&prompt).await.map_err(|e| e.to_string())?;
-        let embedding = self.client.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
-        Ok((merged, embedding))
-    }
-}
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
@@ -181,9 +167,7 @@ impl AutoDreamWorker {
             crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
-        let resolver = WorkerConflictResolver { client: crate::minimax::LocalLLMClient::new() };
-
-        let resolved_count = repository.auto_resolve_conflicts(&resolver).await.map_err(|e| e.to_string())?;
+        let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
         if resolved_count > 0 {
             debug!("AutoDream: Resolved {} memory conflicts automatically.", resolved_count);
         }
@@ -498,7 +482,7 @@ impl AutoDreamWorker {
 
                         let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        let record = crate::ohc::orchestration::EmbeddingRecord {
+                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
                             id: mem_id,
                             tenant_id: "system".to_string(),
                             agent_id: "system_agent".to_string(),
@@ -514,8 +498,8 @@ impl AutoDreamWorker {
                         };
 
                         let repository = match &db.store {
-                            crate::db::DbStore::Postgres => crate::ohc::orchestration::VectorRepository::new(db.pool.clone()),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => crate::ohc::orchestration::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                         };
 
                         if let Err(e) = repository.upsert(&record).await {

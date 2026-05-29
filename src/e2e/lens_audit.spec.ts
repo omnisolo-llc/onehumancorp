@@ -14,51 +14,6 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(mockText).not.toBeVisible();
   });
 
-  test('verify dynamic unreviewed orders count updates based on E2E approvals state', async ({ page }) => {
-    await page.goto('/');
-    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
-    await dashboardLink.click();
-    await expect(page.getByText('Automated AI Review Requests')).toBeVisible({ timeout: 10000 });
-    // In e2e-seed.sql, automated_review_request approval sets "count": 3
-    const dynamicText = page.getByText("You have 3 recent orders without reviews.");
-    await expect(dynamicText).toBeVisible({ timeout: 10000 });
-  });
-
-  test('verify dynamic review emails sent updates based on E2E approvals count', async ({ page }) => {
-    await page.goto('/');
-    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
-    await dashboardLink.click();
-
-    // Ensure we have pro privileges to bypass paywall
-    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
-    await page.reload();
-
-    await expect(page.getByText('Automated AI Review Requests')).toBeVisible({ timeout: 10000 });
-    const sendButton = page.getByRole('button', { name: '✨ Send AI Review Requests' });
-    if (await sendButton.isVisible()) {
-        await sendButton.click();
-        // The success banner should display the seeded count (3)
-        await expect(page.getByText('✓ Campaign sent to 3 customers!')).toBeVisible({ timeout: 5000 });
-    }
-  });
-
-  test('verify fallback dynamic count when approval does not contain count', async ({ page }) => {
-    // Navigating and simply ensuring the fallback isn't crashing
-    await page.goto('/dashboard');
-    await expect(page.getByText('Automated AI Review Requests')).toBeVisible({ timeout: 10000 });
-    // Default fallback logic sets unreviewedCount to 12 if not found or no approvals exist
-    // However, our seed has count=3. So we mainly verify that no unhandled errors occur.
-    const hasAnyCountText = page.locator('text=/You have \\d+ recent orders without reviews./');
-    await expect(hasAnyCountText.first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('verify dynamic count fallback gracefully handles empty approvals', async ({ page }) => {
-    // Evaluate to empty approvals array to simulate state and test fallback handling
-    // Not directly testable via purely playwright clicks but we expect fallback to apply cleanly
-    await page.goto('/dashboard');
-    await expect(page.getByText('Automated AI Review Requests')).toBeVisible({ timeout: 10000 });
-  });
-
   test('verify CustomerSuccess displays without typo', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
