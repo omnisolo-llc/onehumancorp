@@ -1951,9 +1951,9 @@ export default function Dashboard() {
             </div>
 
             <div className="text-5xl mb-4">✨</div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Unlock AI Business Insights and start seeing actionable trends in your sales data. Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
