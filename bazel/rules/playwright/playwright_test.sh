@@ -135,15 +135,6 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   exit 1
 fi
 
-# Check if Docker is available. If not, skip E2E tests gracefully.
-if ! docker info >/dev/null 2>&1; then
-  echo "Skip E2E tests due to docker failure in sandbox"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
-  exit 0
-fi
-
 # Unique container names for parallel isolation
 RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
 CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
@@ -172,34 +163,48 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
+# Advertise sharding support right away
+if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
+  touch "$TEST_SHARD_STATUS_FILE"
+fi
 
-PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
+if ! docker info >/dev/null 2>&1 || ! docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16 2>/dev/null; then
+  echo "[playwright] Docker postgres failed or unavailable, falling back to standalone SQLite mode..."
+  export STANDALONE_MODE="true"
+  export DATABASE_URL="sqlite://${TEST_TMPDIR:-/tmp}/ohc-standalone-${RAND_ID}.db"
+  export REDIS_URL=""
+  export PG_PORT=""
+  export VK_PORT=""
+else
+  export STANDALONE_MODE="false"
+  docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
-echo "[playwright] Waiting for postgres on port $PG_PORT..."
-for i in $(seq 1 120); do
-  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
-    break
-  fi
-  if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
-    echo "[playwright] Postgres container exited before readiness."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  if (( i == 120 )); then
-    echo "[playwright] Error: Postgres failed to become ready after 120 seconds."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  sleep 1
-done
+  PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\\1/' | head -n 1)"
+  VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\\1/' | head -n 1)"
+  echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
 
-echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+  echo "[playwright] Waiting for postgres on port $PG_PORT..."
+  for i in $(seq 1 45); do
+    if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
+      break
+    fi
+    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+      echo "[playwright] Postgres container exited before readiness."
+      docker logs "$POSTGRES_NAME" || true
+      exit 1
+    fi
+    if (( i == 45 )); then
+      echo "[playwright] Error: Postgres failed to become ready after 45 seconds."
+      docker logs "$POSTGRES_NAME" || true
+      exit 1
+    fi
+    sleep 1
+  done
+
+  echo "[playwright] Initializing database roles..."
+  docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+  docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+fi
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -221,18 +226,29 @@ export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
-  JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
-  OHC_SQLITE_KEY="test_sqlite_key" \
-  OHC_PORT="$OHC_SERVER_PORT" \
-  OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
-  OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  if [[ "$STANDALONE_MODE" == "true" ]]; then
+    DATABASE_URL="$DATABASE_URL" \
+    JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+    OHC_SQLITE_KEY="test_sqlite_key" \
+    OHC_PORT="$OHC_SERVER_PORT" \
+    OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
+    OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+    STANDALONE_MODE="true" \
+      "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  else
+    DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+    REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+    JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+    OHC_SQLITE_KEY="test_sqlite_key" \
+    OHC_PORT="$OHC_SERVER_PORT" \
+    OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
+    OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+      "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  fi
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
-  for i in $(seq 1 120); do
+  for i in $(seq 1 45); do
     if curl -s "http://127.0.0.1:$OHC_SERVER_PORT/api/v1/health" >/dev/null; then
       echo "[playwright] Server is ready and healthy."
       break
@@ -242,8 +258,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
       tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
       exit 1
     fi
-    if (( i == 120 )); then
-      echo "[playwright] Error: Server failed to become healthy after 120 seconds."
+    if (( i == 45 )); then
+      echo "[playwright] Error: Server failed to become healthy after 45 seconds."
       tail -50 "${TEST_TMPDIR:-/tmp}/server.log"
       exit 1
     fi
@@ -271,11 +287,6 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   SHARD_INDEX=$((TEST_SHARD_INDEX + 1))
   PLAYWRIGHT_SHARD_ARG="--shard=${SHARD_INDEX}/${TEST_TOTAL_SHARDS}"
   echo "[playwright] Bazel sharding active: running shard ${SHARD_INDEX} of ${TEST_TOTAL_SHARDS}"
-  
-  # Advertise sharding support to Bazel by touching the status file
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
 fi
 
 # Run Playwright

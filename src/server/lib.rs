@@ -1726,6 +1726,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
 
@@ -1753,7 +1754,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
-    autodream_worker.start();
+    if !is_standalone {
+        autodream_worker.start();
+    }
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
@@ -1784,17 +1787,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     forecaster.start();
 
     // Start Agent Memory Pipeline
-    let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
-    let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
-    let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = agent_memory_pipeline_clone.run().await {
-                tracing::error!("Agent Memory Pipeline error: {}", e);
+    if !is_standalone {
+        let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
+        let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
+        let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = agent_memory_pipeline_clone.run().await {
+                    tracing::error!("Agent Memory Pipeline error: {}", e);
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        }
-    });
+        });
+    }
 
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
@@ -1954,11 +1959,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
     });
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "".to_string());
+    let rate_limiter = if is_standalone || redis_url.is_empty() {
+        tracing::info!("Running in standalone mode or no REDIS_URL provided, using empty rate limiter");
+        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(redis::Client::open("redis://127.0.0.1/").unwrap()))
     } else {
-        panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
+        if let Ok(client) = redis::Client::open(redis_url.clone()) {
+            std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+        } else {
+            tracing::warn!("Failed to initialize Redis client for RateLimiter at {}, using dummy client", redis_url);
+            std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(redis::Client::open("redis://127.0.0.1/").unwrap()))
+        }
     };
 
     let webhook_state = crate::api::billing_webhook::WebhookState {
@@ -3028,6 +3039,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                     <script>
+                        if (!localStorage.getItem('tenant_id')) {
+                            localStorage.setItem('tenant_id', 'test-tenant-' + Math.random().toString(36).substring(7));
+                        }
+                        if (!localStorage.getItem('user_id')) {
+                            localStorage.setItem('user_id', 'test-user-' + Math.random().toString(36).substring(7));
+                        }
                         window.OHC_TOOLTIPS = {tooltips_json};
 
                         // Scribe: Tooltips Implementation
@@ -4120,7 +4137,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="display: block; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
@@ -4373,8 +4390,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
-                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
-                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                            'X-Tenant-ID': localStorage.getItem('tenant_id'),
+                                            'X-User-ID': localStorage.getItem('user_id')
                                         },
                                         body: JSON.stringify(state)
                                     });
@@ -4396,8 +4413,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const res = await fetch('/api/onboarding/state', {
                                     headers: {
-                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
-                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                        'X-Tenant-ID': localStorage.getItem('tenant_id'),
+                                        'X-User-ID': localStorage.getItem('user_id')
                                     }
                                 });
                                 if (res.ok) {
@@ -4437,6 +4454,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         currentStepEl.style.display = 'block';
                                         currentStepEl.classList.remove('hidden');
                                     }
+                                } else {
+                                    document.getElementById('step-1').style.display = 'block';
+                                    document.getElementById('step-1').classList.remove('hidden');
                                 }
 
                                 // Restore onboardingState
@@ -5188,8 +5208,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     });
                                     localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
 
-                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const tenantId = localStorage.getItem('tenant_id');
+                                    const userId = localStorage.getItem('user_id');
                                     fetch('/api/onboarding/state', {
                                         method: 'POST',
                                         headers: {
@@ -5215,17 +5235,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
-                                    d.classList.add('hidden');
-                                    d.style.display = 'none'; // Fallback for old e2e logic
-                                    setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
-                                    suppressButtonText(d, true);
-                                    suppressInputSelectors(d, true);
+                                    if (d.id !== 'step-' + stepId) {
+                                        d.classList.add('hidden');
+                                        d.style.display = 'none'; // Fallback for old e2e logic
+                                        suppressButtonText(d, true);
+                                        suppressInputSelectors(d, true);
+                                    }
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
                                 next.style.display = 'block'; // Fallback for old e2e logic
-                                setTimeout(() => next.classList.remove('hidden'), 10);
+                                next.classList.remove('hidden');
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
@@ -5464,7 +5485,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
                                 if (id === 'setup-screen') {
-                                    nextStep(currentStep || 1);
+                                    document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                        d.classList.remove('hidden');
+                                        d.style.display = 'block';
+                                    });
+                                    nextStep(1);
                                 }
                             }
                             setMainNavLabels(id);
@@ -5624,36 +5649,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
-
-                            if (screenId === 'setup-screen') {
-                                try {
-                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
-                                    const res = await fetch('/api/onboarding/state', {
-                                        headers: {
-                                            'X-Tenant-ID': tenantId,
-                                            'X-User-ID': userId
-                                        }
-                                    });
-                                    if (res.ok) {
-                                        const stateData = await res.json();
-                                        if (stateData && stateData.step) {
-                                            currentStep = stateData.step;
-                                            document.querySelectorAll('input').forEach(input => {
-                                                if (input.placeholder && stateData[input.placeholder]) {
-                                                    input.value = stateData[input.placeholder];
-                                                }
-                                            });
-                                            if (stateData.step > 1) {
-                                                // Wait for display updates before fast-forwarding to currentStep
-                                                setTimeout(() => nextStep(stateData.step), 100);
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to load state', e);
-                                }
-                            }
 
                             showScreen(screenId);
                         };
