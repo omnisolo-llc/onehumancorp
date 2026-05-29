@@ -16,13 +16,24 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await expect(page1.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
     // 2. Start flow and type business name
-    await page1.getByPlaceholder('e.g. Sell cakes, plumbing').fill('Sell custom cakes');
-    await page1.getByRole('button', { name: /Next/ }).click();
+    await expect(page1.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await page1.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Cross-Device Bakery");
+    await page1.getByRole('button', { name: 'Next', exact: true }).click();
 
-    await page1.getByPlaceholder('e.g. Maya\'s Cakes').fill('Maya\'s Cross-Device Bakery');
-    await page1.getByRole('button', { name: /Next/i }).click();
-    await page1.getByPlaceholder('e.g. I bake custom wedding cakes').fill('I bake custom vegan cakes');
-    await page1.getByRole('button', { name: /Generate Draft/i }).click();
+    // Wait for step 1 chat 2
+    await expect(page1.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+    await page1.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('Custom vegan cakes');
+    await page1.getByRole('button', { name: 'Next', exact: true }).click();
+
+    // Wait for step 1 chat 3
+    await expect(page1.getByRole('heading', { name: 'Where are you located?' })).toBeVisible();
+    await page1.getByPlaceholder('e.g. Portland, OR').fill('Portland, OR');
+
+    // Click Generate to go to step 2 (Review Details)
+    await page1.getByRole('button', { name: /Generate My Business/i }).click();
+
+    // Wait for step 2 (Review Details)
+    await expect(page1.getByRole('heading', { name: 'Review Details' })).toBeVisible({ timeout: 15000 });
 
     // Wait for the debounce saveWizardState to trigger
     await page1.waitForTimeout(3000);
@@ -43,9 +54,11 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await page2.goto('/onboarding');
     await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
-    // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-    await expect(page2.getByPlaceholder('0.00')).toBeVisible();
+    // The backend should restore the state and auto-advance to step 2
+    await expect(page2.getByRole('heading', { name: 'Review Details' })).toBeVisible({ timeout: 15000 });
+    // And input should be populated with values returned from intake endpoint / restored from state
+    // But mostly we check we are on Step 2.
+    await expect(page2.getByRole('button', { name: 'Continue' })).toBeVisible();
 
     await context2.close();
   });
