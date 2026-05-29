@@ -162,29 +162,6 @@ impl std::fmt::Display for ToolError {
 
 impl std::error::Error for ToolError {}
 
-/// The Orchestration Loop Termination Conditions
-/// Layered: model returns text with no tool calls, max turn limit exceeded, token budget exhausted, guardrail tripwire fires, or safety refusal.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TerminationCondition {
-    NoToolCalls,
-    MaxTurnLimitExceeded(i32),
-    TokenBudgetExhausted(i32),
-    GuardrailTripwireFired(String),
-    SafetyRefusal(String),
-}
-
-impl std::fmt::Display for TerminationCondition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::NoToolCalls => write!(f, "Terminal condition reached: model returned text with no tool calls."),
-            Self::MaxTurnLimitExceeded(limit) => write!(f, "Terminal condition reached: max turn limit exceeded ({} iterations).", limit),
-            Self::TokenBudgetExhausted(budget) => write!(f, "Terminal condition reached: token budget exhausted (budget: {}).", budget),
-            Self::GuardrailTripwireFired(reason) => write!(f, "Terminal condition reached: guardrail tripwire fired. Reason: {}", reason),
-            Self::SafetyRefusal(reason) => write!(f, "Terminal condition reached: safety refusal. The model halted execution due to content safety policy ({}).", reason),
-        }
-    }
-}
-
 /// SOTA Harness Patterns (2025-2026): 5. Human-in-loop as spectrum -> not binary autonomy vs control
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HumanInLoopSpectrum {

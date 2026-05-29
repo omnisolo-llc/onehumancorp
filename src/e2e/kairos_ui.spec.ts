@@ -46,3 +46,17 @@ test('walkthrough tooltips appear', async ({ page }) => {
   // The walkthrough should show a tooltip
   await expect(page.getByText("The Shared Task List is the 'Brain'")).toBeVisible();
 });
+
+test('undercover mode toggle hides data via glassmorphism', async ({ page }) => {
+  await page.goto('/kairos');
+
+  const button = page.getByRole('button', { name: /Undercover Mode/i });
+  await expect(button).toBeVisible();
+
+  await button.click();
+  await expect(page.getByRole('button', { name: /Undercover Active/i })).toBeVisible();
+
+  // Verify that the task names have the blur applied
+  const taskName = page.getByText('Inventory Reorder Strategy');
+  await expect(taskName).toHaveClass(/blur-sm/);
+});

@@ -54,7 +54,7 @@ impl LocalProxyClient {
         }).await;
 
         let request_stream = ReceiverStream::new(rx);
-        let response = self.client.establish_tunnel(Request::new(request_stream)).await?;
+        let mut response = self.client.establish_tunnel(Request::new(request_stream)).await?;
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();

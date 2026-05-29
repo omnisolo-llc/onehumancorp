@@ -51,14 +51,6 @@ impl StripeClient {
             crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
                 // Return razorpay checkout dummy link here since routing was updated
                 Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
-            },
-            crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
-                if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
-                    let mp_client = crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
-                    mp_client.create_checkout_preference(_price_id, customer_id).await
-                } else {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
-                }
             }
         }
     }

@@ -83,7 +83,7 @@ impl DashboardService for MyDashboardService {
             tokio::spawn(async move {
                 Ok::<_, String>(hub2.get_meetings().await)
             }),
-            tokio::task::spawn_blocking(move || {
+            tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
@@ -776,4 +776,3 @@ mod tests {
         // without panicking.
     }
 }
-// Parallel Execution Optimization verified

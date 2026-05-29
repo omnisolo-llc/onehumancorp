@@ -1,7 +1,7 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use regex::Regex;
 use once_cell::sync::Lazy;
 
@@ -27,21 +27,21 @@ impl RepoMapExecutor {
         match ext {
             "rs" => {
                 for line in content.lines() {
-                    if let Some(_) = RS_REGEX.captures(line) {
+                    if RS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "py" => {
                 for line in content.lines() {
-                    if let Some(_) = PY_REGEX.captures(line) {
+                    if PY_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "ts" | "js" | "tsx" | "jsx" => {
                 for line in content.lines() {
-                    if let Some(_) = TS_REGEX.captures(line) {
+                    if TS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }

@@ -32,6 +32,10 @@ impl ToolExecutor for GlobExecutor {
             full_pattern = format!("{}/{}", wd.display(), full_pattern);
         }
 
+
+        // Just-in-Time (JIT) Retrieval Mechanic:
+        let max_bytes = 16 * 1024; // 16KB JIT retrieval limit
+        let mut final_result = String::new();
         let matches: Vec<String> = glob::glob(&full_pattern)
             .map_err(|e| ToolError::LlmRecoverable(format!("glob: invalid pattern: {}", e)))?
             .filter_map(|r| r.ok())
@@ -50,14 +54,17 @@ impl ToolExecutor for GlobExecutor {
         if matches.is_empty() {
             return Ok("No files found.".to_string());
         }
-
-        let mut output_matches = matches;
-        if output_matches.len() > 100 {
-            output_matches.truncate(100);
-            output_matches.push("... (truncated)".to_string());
+        for res in matches {
+            if final_result.len() + res.len() > max_bytes {
+                final_result.push_str("\n... (truncated due to JIT byte limit)");
+                break;
+            }
+            if !final_result.is_empty() {
+                final_result.push('\n');
+            }
+            final_result.push_str(&res);
         }
-
-        Ok(output_matches.join("\n"))
+        Ok(final_result)
     }
 }
 
@@ -81,5 +88,35 @@ pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             "required": ["pattern"]
         }),
         execute: Arc::new(GlobExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_glob_jit_retrieval_limit() {
+        let temp_dir = std::env::temp_dir();
+        let test_dir = temp_dir.join(format!("glob_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        for i in 1..=500 {
+            let file_name = format!("file_{}_{}.txt", i, "a".repeat(100));
+            std::fs::File::create(test_dir.join(file_name)).unwrap();
+        }
+
+        let executor = GlobExecutor { working_dir: Some(test_dir.clone()) };
+
+        let args = serde_json::json!({
+            "pattern": "*.txt",
+            "path": test_dir.to_string_lossy().to_string(),
+        });
+
+        let result = executor.execute(args).await.unwrap();
+        assert!(result.contains("... (truncated due to JIT byte limit)"));
+        assert!(result.len() < 20000);
+
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }

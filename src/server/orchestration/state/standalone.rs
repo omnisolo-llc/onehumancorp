@@ -143,13 +143,7 @@ impl StateManager for StandaloneStateManager {
 
         let transition_future = async {
             let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
-            match self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("Database transition failed in StandaloneStateManager, fail-safing. Err: {}", e);
-                    Err(e)
-                }
-            }
+            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
         };
 
         match tokio::time::timeout(std::time::Duration::from_secs(60), transition_future).await {
@@ -169,13 +163,7 @@ impl StateManager for StandaloneStateManager {
         let acquire_and_fetch = async {
             let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "standalone_state_manager".to_string(), 30).await?;
 
-            let mut tx = match sqlite_pool.begin().await {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::warn!("Database connection error in StandaloneStateManager::pull_available_tasks, fail-safing to empty list. Err: {}", e);
-                    return Ok::<_, String>((lock_guard, None, vec![]));
-                }
-            };
+            let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
             let now_rfc = Utc::now().to_rfc3339();
             let rows = sqlx::query(
@@ -203,16 +191,11 @@ impl StateManager for StandaloneStateManager {
             .await
             .map_err(|e| e.to_string())?;
 
-            Ok::<_, String>((lock_guard, Some(tx), rows))
+            Ok::<_, String>((lock_guard, tx, rows))
         };
 
-        let (_lock_guard, maybe_tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
-            Ok(Ok((lg, tx_opt, rs))) => {
-                match tx_opt {
-                    Some(tx) => (lg, tx, rs),
-                    None => return Ok(vec![]),
-                }
-            },
+                let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
+            Ok(Ok(result)) => result,
             Ok(Err(e)) => {
                 if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
                     tracing::warn!("Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
@@ -225,8 +208,6 @@ impl StateManager for StandaloneStateManager {
                 return Ok(vec![]);
             }
         };
-
-        let mut tx = maybe_tx;
 
         let mut tasks = Vec::new();
         let mut task_ids = Vec::new();

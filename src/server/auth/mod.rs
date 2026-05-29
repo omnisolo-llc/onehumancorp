@@ -115,7 +115,7 @@ pub struct Store {
     by_name: RwLock<HashMap<TenantKey, String>>,
     by_email: RwLock<HashMap<TenantKey, String>>,
     by_oidc: RwLock<HashMap<TenantKey, String>>,
-    revoked: RwLock<HashMap<String, DateTime<Utc>>>,
+    revoked: RwLock<HashMap<String, (DateTime<Utc>, String)>>,
     #[allow(dead_code)]
     secret: Vec<u8>,
     #[allow(dead_code)]
@@ -427,18 +427,18 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
         let mut revoked = self.revoked.write().unwrap();
-        revoked.insert(jti, exp);
+        revoked.insert(jti, (exp, org_id.to_string()));
 
         let now = Utc::now();
-        revoked.retain(|_, v| *v > now);
+        revoked.retain(|_, v| v.0 > now);
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
         let revoked = self.revoked.read().unwrap();
-        if let Some(exp) = revoked.get(jti) {
-             if exp > &Utc::now() {
+        if let Some((exp, stored_org)) = revoked.get(jti) {
+             if exp > &Utc::now() && stored_org == org_id {
                  return true;
              }
         }

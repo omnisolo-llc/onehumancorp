@@ -11,11 +11,12 @@ pub struct Tracker {
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
     pub auditor: Option<Arc<crate::services::billing::auditor::CostAuditor>>,
+    payout_batcher: Option<Arc<crate::integrations::stripe::payout_batcher::PayoutBatcher>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None }
+        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None, payout_batcher: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -23,15 +24,17 @@ impl Tracker {
         let stripe_client = std::env::var("STRIPE_API_KEY")
             .ok()
             .map(|key| Arc::new(StripeClient::new(key)));
+        let payout_batcher = Some(Arc::new(crate::integrations::stripe::payout_batcher::PayoutBatcher::new(Some(redis_url.to_string()), 10000)));
         if let Ok(client) = Client::open(redis_url) {
             Tracker {
                 rate_limiter: Some(Arc::new(RedisRateLimiter::new(client))),
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
                 auditor: None,
+                payout_batcher,
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None, payout_batcher: None }
         }
     }
 
@@ -191,6 +194,14 @@ impl Tracker {
             client.get_subscription(subscription_id).await
         } else {
             Err("Stripe client not configured".to_string())
+        }
+    }
+
+    pub async fn process_payout(&self, account_id: &str, amount_cents: i64) -> Result<Option<String>, String> {
+        if let (Some(client), Some(batcher)) = (&self.stripe_client, &self.payout_batcher) {
+            client.process_payout_with_batching(account_id, amount_cents, batcher).await
+        } else {
+            Ok(None)
         }
     }
 

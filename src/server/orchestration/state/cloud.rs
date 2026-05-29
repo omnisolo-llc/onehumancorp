@@ -139,13 +139,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
         let transition_future = async {
             let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
-            match self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("Database transition failed in CloudStateManager, fail-safing. Err: {}", e);
-                    Err(e)
-                }
-            }
+            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
         };
 
         match tokio::time::timeout(std::time::Duration::from_secs(60), transition_future).await {
@@ -173,13 +167,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             }
         };
 
-        let mut tx = match self.db.pool.begin().await {
-            Ok(t) => t,
-            Err(e) => {
-                tracing::warn!("Database connection error in CloudStateManager::pull_available_tasks, fail-safing to empty list. Err: {}", e);
-                return Ok(vec![]);
-            }
-        };
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let rows_future = sqlx::query(

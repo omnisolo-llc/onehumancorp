@@ -66,7 +66,6 @@ mod tests {
     fn test_wrapper_with_policy() {
         let mut wrapper = BashWrapper::new();
         let policy = SandboxPolicy {
-            allowed_domains: vec![],
             disabled_commands: vec![],
             disabled_patterns: vec![],
             read_only_paths: vec!["/etc".to_string(), "/var".to_string()],

@@ -9,6 +9,7 @@ rust_library(
 
 rust_test(
     name = "chaos_fallback_test",
+    size = "small",
     crate = ":chaos_fallback",
     edition = "2024",
     target_compatible_with = select({

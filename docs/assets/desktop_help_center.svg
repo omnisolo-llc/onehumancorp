@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Desktop Hybrid MCP RAG search view</title>
+  <desc id="desc">A desktop wireframe showing a search field, source filters, result cards, and an offline status panel.</desc>
+  <rect width="960" height="560" fill="#f7f8fb"/>
+  <rect x="48" y="40" width="864" height="480" rx="8" fill="#ffffff" stroke="#d6dbe6" stroke-width="2"/>
+  <rect x="48" y="40" width="864" height="56" rx="8" fill="#24324a"/>
+  <text x="80" y="76" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Hybrid MCP RAG Help Center</text>
+  <rect x="660" y="56" width="220" height="24" rx="12" fill="#d9f3e4"/>
+  <circle cx="680" cy="68" r="6" fill="#1f9d57"/>
+  <text x="696" y="74" font-family="Arial, sans-serif" font-size="13" fill="#1d6040">Local index ready</text>
+
+  <rect x="80" y="128" width="800" height="52" rx="6" fill="#ffffff" stroke="#9aa7bb" stroke-width="2"/>
+  <text x="104" y="161" font-family="Arial, sans-serif" font-size="18" fill="#5d6b82">What is the recipe for the vanilla cake?</text>
+  <rect x="744" y="138" width="120" height="32" rx="5" fill="#276ef1"/>
+  <text x="779" y="160" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Search</text>
+
+  <rect x="80" y="208" width="180" height="272" rx="6" fill="#f1f4f9" stroke="#d6dbe6"/>
+  <text x="104" y="240" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#24324a">Sources</text>
+  <rect x="104" y="264" width="132" height="28" rx="14" fill="#dce9ff"/>
+  <text x="124" y="283" font-family="Arial, sans-serif" font-size="13" fill="#174ea6">Recipes</text>
+  <rect x="104" y="304" width="132" height="28" rx="14" fill="#ffffff" stroke="#c8d0df"/>
+  <text x="124" y="323" font-family="Arial, sans-serif" font-size="13" fill="#40506a">Manuals</text>
+  <rect x="104" y="344" width="132" height="28" rx="14" fill="#ffffff" stroke="#c8d0df"/>
+  <text x="124" y="363" font-family="Arial, sans-serif" font-size="13" fill="#40506a">Quotes</text>
+
+  <rect x="288" y="208" width="384" height="118" rx="6" fill="#ffffff" stroke="#d6dbe6"/>
+  <text x="312" y="242" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#24324a">Vanilla Cake Recipe</text>
+  <text x="312" y="270" font-family="Arial, sans-serif" font-size="14" fill="#40506a">Mix flour, sugar, vanilla extract, and butter.</text>
+  <text x="312" y="294" font-family="Arial, sans-serif" font-size="13" fill="#67758d">Confidence: 94% - Available offline</text>
+
+  <rect x="288" y="346" width="384" height="118" rx="6" fill="#ffffff" stroke="#d6dbe6"/>
+  <text x="312" y="380" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#24324a">Kitchen Prep Notes</text>
+  <text x="312" y="408" font-family="Arial, sans-serif" font-size="14" fill="#40506a">Use the local copy when the network is unavailable.</text>
+  <text x="312" y="432" font-family="Arial, sans-serif" font-size="13" fill="#67758d">Confidence: 87% - Synced 12 minutes ago</text>
+
+  <rect x="704" y="208" width="176" height="256" rx="6" fill="#fff8e8" stroke="#f0cc72"/>
+  <text x="728" y="242" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#6b4a00">Offline support</text>
+  <text x="728" y="274" font-family="Arial, sans-serif" font-size="13" fill="#6b4a00">Searches continue</text>
+  <text x="728" y="296" font-family="Arial, sans-serif" font-size="13" fill="#6b4a00">against the local</text>
+  <text x="728" y="318" font-family="Arial, sans-serif" font-size="13" fill="#6b4a00">document index.</text>
+  <rect x="728" y="354" width="128" height="32" rx="16" fill="#ffe6a8"/>
+  <text x="752" y="375" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#6b4a00">Safe locally</text>
+</svg>

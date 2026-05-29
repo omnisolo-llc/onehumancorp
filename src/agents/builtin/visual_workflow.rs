@@ -152,7 +152,7 @@ impl WorkflowExecutor {
 mod tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, Usage, ToolCall, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage, ToolError};
     use crate::tools::{Tool, ToolExecutor};
 
     struct MockVisualLlmClient;

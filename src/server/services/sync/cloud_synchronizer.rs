@@ -114,8 +114,6 @@ impl CloudSynchronizerImpl {
             }
         }
 
-        let mut futures = Vec::new();
-
         for mission in pending {
             let endpoint = format!("{}/api/v1/missions/escalate", self.cloud_url);
 
@@ -132,19 +130,11 @@ impl CloudSynchronizerImpl {
                 let _ = record_sync_escalation(pool, 1.0, mode).await;
             }
 
-            let client = &self.client;
+            let start = Instant::now();
 
-            futures.push(async move {
-                let start = Instant::now();
-                let resp = client.post_json(&endpoint, &payload).await;
-                let latency = start.elapsed().as_secs_f32();
-                (mission.id, resp, latency)
-            });
-        }
+            let resp = self.client.post_json(&endpoint, &payload).await;
 
-        let results = futures::future::join_all(futures).await;
-
-        for (mission_id, resp, latency) in results {
+            let latency = start.elapsed().as_secs_f32();
             if let Some(pool) = &self.pool {
                 let _ = record_sync_latency(pool, latency, mode).await;
             }
@@ -153,7 +143,7 @@ impl CloudSynchronizerImpl {
                 Ok((status, json)) => {
                     if status >= 200 && status < 300 {
                         if let Some(cloud_id) = json.get("cloud_id").and_then(|v| v.as_str()) {
-                            let repo_res = self.repo.mark_synced(organization_id, &mission_id, cloud_id).await;
+                            let repo_res = self.repo.mark_synced(organization_id, &mission.id, cloud_id).await;
                             if let Err(e) = repo_res {
                                 if let Some(pool) = &self.pool {
                                     let _ = record_sync_daemon_error_total(pool, 1.0, mode, "DB_ERROR").await;
@@ -165,14 +155,14 @@ impl CloudSynchronizerImpl {
                         if let Some(pool) = &self.pool {
                             let _ = record_sync_daemon_error_total(pool, 1.0, mode, "HTTP_ERROR").await;
                         }
-                        self.repo.mark_sync_error(organization_id, &mission_id, &format!("HTTP {}", status)).await?;
+                        self.repo.mark_sync_error(organization_id, &mission.id, &format!("HTTP {}", status)).await?;
                     }
                 }
                 Err(e) => {
                     if let Some(pool) = &self.pool {
                         let _ = record_sync_daemon_error_total(pool, 1.0, mode, "API_TIMEOUT").await;
                     }
-                    self.repo.mark_sync_error(organization_id, &mission_id, &e).await?;
+                    self.repo.mark_sync_error(organization_id, &mission.id, &e).await?;
                 }
             }
         }
@@ -183,28 +173,17 @@ impl CloudSynchronizerImpl {
     pub async fn pull_mission_updates(&self, organization_id: &str) -> Result<(), String> {
         let active = self.repo.get_active_escalations(organization_id).await?;
 
-        let mut futures = Vec::new();
-
         for mission in active {
-            if let Some(cloud_id) = mission.cloud_mission_id.clone() {
+            if let Some(cloud_id) = &mission.cloud_mission_id {
                 let endpoint = format!("{}/api/v1/missions/{}/status", self.cloud_url, cloud_id);
-                let client = &self.client;
-                let mission_id = mission.id.clone();
 
-                futures.push(async move {
-                    let resp = client.get_json(&endpoint).await;
-                    (mission_id, resp)
-                });
-            }
-        }
+                let resp = self.client.get_json(&endpoint).await;
 
-        let results = futures::future::join_all(futures).await;
-
-        for (mission_id, resp) in results {
-            if let Ok((status, json)) = resp {
-                if status >= 200 && status < 300 {
-                    if let Some(mission_status) = json.get("status").and_then(|v| v.as_str()) {
-                        self.repo.update_local_status(organization_id, &mission_id, mission_status).await?;
+                if let Ok((status, json)) = resp {
+                    if status >= 200 && status < 300 {
+                        if let Some(mission_status) = json.get("status").and_then(|v| v.as_str()) {
+                            self.repo.update_local_status(organization_id, &mission.id, mission_status).await?;
+                        }
                     }
                 }
             }
