@@ -32,16 +32,9 @@ impl ToolExecutor for HeadExecutor {
 
         let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
 
-        // Just-in-Time (JIT) Retrieval Mechanic: limit to 1000 lines
-        if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
-        }
-
         let mut reader = BufReader::new(file);
         let mut lines = Vec::new();
         let mut buffer = String::new();
-        let mut total_bytes = 0;
-        let max_bytes = 16 * 1024; // 16KB JIT limit
 
         for _ in 0..lines_to_read {
             buffer.clear();
@@ -49,10 +42,6 @@ impl ToolExecutor for HeadExecutor {
                 .map_err(|e| ToolError::LlmRecoverable(format!("head: read error: {}", e)))?;
             if bytes_read == 0 {
                 break;
-            }
-            total_bytes += bytes_read;
-            if total_bytes > max_bytes {
-                return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Requested head is too large (> 16KB). Never load full files.".to_string()));
             }
             lines.push(buffer.trim_end_matches(&['\r', '\n'][..]).to_string());
         }
@@ -121,24 +110,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_head_jit_retrieval_limit() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("jit_test.txt");
-        fs::write(&file_path, "dummy content").await.unwrap();
-
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
-
-        let args = json!({ "path": "jit_test.txt", "lines": 1001 });
-        let result = executor.execute(args).await;
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("JIT Retrieval Error: Cannot read more than 1000 lines at once."));
-        } else {
-            panic!("Expected JIT Retrieval Error");
-        }
-    }
-
-    #[tokio::test]
     async fn test_head_path_traversal() {
         let executor = HeadExecutor { working_dir: None };
         let args = json!({ "path": "../../../etc/passwd" });
@@ -150,30 +121,4 @@ mod tests {
             panic!("Expected LlmRecoverable error");
         }
     }
-
-    #[tokio::test]
-    async fn test_head_jit_retrieval_limit() {
-        use tempfile::tempdir;
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("head_jit_test.txt");
-        let mut file = std::fs::File::create(&file_path).unwrap();
-
-        use std::io::Write;
-        let long_line = "a".repeat(10000); // 10KB line
-        writeln!(file, "{}", long_line).unwrap();
-        writeln!(file, "{}", long_line).unwrap();
-
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
-
-        let args = serde_json::json!({ "path": "head_jit_test.txt", "lines": 5 });
-        let result = executor.execute(args).await;
-
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("JIT Retrieval Error: Requested head is too large (> 16KB)"));
-        } else {
-            panic!("Expected JIT Retrieval Error");
-        }
-    }
-
 }

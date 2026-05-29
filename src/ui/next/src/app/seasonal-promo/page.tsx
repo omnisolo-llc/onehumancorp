@@ -18,28 +18,13 @@ export default function SeasonalPromoPage() {
     }
   }, []);
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
       return;
     }
 
     setIsGenerating(true);
-
-    // Simulate generation via backend
-    try {
-      await fetch('/api/v1/growth/campaign/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            target_segment: 'seasonal_promo',
-            message: `${occasion} Special! ${discount}% OFF`
-        })
-      });
-    } catch (e) {
-      console.error(e);
-    }
-
     const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
     setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
     setIsGenerating(false);
@@ -53,11 +38,10 @@ export default function SeasonalPromoPage() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-
-    // Use a non-blocking timeout for the actual generation to allow React to update UI first
     setTimeout(() => {
-        handleGenerate();
-    }, 100);
+      alert('Your 7-day Pro trial has been activated.');
+      handleGenerate();
+    }, 500);
   };
 
   return (

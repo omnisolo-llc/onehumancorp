@@ -1080,20 +1080,12 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setShowAddItemModal(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-[8px] shadow-md hover:bg-black transition-all font-inter text-sm"
-                    >
-                        <span>+ Add Item</span>
-                    </button>
-                    <Link
-                        href="/products/new"
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-[8px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm border border-blue-400/50"
-                    >
-                        <span>✨ Auto-Catalog</span>
-                    </Link>
-                </div>
+                <button
+                    onClick={() => setShowAddItemModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                >
+                    <span>+ Add Item</span>
+                </button>
             </div>
          </section>
 
@@ -1731,18 +1723,7 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                try {
-                                    await fetch('/api/v1/growth/campaign/send', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            target_segment: 'vip_customers',
-                                            message: customerReferralMessage
-                                        })
-                                    });
-                                } catch (e) {
-                                    console.error("Failed to send VIP referral campaign", e);
-                                }
+                                // Simulate sending email
                                 setCustomerReferralSent(true);
                                 setTimeout(() => {
                                     setShowCustomerReferralModal(false);
@@ -1836,9 +1817,9 @@ export default function Dashboard() {
             </div>
 
             <div className="text-5xl mb-4">✨</div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Unlock AI Business Insights and start seeing actionable trends in your sales data. Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
