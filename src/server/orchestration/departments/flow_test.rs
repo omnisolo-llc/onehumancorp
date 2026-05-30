@@ -149,15 +149,27 @@ mod tests {
         assert!(res.is_ok());
 
         let mut has_draft = false;
+        let mut draft_request_id = String::new();
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Draft email for review")) {
+            if let Some(req) = pending.iter().find(|req| req.description.contains("Draft email for review")) {
                 has_draft = true;
+                draft_request_id = req.id.clone();
                 break;
             }
         }
         assert!(has_draft, "Should generate a draft for review");
+
+        // 2. Approve the draft
+        let decide_res = orchestrator.decide_approval(&draft_request_id, &tenant_id, true).await;
+        assert!(decide_res.is_ok());
+
+        // Wait a bit for the approved event to propagate and be processed by the CustomerSuccessAgent
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        // In a real scenario we'd assert on a mock sink, but for now we rely on the agent not panicking
+        // and tracing out the EXECUTING APPROVED DRAFT line.
+
     }
 
     #[tokio::test]
