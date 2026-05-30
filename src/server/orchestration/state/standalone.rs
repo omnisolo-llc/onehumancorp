@@ -181,7 +181,7 @@ impl StateManager for StandaloneStateManager {
             .await
         };
 
-        match tokio::time::timeout(state_manager_timeout(), transition_future).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
