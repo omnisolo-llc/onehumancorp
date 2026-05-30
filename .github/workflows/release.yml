@@ -63,7 +63,7 @@ jobs:
           #   artifact_name: ohc-x86_64-apple-darwin.tar.gz
           #   install_linux_deps: false
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
@@ -77,10 +77,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-release-artifacts-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -95,7 +91,7 @@ jobs:
         run: bazelisk build //release:release_archive --config=${{ matrix.bazel_config }}
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.name }}
           path: bazel-bin/release/${{ matrix.artifact_name }}
@@ -142,7 +138,7 @@ jobs:
             tauri_cli_bazel_flags: --config=linux_arm64
             install_linux_deps: true
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -165,32 +161,9 @@ jobs:
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
-      - name: Cache Cargo and Tauri build outputs
-        uses: actions/cache@v5.0.5
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/registry/src
-            ~/.cargo/git/db
-            target/release/.fingerprint
-            target/release/build
-            target/release/deps
-            target/*/release/.fingerprint
-            target/*/release/build
-            target/*/release/deps
-          key: ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'src/ui/tauri/Cargo.toml', 'src/ui/tauri/tauri.conf.json') }}
-          restore-keys: |
-            ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-
-            ${{ runner.os }}-desktop-cargo-tauri-
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-desktop-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -238,25 +211,24 @@ jobs:
             exit 1
           fi
 
-          normalize_tauri_signing_key() {
+          decode_key_if_needed() {
             local value="$1"
             if [[ "$value" == *"untrusted comment:"* ]]; then
-              printf '%s' "$value" | base64 | tr -d '\r\n'
+              printf '%s' "$value"
               return
             fi
 
             local decoded
             decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
             if [[ "$decoded" == *"untrusted comment:"* ]]; then
-              printf '%s' "$decoded" | base64 | tr -d '\r\n'
+              printf '%s' "$decoded"
             else
               printf '%s' "$value"
             fi
           }
 
-          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
-          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
-          echo "::add-mask::$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
 
           export VERSION
           node <<'NODE'
@@ -277,10 +249,11 @@ jobs:
           fs.writeFileSync(cargoPath, cargo);
           NODE
 
-          private_key_path="$RUNNER_TEMP/tauri-updater-signing.key"
-          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_SECRET" > "$private_key_path"
-          chmod 600 "$private_key_path" 2>/dev/null || true
-          echo "TAURI_SIGNING_PRIVATE_KEY=$private_key_path" >> "$GITHUB_ENV"
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_SIGNING_PRIVATE_KEY__"
+            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+            echo "__TAURI_SIGNING_PRIVATE_KEY__"
+          } >> "$GITHUB_ENV"
 
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
@@ -354,9 +327,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
 
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
@@ -383,9 +356,9 @@ jobs:
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
           DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
@@ -412,13 +385,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $versionTag = $env:GITHUB_REF_NAME
 
-          $bundleRoots = @(
-            'target/release/bundle',
-            'target/x86_64-pc-windows-msvc/release/bundle'
-          ) | Where-Object { Test-Path $_ }
-          $msi = $bundleRoots | ForEach-Object {
-            Get-ChildItem -Path $_ -Recurse -Include *.msi -ErrorAction SilentlyContinue
-          } | Select-Object -First 1
+          $msi = Get-ChildItem -Path 'src/ui/tauri/target/release/bundle' -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
@@ -431,8 +398,8 @@ jobs:
           }
 
           $exeCandidates = @(
-            'target/release/app.exe',
-            'target/x86_64-pc-windows-msvc/release/app.exe'
+            'src/ui/tauri/target/release/app.exe',
+            'src/ui/tauri/target/x86_64-pc-windows-msvc/release/app.exe'
           )
           $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if ($null -eq $exe) {
@@ -453,7 +420,7 @@ jobs:
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
           ARCH="${{ matrix.arch }}"
-          BUNDLE_ROOT="target/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
 
           APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
           DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
@@ -486,7 +453,7 @@ jobs:
           cat checksums-desktop-${{ matrix.name }}.txt
 
       - name: Upload desktop installer artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.name }}
           path: dist/
@@ -521,7 +488,7 @@ jobs:
           #   targets: "//src/ui/tauri:tauri_ios_ipa"
           #   patterns: "*.ipa"
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
@@ -563,10 +530,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-mobile-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -608,7 +571,7 @@ jobs:
           cat checksums-mobile-${{ matrix.name }}.txt
 
       - name: Upload mobile artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: mobile-${{ matrix.name }}
           path: dist/
@@ -619,7 +582,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
         run: |
@@ -632,10 +595,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-server-web-image
-          repository-cache: true
-          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -667,7 +626,7 @@ jobs:
           cat checksums-server-web-image.txt
 
       - name: Upload server web image artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: server-web-image
           path: dist/
@@ -684,7 +643,7 @@ jobs:
       - build-server-web-image
     timeout-minutes: 15
     steps:
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/download-artifact@v4
         with:
           path: dist/
 
@@ -705,7 +664,7 @@ jobs:
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz
@@ -833,17 +792,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4.2.0
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v4.2.0
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -851,10 +810,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-push-docker
-          repository-cache: true
-          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
