@@ -117,12 +117,12 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
+                                    description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                                    fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                                     metadata_json: if mobile_optimized {
-                                        "{}".to_string()
+                                        String::new()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -143,12 +143,12 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
+                                    description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                                    fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                                     metadata_json: if mobile_optimized {
-                                        "{}".to_string()
+                                        String::new()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -188,10 +188,10 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                    organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                                     product_id: "".to_string(),
                                     amount_cents: (amount_real * 100.0) as i64,
-                                    status: r.try_get("status").unwrap_or_default(),
+                                    status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                                     created_at_unix: 0,
                                 };
                                 results.push(o);
@@ -204,10 +204,10 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                    organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                                     product_id: "".to_string(),
                                     amount_cents: (amount_real * 100.0) as i64,
-                                    status: r.try_get("status").unwrap_or_default(),
+                                    status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                                     created_at_unix: 0,
                                 };
                                 results.push(o);
@@ -295,34 +295,6 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let products = if req.mobile_optimized {
-            products
-                .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
-                })
-                .collect()
-        } else {
-            products
-        };
-
-        let orders = if req.mobile_optimized {
-            orders
-                .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
-                })
-                .collect()
-        } else {
-            orders
-        };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
