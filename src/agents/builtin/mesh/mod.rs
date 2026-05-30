@@ -38,9 +38,9 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:job_dispatch:mesh", Message {
+        self.transport.publish("mesh:tasks", Message {
             agent_id: "agent".to_string(),
-            action: "system:job_dispatch:mesh".to_string(),
+            action: "mesh:tasks".to_string(),
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
@@ -48,9 +48,9 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:coordination", Message {
+        self.transport.publish("mesh:coordination", Message {
             agent_id: "agent".to_string(),
-            action: "system:coordination".to_string(),
+            action: "mesh:coordination".to_string(),
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
@@ -58,11 +58,11 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:job_dispatch:mesh", handler).await
+        self.transport.subscribe("mesh:tasks", handler).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:coordination", handler).await
+        self.transport.subscribe("mesh:coordination", handler).await
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
