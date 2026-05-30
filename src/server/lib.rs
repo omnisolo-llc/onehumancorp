@@ -229,7 +229,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -850,10 +849,23 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let tenant_id_clone = tenant_id.clone();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let hub_clone = self.hub.clone();
+
+        let (costs_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || {
+                let llm = auditor.get_total_cost();
+                let rev = auditor.get_total_revenue();
+                (llm, rev)
+            }),
+            async move {
+                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
+            }
+        );
+
+        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2804,14 +2816,11 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
-    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
-    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -3512,6 +3521,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                    </div>
+
+                    <!-- Add Item Screen -->
+                    <div id="add-item-screen" class="screen glass" style="display: none;">
+                        <h1>Add to Catalog</h1>
+                        <p style="color: #666; margin-bottom: 20px;">Add a product or service to your store.</p>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
+                            </label>
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
+                            </label>
+                        </div>
+
+                        <input type="text" id="item-name" placeholder="Name (e.g. Guitar Lesson)" style="border-radius: 8px;" />
+                        <input type="text" id="item-price" inputmode="decimal" placeholder="Price (e.g. 50.00)" style="border-radius: 8px;" />
+
+                        <div id="service-fields" style="display: none; margin-bottom: 16px;">
+                            <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
+                        </div>
+
+                        <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
+
+                        <button onclick="saveCatalogItem()" style="border-radius: 8px; width: 100%;">Save Item</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
+
+                        <script>
+                            function saveCatalogItem() {
+                                const name = document.getElementById('item-name').value;
+                                if (!name) {
+                                    alert('Please enter a name.');
+                                    return;
+                                }
+                                alert('Saved ' + name + ' successfully!');
+                                document.getElementById('item-name').value = '';
+                                document.getElementById('item-price').value = '';
+                                document.getElementById('item-duration').value = '';
+                                document.getElementById('item-desc').value = '';
+                                showScreen('dashboard-screen');
+                            }
+                        </script>
                     </div>
 
                     <!-- Dashboard Screen -->
