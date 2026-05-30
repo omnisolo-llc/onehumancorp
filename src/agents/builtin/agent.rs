@@ -3232,7 +3232,9 @@ mod tests {
 
         let agent = Agent::new(client.clone(), vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_harness_thickness_optimization = true;
         cfg.enable_llmcompiler_plan_and_execute = true;
         cfg.model = "gpt-3.5-turbo".to_string();
@@ -3431,7 +3433,9 @@ mod tests {
         });
 
         let agent = Agent::new(client.clone(), vec![mock_tool]);
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
         let mut events = vec![];
@@ -3555,7 +3559,9 @@ mod tests {
             },
         ];
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
         // Disable other mechanics to isolate the test
         cfg.enable_observation_masking = false;
@@ -3664,7 +3670,9 @@ mod tests {
             }
         ]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_lazy_tool_loading = true; // THIS IS THE KEY MECHANIC
 
         let mut events = vec![];
@@ -3702,7 +3710,9 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_single_agent_maximization = true;
 
         let mut events = vec![];
@@ -3770,7 +3780,9 @@ mod tests {
         let agent = Agent::new(client.clone(), tools.clone());
 
         // Test 1: Untrusted project rejects mutating tools
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = false;
 
         let mut events = vec![];
@@ -3812,7 +3824,9 @@ mod tests {
         ]);
 
         // Test 2: Permission check blocks unallowed tools
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
 
@@ -3855,7 +3869,9 @@ mod tests {
             },
         ]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
         cfg.high_risk_tools = vec!["high_risk_tool".to_string()];
         // Not in approved_tool_calls
@@ -3956,7 +3972,9 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
 
         let mut events = vec![];
@@ -4055,7 +4073,9 @@ mod tests {
             }
         ];
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_context_compaction = true;
         cfg.compaction_threshold_tokens = 50; // Set low threshold to trigger compaction
 
@@ -4496,7 +4516,9 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailRegistry {
             input_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
                 output_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
@@ -4573,7 +4595,9 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_with_tools() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
@@ -4596,7 +4620,9 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
         cfg.user_instructions = "User Instructions".to_string();
@@ -4611,7 +4637,9 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_missing_sections() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "".to_string();
         cfg.user_instructions = "User Instructions".to_string();
@@ -4636,7 +4664,9 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         // A single emoji is 4 bytes.
         let emoji = "🚀"; // 4 bytes
         // 8192 emojis = 32768 bytes
@@ -4653,7 +4683,9 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe_boundary() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         // Construct a string where the 32768th byte is in the middle of a multibyte character.
         // Let's use 1-byte chars until 32766, then a 3-byte char.
         cfg.user_instructions = "a".repeat(32766);
@@ -4706,7 +4738,9 @@ mod tests {
         };
 
         let agent = Agent::new(client, vec![tool]);
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
 
         let mut events = vec![];
@@ -4748,7 +4782,9 @@ mod tests {
         });
         let agent = Agent::new(client, vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
 
         let mut events = vec![];
@@ -4810,7 +4846,9 @@ mod tests {
         let client = Arc::new(MockLlmClientGuides { call_count: tokio::sync::Mutex::new(0) });
         let agent = Agent::new(client, vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_computational_guides = true;
         cfg.computational_guide_command = "exit 1".to_string(); // A command that fails
         cfg.max_iterations = 2; // Stop after 2 iterations to prevent infinite loop
@@ -4824,6 +4862,7 @@ mod tests {
         assert!(result.is_err() || result.is_ok());
     }
 
+    #[tokio::test]
     #[tokio::test]
     async fn test_verification_loops_llm_judge_sensor_rejection_recovery() {
         struct MockLlmClientJudge {
@@ -4895,7 +4934,8 @@ mod tests {
         }
         let client = Arc::new(MockLlmClientJudge { call_count: tokio::sync::Mutex::new(0) });
         let agent = Agent::new(client, vec![]);
-        let mut cfg = AgentRunConfig::default();
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
         cfg.max_iterations = 5;
         let mut events = vec![];
@@ -4921,7 +4961,9 @@ mod tests {
 
         let agent = Agent::new(client, vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         // Specifically setting a model that triggers cost estimation logic
         cfg.model = "gpt-4o".to_string();
         cfg.agent_id = "test-agent-telemetry".to_string();
@@ -4994,7 +5036,9 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.model = "gpt-4o".to_string();
         cfg.agent_id = "test-agent-telemetry".to_string();
 
@@ -5086,7 +5130,9 @@ mod tests {
         });
 
         let agent1 = Agent::new(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.model = "test-model".to_string();
         cfg.thread_id = Some("test_thread".to_string());
 
@@ -5189,7 +5235,9 @@ mod tests {
         let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
         agent.checkpointer = Some(Arc::new(cp));
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -5253,7 +5301,9 @@ mod tests {
         let agent = Agent::new(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_state_checkpointing = true;
         cfg.state_scratchpad_path = Some(scratchpad_path.clone());
 
@@ -5308,7 +5358,9 @@ mod tests {
         // Create an agent and we will inject some state so messages.len() > 3
         let agent = Agent::new(client.clone(), vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_lost_in_the_middle_prevention = true;
         cfg.enable_state_checkpointing = true;
         cfg.developer_instructions = "Developer instructions here.".to_string();
@@ -5373,7 +5425,9 @@ mod tests {
         });
 
         let agent = Agent::new(client, vec![]);
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.max_task_tokens = 150; // set budget lower than output tokens so it stops
 
         let mut events = vec![];
@@ -5426,7 +5480,9 @@ mod tests {
 
         let agent = Agent::new(client, vec![tool]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
         cfg.max_task_tokens = 80; // Budget is lower than the first response's 100 tokens
 
@@ -5502,7 +5558,9 @@ mod tests {
 
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];
@@ -5580,7 +5638,9 @@ mod tests {
             ]),
         });
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
 
         let tool_recoverable = Tool {
@@ -5752,7 +5812,9 @@ mod tests {
             ]),
         });
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
         let agent = Agent::new(client, vec![Tool {
@@ -5826,7 +5888,9 @@ mod tests {
         let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
         let agent = Agent::new(client, vec![mutating_tool]).with_checkpointer(std::sync::Arc::new(cp));
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.workspace_path = Some(temp_dir.to_str().unwrap().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -5942,7 +6006,9 @@ mod stream_tests {
         let mut agent = Agent::new(llm, vec![]);
         agent.checkpointer = Some(cp_saver.clone());
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.thread_id = Some("test-thread".to_string());
 
         let mut messages = vec![Message::user("Hello")];
@@ -6083,7 +6149,9 @@ mod stream_tests {
 
         let agent = Agent::new(llm, tools).with_checkpointer(checkpointer);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_time_travel_rewind = true;
         cfg.thread_id = Some("rewind-thread".to_string());
         cfg.max_rewind_attempts = 1;
@@ -6253,7 +6321,9 @@ mod stream_tests {
         // Intentionally NOT passing a checkpointer to test the lightweight chaining fallback
         let agent = Agent::new(llm, tools);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_time_travel_rewind = true;
         cfg.thread_id = Some("lightweight-rewind-thread".to_string());
         cfg.max_rewind_attempts = 1;
@@ -6355,7 +6425,9 @@ mod stream_tests {
         ];
 
         let agent = Agent::new(client, tools);
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.max_iterations = 5;
 
         // Measure time taken.
@@ -6383,7 +6455,9 @@ mod hierarchical_prompt_tests {
 
     #[test]
     fn test_lost_in_the_middle_prevention() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
         cfg.developer_instructions = "Use standard libraries.".to_string();
         cfg.user_instructions = "Please calculate 2+2".to_string();
@@ -6400,7 +6474,9 @@ mod hierarchical_prompt_tests {
 
     #[test]
     fn test_lost_in_the_middle_prevention_disabled() {
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
         cfg.developer_instructions = "Use standard libraries.".to_string();
         cfg.user_instructions = "Please calculate 2+2".to_string();
@@ -6468,7 +6544,9 @@ mod hierarchical_prompt_tests {
         };
 
         let agent = Agent::new(client.clone(), vec![tool]);
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_agent_curated_memory = true;
         cfg.curated_memory_nudge_threshold = 2; // Nudge after 2 iterations
 
@@ -6536,7 +6614,9 @@ async fn test_stripe_retry_limit() {
     ];
 
     let agent = Agent::new(client.clone(), tools);
-    let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
     cfg.max_retries = 5; // Configure to 5, but our code should clamp to 2
     cfg.max_iterations = 20;
 
@@ -6701,7 +6781,9 @@ async fn test_stripe_retry_limit() {
         let client = Arc::new(SpyLlmClient { system_prompt: std::sync::Mutex::new(String::new()) });
         let agent = Agent::new(client.clone(), vec![]);
 
-        let mut cfg = AgentRunConfig::default();
+
+
+        let mut _cfg = AgentRunConfig::default();
         cfg.enable_progressive_skills = true;
         cfg.progressive_skills_dir = Some(skills_dir.to_string_lossy().to_string());
         cfg.developer_instructions = "Base Instructions".to_string();
