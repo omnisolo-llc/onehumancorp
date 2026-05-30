@@ -285,6 +285,7 @@ rust_library(
         "//src/server/integrations/manychat:server_integrations_manychat",
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
+        "//src/server/integrations/resend:server_integrations_resend",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
         "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
