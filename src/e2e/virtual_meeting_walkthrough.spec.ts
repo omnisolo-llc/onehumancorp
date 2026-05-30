@@ -1,5 +1,8 @@
-import { test, expect } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+currentAppSmoke('virtual_meeting_walkthrough');
+=======
 test.describe('Virtual Meeting Room & UltraPlan Walkthrough', () => {
   test('starts walkthrough from Help Widget', async ({ page }) => {
     await page.goto('/builder');
@@ -39,3 +42,4 @@ test.describe('Virtual Meeting Room & UltraPlan Walkthrough', () => {
     await expect(bubbleText2).not.toBeVisible();
   });
 });
+>>>>>>> 117a00ab (feat(docs): polish documentation pages and fix Next.js build issue)

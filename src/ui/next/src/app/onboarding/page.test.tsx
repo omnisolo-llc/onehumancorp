@@ -116,6 +116,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Handles intake API failure', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Mock intake failure
@@ -155,9 +156,12 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('Step 3: Handles start API failure and returns to Step 3', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
@@ -184,6 +188,8 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('Step 2: Displays validation error when business name is too short', async () => {
