@@ -65,13 +65,24 @@ impl AutoDreamPipeline {
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Find tasks that are COMPLETED but not yet in autodream_memories
-        let query = "
+        let query = if self.db.is_sqlite() {
+            "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
-            LIMIT 100
-        ";
+            LIMIT 500
+            "
+        } else {
+            "
+            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
+            FROM shared_tasks t
+            LEFT JOIN autodream_memories m ON t.id = m.task_id
+            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            FOR UPDATE SKIP LOCKED
+            LIMIT 500
+            "
+        };
 
         let tasks = sqlx::query(query)
             .fetch_all(&self.db.pool)

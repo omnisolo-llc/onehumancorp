@@ -342,6 +342,13 @@ pub struct LocalLLMClient {
 }
 
 #[allow(dead_code)]
+#[async_trait::async_trait]
+impl crate::autodream_pipeline::llm_client::LLMClient for LocalLLMClient {
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        self.generate_embedding(text).await
+    }
+}
+
 impl LocalLLMClient {
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")

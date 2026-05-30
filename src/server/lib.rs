@@ -1906,6 +1906,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    // Start AutoDream Pipeline Worker
+    let autodream_pipeline_llm = Arc::new(crate::minimax::LocalLLMClient::new());
+    let autodream_pipeline_cache = Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(3600)));
+    let autodream_pipeline = Arc::new(autodream_pipeline::pipeline::AutoDreamPipeline::new_with_cache(
+        db.clone(),
+        autodream_pipeline_llm,
+        autodream_pipeline_cache
+    ));
+    autodream_pipeline.start_worker();
+
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
