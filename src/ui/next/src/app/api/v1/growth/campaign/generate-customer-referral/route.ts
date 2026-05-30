@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ message });
     }
   } catch (error) {
-
+    console.error("Error generating customer referral campaign message:", error);
     // Fallback if fetch fails completely
     const message = `Hi there!\n\nWe love having you as a top customer at our store. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });

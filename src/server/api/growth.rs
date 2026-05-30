@@ -287,7 +287,7 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let tenant = query.tenant.as_deref().unwrap_or("my-store");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
@@ -332,7 +332,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
