@@ -74,11 +74,7 @@ describe('OnboardingWizard', () => {
     await userEvent.type(descInput, 'Maya Bakery Cakes Seattle');
 
     const genBtn = screen.getByRole('button', { name: /Generate My Business/i });
-    await act(async () => { genBtn.click(); });
-
-
-
-    // Verify it transitions to Step 2: Review Details
+    await act(async () => { genBtn.click(); });// Verify it transitions to Step 2: Review Details
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
@@ -130,24 +126,15 @@ describe('OnboardingWizard', () => {
     await act(async () => { genBtn.click(); });
 
 
-
-
-
-
-
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await userEvent.type(locInput, 'NY');
-
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await act(async () => {
       button.click();
-    });    // Verify error appears and step stays at 1
+    });
+
+    // Verify error appears and step goes back to 1
     await waitFor(() => {
-      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     });
   });
 
