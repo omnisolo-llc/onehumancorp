@@ -1,4 +1,4 @@
-
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -360,70 +360,6 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS vendors (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        name TEXT,
-                        contact_info TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS raw_materials (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        name TEXT,
-                        current_quantity INTEGER DEFAULT 0,
-                        reorder_threshold INTEGER DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS bom_items (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        finished_good_id TEXT,
-                        raw_material_id TEXT,
-                        quantity_required INTEGER DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS purchase_orders (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        vendor_id TEXT,
-                        status TEXT DEFAULT 'Draft',
-                        total_cost REAL DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS po_line_items (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        purchase_order_id TEXT,
-                        raw_material_id TEXT,
-                        quantity INTEGER DEFAULT 1,
-                        price REAL DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS depletion_logs (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        raw_material_id TEXT,
-                        order_id TEXT,
-                        quantity INTEGER DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -1014,30 +950,26 @@ impl DB {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let meta = serde_json::json!({ "task_id": task_id });
-                let meta_str = serde_json::to_string(&meta).unwrap_or_else(|_| "{}".to_string());
-                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
+                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .bind(meta_str)
                     .execute(sqlite_pool)
                     .await?;
             }
             DbStore::Postgres => {
-                let meta = serde_json::json!({ "task_id": task_id });
-                let meta_value = serde_json::to_value(&meta).unwrap_or_else(|_| serde_json::json!({}));
-                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, metadata) VALUES ($1, $2, $3, $4, $5::vector, $6, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
+                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .bind(meta_value)
                     .execute(&self.pool)
                     .await?;
             }
