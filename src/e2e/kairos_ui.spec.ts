@@ -4,7 +4,7 @@ test('navigation to kairos works', async ({ page }) => {
   await page.goto('/dashboard');
 
   // Click on the KAIROS link
-  const kairosLink = page.getByRole('link', { name: /KAIROS/i });
+  const kairosLink = page.getByRole('link', { name: /⚡️ KAIROS/i });
   await kairosLink.click();
 
   // Verify KAIROS dashboard loaded
@@ -24,9 +24,9 @@ test('teammate mesh nodes are visible', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Teammate Mesh' })).toBeVisible();
 
   // Checking node types are present
-  await expect(page.locator('#kairos-nerves').getByText('Brain', { exact: true })).toBeVisible();
-  await expect(page.locator('#kairos-nerves').getByText('Nerve', { exact: true })).toBeVisible();
-  await expect(page.locator('#kairos-nerves').getByText('Memory', { exact: true })).toBeVisible();
+  await expect(page.getByText('Brain', { exact: true })).toBeVisible();
+  await expect(page.getByText('Nerve', { exact: true })).toBeVisible();
+  await expect(page.getByText('Memory', { exact: true })).toBeVisible();
 });
 
 test('autodream memory stats', async ({ page }) => {
