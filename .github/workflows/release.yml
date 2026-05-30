@@ -33,28 +33,35 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-latest
             bazel_config: linux_x86_64
-            archive_name: ohc-x86_64-unknown-linux-gnu.tar.gz
+            artifact_name: ohc-x86_64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
-            archive_name: ohc-x86_64-pc-windows-gnu.zip
+            artifact_name: ohc-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
-          - name: windows-arm64
-            runner: windows-11-arm
-            bazel_config: windows_arm64
-            archive_name: ohc-aarch64-pc-windows-msvc.zip
-            install_linux_deps: false
           - name: macos-aarch64
             runner: macos-15
             bazel_config: macos_aarch64
-            archive_name: ohc-aarch64-apple-darwin.tar.gz
+            artifact_name: ohc-aarch64-apple-darwin.tar.gz
             install_linux_deps: false
-          - name: macos-x86_64
-            runner: macos-15-intel
-            bazel_config: macos_x86_64
-            archive_name: ohc-x86_64-apple-darwin.tar.gz
-            install_linux_deps: false
+          # Supported by //release:release_archive, left disabled until we turn
+          # on the full cross-platform release matrix.
+          # - name: linux-arm64
+          #   runner: ubuntu-22.04-arm
+          #   bazel_config: linux_arm64
+          #   artifact_name: ohc-aarch64-unknown-linux-gnu.tar.gz
+          #   install_linux_deps: true
+          # - name: windows-arm64
+          #   runner: windows-11-arm
+          #   bazel_config: windows_arm64
+          #   artifact_name: ohc-aarch64-pc-windows-msvc.zip
+          #   install_linux_deps: false
+          # - name: macos-x86_64
+          #   runner: macos-15-intel
+          #   bazel_config: macos_x86_64
+          #   artifact_name: ohc-x86_64-apple-darwin.tar.gz
+          #   install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
 
@@ -81,42 +88,14 @@ jobs:
       - name: Build packaged application
         env:
           MSYS2_ARG_CONV_EXCL: "*"
-        run: bazelisk build //release:all_release_artifacts --config=${{ matrix.bazel_config }}
-
-      - name: Collect artifacts
-        env:
-          MSYS2_ARG_CONV_EXCL: "*"
-        run: |
-          mkdir -p dist
-          bazelisk cquery --output=files //release:all_release_artifacts --config=${{ matrix.bazel_config }} > artifact-files.txt
-          while IFS= read -r src; do
-            [[ -f "$src" ]] || continue
-            case "$src" in
-              *.tar.gz|*.zip)
-                cp "$src" "dist/${{ matrix.archive_name }}"
-                ;;
-              *.deb|*.rpm)
-                cp "$src" dist/
-                ;;
-            esac
-          done < artifact-files.txt
-          ls -lh dist/
-
-      - name: Generate platform checksums
-        run: |
-          cd dist
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum * > checksums-${{ matrix.name }}.txt
-          else
-            shasum -a 256 * > checksums-${{ matrix.name }}.txt
-          fi
-          cat checksums-${{ matrix.name }}.txt
+        run: bazelisk build //release:release_archive --config=${{ matrix.bazel_config }}
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.name }}
-          path: dist/
+          path: bazel-bin/release/${{ matrix.artifact_name }}
+          if-no-files-found: error
           retention-days: 7
 
   build-desktop-installers:
@@ -205,6 +184,25 @@ jobs:
             echo "TAURI_SIGNING_PUBLIC_KEY and TAURI_SIGNING_PRIVATE_KEY GitHub secrets are required for updater-signed desktop release artifacts." >&2
             exit 1
           fi
+
+          decode_key_if_needed() {
+            local value="$1"
+            if [[ "$value" == *"untrusted comment:"* ]]; then
+              printf '%s' "$value"
+              return
+            fi
+
+            local decoded
+            decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
+            if [[ "$decoded" == *"untrusted comment:"* ]]; then
+              printf '%s' "$decoded"
+            else
+              printf '%s' "$value"
+            fi
+          }
+
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
 
           export VERSION
           node <<'NODE'
@@ -457,10 +455,12 @@ jobs:
             runner: ubuntu-latest
             targets: "//src/ui/tauri:tauri_android_apk //src/ui/tauri:tauri_android_aab"
             patterns: "*.apk *.aab"
-          - name: ios
-            runner: macos-latest
-            targets: "//src/ui/tauri:tauri_ios_ipa"
-            patterns: "*.ipa"
+          # iOS is supported by //src/ui/tauri:tauri_ios_ipa, but disabled
+          # until the Apple developer signing assets are available.
+          # - name: ios
+          #   runner: macos-latest
+          #   targets: "//src/ui/tauri:tauri_ios_ipa"
+          #   patterns: "*.ipa"
     steps:
       - uses: actions/checkout@v6
 
