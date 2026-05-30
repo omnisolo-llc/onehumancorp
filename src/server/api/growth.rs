@@ -123,8 +123,6 @@ pub struct InviteIdRequest {
 
 
 #[derive(Debug, Serialize, Deserialize)]
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct MilestoneShareRequest {
     pub tenant_id: String,
     pub milestone_id: String,
