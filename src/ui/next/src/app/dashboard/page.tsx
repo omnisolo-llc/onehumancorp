@@ -11,7 +11,6 @@ export default function Dashboard() {
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
-  const [tenantId, setTenantId] = useState('my-store');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
