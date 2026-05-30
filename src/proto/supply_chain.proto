@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package ohc.supply_chain;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/supply_chain;supply_chainpb";
+
+message RawMaterial {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  int32 current_quantity = 4;
+  int32 reorder_threshold = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message BOMItem {
+  string id = 1;
+  string tenant_id = 2;
+  string finished_good_id = 3;
+  string raw_material_id = 4;
+  int32 quantity_required = 5;
+  int64 created_at_unix = 6;
+}
+
+message Vendor {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string contact_info = 4;
+  int64 created_at_unix = 5;
+  int64 updated_at_unix = 6;
+}
+
+message PurchaseOrder {
+  string id = 1;
+  string tenant_id = 2;
+  string vendor_id = 3;
+  string status = 4;
+  double total_cost = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message POLineItem {
+  string id = 1;
+  string tenant_id = 2;
+  string purchase_order_id = 3;
+  string raw_material_id = 4;
+  int32 quantity = 5;
+  double unit_price = 6;
+  int64 created_at_unix = 7;
+}
+
+message DepletionLog {
+  string id = 1;
+  string tenant_id = 2;
+  string raw_material_id = 3;
+  string sales_event_id = 4;
+  int32 quantity_deducted = 5;
+  int64 created_at_unix = 6;
+}
+
+message GetLowStockAlertsRequest {
+  string tenant_id = 1;
+}
+
+message GetLowStockAlertsResponse {
+  repeated RawMaterial low_stock_materials = 1;
+}
+
+message ApprovePurchaseOrderRequest {
+  string tenant_id = 1;
+  string purchase_order_id = 2;
+}
+
+message ApprovePurchaseOrderResponse {
+  bool success = 1;
+  PurchaseOrder purchase_order = 2;
+}
+
+service SupplyChainService {
+  rpc GetLowStockAlerts(GetLowStockAlertsRequest) returns (GetLowStockAlertsResponse);
+  rpc ApprovePurchaseOrder(ApprovePurchaseOrderRequest) returns (ApprovePurchaseOrderResponse);
+}
