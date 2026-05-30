@@ -1,0 +1,31 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -600,7 +600,7 @@ async fn http_login_handler(
+         }
+     };
+
+-    let claims = ::server_common::Claims {
++    let _claims = ::server_common::Claims {
+         sub: id.clone(),
+         exp: expires_at,
+         iat: issued_at,
+@@ -4891,8 +4891,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
+                                 // Restore onboardingState
+                                 if (state.business_type) onboardingState.business_type = state.business_type;
+                                 if (state.payment_pref) onboardingState.payment_pref = state.payment_pref;
+-                                if (state.website_template) onboardingState.website_template = state.website_template;
+-                                if (state.domain_choice) onboardingState.domain_choice = state.domain_choice;
++                                onboardingState.website_template = state.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
++                                onboardingState.domain_choice = state.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || 'subdomain';
+                             }
+                         }
+
+@@ -5701,7 +5701,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
+                                     let firstProductName = window.onboardingState?.first_product_name || document.getElementById('step-5-product-name')?.value || '';
+                                     let firstProductPrice = window.onboardingState?.first_product_price || document.getElementById('step-5-product-price')?.value || '';
+                                     let websiteTemplate = window.onboardingState?.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
+-                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || '';
++                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || 'subdomain';
+
+                                     if (domainChoice.includes('Free')) {
+                                         domainChoice = 'free';

@@ -92,7 +92,7 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
-    pub(crate) broadcaster: Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>,
+    pub(crate) broadcaster: std::sync::RwLock<Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>>,
 }
 
 impl TaskManager {
@@ -100,7 +100,7 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
-            broadcaster: None,
+            broadcaster: std::sync::RwLock::new(None),
         }
     }
 
@@ -108,16 +108,16 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
-            broadcaster: None,
+            broadcaster: std::sync::RwLock::new(None),
         }
     }
 
-    pub fn set_broadcaster(&mut self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
-        self.broadcaster = Some(broadcaster);
+    pub fn set_broadcaster(&self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
+        *self.broadcaster.write().unwrap() = Some(broadcaster);
     }
 
     fn broadcast(&self, task: &SharedTask, event_type: &str) {
-        if let Some(ref b) = self.broadcaster {
+        if let Some(ref b) = *self.broadcaster.read().unwrap() {
             b(task.clone(), event_type.to_string());
         }
     }
@@ -262,7 +262,7 @@ impl TaskManager {
                     obj.insert("completed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                 }
                 
-                task.payload = payload_map.to_string();
+                task.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 task.updated_at = Utc::now();
                 return Ok(());
             } else {
@@ -291,7 +291,7 @@ impl TaskManager {
                     obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                 }
 
-                task.payload = payload_map.to_string();
+                task.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 task.updated_at = Utc::now();
                 return Ok(());
             } else {
@@ -389,7 +389,7 @@ impl TaskManager {
                         obj.insert("error".to_string(), serde_json::Value::String("Task was rejected by user".to_string()));
                         obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                     }
-                    task_clone.payload = payload_map.to_string();
+                    task_clone.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 }
                 task_clone.updated_at = Utc::now();
                 (task_clone.approval_status.clone(), task_clone.status.clone(), Some(task_clone.payload.clone()), task_clone.updated_at, task_clone.organization_id.clone())
@@ -483,6 +483,33 @@ impl TaskManager {
 mod tests {
     use super::*;
     #[test]
+    #[test]
+    fn test_task_manager_mesh_broadcast() {
+        let tm = TaskManager::new();
+        let broadcast_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+        let payload_captured = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let event_type_captured = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+
+        let broadcast_called_clone = broadcast_called.clone();
+        let payload_captured_clone = payload_captured.clone();
+        let event_type_captured_clone = event_type_captured.clone();
+
+        tm.set_broadcaster(std::sync::Arc::new(move |task, event_type| {
+            *broadcast_called_clone.lock().unwrap() = true;
+            *payload_captured_clone.lock().unwrap() = serde_json::to_string(&task).unwrap();
+            *event_type_captured_clone.lock().unwrap() = event_type;
+        }));
+
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+
+        // Trigger an update to invoke broadcaster
+        tm.update_task_status(&task.id, "IN_PROGRESS".to_string()).unwrap();
+
+        assert!(*broadcast_called.lock().unwrap(), "Broadcaster should have been called");
+        assert_eq!(*event_type_captured.lock().unwrap(), "task_status_updated");
+        assert!(!payload_captured.lock().unwrap().is_empty(), "Payload should not be empty");
+    }
+
     fn test_create_and_get_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();

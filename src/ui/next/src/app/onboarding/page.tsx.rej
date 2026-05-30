@@ -1,0 +1,18 @@
+--- page.tsx
++++ page.tsx
+@@ -78,6 +79,7 @@ export default function OnboardingWizard() {
+       businessType,
+       categories,
+       websiteTemplate,
++      domainChoice,
+       firstProductName,
+       firstProductPrice,
+       aiAgents,
+@@ -95,7 +97,7 @@ export default function OnboardingWizard() {
+     return () => clearTimeout(timer);
+   }, [
+     step, chatStep, businessDescription, businessName, whatYouSell, location,
+-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
++    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
+     aiAgents, aiAutoRespond, isLoaded
+   ]);

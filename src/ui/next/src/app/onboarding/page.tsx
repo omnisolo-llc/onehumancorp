@@ -39,7 +39,8 @@ export default function OnboardingWizard() {
     .then(res => res.json())
     .then(data => {
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
+            if (data.step) setStep(data.step);
+            else if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
@@ -53,6 +54,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -89,7 +91,7 @@ export default function OnboardingWizard() {
       fetch('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-        body: JSON.stringify({ wizardState })
+            body: JSON.stringify({ wizardState, step })
       })?.catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
@@ -229,6 +231,12 @@ export default function OnboardingWizard() {
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && businessName.trim()) {
+                            e.preventDefault();
+                            setChatStep(2);
+                          }
+                        }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -262,6 +270,12 @@ export default function OnboardingWizard() {
                       <textarea
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && whatYouSell.trim()) {
+                            e.preventDefault();
+                            setChatStep(3);
+                          }
+                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -296,6 +310,12 @@ export default function OnboardingWizard() {
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            e.preventDefault();
+                            handleIntake();
+                          }
+                        }}
                         placeholder="e.g. Portland, OR"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -368,6 +388,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"

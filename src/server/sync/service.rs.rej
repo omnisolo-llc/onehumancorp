@@ -1,0 +1,11 @@
+--- service.rs
++++ service.rs
+@@ -2,7 +2,7 @@ use std::env;
+ use std::sync::Arc;
+ use serde::{Deserialize, Serialize};
+ use crate::db::{DB, DbStore};
+-use sqlx::Row;
++
+
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+ pub struct SyncDelta {
