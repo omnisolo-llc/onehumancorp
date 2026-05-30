@@ -36,7 +36,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
 
   test('verify pricing dashboard has correct glassmorphism', async ({ page }) => {
       await page.goto('/pricing');
-      const header = page.locator('header').first();
+      const header = page.locator('.mac-glass-container').first();
       const style = await header.evaluate((el) => {
           const computed = window.getComputedStyle(el);
           return {
