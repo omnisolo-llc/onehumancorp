@@ -7,9 +7,9 @@ global.fetch = vi.fn() as any;
 
 describe('TooltipRegistry', () => {
   beforeEach(() => {
-    (global.fetch as any).mockResolvedValue({
-      json: async () => ({ "test-id": "Fetched tooltip text" })
-    });
+    (global.fetch as any).mockImplementation(() => Promise.resolve({
+      json: () => Promise.resolve({ "test-id": "Fetched tooltip text" })
+    }));
   });
 
   it('renders default text on hover', async () => {
@@ -21,7 +21,7 @@ describe('TooltipRegistry', () => {
       </TooltipProvider>
     );
 
-    const button = screen.getByText('Hover me');
+    const button = await screen.findByText('Hover me');
 
     // Create a mock getBoundingClientRect
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
