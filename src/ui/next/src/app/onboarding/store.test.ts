@@ -1,12 +1,16 @@
-import { useOnboardingStore } from './store';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { useOnboardingStore } from './store';
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      businessDescription: '',
+      businessName: '',
+      whatYouSell: '',
+      style: '',
+      firstProductName: '',
+      firstProductPrice: '',
       isLoading: false,
       error: '',
       startResult: null,
@@ -16,10 +20,10 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
-    expect(state.businessDescription).toBe('');
+    expect(state.businessName).toBe('');
+    expect(state.whatYouSell).toBe('');
+    expect(state.style).toBe('');
     expect(state.isLoading).toBe(false);
-    expect(state.error).toBe('');
-    expect(state.startResult).toBeNull();
   });
 
   it('should update step', () => {
@@ -27,9 +31,9 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('should update businessDescription', () => {
-    useOnboardingStore.getState().setBusinessDescription('Test Description');
-    expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
+  it('should update whatYouSell', () => {
+    useOnboardingStore.getState().setWhatYouSell('Test Description');
+    expect(useOnboardingStore.getState().whatYouSell).toBe('Test Description');
   });
 
   it('should update isLoading', () => {
@@ -43,36 +47,34 @@ describe('useOnboardingStore', () => {
   });
 
   it('should update startResult', () => {
-    useOnboardingStore.getState().setStartResult({ result: 'test' });
-    expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
+    const result = { success: true };
+    useOnboardingStore.getState().setStartResult(result);
+    expect(useOnboardingStore.getState().startResult).toEqual(result);
   });
 
   it('should update new state keys correctly', () => {
     useOnboardingStore.getState().setBusinessName('Test Business');
-    useOnboardingStore.getState().setBusinessType('Cafe');
-    useOnboardingStore.getState().setCategories(['food', 'drinks']);
-    useOnboardingStore.getState().setWebsiteTemplate('Classic');
-    useOnboardingStore.getState().setFirstProductName('Coffee');
-    useOnboardingStore.getState().setFirstProductPrice('5.00');
+    useOnboardingStore.getState().setStyle('Elegant');
+    useOnboardingStore.getState().setFirstProductName('Test Product');
+    useOnboardingStore.getState().setFirstProductPrice('100');
 
     const state = useOnboardingStore.getState();
     expect(state.businessName).toBe('Test Business');
-    expect(state.businessType).toBe('Cafe');
-    expect(state.categories).toEqual(['food', 'drinks']);
-    expect(state.websiteTemplate).toBe('Classic');
-    expect(state.firstProductName).toBe('Coffee');
-    expect(state.firstProductPrice).toBe('5.00');
+    expect(state.style).toBe('Elegant');
+    expect(state.firstProductName).toBe('Test Product');
+    expect(state.firstProductPrice).toBe('100');
   });
 
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
+    useOnboardingStore.getState().setWhatYouSell('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v4'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
+
     expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessDescription).toBe('Persisted Description');
+    expect(storedState.state.whatYouSell).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
   });
 });

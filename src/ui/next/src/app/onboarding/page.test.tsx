@@ -10,13 +10,11 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      chatStep: 1,
       businessName: '',
       whatYouSell: '',
-      location: '',
-      businessDescription: '',
-      aiAgents: [],
-      aiAutoRespond: true,
+      style: '',
+      firstProductName: '',
+      firstProductPrice: '',
       isLoading: false,
       error: '',
       startResult: null,
@@ -34,8 +32,8 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    expect(screen.getByText("Welcome to OneHumanCorp")).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Create My Business/i });
     expect(button).toBeDisabled();
   });
 
@@ -48,9 +46,7 @@ describe('OnboardingWizard', () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            business_type: 'Bakery',
             business_name: 'Maya Bakery',
-            categories: ['food'],
             initial_products: [{ name: 'Cake', price: '20' }]
           })
         });
@@ -66,46 +62,29 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    // Step 1 - Inputs
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = screen.getByPlaceholderText(/e.g. Custom Cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    const styleInput = screen.getByPlaceholderText(/e.g. Elegant, Playful/i);
+    await user.type(styleInput, 'Playful');
 
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
-
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Create My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
+    // Submit Step 1
     await user.click(button);
 
-    // Verify it transitions to Step 2: Review Details
+    // Verify it transitions to Step 3: First Product (via Magic Loading)
     await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+      expect(screen.getByText("Let's add your first item.")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Cake")).toBeInTheDocument();
     });
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await user.click(continueButton);
-
-    // Verify it transitions to Step 3: Style & Team
-    await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Looks Good! Go Live./i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -128,32 +107,24 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    // Step 1 - Inputs
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = screen.getByPlaceholderText(/e.g. Custom Cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    const styleInput = screen.getByPlaceholderText(/e.g. Elegant, Playful/i);
+    await user.type(styleInput, 'Playful');
 
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
-
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Create My Business/i });
 
     await user.click(button);
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Welcome to OneHumanCorp")).toBeInTheDocument();
     });
   });
 
@@ -162,7 +133,7 @@ describe('OnboardingWizard', () => {
 
     // Set initial state to Step 3 to test start API directly
     act(() => {
-      useOnboardingStore.setState({ step: 3 });
+      useOnboardingStore.setState({ step: 3, firstProductName: 'Cake', firstProductPrice: '20' });
     });
 
     // Mock start failure
@@ -175,69 +146,36 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Looks Good! Go Live./i });
 
     await user.click(launchButton);
 
     // Verify error appears and step goes back to 3
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+      expect(screen.getByText("Let's add your first item.")).toBeInTheDocument();
     });
   });
 
-  it('Step 2: Displays validation error when business name is too short', async () => {
+  it('Step 1: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
-
-    // Set initial state to Step 2
-    act(() => {
-      useOnboardingStore.setState({
-        step: 2,
-        businessName: 'A',
-        businessType: 'Bakery',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
-      });
-    });
 
     render(<OnboardingWizard />);
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Cakes/i);
+    await user.type(nameInput, 'Ma');
 
-    await user.click(continueButton);
+    const sellInput = screen.getByPlaceholderText(/e.g. Custom Cakes/i);
+    await user.type(sellInput, 'Cakes');
+
+    const styleInput = screen.getByPlaceholderText(/e.g. Elegant, Playful/i);
+    await user.type(styleInput, 'Playful');
+
+    const button = screen.getByRole('button', { name: /Create My Business/i });
+
+    await user.click(button);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
-  });
-
-  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
-    });
-
-    render(<OnboardingWizard />);
-
-    // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
-    expect(salesAgent).toBeInTheDocument();
-
-    // Check toggle
-    const toggle = screen.getByRole('checkbox');
-    expect(toggle).toBeChecked();
-
-    // Select Sales Agent
-    await user.click(salesAgent);
-
-    // Toggle auto respond
-    await user.click(toggle);
-
-    await waitFor(() => {
-      const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
-      expect(state.aiAutoRespond).toBe(false);
-    });
   });
 
   it('Step 5: Shows Live Screen with correct links', async () => {
