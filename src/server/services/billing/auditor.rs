@@ -37,7 +37,7 @@ pub struct CostAuditor {
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<u64>,
-    storage_savings_counter: Counter<f64>,
+    storage_savings_counter: Counter<u64>,
     compute_cost_counter: Counter<u64>,
 }
 
@@ -45,7 +45,7 @@ impl CostAuditor {
     pub fn new(config: CostConfig) -> Self {
         let meter = global::meter("ohc.billing");
         let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
-        let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
+        let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
 
         CostAuditor {
@@ -155,7 +155,8 @@ impl CostAuditor {
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
-        self.storage_savings_counter.add(savings, &[]);
+        let savings_cents = (savings * 100.0).round() as u64;
+        self.storage_savings_counter.add(savings_cents, &[]);
 
         savings
     }
