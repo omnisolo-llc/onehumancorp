@@ -19,6 +19,11 @@ export default function CostDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fallbackStart = startOfMonth.toISOString().split('T')[0];
+    const fallbackEnd = now.toISOString().split('T')[0];
+
     async function fetchCostData() {
       try {
         const token = localStorage.getItem('token') || 'test-token';
@@ -39,8 +44,8 @@ export default function CostDashboardPage() {
                 llm_cost: 0,
                 storage_cost: 0,
                 payment_fees: 0,
-                period_start: "2024-05-01",
-                period_end: "2024-05-31",
+                period_start: fallbackStart,
+                period_end: fallbackEnd,
             });
         }
       } catch (err) {
@@ -51,8 +56,8 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
-            period_start: "2024-05-01",
-            period_end: "2024-05-31",
+            period_start: fallbackStart,
+            period_end: fallbackEnd,
         });
       } finally {
         setLoading(false);
@@ -99,8 +104,12 @@ export default function CostDashboardPage() {
                <span className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_revenue || 0)}</p>
+                </div>
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>

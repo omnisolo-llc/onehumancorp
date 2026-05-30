@@ -112,7 +112,14 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => {
+            let now = chrono::Utc::now();
+            use chrono::Datelike;
+            let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
+            let period_start = start_of_month.format("%Y-%m-%d").to_string();
+            let period_end = now.format("%Y-%m-%d").to_string();
+            return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start, period_end })
+        }
     };
 
     let now = chrono::Utc::now();
