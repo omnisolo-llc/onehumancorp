@@ -39,7 +39,8 @@ export default function OnboardingWizard() {
     .then(res => res.json())
     .then(data => {
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
+            if (data.step) setStep(data.step);
+            else if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
@@ -87,7 +88,7 @@ export default function OnboardingWizard() {
       fetch('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-        body: JSON.stringify({ wizardState })
+            body: JSON.stringify({ wizardState, step })
       })?.catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
