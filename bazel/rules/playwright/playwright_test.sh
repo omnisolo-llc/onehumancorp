@@ -36,33 +36,48 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
-# Resolve browsers path to absolute
+# Resolve the Bazel-provided Playwright browser repository to an absolute path.
+# Every shard gets the same runfiles-backed browser directory instead of a
+# per-shard install under the temporary Playwright workspace.
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-  
-  # Resolve relative to runfiles root if it starts with ../
-  if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
-      if [[ -L bazel-out ]]; then
-          output_base="$(dirname "$(dirname "$(dirname "$(readlink bazel-out)")")")"
-          repo_path="${PLAYWRIGHT_BROWSERS_PATH#../}"
-          repo_path="${repo_path%/..}"
-          potential_path="$output_base/external/$repo_path"
-          if [[ -d "$potential_path" ]]; then
-              export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$potential_path")"
-          fi
-      fi
+
+  BROWSER_PATH_CANDIDATES=(
+    "$PLAYWRIGHT_BROWSERS_PATH"
+    "$RUNFILES_ROOT/$PLAYWRIGHT_BROWSERS_PATH"
+  )
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$PLAYWRIGHT_BROWSERS_PATH"
+    )
   fi
-  
+  if [[ -n "${TEST_WORKSPACE:-}" && -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$TEST_WORKSPACE/$PLAYWRIGHT_BROWSERS_PATH"
+    )
+  fi
+
+  for candidate in "${BROWSER_PATH_CANDIDATES[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$candidate")"
+      break
+    fi
+  done
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
+      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" \( -name "chrome-headless-shell" -o -name "headless_shell" \) -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
           ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
       fi
   fi
-  
+
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
+  else
+      echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
+      exit 1
   fi
 fi
 
