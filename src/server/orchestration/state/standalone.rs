@@ -20,12 +20,11 @@ fn state_manager_timeout() -> std::time::Duration {
 pub struct StandaloneStateManager {
     db: Arc<DB>,
     mesh: Arc<dyn TeammateMesh>,
-    timeout_duration: std::time::Duration,
 }
 
 impl StandaloneStateManager {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
-        Self { db, mesh, timeout_duration: state_manager_timeout() }
+        Self { db, mesh }
     }
 
     async fn transition_state_inner(
@@ -161,45 +160,31 @@ impl StateManager for StandaloneStateManager {
 
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
-        let mut attempt = 0;
-        let max_attempts = 3;
+        let transition_future = async {
+            let lock_guard = MeshLockGuard::acquire(
+                self.mesh.clone(),
+                lock_key.clone(),
+                "standalone_state_manager".to_string(),
+                30,
+            )
+            .await?;
+            self.transition_state_inner(
+                task_id,
+                tenant_id,
+                from_state,
+                to_state,
+                agent_id,
+                reason,
+                &lock_guard,
+                sqlite_pool,
+            )
+            .await
+        };
 
-        loop {
-            attempt += 1;
-            let transition_future = async {
-                let lock_guard = MeshLockGuard::acquire(
-                    self.mesh.clone(),
-                    lock_key.clone(),
-                    "standalone_state_manager".to_string(),
-                    30,
-                )
-                .await?;
-                self.transition_state_inner(
-                    task_id,
-                    tenant_id,
-                    from_state,
-                    to_state,
-                    agent_id,
-                    reason,
-                    &lock_guard,
-                    sqlite_pool,
-                )
-                .await
-            };
-
-            match tokio::time::timeout(self.timeout_duration, transition_future).await {
-                Ok(Ok(())) => return Ok(()),
-                Ok(Err(e)) => {
-                    if attempt >= max_attempts {
-                        return Err(e);
-                    }
-                },
-                Err(_) => {
-                    if attempt >= max_attempts {
-                        return Err("Timeout acquiring lock or writing database transition (ML-Resilience 60s boundary)".to_string());
-                    }
-                },
-            }
+        match tokio::time::timeout(state_manager_timeout(), transition_future).await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
         }
     }
 
@@ -209,89 +194,75 @@ impl StateManager for StandaloneStateManager {
             _ => return Err("StandaloneStateManager requires DbStore::Sqlite".to_string()),
         };
 
-        let mut attempt = 0;
-        let max_attempts = 3;
-
-        loop {
-            attempt += 1;
-            let lock_key = "ohc:lock:system:pull_tasks".to_string();
-            let acquire_and_fetch = async {
-                let lock_guard = MeshLockGuard::acquire(
-                    self.mesh.clone(),
-                    lock_key.clone(),
-                    "standalone_state_manager".to_string(),
-                    30,
-                )
-                .await?;
-
-                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-
-                let now_rfc = Utc::now().to_rfc3339();
-                let rows = sqlx::query(
-                    r#"
-                    UPDATE swarm_tasks
-                    SET status = 'IN_PROGRESS', updated_at = ?
-                    WHERE id IN (
-                        SELECT t.id
-                        FROM swarm_tasks t
-                        WHERE t.status = 'PENDING'
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM json_each(t.dependencies) as dep_id
-                            JOIN swarm_tasks dep ON dep.id = dep_id.value
-                            WHERE dep.status != 'COMPLETED'
-                        )
-                        LIMIT ?
-                    )
-                    RETURNING *
-                    "#,
-                )
-                .bind(now_rfc)
-                .bind(limit)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                Ok::<_, String>((lock_guard, tx, rows))
-            };
-
-            let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
-                self.timeout_duration,
-                acquire_and_fetch,
+        let lock_key = "ohc:lock:system:pull_tasks".to_string();
+        let acquire_and_fetch = async {
+            let lock_guard = MeshLockGuard::acquire(
+                self.mesh.clone(),
+                lock_key.clone(),
+                "standalone_state_manager".to_string(),
+                30,
             )
+            .await?;
+
+            let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+            let now_rfc = Utc::now().to_rfc3339();
+            let rows = sqlx::query(
+                r#"
+                UPDATE swarm_tasks
+                SET status = 'IN_PROGRESS', updated_at = ?
+                WHERE id IN (
+                    SELECT t.id
+                    FROM swarm_tasks t
+                    WHERE t.status = 'PENDING'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(t.dependencies) as dep_id
+                        JOIN swarm_tasks dep ON dep.id = dep_id.value
+                        WHERE dep.status != 'COMPLETED'
+                    )
+                    LIMIT ?
+                )
+                RETURNING *
+                "#,
+            )
+            .bind(now_rfc)
+            .bind(limit)
+            .fetch_all(&mut *tx)
             .await
-            {
-                Ok(Ok(result)) => result,
-                Ok(Err(e)) => {
-                    if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
-                        if attempt >= max_attempts {
-                            tracing::warn!(
-                                "Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
-                            );
-                            return Ok(vec![]);
-                        }
-                        continue;
-                    }
-                    if attempt >= max_attempts {
-                        return Err(e);
-                    }
-                    continue;
-                }
-                Err(_) => {
-                    if attempt >= max_attempts {
-                        tracing::warn!(
-                            "Database timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
-                        );
-                        return Ok(vec![]);
-                    }
-                    continue;
-                }
-            };
+            .map_err(|e| e.to_string())?;
 
-            let mut tasks = Vec::new();
-            let mut task_ids = Vec::new();
+            Ok::<_, String>((lock_guard, tx, rows))
+        };
 
-            for row in rows {
+        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
+            state_manager_timeout(),
+            acquire_and_fetch,
+        )
+        .await
+        {
+            Ok(Ok(result)) => result,
+            Ok(Err(e)) => {
+                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
+                    tracing::warn!(
+                        "Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
+                    );
+                    return Ok(vec![]);
+                }
+                return Err(e);
+            }
+            Err(_) => {
+                tracing::warn!(
+                    "Database timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
+                );
+                return Ok(vec![]);
+            }
+        };
+
+        let mut tasks = Vec::new();
+        let mut task_ids = Vec::new();
+
+        for row in rows {
             let id: String = row.get("id");
             let deps_str: String = row
                 .try_get("dependencies")
@@ -376,13 +347,13 @@ impl StateManager for StandaloneStateManager {
             }
         }
 
-            // Transitions are recorded after the UPDATE ... RETURNING
-            if !task_ids.is_empty() {
-                let now = Utc::now();
-                let now_rfc = now.to_rfc3339();
-                for (id_str, tenant_id) in task_ids {
-                    let trans_id = uuid::Uuid::new_v4().to_string();
-                    sqlx::query(
+        // Transitions are recorded after the UPDATE ... RETURNING
+        if !task_ids.is_empty() {
+            let now = Utc::now();
+            let now_rfc = now.to_rfc3339();
+            for (id_str, tenant_id) in task_ids {
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, occurred_at)
                     VALUES (?, ?, ?, 'swarm_task', 'PENDING', 'IN_PROGRESS', ?)
@@ -391,21 +362,20 @@ impl StateManager for StandaloneStateManager {
                 .bind(trans_id)
                 .bind(&tenant_id)
                 .bind(&id_str)
-                    .bind(&now_rfc)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                }
+                .bind(&now_rfc)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
             }
-
-            tx.commit().await.map_err(|e| e.to_string())?;
-
-            // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
-            for t in &mut tasks {
-                t.status = "IN_PROGRESS".to_string();
-            }
-
-            return Ok(tasks);
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        // Update the returned tasks statuses to match what we committed (IN_PROGRESS)
+        for t in &mut tasks {
+            t.status = "IN_PROGRESS".to_string();
+        }
+
+        Ok(tasks)
     }
 }

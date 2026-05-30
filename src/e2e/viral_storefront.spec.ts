@@ -4,7 +4,7 @@ test.describe('Viral Storefront E2E', () => {
   test('exposes referral share entry points for storefront growth', async ({ page }) => {
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
-    await expect(page.locator('#referral-link')).toContainText('https://ohc.store/join?ref=');
+    await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
     await expect(page.getByRole('button', { name: /Share to Instagram/ })).toBeVisible();
   });
 
@@ -58,6 +58,10 @@ test.describe('Viral Storefront E2E', () => {
   test('generates social share og card with branding', async ({ request }) => {
     const response = await request.get('/api/v1/growth/storefront/og-card?tenant=test&product_name=NovaPremium');
     expect(response.ok()).toBeTruthy();
-    expect(response.headers()['content-type']).toContain('image/png');
+    expect(response.headers()['content-type']).toContain('image/svg+xml');
+
+    const svg = await response.text();
+    expect(svg).toContain('NovaPremium');
+    expect(svg).toContain('⚡ Powered by OHC');
   });
 });
