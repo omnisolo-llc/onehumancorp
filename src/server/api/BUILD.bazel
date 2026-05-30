@@ -43,6 +43,7 @@ rust_library(
         "//src/server/api/agents:settings.rs",
         "//src/server/api/agents:webhook.rs",
         "//src/server/api/onboarding:mod.rs",
+        "//src/server/api/catalog:mod.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

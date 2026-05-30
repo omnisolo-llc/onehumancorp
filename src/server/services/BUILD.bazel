@@ -61,6 +61,8 @@ rust_library(
         "//src/server/services/onboarding:wizard.rs",
         "//src/server/services/ops:mod.rs",
         "//src/server/services/ops:service.rs",
+        "//src/server/services/catalog:invisible_agent.rs",
+        "//src/server/services/catalog:mod.rs",
         "//src/server/services/org:mod.rs",
         "//src/server/services/org:service.rs",
         "//src/server/services/scheduler:mod.rs",

@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package ohc.catalog;
+
+import "src/proto/organization.proto";
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/catalog;catalogpb";
+
+message ProductVideoScan {
+  string id = 1;
+  string tenant_id = 2;
+  string video_url = 3;
+  string status = 4; // PENDING, PROCESSING, COMPLETED, FAILED
+  int64 created_at_unix = 5;
+}
+
+message DraftCatalogItem {
+  string id = 1;
+  string scan_id = 2;
+  string tenant_id = 3;
+  string name = 4;
+  string description = 5;
+  int64 estimated_price_cents = 6;
+  string image_url = 7;
+  string status = 8; // PENDING_REVIEW, APPROVED, REJECTED
+}
+
+message ProcessVideoScanRequest {
+  string tenant_id = 1;
+  string video_url = 2;
+}
+
+message ProcessVideoScanResponse {
+  string scan_id = 1;
+}
+
+message GetVideoScanStatusRequest {
+  string scan_id = 1;
+}
+
+message GetVideoScanStatusResponse {
+  ProductVideoScan scan = 1;
+  repeated DraftCatalogItem drafts = 2;
+}
+
+message ReviewDraftItemRequest {
+  string draft_id = 1;
+  bool approved = 2; // true to convert to product, false to discard
+}
+
+message ReviewDraftItemResponse {
+  bool success = 1;
+  ohc.organization.Product product = 2; // the newly created product if approved
+}
+
+service CatalogService {
+  rpc ProcessVideoScan(ProcessVideoScanRequest) returns (ProcessVideoScanResponse);
+  rpc GetVideoScanStatus(GetVideoScanStatusRequest) returns (GetVideoScanStatusResponse);
+  rpc ReviewDraftItem(ReviewDraftItemRequest) returns (ReviewDraftItemResponse);
+}

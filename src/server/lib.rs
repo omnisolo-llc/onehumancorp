@@ -229,6 +229,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod catalog;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2594,6 +2595,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/v1/catalog", api::catalog::router(std::sync::Arc::new(crate::services::catalog::invisible_agent::InvisibleCatalogAgent::new(db.clone(), hub.clone()))))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3462,6 +3464,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
+                        <a onclick="showScreen('catalog-scan-screen')" id="nav-catalog-scan">Video Catalog</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                         <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
@@ -3477,6 +3480,97 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
                     </div>
 
+
+                    <!-- Video Catalog Scan Screen -->
+                    <div id="catalog-scan-screen" class="screen glass" style="display: none;">
+                        <h1>Invisible Catalog Agent</h1>
+                        <p>Show us your store! Take a 30s video or paste a URL to auto-generate your entire catalog.</p>
+                        <input type="text" id="catalog-video-url" placeholder="Paste video URL here..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid var(--border);">
+                        <button class="primary-btn" id="btn-start-scan" onclick="startCatalogScan()" style="width:100%; padding:12px;">Start Scan</button>
+
+                        <div id="catalog-scan-status" style="display:none; margin-top: 20px;">
+                            <h3>Status: <span id="scan-status-text">Processing...</span></h3>
+                            <div id="catalog-drafts" style="margin-top: 16px;"></div>
+                        </div>
+                    </div>
+
+                    <script>
+                        let currentScanId = null;
+                        let scanPollInterval = null;
+
+                        async function startCatalogScan() {
+                            const videoUrl = document.getElementById("catalog-video-url").value || "https://example.com/demo.mp4";
+                            document.getElementById("catalog-scan-status").style.display = "block";
+                            document.getElementById("scan-status-text").innerText = "Processing...";
+                            document.getElementById("catalog-drafts").innerHTML = "";
+
+                            const res = await fetch("/api/v1/catalog/video-scan", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json", "X-Tenant-ID": localStorage.getItem("tenantId") || "demo_tenant" },
+                                body: JSON.stringify({ video_url: videoUrl })
+                            });
+                            const data = await res.json();
+                            currentScanId = data.scan_id;
+                            scanPollInterval = setInterval(pollScanStatus, 2000);
+                        }
+
+                        async function pollScanStatus() {
+                            if (!currentScanId) return;
+                            const res = await fetch("/api/v1/catalog/video-scan/" + currentScanId, {
+                                headers: { "X-Tenant-ID": localStorage.getItem("tenantId") || "demo_tenant" }
+                            });
+                            const data = await res.json();
+
+                            document.getElementById("scan-status-text").innerText = data.status;
+
+                            if (data.status === "COMPLETED") {
+                                clearInterval(scanPollInterval);
+                                renderDrafts(data.drafts);
+                            }
+                        }
+
+                        function renderDrafts(drafts) {
+                            const container = document.getElementById("catalog-drafts");
+                            container.innerHTML = "";
+
+                            drafts.forEach(draft => {
+                                if (draft.status !== "PENDING_REVIEW") return;
+
+                                const card = document.createElement("div");
+                                card.className = "card draft-item";
+                                card.setAttribute("data-draft-id", draft.id);
+                                card.style.marginBottom = "12px";
+                                card.innerHTML = `
+                                    <div style="display:flex; gap:16px;">
+                                        <img src="${draft.image_url}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; background:#f0f0f0;">
+                                        <div style="flex-grow:1;">
+                                            <h4 class="draft-name" style="margin:0;">${draft.name}</h4>
+                                            <p style="margin:4px 0; font-size:14px; color:#666;">${draft.description}</p>
+                                            <strong>${(draft.estimated_price_cents / 100).toFixed(2)}</strong>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:8px; margin-top:12px;">
+                                        <button class="btn-discard" onclick="reviewDraft('${draft.id}', false)" style="flex:1; padding:8px; background:#fff; border:1px solid #ddd; border-radius:8px; cursor:pointer;">Discard</button>
+                                        <button class="btn-approve" onclick="reviewDraft('${draft.id}', true)" style="flex:1; padding:8px; background:var(--primary-gradient); color:#fff; border:none; border-radius:8px; cursor:pointer;">Approve</button>
+                                    </div>
+                                `;
+                                container.appendChild(card);
+                            });
+
+                            if (container.children.length === 0) {
+                                container.innerHTML = "<p>All items reviewed!</p>";
+                            }
+                        }
+
+                        async function reviewDraft(draftId, approved) {
+                            await fetch("/api/v1/catalog/drafts/" + draftId + "/review", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json", "X-Tenant-ID": localStorage.getItem("tenantId") || "demo_tenant" },
+                                body: JSON.stringify({ approved })
+                            });
+                            pollScanStatus();
+                        }
+                    </script>
 
                     <!-- Signup Screen -->
                     <div id="signup-screen" class="screen glass">

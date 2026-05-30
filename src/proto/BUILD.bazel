@@ -3,6 +3,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
+    "catalog.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -212,6 +213,24 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Catalog ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "catalog_proto",
+    srcs = ["catalog.proto"],
+    deps = [
+        ":organization_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "catalog",
+    proto = ":catalog_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
