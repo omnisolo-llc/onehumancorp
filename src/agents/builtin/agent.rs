@@ -846,12 +846,12 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
+                            let mut _retry_count = 0;
+                            let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let _final_res;
 
                             loop {
                                 match tool.execute.execute(args.clone()).await {
@@ -944,7 +944,7 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        let _final_res: Result<String, crate::types::ToolError> = Err(e);
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
@@ -970,7 +970,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -984,9 +984,9 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
+                        let mut _retry_count = 0;
+                        let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let _final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -1310,7 +1310,7 @@ impl Agent {
         for (_, tc) in &read_only_calls {
             let tc_clone = tc.clone();
             let session_tools_clone = session_tools.to_vec();
-            let max_retries = cfg.max_retries;
+            let _max_retries = cfg.max_retries;
 
             let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
             if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
@@ -1321,7 +1321,7 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
+                let mut _retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
@@ -1429,8 +1429,8 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
+            let mut _retry_count = 0;
+            let _max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
             let result = loop {
@@ -1533,7 +1533,7 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 2 });
-        let final_resp = self.llm.chat(replier_req).await?;
+        let _final_resp = self.llm.chat(replier_req).await?;
 
         on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
         Ok(final_resp.message.content)
@@ -2306,8 +2306,8 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let mut _retry_count = 0;
+                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
@@ -2506,8 +2506,8 @@ impl Agent {
                     }
                 }
 
-                let mut retry_count = 0;
-                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let mut _retry_count = 0;
+                let _max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
