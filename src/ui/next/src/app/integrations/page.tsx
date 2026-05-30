@@ -8,13 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "manychat", name: "Social Media Accounts", category: "marketing", status: "disconnected", icon: "📱", description: "Manage all your social media messages and posts in one place.", buttonText: "Connect my Instagram and Facebook", connectedText: "Manage" },
+    { id: "cal_com", name: "Autonomous Booking Agent", category: "operations", status: "disconnected", icon: "📅", description: "Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.", buttonText: "Enable Booking Agent", connectedText: "Manage" },
+    { id: "mailerlite", name: "Customer Emails", category: "marketing", status: "disconnected", icon: "📨", description: "Send email updates and promotions to your customers.", buttonText: "Start sending emails", connectedText: "Manage" },
+    { id: "mercadopago", name: "Local Payments", category: "finance", status: "disconnected", icon: "🌎", description: "Get paid easily using local payment methods in Latin America.", buttonText: "Accept local payments", connectedText: "Manage" },
+    { id: "shippo", name: "Shipping Labels", category: "operations", status: "disconnected", icon: "📦", description: "Print shipping labels and automatically track packages for your orders.", buttonText: "Set up shipping", connectedText: "Manage" },
+    { id: "twilio", name: "Text Notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Send automatic text message updates to your customers about their orders.", buttonText: "Enable text messages", connectedText: "Manage" },
+    { id: "whereby", name: "Online Meetings", category: "operations", status: "disconnected", icon: "📹", description: "Host online video meetings with your customers easily without extra downloads.", buttonText: "Create my meeting room", connectedText: "Manage" }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -28,22 +28,22 @@ export default function Integrations() {
   });
 
   const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
+    if (id === 'calendly' || id === 'cal_com') {
+      alert("Enabling Autonomous Booking...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
+    } else if (id === 'manychat') {
+      alert("Connecting to ManyChat...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push('/inbox');
-    }
-    if (id === 'twilio') {
+    } else if (id === 'twilio') {
       setShowTwilioModal(true);
+    } else {
+      alert("Connecting...");
     }
   };
 
@@ -74,7 +74,7 @@ export default function Integrations() {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio Conversations</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Text Notifications</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
               Select the channels you want to route into your unified inbox. You can update this later without losing message history.
             </p>
@@ -110,8 +110,8 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
-            <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Tools</h1>
+            <p className="text-gray-400 text-sm">Seamlessly connect your favorite apps to streamline your business operations.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
             🧩
@@ -165,7 +165,7 @@ export default function Integrations() {
                     ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                     : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
                 }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
-                {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                {integration.status === 'connected' ? (integration.connectedText || 'Manage') : (integration.buttonText || 'Connect')}
               </button>
             </div>
           ))}
