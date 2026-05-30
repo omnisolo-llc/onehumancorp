@@ -693,7 +693,7 @@ impl DepartmentOrchestrator {
                 .bind(&id)
                 .bind(tenant_id)
                 .bind(dep_type.to_string())
-                .bind(serde_json::from_str::<serde_json::Value>(&config_json).unwrap_or_default())
+                .bind(&config_json)
                 .bind(now)
                 .execute(&self.db.pool)
                 .await
