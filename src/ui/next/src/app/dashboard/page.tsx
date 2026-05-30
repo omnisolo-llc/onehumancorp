@@ -10,12 +10,80 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
+  const [falafelSoldOut, setFalafelSoldOut] = useState(false);
+  const [pushNotification, setPushNotification] = useState<any>(null);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
+
+        try {
+           const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+           setOfflineQueue(queue);
+        } catch(e) {}
     }
+
+    const handleOnline = async () => {
+        setIsOnline(true);
+        let currentQueue = [];
+        try {
+           currentQueue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+        } catch(e) {}
+
+        if (currentQueue.length > 0) {
+            try {
+                // Sync to backend
+                const response = await fetch('/api/v1/sync/offline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ queue: currentQueue })
+                });
+
+                if (response.ok) {
+                    localStorage.setItem('ohc_offline_queue', '[]');
+                    setOfflineQueue([]);
+                }
+            } catch (e) {
+                console.error("Sync failed", e);
+            }
+        }
+    };
+
+    const handleOffline = () => setIsOnline(false);
+
+    const handlePushNotification = (e: any) => {
+        if (e.detail) {
+            setPushNotification(e.detail);
+            setTimeout(() => setPushNotification(null), 5000);
+        }
+    };
+
+    setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('push-notification', handlePushNotification as EventListener);
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        window.removeEventListener('push-notification', handlePushNotification as EventListener);
+    };
   }, []);
+
+  // Sync state if it was updated from outside (like test evaluate)
+  useEffect(() => {
+     const checkQueue = setInterval(() => {
+        if (typeof localStorage !== 'undefined') {
+            try {
+               const q = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+               if (q.length !== offlineQueue.length) setOfflineQueue(q);
+            } catch(e) {}
+        }
+     }, 1000);
+     return () => clearInterval(checkQueue);
+  }, [offlineQueue]);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
@@ -373,13 +441,10 @@ export default function Dashboard() {
          <div className="flex justify-between items-center w-full">
           <div className="flex justify-between items-center w-full">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+          <div id="network-status-indicator" className={`${isOnline ? 'hidden' : 'block'} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
             Offline - Changes saved locally
           </div>
         </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
         </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
@@ -419,6 +484,21 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {pushNotification && (
+            <div id="push-notification-banner" className="bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between animate-fade-in">
+                <div className="flex flex-col">
+                    <span className="font-bold text-sm">{pushNotification.title}</span>
+                    <span className="text-sm">{pushNotification.body}</span>
+                </div>
+            </div>
+         )}
+
+         {offlineQueue.length > 0 && (
+             <div id="queue-dashboard" className="bg-yellow-50 text-yellow-800 border border-yellow-200 px-4 py-3 rounded-xl shadow-sm flex items-center justify-between">
+                 <span className="text-sm font-medium">{offlineQueue.length} Payments Pending Sync</span>
+             </div>
+         )}
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
