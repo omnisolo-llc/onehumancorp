@@ -1,2 +1,0 @@
-build --remote_download_toplevel
-test --remote_download_toplevel
