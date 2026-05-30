@@ -1,22 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Cost Engineering & Billing UI', () => {
+  // `page` fixture is already authenticated as admin
   test('Admin can view My Plan, check Cost details, and open Pricing to upgrade', async ({ page }) => {
-    // Navigate to Home/Login
-    await page.goto('/');
-
-    // Verify we are at the home/login screen
-    await expect(page.locator('h1').filter({ hasText: 'Welcome to One Human Corp' })).toBeVisible();
-
-    // Login using UI interaction
-    await page.locator('button', { hasText: 'Have an account? Sign In' }).click();
-    await expect(page.locator('#login-screen')).toBeVisible();
-
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'password123');
-    await page.locator('button', { hasText: 'Login' }).click();
-
-    // Verify redirect to dashboard
+    // Wait for dashboard to fully load
     await expect(page.locator('#dashboard-screen')).toBeVisible();
 
     // The user opens the side nav (on mobile/desktop) and clicks Billing
