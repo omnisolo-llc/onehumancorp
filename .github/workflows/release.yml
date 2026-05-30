@@ -211,24 +211,25 @@ jobs:
             exit 1
           fi
 
-          decode_key_if_needed() {
+          normalize_tauri_signing_key() {
             local value="$1"
             if [[ "$value" == *"untrusted comment:"* ]]; then
-              printf '%s' "$value"
+              printf '%s' "$value" | base64 | tr -d '\r\n'
               return
             fi
 
             local decoded
             decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
             if [[ "$decoded" == *"untrusted comment:"* ]]; then
-              printf '%s' "$decoded"
+              printf '%s' "$decoded" | base64 | tr -d '\r\n'
             else
               printf '%s' "$value"
             fi
           }
 
-          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
-          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
+          echo "::add-mask::$TAURI_SIGNING_PRIVATE_KEY_SECRET"
 
           export VERSION
           node <<'NODE'
@@ -249,11 +250,10 @@ jobs:
           fs.writeFileSync(cargoPath, cargo);
           NODE
 
-          {
-            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_SIGNING_PRIVATE_KEY__"
-            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_SECRET"
-            echo "__TAURI_SIGNING_PRIVATE_KEY__"
-          } >> "$GITHUB_ENV"
+          private_key_path="$RUNNER_TEMP/tauri-updater-signing.key"
+          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_SECRET" > "$private_key_path"
+          chmod 600 "$private_key_path" 2>/dev/null || true
+          echo "TAURI_SIGNING_PRIVATE_KEY=$private_key_path" >> "$GITHUB_ENV"
 
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
