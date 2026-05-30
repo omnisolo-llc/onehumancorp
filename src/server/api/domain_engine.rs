@@ -21,7 +21,6 @@ pub struct SSLConfiguration {
     pub issued_at: Option<String>,
 }
 
-
 #[derive(Deserialize)]
 pub struct SearchQuery {
     pub domain: String,

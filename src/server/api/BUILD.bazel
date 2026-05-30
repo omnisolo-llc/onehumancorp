@@ -8,6 +8,7 @@ exports_files(
         "billing_webhook_test.rs",
         "dynamic_workflows.rs",
         "domain_engine.rs",
+        "domain_engine.rs",
         "growth.rs",
         "health.rs",
         "syndication_handler.rs",
@@ -28,6 +29,7 @@ rust_library(
         "billing_webhook.rs",
         "billing_webhook_test.rs",
         "dynamic_workflows.rs",
+        "domain_engine.rs",
         "domain_engine.rs",
         "growth.rs",
         "health.rs",
@@ -154,4 +156,5 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files(["domain_engine.rs"])
 exports_files(["domain_engine.rs"])
