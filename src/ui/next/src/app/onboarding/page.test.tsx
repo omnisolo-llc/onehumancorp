@@ -116,7 +116,6 @@ describe('OnboardingWizard', () => {
     return Promise.resolve({ ok: false });
   });
 
-
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
@@ -161,7 +160,6 @@ describe('OnboardingWizard', () => {
     if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     return Promise.resolve({ ok: false });
   });
-
 
     act(() => { render(<OnboardingWizard />); });
 
