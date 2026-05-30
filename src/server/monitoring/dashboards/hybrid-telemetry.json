@@ -4091,6 +4091,50 @@
         "overrides": []
       },
       "transparent": true
+    },
+    {
+      "title": "Agent State Transition Latency",
+      "type": "timeseries",
+      "id": 69025,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 100
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_agent_transition_latency_seconds_bucket[5m])) by (le, transition))",
+          "legendFormat": "{{transition}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      }
     }
   ],
   "refresh": "",

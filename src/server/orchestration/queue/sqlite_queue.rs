@@ -157,6 +157,7 @@ impl TaskQueue for SQLiteTaskQueue {
             let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_agent_transition_latency("pending_to_running", latency);
 
             let job = Job {
                 id: row.get("id"),
@@ -188,6 +189,16 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
+        let previous_row = sqlx::query("SELECT updated_at FROM sub_agent_jobs WHERE id = ?")
+            .bind(job_id)
+            .fetch_optional(&*self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        let previous_updated_at: Option<chrono::DateTime<chrono::Utc>> = previous_row.map(|r| {
+            use sqlx::Row;
+            r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now())
+        });
+
         let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING updated_at, run_after")
             .bind(job_id)
             .fetch_optional(&*self.pool)
@@ -201,6 +212,10 @@ impl TaskQueue for SQLiteTaskQueue {
             let run_after: chrono::DateTime<chrono::Utc> = r.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
+            if let Some(prev) = previous_updated_at {
+                let transition_latency = (updated - prev).num_milliseconds() as f64 / 1000.0;
+                ::server_telemetry::record_agent_transition_latency("running_to_completed", transition_latency);
+            }
         }
         Ok(())
     }

@@ -252,6 +252,7 @@ static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
 static TASK_PROCESSING_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static AGENT_TRANSITION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_FAILURE_RATE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUSINESS_EVENT_COUNT: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 
@@ -345,6 +346,26 @@ pub fn record_llm_network_latency(model: &str, latency: f64) {
         &[
             opentelemetry::KeyValue::new("model", model.to_string()),
         ]
+    );
+}
+
+pub fn get_agent_transition_latency_histogram() -> &'static Histogram<f64> {
+    AGENT_TRANSITION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter
+            .f64_histogram("ohc_agent_transition_latency_seconds")
+            .with_description("Latency for agent state transitions (e.g. pending_to_running)")
+            .build()
+    })
+}
+
+pub fn record_agent_transition_latency(transition: &str, latency: f64) {
+    let histogram = get_agent_transition_latency_histogram();
+    histogram.record(
+        latency,
+        &[
+            opentelemetry::KeyValue::new("transition", transition.to_string()),
+        ],
     );
 }
 
@@ -1259,5 +1280,16 @@ mod additional_tests {
         // Just checking that `get_deployment_mode` is exported and we can use it.
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
+    }
+}
+
+#[cfg(test)]
+mod agent_transition_telemetry_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_agent_transition_latency() {
+        record_agent_transition_latency("pending_to_running", 1.23);
+        let _histogram = get_agent_transition_latency_histogram();
     }
 }
