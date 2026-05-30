@@ -62,8 +62,20 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
-        // Mock handle webhook
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        // Parse webhook payload for Mercado Pago
+        let parsed: serde_json::Value = serde_json::from_str(payload).unwrap_or(serde_json::json!({}));
+
+        // Mock extracting the action/type
+        let action = parsed.get("action").and_then(|a| a.as_str()).unwrap_or("unknown");
+
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown",
+            &format!("mercadopago_webhook_{}", action),
+            0.0
+        ).await;
+
         Ok(())
     }
 }

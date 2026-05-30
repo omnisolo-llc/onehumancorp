@@ -152,7 +152,16 @@ impl IntegrationService for MyIntegrationService {
     ) -> Result<Response<CreateEventResponse>, Status> {
         let req = request.into_inner();
         match self.registry.create_event(&req.integration_id, &req.summary, &req.start_time, &req.end_time).await {
-            Ok(event_id) => Ok(Response::new(CreateEventResponse { event_id })),
+            Ok(event_json) => {
+                let parsed: serde_json::Value = serde_json::from_str(&event_json).unwrap_or(serde_json::json!({}));
+                let event_id = parsed.get("event_id").and_then(|v| v.as_str()).unwrap_or(&event_json).to_string();
+                let meet_link = parsed.get("meet_link").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                Ok(Response::new(CreateEventResponse {
+                    event_id,
+                    meet_link
+                }))
+            },
             Err(e) => Err(Status::internal(e)),
         }
     }

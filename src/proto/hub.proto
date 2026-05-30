@@ -1694,6 +1694,7 @@ message CreateEventRequest {
 
 message CreateEventResponse {
   string event_id = 1;
+  string meet_link = 2;
 }
 
 message GetBookingLinkRequest {

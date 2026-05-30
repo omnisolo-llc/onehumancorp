@@ -396,6 +396,36 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn sendgrid_send_campaign(&self, integration_id: &str, list_id: &str, subject: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "sendgrid" {
+                let clients = self.sendgrid_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_campaign(list_id, subject, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn sendgrid_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "sendgrid" {
+                let clients = self.sendgrid_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
 
     pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
@@ -500,6 +530,20 @@ impl IntegrationsRegistry {
             return c.create_payment(amount, description, payer_email).await;
         }
         Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn meta_handle_webhook(&self, _integration_id: &str, payload: &str) -> Result<(), String> {
+        // Parse webhook payload for meta
+        let _parsed: serde_json::Value = serde_json::from_str(payload).unwrap_or(serde_json::json!({}));
+
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown",
+            "meta_webhook",
+            0.0
+        ).await;
+
+        Ok(())
     }
 
     pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {

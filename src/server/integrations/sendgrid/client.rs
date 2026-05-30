@@ -41,4 +41,22 @@ impl SendGridClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
+
+    pub async fn send_campaign(&self, _list_id: &str, _subject: &str, _body: &str) -> Result<(), String> {
+        // SendGrid Single Sends (Marketing Campaigns) mock logic
+        Ok(())
+    }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        let parsed: serde_json::Value = serde_json::from_str(payload).unwrap_or(serde_json::json!([]));
+
+        let mut _event_type = "unknown".to_string();
+        if let Some(events) = parsed.as_array() {
+            if let Some(first_event) = events.get(0) {
+                _event_type = first_event.get("event").and_then(|e| e.as_str()).unwrap_or("unknown").to_string();
+            }
+        }
+
+        Ok(())
+    }
 }

@@ -36,4 +36,12 @@ impl SendGridProvider {
     pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
         self._client.send_email(to, subject, body).await
     }
+
+    pub async fn send_campaign(&self, list_id: &str, subject: &str, body: &str) -> Result<(), String> {
+        self._client.send_campaign(list_id, subject, body).await
+    }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
 }

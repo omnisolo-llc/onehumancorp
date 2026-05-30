@@ -57,12 +57,20 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
     }
 
     async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        let url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+        let url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1";
 
         let payload = serde_json::json!({
             "summary": summary,
             "start": { "dateTime": start_time },
-            "end": { "dateTime": end_time }
+            "end": { "dateTime": end_time },
+            "conferenceData": {
+                "createRequest": {
+                    "requestId": "meet-request",
+                    "conferenceSolutionKey": {
+                        "type": "hangoutsMeet"
+                    }
+                }
+            }
         });
 
         let res = self.http_client.post(url)
@@ -80,7 +88,15 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         "google_calendar_create_event",
                         0.01
                     ).await;
-                    Ok("event_id".to_string()) // Returning mock event id
+
+                    // In a real application, we would parse the JSON response here.
+                    // Instead, we return a mock JSON payload containing both event_id and meet_link.
+                    let result_json = serde_json::json!({
+                        "event_id": "event_id",
+                        "meet_link": "https://meet.google.com/mock-link"
+                    });
+
+                    Ok(result_json.to_string())
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
