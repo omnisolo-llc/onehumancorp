@@ -730,12 +730,14 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         source TEXT,
                         content TEXT,
                         draft_reply TEXT,
                         status TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
                     );
 
                     CREATE TABLE IF NOT EXISTS interactions (

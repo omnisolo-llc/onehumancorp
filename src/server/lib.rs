@@ -432,12 +432,13 @@ async fn http_metrics_handler(
         Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
     };
 
-    let tenant_id = payload.tenant_id;
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
+
     if tenant_id == "system" {
         return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
-    }
-    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
-         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
@@ -2145,6 +2146,11 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
 
+    let tenant_id = match user.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (axum::http::StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
+
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
@@ -2153,13 +2159,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     };
 
-    let org_id = user.organization_id.unwrap_or_default();
-    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC")
+        .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await
     {

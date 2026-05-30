@@ -117,12 +117,16 @@ async fn handle_webhook(
     let pool = get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to begin transaction for inbox message: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+        }
     };
-    if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+        tracing::error!("Failed to set org context for webhook: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
     }
-    let _ = sqlx::query(
+    if let Err(e) = sqlx::query(
         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(&id)
@@ -132,8 +136,14 @@ async fn handle_webhook(
     .bind(&draft_reply)
     .bind(&status)
     .execute(&mut *tx)
-    .await;
-    let _ = tx.commit().await;
+    .await {
+        tracing::error!("Failed to insert inbox message: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+    }
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit inbox message transaction: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+    }
 
     match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
