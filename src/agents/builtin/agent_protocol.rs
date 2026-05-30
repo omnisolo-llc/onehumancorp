@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 use crate::codex_runner::Runner;
 use std::sync::Arc;
 

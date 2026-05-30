@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::sync::Arc;
 use serde_json::Value;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolCall};

@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 use axum::{
     routing::post,
     Json, Router,

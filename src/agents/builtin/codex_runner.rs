@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc;

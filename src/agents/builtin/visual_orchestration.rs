@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unused_mut)]
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

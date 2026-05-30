@@ -1,6 +1,3 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unused_mut)]
 pub use ::server_harness as harness;
 pub mod api;
 
