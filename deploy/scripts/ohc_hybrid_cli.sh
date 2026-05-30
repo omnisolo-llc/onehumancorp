@@ -54,4 +54,3 @@ while true; do
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
 done
-# Trivial comment to generate diff

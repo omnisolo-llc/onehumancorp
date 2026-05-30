@@ -101,4 +101,3 @@ chmod 0600 "$ENV_FILE"
 echo -e "\n${GREEN}✓ Setup Complete! Your .env file is configured.${RESET}"
 echo -e "${DIM}Note: You can run this wizard again anytime via deploy/scripts/ohc-env-wizard.sh.${RESET}"
 echo ""
-# Trivial comment to generate diff
