@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package ohc.capital;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/capital;capitalpb";
+
+message CapitalOffer {
+  string id = 1;
+  string tenant_id = 2;
+  int64 amount_cents = 3;
+  int64 fee_cents = 4;
+  double sweep_percentage = 5;
+  string status = 6; // PENDING, ACCEPTED, REJECTED, DISBURSED
+  int64 created_at_unix = 7;
+}
+
+message CapitalAdvance {
+  string id = 1;
+  string tenant_id = 2;
+  string offer_id = 3;
+  int64 total_repayment_cents = 4;
+  int64 repaid_cents = 5;
+  string status = 6; // ACTIVE, REPAID, DEFAULTED
+  int64 created_at_unix = 7;
+}
+
+message TransactionLedger {
+  string id = 1;
+  string tenant_id = 2;
+  int64 amount_cents = 3;
+  string type = 4; // SALE, SWEEP, REPAYMENT
+  string reference_id = 5; // sale_id or advance_id
+  int64 created_at_unix = 6;
+}
+
+message GetOffersRequest {
+  string tenant_id = 1;
+}
+
+message GetOffersResponse {
+  repeated CapitalOffer offers = 1;
+}
+
+message AcceptOfferRequest {
+  string tenant_id = 1;
+  string offer_id = 2;
+  string face_id_token = 3;
+}
+
+message AcceptOfferResponse {
+  CapitalAdvance advance = 1;
+}
+
+message ProcessSaleRequest {
+  string tenant_id = 1;
+  int64 sale_amount_cents = 2;
+}
+
+message ProcessSaleResponse {
+  bool success = 1;
+  int64 sweep_amount_cents = 2;
+}
+
+service CapitalEngineService {
+  rpc GetOffers(GetOffersRequest) returns (GetOffersResponse);
+  rpc AcceptOffer(AcceptOfferRequest) returns (AcceptOfferResponse);
+  rpc ProcessSale(ProcessSaleRequest) returns (ProcessSaleResponse);
+}

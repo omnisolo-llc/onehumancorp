@@ -15,5 +15,6 @@ rust_library(
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
+        "//src/proto:capital_tonic",
     ],
 )

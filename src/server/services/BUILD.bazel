@@ -25,6 +25,8 @@ rust_library(
         "//src/server/services/autodream:service.rs",
         "//src/server/services/b2b:mod.rs",
         "//src/server/services/b2b:service.rs",
+        "//src/server/services/capital:mod.rs",
+        "//src/server/services/capital:service.rs",
         "//src/server/services/billing:auditor.rs",
         "//src/server/services/billing:mod.rs",
         "//src/server/services/billing:service.rs",
@@ -197,4 +199,28 @@ rust_sharded_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+# ── Capital ──────────────────────────────────────────────────────────────────
+
+rust_library(
+    name = "server_services_capital",
+    srcs = [
+        "//src/server/services/capital:mod.rs",
+        "//src/server/services/capital:service.rs",
+    ],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:capital_tonic",
+        "//src/proto:capital_prost",
+        "//src/server/db:server_db",
+        "//src/server/auth:server_auth",
+        "@crates//:async-trait",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+        "@crates//:chrono",
+    ],
 )

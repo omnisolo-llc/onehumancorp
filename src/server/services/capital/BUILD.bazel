@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_capital",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:capital_tonic",
+        "//src/proto:capital_prost",
+        "//src/server/db:server_db",
+        "//src/server/auth:server_auth",
+        "@crates//:async-trait",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+exports_files(
+    [
+        "mod.rs",
+        "service.rs",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -49,4 +49,5 @@ fi
 
 npm test -- --run \
   src/app/api/chat/route.test.ts \
-  src/app/api/v1/growth/storefront/embed/route.test.ts
+  src/app/api/v1/growth/storefront/embed/route.test.ts \
+  src/app/capital/page.test.tsx
