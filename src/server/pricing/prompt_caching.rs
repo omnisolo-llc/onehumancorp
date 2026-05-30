@@ -68,7 +68,6 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_set() {
-        let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 1);
 
         let response = cache.get("What is the capital of France?");
@@ -99,7 +98,6 @@ mod tests {
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
         let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set("What is the capital of France?", "Paris", 10000);
 
         let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response.is_some());
