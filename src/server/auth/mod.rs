@@ -594,8 +594,8 @@ impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
 
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
-            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        if ::server_config::get().multitenant && (req.organization_id.is_empty() || req.organization_id == "system") {
+            return Err(Status::invalid_argument("valid organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
         match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
@@ -617,8 +617,8 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
-             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
+        if ::server_config::get().multitenant && (req.organization_id.is_empty() || req.organization_id == "system") {
+             return Err(Status::invalid_argument("valid organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
         let user = self.store.create_user(

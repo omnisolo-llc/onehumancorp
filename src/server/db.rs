@@ -766,6 +766,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS telemetry_buffer (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        tenant_id TEXT NOT NULL,
                         metric_name TEXT NOT NULL,
                         metric_type TEXT NOT NULL,
                         value REAL NOT NULL,
@@ -782,6 +783,26 @@ impl DB {
                         shared_at TIMESTAMP,
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS epics (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tasks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        epic_id TEXT REFERENCES epics(id),
+                        title TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        assigned_agent TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;

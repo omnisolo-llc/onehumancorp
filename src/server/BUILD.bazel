@@ -23,6 +23,7 @@ SERVER_RS_SRCS = [
     "sip.rs",
     "store.rs",
     "tasks.rs",
+    "tenant_isolation_test.rs",
     "ultraplan.rs",
     "//src/server/agents:mod.rs",
     "//src/server/agents:sandbox.rs",
@@ -617,6 +618,29 @@ rust_test(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "tenant_isolation_test",
+    size = "large",
+    srcs = ["tenant_isolation_test.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":server_lib",
+        "//src/proto:hub_tonic",
+        "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
+        "//src/server/config:server_config",
+        "//src/server/ohc:server_ohc",
+        "@crates//:sqlx",
+        "@crates//:temp-env",
+        "@crates//:tokio",
+        "@crates//:tonic",
     ],
 )
 

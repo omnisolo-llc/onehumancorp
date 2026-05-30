@@ -490,11 +490,24 @@ async fn http_login_handler(
             .into_response();
     }
 
-    let tenant_id = payload
-        .organization_id
-        .filter(|id| !id.trim().is_empty())
-        .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
-        .unwrap_or_else(|| "e2e-tenant".to_string());
+    let is_multitenant = ::server_config::get().multitenant;
+    let tenant_id = if is_multitenant {
+        match payload.organization_id.filter(|id| !id.trim().is_empty() && id != "system") {
+            Some(id) => id,
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    axum::Json(HttpErrorResponse { error: "valid organization_id is required in cloud mode".to_string() }),
+                ).into_response();
+            }
+        }
+    } else {
+        payload
+            .organization_id
+            .filter(|id| !id.trim().is_empty())
+            .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
+            .unwrap_or_else(|| "e2e-tenant".to_string())
+    };
 
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
