@@ -1,6 +1,8 @@
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+#[allow(unused_imports)]
+use crate::telemetry;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MetricBatchItem {
