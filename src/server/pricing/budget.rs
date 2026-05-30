@@ -59,6 +59,14 @@ impl BudgetManager {
         ((self.total_limit - *current) * 100.0).round() as i64
     }
 
+    pub fn get_total_limit(&self) -> f64 {
+        self.total_limit
+    }
+
+    pub fn get_total_limit_cents(&self) -> i64 {
+        (self.total_limit * 100.0).round() as i64
+    }
+
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         self.record_spend((amount_cents as f64) / 100.0)
     }
@@ -88,5 +96,9 @@ mod tests {
         assert_eq!(manager.record_spend_cents(1000).unwrap(), false); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
+
+        // test total limit getter
+        assert_eq!(manager.get_total_limit(), 100.0);
+        assert_eq!(manager.get_total_limit_cents(), 10000);
     }
 }

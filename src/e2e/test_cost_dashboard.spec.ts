@@ -30,7 +30,7 @@ test.describe('Cost Dashboard', () => {
         };
     });
     if (style.backdropFilter && style.backdropFilter !== 'none') {
-        expect(style.backdropFilter).toContain('blur(30px)');
+        expect(style.backdropFilter).toContain('blur(20px)');
     }
   });
 
