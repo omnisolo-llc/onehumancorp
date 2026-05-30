@@ -1,3 +1,4 @@
+use crate::orchestration::departments::types::DepartmentType;
 use axum::{
     extract::{Extension, State},
     response::IntoResponse,
@@ -9,7 +10,7 @@ use axum::{
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+
 use ::server_common::Claims;
 
 #[derive(Deserialize)]
