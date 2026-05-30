@@ -229,6 +229,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -849,23 +850,10 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let tenant_id_clone = tenant_id.clone();
+        let llm_cost_f64 = auditor.get_total_cost();
+        let total_revenue_f64 = auditor.get_total_revenue();
 
-        let hub_clone = self.hub.clone();
-
-        let (costs_res, storage_bytes_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
-            }),
-            async move {
-                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
-            }
-        );
-
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
-        let storage_bytes = storage_bytes_res.unwrap_or(0);
+        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2816,11 +2804,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
+    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
+    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
