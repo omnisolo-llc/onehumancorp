@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tier = searchParams.get('tier') || 'Unknown';
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -24,12 +26,12 @@ export default function CheckoutPage() {
         setReferralLink(data.referral_link);
       } else {
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(\`https://ohc.store/join?ref=\${tenant}\`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(\`https://ohc.store/join?ref=\${tenant}\`);
     }
 
     setIsProcessing(false);
@@ -37,13 +39,9 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
-      </header>
-
+    <>
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <p className="text-gray-700">Please enter your payment details below. You selected the <strong>{tier}</strong> plan.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
@@ -52,7 +50,7 @@ export default function CheckoutPage() {
             <button
               onClick={handlePayment}
               disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+              className={\`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm \${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}\`}
             >
               {isProcessing ? 'Processing...' : 'Pay Now'}
             </button>
@@ -65,7 +63,7 @@ export default function CheckoutPage() {
                 if (!amount) return;
 
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
+                  alert(\`Payment of \${amount} successful!\`);
                   router.push('/dashboard');
                 } else {
                   let queue = [];
@@ -81,7 +79,7 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  alert(\`You are offline. Payment of \${amount} saved locally and will process when reconnected.\`);
                   router.push('/dashboard');
                 }
               }}
@@ -129,7 +127,7 @@ export default function CheckoutPage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">\$10 credit</strong>.
             </p>
 
             <div className="space-y-4">
@@ -148,7 +146,7 @@ export default function CheckoutPage() {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                    className={\`px-4 py-2 rounded-lg text-sm font-semibold transition-all \${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}\`}
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
@@ -162,7 +160,7 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  href={\`https://wa.me/?text=\${encodeURIComponent(\`I just bought an amazing product from this store! Use my link to get 10% off your first order: \${referralLink}\`)}\`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -171,7 +169,7 @@ export default function CheckoutPage() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  href={\`https://twitter.com/intent/tweet?text=\${encodeURIComponent(\`I just bought an amazing product from this store! Use my link to get 10% off your first order: \${referralLink}\`)}\`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -191,12 +189,26 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
+    </>
+  );
+}
 
-      <style dangerouslySetInnerHTML={{__html: `
+export default function CheckoutPage() {
+  return (
+    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+      </header>
+
+      <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading checkout...</div>}>
+        <CheckoutContent />
+      </Suspense>
+
+      <style dangerouslySetInnerHTML={{__html: \`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}} />
+      \`}} />
     </div>
   );
 }

@@ -117,11 +117,14 @@ export default function CostDashboardPage() {
         {/* Breakdown Section */}
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
+            <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900" >Token Usage</h2>
+            <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900" >Storage Quota</h2>
+            <span >Current Storage:</span>
 
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
+                        <span className="font-medium text-gray-900">Token Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>

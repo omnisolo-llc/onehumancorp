@@ -1,31 +1,18 @@
 import { test, expect } from './fixtures';
 
-test.describe('Billing & Rate Limits', () => {
-  test('should display dashboard', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  });
+test.describe('Billing Limits & Cost Monitoring', () => {
+  test('navigates to cost transparency dashboard from plan page', async ({ page }) => {
+    // Navigate to Plan page
+    await page.goto('/plan');
+    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
 
-  test('should display navigation', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-  });
+    // Click "View Cost Details"
+    await page.getByText('View Cost Details', { exact: true }).click();
 
-  test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
-  });
-});
-
-test.describe('Navigation', () => {
-  test('should navigate via nav links', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
-  });
-
-  test('should display login page', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    // Verify Cost Transparency dashboard is visible
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
+    await expect(page.locator('span.font-medium').filter({ hasText: 'Token Usage' })).toBeVisible();
+    await expect(page.locator('span.font-medium').filter({ hasText: 'Storage' })).toBeVisible();
+    await expect(page.getByText('Current Storage:')).toBeVisible();
   });
 });

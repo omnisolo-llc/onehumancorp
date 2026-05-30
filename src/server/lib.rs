@@ -4720,11 +4720,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2 style="margin-top: 24px;">Costs</h2>
                             <ul style="list-style: none; padding: 0;">
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>LLM Inference Cost</span>
+                                    <span>Token Usage</span>
                                     <strong id="cost-dashboard-llm">$0.00</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>Storage & CDN</span>
+                                    <span>Storage Quota</span>
                                     <strong id="cost-dashboard-storage">$0.00</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
