@@ -250,18 +250,6 @@ mod tests {
         assert_eq!(resp.id, 2);
     }
 
-    #[tokio::test]
-    async fn test_harness_mcp_server_call_tool_success() {
-        let server = HarnessMcpServer::new();
-        let req_str = r#"{"jsonrpc": "2.0", "id": 3, "method": "callTool", "params": {"name": "harness_action", "arguments": {}}}"#;
-        let res = server.serve(req_str).await.unwrap();
-        let resp: JsonRpcResponse = serde_json::from_str(&res).unwrap();
-        assert!(resp.result.is_some());
-        assert!(resp.error.is_none());
-        assert_eq!(resp.id, 3);
-        let result = resp.result.unwrap();
-        assert_eq!(result, serde_json::json!({"success": true}));
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -297,18 +285,6 @@ impl HarnessMcpServer {
                             "inputSchema": { "type": "object" }
                         }
                     ]
-                })),
-                error: None,
-            };
-            return serde_json::to_string(&resp).map_err(|e| e.to_string());
-        }
-
-        if req.method == "callTool" {
-            let resp = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id,
-                result: Some(serde_json::json!({
-                    "success": true
                 })),
                 error: None,
             };
