@@ -1,0 +1,215 @@
+:root {
+  --ohc-bg: #09090b;
+  --ohc-surface: #0e0e0e;
+  --ohc-surface-2: #151513;
+  --ohc-border: rgba(212, 162, 127, 0.18);
+  --ohc-text: #f4f1e8;
+  --ohc-muted: #b9b3a7;
+  --ohc-accent: #d4a27f;
+  --ohc-accent-2: #f2c8a7;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--ohc-bg);
+  --md-default-fg-color: var(--ohc-text);
+  --md-default-fg-color--light: var(--ohc-muted);
+  --md-default-fg-color--lighter: #8f8a82;
+  --md-primary-fg-color: var(--ohc-bg);
+  --md-primary-bg-color: var(--ohc-text);
+  --md-accent-fg-color: var(--ohc-accent);
+  --md-code-bg-color: #111113;
+  --md-code-fg-color: #f7e3d2;
+  --md-typeset-a-color: var(--ohc-accent-2);
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #fdfdf7;
+  --md-default-fg-color: #20201d;
+  --md-default-fg-color--light: #646057;
+  --md-primary-fg-color: #fdfdf7;
+  --md-primary-bg-color: #20201d;
+  --md-accent-fg-color: #8f552f;
+  --md-typeset-a-color: #8f552f;
+}
+
+body {
+  letter-spacing: 0;
+}
+
+.md-header {
+  background: color-mix(in srgb, var(--md-default-bg-color) 92%, transparent);
+  border-bottom: 1px solid var(--ohc-border);
+  box-shadow: none;
+}
+
+.md-tabs {
+  background: var(--md-default-bg-color);
+  border-bottom: 1px solid var(--ohc-border);
+}
+
+.md-main__inner {
+  margin-top: 0;
+}
+
+.md-content {
+  max-width: 860px;
+}
+
+.md-typeset {
+  font-size: 0.78rem;
+  line-height: 1.75;
+}
+
+.md-typeset h1 {
+  color: var(--md-default-fg-color);
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 0.8rem;
+}
+
+.md-typeset h2 {
+  border-top: 1px solid var(--ohc-border);
+  color: var(--md-default-fg-color);
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+}
+
+.md-typeset h3 {
+  color: var(--md-default-fg-color);
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.md-typeset p,
+.md-typeset li {
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset strong {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset a {
+  text-decoration-thickness: 0.05rem;
+  text-underline-offset: 0.18rem;
+}
+
+.md-typeset code {
+  border: 1px solid color-mix(in srgb, var(--ohc-accent) 16%, transparent);
+  border-radius: 0.35rem;
+  padding: 0.08rem 0.28rem;
+}
+
+.md-typeset pre > code {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.md-typeset .highlight,
+.md-typeset pre {
+  border: 1px solid var(--ohc-border);
+  border-radius: 0.55rem;
+  box-shadow: none;
+}
+
+.md-nav__title {
+  background: transparent;
+  color: var(--md-default-fg-color);
+  font-weight: 700;
+}
+
+.md-nav__item .md-nav__link--active,
+.md-nav__item .md-nav__link--active code {
+  color: var(--ohc-accent-2);
+}
+
+.md-nav__link {
+  border-radius: 0.55rem;
+  padding: 0.24rem 0.45rem;
+}
+
+.md-nav__link:hover {
+  background: color-mix(in srgb, var(--ohc-accent) 10%, transparent);
+}
+
+.md-search__form {
+  border: 1px solid var(--ohc-border);
+  border-radius: 0.65rem;
+  box-shadow: none;
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  background: var(--ohc-surface);
+}
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--ohc-border);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: color-mix(in srgb, var(--ohc-accent) 12%, transparent);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-color: var(--ohc-border);
+  border-radius: 0.55rem;
+  box-shadow: none;
+}
+
+.grid.cards {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  margin-top: 1.2rem;
+}
+
+.grid.cards > * {
+  background: color-mix(in srgb, var(--md-default-bg-color) 86%, var(--ohc-accent) 6%);
+  border: 1px solid var(--ohc-border);
+  border-radius: 0.6rem;
+  padding: 0.9rem 1rem;
+}
+
+.grid.cards h3 {
+  font-size: 0.92rem;
+  margin-top: 0;
+}
+
+.grid.cards p {
+  margin-bottom: 0;
+}
+
+/* Legacy generated docs used inline glass wrappers with white text, which made
+   pages unreadable in the old light theme. Keep wrappers visually neutral. */
+.md-typeset div[style*="backdrop-filter"],
+.md-typeset div[style*="background: rgba(255, 255, 255"],
+.md-typeset div[style*="background-color: rgba(255, 255, 255"] {
+  background: transparent !important;
+  border-color: var(--ohc-border) !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  font-family: inherit !important;
+}
+
+.md-typeset div[style] * {
+  color: inherit;
+}
+
+.md-typeset svg text,
+.md-typeset .mermaid {
+  font-family: inherit !important;
+}
+
+.md-footer {
+  background: var(--md-default-bg-color);
+  border-top: 1px solid var(--ohc-border);
+}
