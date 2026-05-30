@@ -10,6 +10,7 @@ import { InteractiveWalkthrough } from './Walkthrough';
 type Step = {
   targetId: string;
   message: string;
+  title?: string;
 };
 
 type WalkthroughContextType = {
@@ -76,7 +77,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: s.title || "Quick Guide", content: s.message, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -204,16 +205,16 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", title: "Describe Your Business", message: "Start by entering a short description of your business." }, { targetId: "generate-btn", title: "Launch It", message: "Click this button to have our AI build your entire store instantly!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", title: "Connect Your Bank", message: "Click here to securely connect Stripe. This lets you receive payouts directly to your bank account." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "activate-agent-btn", title: "Hire a Helper", message: "Turn this toggle on to activate your AI Support Agent. It will answer customer questions while you sleep!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "The Process", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button

@@ -84,7 +84,7 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      }).catch(err => console.error('Failed to sync onboarding state', err));
+      }).catch(() => {});
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);

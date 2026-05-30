@@ -7,12 +7,14 @@ global.fetch = vi.fn() as any;
 
 describe('TooltipRegistry', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     (global.fetch as any).mockResolvedValue({
+      ok: true,
       json: async () => ({ "test-id": "Fetched tooltip text" })
     });
   });
 
-  it('renders default text on hover', async () => {
+  it('renders fetched text on hover', async () => {
     render(
       <TooltipProvider>
         <WithTooltip id="test-id" defaultText="Default Tooltip">
@@ -27,6 +29,11 @@ describe('TooltipRegistry', () => {
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
       width: 100, height: 20, top: 0, left: 0, bottom: 20, right: 100, x: 0, y: 0, toJSON: () => {}
     }));
+
+    // Wait for initial fetch to complete
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/tooltips");
+    });
 
     fireEvent.mouseEnter(button.parentElement!);
 

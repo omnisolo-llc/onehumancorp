@@ -158,12 +158,6 @@ sh_binary(
     }),
 )
 
-# Alias to run hello-world agent easily
-alias(
-    name = "hello-world",
-    actual = "//src/examples/hello-world-agent:hello-world",
-    tags = ["manual"],
-)
 
 # gazelle:prefix onehumancorp
 gazelle(name = "gazelle")
