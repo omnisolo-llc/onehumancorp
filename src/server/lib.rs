@@ -1152,10 +1152,10 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1199,10 +1199,10 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1974,13 +1974,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, organization_id)
+                    PRIMARY KEY (tenant_id, user_id)
                 );"
             )
             .execute(pool)
@@ -2164,7 +2163,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages WHERE tenant_id =  ORDER BY created_at DESC")
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC")
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await
