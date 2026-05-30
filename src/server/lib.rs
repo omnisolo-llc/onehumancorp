@@ -5039,7 +5039,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            const url = encodeURIComponent(`ohc://join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
