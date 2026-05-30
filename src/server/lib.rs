@@ -281,6 +281,16 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let certs = req.peer_certs().map(|c| c.iter().map(|cert| cert.as_ref().to_vec()).collect::<Vec<Vec<u8>>>());
+        let validator = ::server_auth::spiffe::SpiffeValidator::new();
+        use ::server_auth::spiffe::IdentityValidator;
+        match validator.validate_svid(certs) {
+            Ok(svid) => tracing::info!("mTLS successful, verified SVID: {}", svid),
+            Err(e) => return Err(e),
+        }
+    }
+
     let spiffe_id = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
 
@@ -2784,7 +2794,26 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
-    Server::builder()
+    let mut builder = Server::builder();
+
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let cert_pem = std::env::var("OHC_TLS_CERT").unwrap_or_default();
+        let key_pem = std::env::var("OHC_TLS_KEY").unwrap_or_default();
+        let ca_pem = std::env::var("OHC_TLS_CA").unwrap_or_default();
+
+        if !cert_pem.is_empty() && !key_pem.is_empty() && !ca_pem.is_empty() {
+            let key = tonic::transport::Identity::from_pem(&cert_pem, &key_pem);
+            let ca = tonic::transport::Certificate::from_pem(&ca_pem);
+
+            let tls = tonic::transport::ServerTlsConfig::new()
+                .identity(key)
+                .client_ca_root(ca);
+
+            builder = builder.tls_config(tls)?;
+        }
+    }
+
+    builder
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
