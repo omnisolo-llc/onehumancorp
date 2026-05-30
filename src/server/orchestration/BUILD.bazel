@@ -61,6 +61,7 @@ rust_library(
         "//src/server/orchestration/departments:mod.rs",
         "//src/server/orchestration/departments:operations_agent.rs",
         "//src/server/orchestration/departments:orchestrator.rs",
+        "//src/server/orchestration/departments:discovery_agent.rs",
         "//src/server/orchestration/departments:sales_agent.rs",
         "//src/server/orchestration/departments:throttling.rs",
         "//src/server/orchestration/departments:types.rs",
