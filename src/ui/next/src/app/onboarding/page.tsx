@@ -159,7 +159,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
+          company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
