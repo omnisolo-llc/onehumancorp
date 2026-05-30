@@ -183,11 +183,13 @@ export function HelpChat() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
+              aria-label="Chat input message"
               className="flex-1 bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter"
             />
             <button
               type="submit"
               disabled={!inputValue.trim()}
+              aria-label="Send message"
               className="bg-blue-600/90 backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/90 transition-colors shadow-sm"
               aria-label="Send message"
             >
