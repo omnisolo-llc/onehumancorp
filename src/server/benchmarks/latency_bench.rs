@@ -404,7 +404,7 @@ pub async fn bench_advisory_insights_latency() {
             let tenant_id = "system".to_string();
 
             let start = std::time::Instant::now();
-            let res = tokio::try_join!(
+            let (_org_res, _active_orders_res) = tokio::join!(
                 async {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -422,7 +422,6 @@ pub async fn bench_advisory_insights_latency() {
                     .await
                 }
             );
-            let (_org_res, _active_orders_res) = res.unwrap_or((None, 0));
 
             fetch_times.push(start.elapsed().as_micros());
         }

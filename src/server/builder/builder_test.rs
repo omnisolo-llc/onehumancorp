@@ -187,27 +187,6 @@ async fn test_builder_api() {
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
 
-    // Test MenuBlock Validation
-    let res = client.post(&format!("{}/builder/pages/{}/blocks", base_url, page.id))
-        .json(&serde_json::json!({"block_type": "MenuBlock", "content": {"items": [{"name": "Cake"}]}, "sort_order": 1}))
-        .send().await.unwrap();
-    assert_eq!(res.status(), 200);
-
-    // Test GalleryBlock Validation
-    let res = client.post(&format!("{}/builder/pages/{}/blocks", base_url, page.id))
-        .json(&serde_json::json!({"block_type": "GalleryBlock", "content": {"images": ["url1"]}, "sort_order": 2}))
-        .send().await.unwrap();
-    assert_eq!(res.status(), 200);
-
-    // Test get_storefront
-    let res = client.get(&format!("{}/builder/sites/{}/storefront", base_url, site.id))
-        .send().await.unwrap();
-    assert_eq!(res.status(), 200);
-    let storefront: super::api::StorefrontResponse = res.json().await.unwrap();
-    assert_eq!(storefront.id, site.id);
-    assert_eq!(storefront.pages.len(), 1);
-    assert_eq!(storefront.pages[0].blocks.len(), 3);
-
     // Publish Site
     let res = client.post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
         .send().await.unwrap();

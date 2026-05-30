@@ -25,6 +25,3 @@ pub mod common {
 pub mod app {
     pub use app_proto::ohc::api::v1::*;
 }
-pub mod campaign {
-    pub use campaign_proto::ohc::campaign::*;
-}

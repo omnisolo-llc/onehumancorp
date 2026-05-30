@@ -99,28 +99,26 @@ impl KairosOrchestrator {
                 let mut tx = self.db.pool.begin().await.map_err(KairosError::Database)?;
 
                 // Update the task status to COMPLETED
-                let updated_id: Option<String> = if task_type == "swarm" {
+                let result = if task_type == "swarm" {
                     let id_uuid = uuid::Uuid::parse_str(task_id).unwrap_or_default();
-                    let row = sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = $1 WHERE id = $2 AND assigned_agent_id = $3 RETURNING id::text")
+                    sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = $1 WHERE id = $2 AND assigned_agent_id = $3")
                         .bind(now)
                         .bind(id_uuid)
                         .bind(agent_id)
-                        .fetch_optional(&mut *tx)
+                        .execute(&mut *tx)
                         .await
-                        .map_err(KairosError::Database)?;
-                    row.map(|r| r.get("id"))
+                        .map_err(KairosError::Database)?
                 } else {
-                    let row = sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = $1 WHERE id = $2 AND assigned_agent_id = $3 RETURNING id")
+                    sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = $1 WHERE id = $2 AND assigned_agent_id = $3")
                         .bind(now)
                         .bind(task_id)
                         .bind(agent_id)
-                        .fetch_optional(&mut *tx)
+                        .execute(&mut *tx)
                         .await
-                        .map_err(KairosError::Database)?;
-                    row.map(|r| r.get("id"))
+                        .map_err(KairosError::Database)?
                 };
 
-                if updated_id.is_some() {
+                if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
                         "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES ($1, $2, 'EXECUTING', 'COMPLETED', $3, $4)"
@@ -168,27 +166,25 @@ impl KairosOrchestrator {
                 let _lock = self.sqlite_mutex.lock().await;
                 let mut tx = sqlite_pool.begin().await.map_err(KairosError::Database)?;
 
-                let updated_id: Option<String> = if task_type == "swarm" {
-                    let row = sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ? AND assigned_agent_id = ? RETURNING id")
+                let result = if task_type == "swarm" {
+                    sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ? AND assigned_agent_id = ?")
                         .bind(now.to_rfc3339())
                         .bind(task_id)
                         .bind(agent_id)
-                        .fetch_optional(&mut *tx)
+                        .execute(&mut *tx)
                         .await
-                        .map_err(KairosError::Database)?;
-                    row.map(|r| r.get("id"))
+                        .map_err(KairosError::Database)?
                 } else {
-                    let row = sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ? AND assigned_agent_id = ? RETURNING id")
+                    sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ? AND assigned_agent_id = ?")
                         .bind(now.to_rfc3339())
                         .bind(task_id)
                         .bind(agent_id)
-                        .fetch_optional(&mut *tx)
+                        .execute(&mut *tx)
                         .await
-                        .map_err(KairosError::Database)?;
-                    row.map(|r| r.get("id"))
+                        .map_err(KairosError::Database)?
                 };
 
-                if updated_id.is_some() {
+                if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
                         "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES (?, ?, 'EXECUTING', 'COMPLETED', ?, ?)"

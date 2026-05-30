@@ -1,54 +1,43 @@
 import { test, expect } from './fixtures';
 
-test.describe('Integrations Page UI', () => {
-  test('displays Integrations page and filters correctly', async ({ page }) => {
-    await page.goto('/integrations');
-
-    await expect(page.locator('h1')).toHaveText('Tool Integrations');
-
-    // Default 'all' tab shows ManyChat and Calendly
-    await expect(page.locator('text=ManyChat')).toBeVisible();
-    await expect(page.locator('text=Calendly')).toBeVisible();
-    await expect(page.locator('text=Shippo')).toBeVisible();
-
-    // Click on Operations tab
-    await page.getByRole('button', { name: 'Operations' }).click();
-    await expect(page.locator('text=Calendly')).toBeVisible();
-    await expect(page.locator('text=Shippo')).toBeVisible();
-    // ManyChat should be hidden
-    await expect(page.locator('text=ManyChat')).not.toBeVisible();
-
-    // Click on Marketing tab
-    await page.getByRole('button', { name: 'Marketing' }).click();
-    await expect(page.locator('text=ManyChat')).toBeVisible();
-    await expect(page.locator('text=Mailchimp')).toBeVisible();
-    await expect(page.locator('text=Calendly')).not.toBeVisible();
-
-    // Click on Finance tab
-    await page.getByRole('button', { name: 'Finance' }).click();
-    await expect(page.locator('text=Mercado Pago')).toBeVisible();
-    await expect(page.locator('text=ManyChat')).not.toBeVisible();
+test.describe('Integrations Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.getByText('Connect Tools').click();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
   });
 
-  test('connects Twilio integration via modal', async ({ page }) => {
-    await page.goto('/integrations');
+  test('shows the custom software integration page', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Custom Integration' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Custom Software', exact: true })).toBeVisible();
+  });
 
-    // Find the button directly by navigating from the text
-    await page.locator('h3', { hasText: 'Twilio Conversations' }).locator('..').getByRole('button', { name: 'Connect' }).click();
+  test('shows product data access copy', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Product Data Access' })).toBeVisible();
+    await expect(page.getByText('Read Product List')).toBeVisible();
+    await expect(page.getByText('Manage your custom software connections here.')).toBeVisible();
+  });
 
-    // Verify modal appears
-    const modal = page.locator('text=Connect Twilio Conversations');
-    await expect(modal).toBeVisible();
+  test('can return to dashboard from integrations', async ({ page }) => {
+    await page.getByRole('button', { name: 'Back to Dashboard' }).click();
 
-    // Toggle Instagram - this requires clicking the button next to the text
-    const instagramRow = page.locator('div').filter({ hasText: /^instagram$/i }).first();
-    await instagramRow.locator('button').click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
 
-    // Click Save & Connect
-    await page.getByRole('button', { name: 'Save & Connect' }).click();
+  test('opens integrations from dashboard quick actions', async ({ page }) => {
+    await page.getByRole('button', { name: 'Back to Dashboard' }).click();
+    await page.getByRole('button', { name: 'Integrations' }).click();
 
-    // Verify routing to /inbox
-    await page.waitForURL('**/inbox');
-    expect(page.url()).toContain('/inbox');
+    await expect(page.getByRole('heading', { name: /Ayrshare/ })).toBeVisible();
+    await expect(page.locator('#ayrshare-integration').getByRole('button', { name: 'Configure' })).toBeVisible();
+  });
+
+  test('configure action routes to inbox', async ({ page }) => {
+    await page.getByRole('button', { name: 'Back to Dashboard' }).click();
+    await page.getByRole('button', { name: 'Integrations' }).click();
+    await page.locator('#ayrshare-integration').getByRole('button', { name: 'Configure' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
+    await expect(page.getByText('Facebook User')).toBeVisible();
   });
 });

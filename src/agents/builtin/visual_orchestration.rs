@@ -72,7 +72,7 @@ impl VisualOrchestrator {
             visited.insert(current_node_id.clone());
 
             match node {
-                OrchestrationNode::Input { name: _ } => {
+                OrchestrationNode::Input { name } => {
                     // Start block; variables should be in state already.
                 }
                 OrchestrationNode::Llm { prompt_template } => {

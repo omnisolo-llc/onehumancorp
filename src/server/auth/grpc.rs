@@ -78,13 +78,6 @@ impl AuthConfig {
     }
 
     fn check_spiffe(&self, req: &Request<()>, allowed_id: Option<&str>) -> Result<(), Status> {
-        if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
-            let certs = req.peer_certs().map(|c| c.iter().map(|cert| cert.as_ref().to_vec()).collect::<Vec<Vec<u8>>>());
-            let validator = crate::spiffe::SpiffeValidator::new();
-            use crate::spiffe::IdentityValidator;
-            validator.validate_svid(certs)?;
-        }
-
         let md = req.metadata();
         let spiffe_id = md.get("x-spiffe-id")
             .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
