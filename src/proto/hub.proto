@@ -1568,6 +1568,7 @@ service IntegrationService {
   rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse);
   rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
   rpc GetBookingLink(GetBookingLinkRequest) returns (GetBookingLinkResponse);
+  rpc GenerateMeetingForBooking(GenerateMeetingForBookingRequest) returns (GenerateMeetingForBookingResponse);
 }
 
 message McpToolProto {
@@ -1702,5 +1703,15 @@ message GetBookingLinkRequest {
 }
 
 message GetBookingLinkResponse {
+  string link = 1;
+}
+
+message GenerateMeetingForBookingRequest {
+  string integration_id = 1;
+  string booking_id = 2;
+  string topic = 3;
+}
+
+message GenerateMeetingForBookingResponse {
   string link = 1;
 }
