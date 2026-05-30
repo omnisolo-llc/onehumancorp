@@ -86,6 +86,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/generate-milestone-post", post(handle_generate_milestone_post))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -128,6 +129,17 @@ pub struct GenerateCustomerReferralRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCustomerReferralResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateMilestonePostRequest {
+    pub tenant: Option<String>,
+    pub milestone: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateMilestonePostResponse {
     pub message: String,
 }
 
@@ -222,6 +234,21 @@ async fn handle_generate_customer_referral(
         store, store
     );
     Json(GenerateCustomerReferralResponse {
+        message: generated,
+    })
+}
+
+async fn handle_generate_milestone_post(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateMilestonePostRequest>,
+) -> impl IntoResponse {
+    let store = req.tenant.unwrap_or_else(|| "my-store".to_string());
+    let _milestone = req.milestone.unwrap_or_else(|| "100th Order".to_string());
+    let generated = format!(
+        "I just hit a new milestone on OneHumanCorp! 🎉 So incredibly thankful for all the support.\n\nStart your own business journey for free today: https://ohc.app/ref/{}\n\n#SmallBusiness #Entrepreneur #PoweredByOHC",
+        store
+    );
+    Json(GenerateMilestonePostResponse {
         message: generated,
     })
 }
@@ -930,6 +957,27 @@ mod tests {
         assert!(res_json.message.contains("Maya Cakes"));
         assert!(res_json.message.contains("VIP Referral Program"));
     }
+
+#[tokio::test]
+async fn test_generate_milestone_post() {
+    let pool = setup_db().await;
+    if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+        println!("Skipping DB test, DB not available");
+        return;
+    }
+    let (event_tx, _) = tokio::sync::mpsc::channel(100);
+    let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+    let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+    let req = GenerateMilestonePostRequest { tenant: Some("Maya Cakes".to_string()), milestone: Some("10th Order".to_string()) };
+    let res = handle_generate_milestone_post(Extension(state.clone()), Json(req)).await;
+
+    let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+    let res_json: GenerateMilestonePostResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+    assert!(res_json.message.contains("Maya Cakes"));
+    assert!(res_json.message.contains("I just hit a new milestone"));
+}
 
     #[tokio::test]
     async fn test_generate_cart() {

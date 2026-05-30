@@ -113,6 +113,9 @@ export default function Dashboard() {
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+  const [showMilestoneShareModal, setShowMilestoneShareModal] = useState<boolean>(false);
+  const [milestoneShareMessage, setMilestoneShareMessage] = useState<string>("");
+  const [isGeneratingMilestoneShare, setIsGeneratingMilestoneShare] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
@@ -803,6 +806,71 @@ export default function Dashboard() {
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">🤝</div>
                     <span className="text-sm font-medium text-gray-600 text-center">+25% more new customers</span>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Viral Milestone Sharing */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Viral Milestone Sharing</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                        <span className="text-xs font-medium text-yellow-600">Growth & Virality</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Celebrate & Grow</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You hit <strong>100 Orders!</strong> Share your success on social media to earn a free month of OHC Premium.</p>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-lg">
+                                    🎉
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">100th Order Milestone</h4>
+                                    <p className="text-xs text-gray-500">Unlocked today</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    setShowMilestoneShareModal(true);
+                                    setIsGeneratingMilestoneShare(true);
+                                    try {
+                                        const response = await fetch('/api/v1/growth/campaign/generate-milestone-post', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                tenant: 'my-store',
+                                                milestone: '100th Order'
+                                            })
+                                        });
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            setMilestoneShareMessage(data.message);
+                                        } else {
+                                            setMilestoneShareMessage("I just hit a new milestone on OneHumanCorp! 🎉 Start your own business journey for free: https://ohc.app/ref/my-store");
+                                        }
+                                    } catch (e) {
+                                        console.error("Failed to generate milestone post", e);
+                                        setMilestoneShareMessage("I just hit a new milestone on OneHumanCorp! 🎉 Start your own business journey for free: https://ohc.app/ref/my-store");
+                                    } finally {
+                                        setIsGeneratingMilestoneShare(false);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                Share Milestone & Get Free Month
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                    <div className="text-4xl mb-3">📢</div>
+                    <span className="text-sm font-medium text-gray-600 text-center">Viral Potential</span>
                 </div>
             </div>
          </section>
@@ -1699,6 +1767,67 @@ export default function Dashboard() {
                             Send Campaign
                         </button>
                     )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Milestone Share Modal */}
+      {showMilestoneShareModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-yellow-600">
+                🎉
+              </div>
+              <button
+                onClick={() => setShowMilestoneShareModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Share Your Success</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              We've drafted a viral social media post for you. Share this to earn a free month!
+            </p>
+            <div className="space-y-4">
+              {isGeneratingMilestoneShare ? (
+                 <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center min-h-[160px]">
+                    <svg className="animate-spin h-8 w-8 text-yellow-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span className="text-sm font-medium text-gray-500">Drafting viral post...</span>
+                 </div>
+              ) : (
+                <>
+                    <textarea
+                        value={milestoneShareMessage}
+                        onChange={(e) => setMilestoneShareMessage(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        rows={6}
+                    />
+                    <div className="flex gap-2">
+                      <a
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(milestoneShareMessage)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                      >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                          Share to X
+                      </a>
+                      <button
+                          onClick={() => {
+                              navigator.clipboard.writeText(milestoneShareMessage);
+                              alert("Copied to clipboard!");
+                          }}
+                          className="flex-1 py-3 bg-gray-100 text-gray-800 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors"
+                      >
+                          Copy Text
+                      </button>
+                    </div>
                 </>
               )}
             </div>
