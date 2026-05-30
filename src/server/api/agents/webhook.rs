@@ -8,7 +8,7 @@ use axum::{
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+use crate::orchestration::departments::types::DepartmentType;
 use uuid::Uuid;
 use crate::db::get_pool;
 

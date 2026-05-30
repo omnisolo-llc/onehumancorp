@@ -6,7 +6,7 @@ use std::sync::RwLock;
 use crate::provider::{
     Provider, ProviderType, Credentials, ClaudeProvider, GeminiProvider,
     OpenCodeProvider, OpenClawProvider, IronClawProvider, MiniMaxiProvider,
-    BuiltinProvider, ScoutProvider
+    BuiltinProvider
 };
 
 pub struct Registry {
@@ -29,7 +29,6 @@ impl Registry {
         r.register(Arc::new(IronClawProvider::new()));
         r.register(Arc::new(MiniMaxiProvider::new()));
         r.register(Arc::new(BuiltinProvider::new()));
-        r.register(Arc::new(ScoutProvider::new()));
         r
     }
 
@@ -55,7 +54,6 @@ impl Registry {
             ProviderType::OpenClaw,
             ProviderType::IronClaw,
             ProviderType::Builtin,
-            ProviderType::Scout,
             ProviderType::MiniMaxi,
         ];
 

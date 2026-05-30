@@ -17,7 +17,6 @@ pub enum ProviderType {
     OpenClaw,
     IronClaw,
     Builtin,
-    Scout,
     MiniMaxi,
 }
 
@@ -30,7 +29,6 @@ impl std::fmt::Display for ProviderType {
             ProviderType::OpenClaw => "openclaw",
             ProviderType::IronClaw => "ironclaw",
             ProviderType::Builtin => "builtin",
-            ProviderType::Scout => "scout",
             ProviderType::MiniMaxi => "minimaxi",
         };
         write!(f, "{}", s)
@@ -380,30 +378,3 @@ impl Provider for BuiltinProvider {
     }
 }
 
-pub struct ScoutProvider {
-    base: BaseProvider,
-}
-
-impl ScoutProvider {
-    pub fn new() -> Self {
-        ScoutProvider { base: BaseProvider::new() }
-    }
-}
-
-#[async_trait]
-impl Provider for ScoutProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::Scout }
-    fn description(&self) -> String { "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities".to_string() }
-    fn supported_roles(&self) -> Vec<String> {
-        vec!["RESOURCE_SCOUT".to_string(), "TOOL_INTEGRATOR".to_string()]
-    }
-    fn authenticate(&self, creds: Credentials) -> Result<(), String> {
-        self.base.store(creds);
-        Ok(())
-    }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
-    }
-}
