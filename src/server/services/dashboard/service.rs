@@ -67,6 +67,7 @@ impl DashboardService for MyDashboardService {
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
+        // Mobile Payload Optimization: Ensure mobile payloads never over-fetch by selecting only what's needed
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
                 let cache_key = format!("hub:agents:{}:{}", org_id_agents, mobile_optimized);
