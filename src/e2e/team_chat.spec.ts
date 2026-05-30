@@ -16,11 +16,11 @@ test.describe('Team Chat AI Agent Routing', () => {
     // 4. Send the required message
     const message = 'Draft a welcome email for new newsletter subscribers';
     await page.getByTestId('team-chat-input').fill(message);
-    await page.getByTestId('team-chat-send').click({ force: true });
+    await page.getByTestId('team-chat-send').click();
 
     // 5. Assert the response comes from "The Promoter" with an action card
     const actionCard = page.getByTestId('action-card').last();
-    await expect(actionCard).toBeVisible({ timeout: 15000 });
+    await expect(actionCard).toBeVisible({ timeout: 10000 });
 
     // Check that it's routed to The Promoter
     await expect(actionCard.getByText('The Promoter')).toBeVisible();

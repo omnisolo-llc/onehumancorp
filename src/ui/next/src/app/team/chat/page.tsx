@@ -114,11 +114,7 @@ export default function TeamChatPage() {
 
                 {/* Action Card if present */}
                 {msg.card && (
-                  <div
-                    className="p-4 shadow-sm relative overflow-hidden rounded-[16px]"
-                    style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
-                    data-testid="action-card"
-                  >
+                  <div className="bg-white/60 backdrop-blur-md border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
                     <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-green-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}></div>
                     <div className="flex items-center gap-2 mb-2">
                       {msg.card.status === 'pending' ? (
@@ -134,12 +130,12 @@ export default function TeamChatPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApprove(msg.id)}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-[8px] transition-colors"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
                           data-testid="approve-action-btn"
                         >
                           Approve & Execute
                         </button>
-                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-[8px] transition-colors">
+                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
                           Edit
                         </button>
                       </div>
@@ -153,7 +149,7 @@ export default function TeamChatPage() {
 
         {/* Input */}
         <div className="p-4 border-t border-gray-100 bg-white">
-          <div className="flex items-center bg-gray-50 rounded-[8px] border border-gray-200 px-4 py-2">
+          <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 px-4 py-2">
             <input
               type="text"
               className="flex-1 bg-transparent border-none outline-none text-sm"
