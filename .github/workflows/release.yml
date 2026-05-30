@@ -327,9 +327,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
 
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
@@ -356,9 +356,9 @@ jobs:
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
           DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
@@ -385,13 +385,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $versionTag = $env:GITHUB_REF_NAME
 
-          $bundleRoots = @(
-            'target/release/bundle',
-            'target/x86_64-pc-windows-msvc/release/bundle'
-          ) | Where-Object { Test-Path $_ }
-          $msi = $bundleRoots | ForEach-Object {
-            Get-ChildItem -Path $_ -Recurse -Include *.msi -ErrorAction SilentlyContinue
-          } | Select-Object -First 1
+          $msi = Get-ChildItem -Path 'src/ui/tauri/target/release/bundle' -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
@@ -404,8 +398,8 @@ jobs:
           }
 
           $exeCandidates = @(
-            'target/release/app.exe',
-            'target/x86_64-pc-windows-msvc/release/app.exe'
+            'src/ui/tauri/target/release/app.exe',
+            'src/ui/tauri/target/x86_64-pc-windows-msvc/release/app.exe'
           )
           $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if ($null -eq $exe) {
@@ -426,7 +420,7 @@ jobs:
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
           ARCH="${{ matrix.arch }}"
-          BUNDLE_ROOT="target/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
 
           APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
           DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
