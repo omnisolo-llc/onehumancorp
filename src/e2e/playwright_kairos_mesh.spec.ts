@@ -17,15 +17,10 @@ test('Broadcast KAIROS mesh message validates payload', async ({ request }) => {
     // Attempt valid request
     response = await request.post('/api/mesh/v2/broadcast', {
         data: {
-            topic: "test_channel",
-            message: {
-                agent_id: "agent-1",
-                action: "TEST_EVENT",
-                status: "ok",
-                channel: "test_channel",
-                payload: [116, 101, 115, 116],
-                msg_id: "test-123"
-            }
+            agent_id: "spiffe://example.org/agent-1",
+            channel: "mesh:tasks",
+            event_type: "TEST_EVENT",
+            data: { test: "data" }
         }
     });
     // 200 means it passed validation and was handled
