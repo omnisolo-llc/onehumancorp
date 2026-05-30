@@ -76,6 +76,7 @@ pub struct OnboardingMetricsResponse {
 
 
 
+
 pub async fn handle_wall_of_love_embed(axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>) -> impl IntoResponse {
     let tenant = params.get("tenant").cloned().unwrap_or_else(|| "my-store".to_string());
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
@@ -310,7 +311,7 @@ async fn handle_storefront_embed(
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
-    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+    let safe_tenant = tenant;
 
     let html = format!(r##"
 <!DOCTYPE html>
