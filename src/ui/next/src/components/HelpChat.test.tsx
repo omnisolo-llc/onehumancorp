@@ -9,6 +9,7 @@ global.fetch = vi.fn() as any;
 describe('HelpChat Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
   it('renders the floating button initially', () => {
