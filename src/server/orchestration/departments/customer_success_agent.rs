@@ -44,14 +44,9 @@ impl Department for CustomerSuccessAgent {
         };
 
         if event.event_type == "agent:customer_success:approved" {
-            let payload = &event.payload;
-            let original = payload.get("original_payload");
-            let message = if let Some(orig) = original {
-                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
-            } else {
-                "Unknown response"
-            };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+            // Actual logic to send the message when approved.
+            // For now, we simulate sending the message.
+            tracing::info!("Simulating sending approved message for tenant");
             return Ok(());
         }
 
