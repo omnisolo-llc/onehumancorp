@@ -207,7 +207,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Review and add any extra details to help our AI generate the perfect store.
+                    Zero tech skills needed. We do the heavy lifting to help our AI generate the perfect store.
                   </p>
 
                   <div className="flex flex-col gap-4">
@@ -230,7 +230,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 1 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
+
+                  <button onClick={() => setWizardStep(0)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
@@ -250,7 +253,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 2 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
+
+                  <button onClick={() => setWizardStep(1)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
@@ -272,7 +278,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 3 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
+
+                  <button onClick={() => setWizardStep(2)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
                       <input
@@ -304,7 +313,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 4 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
+
+                  <button onClick={() => setWizardStep(3)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
@@ -334,7 +346,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 5 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
+
+                  <button onClick={() => setWizardStep(4)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <button
                       className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
@@ -354,7 +369,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 6 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
+
+                  <button onClick={() => setWizardStep(5)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
@@ -392,7 +410,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 7 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
+
+                  <button onClick={() => setWizardStep(6)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
@@ -412,7 +433,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '7.5' && (
                 <>
-                  <div className="flex flex-col gap-4 mt-6">
+
+                  <button onClick={() => setWizardStep(7)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(8)}
@@ -425,7 +449,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 8 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
+
+                  <button onClick={() => setWizardStep('7.5')} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
@@ -445,7 +472,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '8.5' && (
                 <>
-                  <div className="flex flex-col gap-4 mt-6">
+
+                  <button onClick={() => setWizardStep(8)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(9)}
@@ -458,7 +488,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 9 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
+
+                  <button onClick={() => setWizardStep('8.5')} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
@@ -477,7 +510,10 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 'instant-build' && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
+
+                  <button onClick={() => setWizardStep(0)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
                       className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"

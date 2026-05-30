@@ -354,6 +354,10 @@ export default function Dashboard() {
          <div className="flex justify-between items-center w-full">
           <div className="flex justify-between items-center w-full">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <div className="flex gap-2">
+            <button className="px-4 py-2 bg-white text-sm font-semibold rounded-lg shadow border hover:bg-gray-50" onClick={() => window.location.href='/agents'}>Manage AI Assistants</button>
+            <button className="px-4 py-2 bg-white text-sm font-semibold rounded-lg shadow border hover:bg-gray-50" onClick={() => window.location.href='/settings'}>Settings</button>
+          </div>
           <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
             Offline - Changes saved locally
           </div>
