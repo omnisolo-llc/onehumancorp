@@ -100,7 +100,7 @@ impl Forecaster {
         let budget_threshold = 100_000.0;
 
         for (org_id, forecast) in forecasts {
-            let _ = crate::record_token_burn_rate_predicted_24h(&self.pool, &org_id, forecast).await;
+            let _ = crate::record_token_burn_rate(&self.pool, &org_id, forecast as f64).await;
 
             if forecast > budget_threshold {
                 let _ = crate::record_token_budget_alert(&self.pool, &org_id, "predicted_24h_exceeded").await;
@@ -161,7 +161,7 @@ mod tests {
         forecaster.run_forecast_cycle().await.unwrap();
 
         // Check if predicted_24h is recorded
-        let row: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+        let row: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 
@@ -170,7 +170,7 @@ mod tests {
 
         // Cycle 2: No new tokens, should decay
         forecaster.run_forecast_cycle().await.unwrap();
-        let row2: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+        let row2: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 

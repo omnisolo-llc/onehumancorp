@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::{Counter, UpDownCounter};
+use opentelemetry::metrics::{Counter, UpDownCounter, Gauge};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -26,6 +26,7 @@ static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static TOKEN_BURN_RATE_GAUGE: OnceLock<Gauge<f64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -275,6 +276,17 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
     })
 }
 
+
+pub fn get_token_burn_rate_gauge() -> &'static Gauge<f64> {
+    TOKEN_BURN_RATE_GAUGE.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter
+            .f64_gauge("ohc_token_burn_rate_forecast")
+            .with_description("Predicted 24h token burn rate for a tenant")
+            .build()
+    })
+}
+
 pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
     SYNC_DAEMON_BATCH_SIZE_HISTOGRAM.get_or_init(|| {
         let meter = global::meter("ohc.daemon");
@@ -515,16 +527,22 @@ pub async fn record_outbound_api_cost(
     .await
 }
 
-pub async fn record_token_burn_rate_predicted_24h(
+
+pub async fn record_token_burn_rate(
     pool: &PgPool,
     org_id: &str,
-    forecast: f32,
+    forecast: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    get_token_burn_rate_gauge().record(
+        forecast,
+        &[opentelemetry::KeyValue::new("organization_id", org_id.to_string())],
+    );
+
     buffer_metric(
         pool,
-        "ohc_token_burn_rate_predicted_24h",
+        "ohc_token_burn_rate_forecast",
         "gauge",
-        forecast,
+        forecast as f32,
         serde_json::json!({ "organization_id": org_id }),
     )
     .await
