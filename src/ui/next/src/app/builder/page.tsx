@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { useBuilderStore } from "./store";
 
 export default function BuilderPage() {
@@ -387,17 +388,19 @@ export default function BuilderPage() {
                 </p>
 
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Your Business Details</label>
-                <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-                  <textarea
-                    id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
-                    style={{ borderRadius: '8px' }}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="e.g. I run a mobile dog grooming service in Portland"
-                    rows={6}
-                  />
-                </WithTooltip>
+                <WalkthroughTarget id="bio-input">
+                  <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                    <textarea
+                      id="bio-input"
+                      className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                      style={{ borderRadius: '12px' }}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="e.g. I run a mobile dog grooming service in Portland"
+                      rows={6}
+                    />
+                  </WithTooltip>
+                </WalkthroughTarget>
 
                 <div className="flex gap-4">
                   <button

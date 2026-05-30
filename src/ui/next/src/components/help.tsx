@@ -14,6 +14,7 @@ type Step = {
 
 type WalkthroughContextType = {
   startWalkthrough: (steps: Step[]) => void;
+  queueWalkthrough: (steps: Step[]) => void;
   nextStep: () => void;
   endWalkthrough: () => void;
 };
@@ -23,11 +24,27 @@ const WalkthroughContext = createContext<WalkthroughContextType | undefined>(und
 export function WalkthroughProvider({ children }: { children: ReactNode }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const [pendingWalkthrough, setPendingWalkthrough] = useState<Step[] | null>(null);
 
   const startWalkthrough = (newSteps: Step[]) => {
     setSteps(newSteps);
     setCurrentStepIndex(0);
   };
+
+  const queueWalkthrough = (newSteps: Step[]) => {
+    setPendingWalkthrough(newSteps);
+  };
+
+  useEffect(() => {
+    if (pendingWalkthrough) {
+      // Small timeout to allow DOM to render after a route change
+      const timer = setTimeout(() => {
+        startWalkthrough(pendingWalkthrough);
+        setPendingWalkthrough(null);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingWalkthrough]);
 
   const nextStep = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -72,7 +89,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
   }, [activeStep]);
 
   return (
-    <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough }}>
+    <WalkthroughContext.Provider value={{ startWalkthrough, queueWalkthrough, nextStep, endWalkthrough }}>
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
@@ -95,7 +112,7 @@ export function useWalkthrough() {
 // --- Help Widget System ---
 export function HelpWidget() {
   const router = useRouter();
-  const { startWalkthrough } = useWalkthrough();
+  const { startWalkthrough, queueWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
@@ -204,13 +221,13 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => { setOpen(false); router.push("/builder"); queueWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }]); }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => { setOpen(false); router.push("/checkout"); queueWalkthrough([{ targetId: "checkout-pay-now-btn", message: "Click here to connect Stripe and start accepting payments." }]); }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => { setOpen(false); router.push("/agents"); queueWalkthrough([{ targetId: "agent-card-support", message: "Activate your Support AI agent by assigning tasks." }]); }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">

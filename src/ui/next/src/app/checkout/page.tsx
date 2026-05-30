@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { WalkthroughTarget } from '../../components/Walkthrough';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -48,15 +49,18 @@ export default function CheckoutPage() {
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
-          <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
-            <button
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-            >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
-            </button>
-          </WithTooltip>
+          <WalkthroughTarget id="checkout-pay-now-btn">
+            <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
+              <button
+                id="checkout-pay-now-btn"
+                onClick={handlePayment}
+                disabled={isProcessing}
+                className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+              >
+                {isProcessing ? 'Processing...' : 'Pay $100.00'}
+              </button>
+            </WithTooltip>
+          </WalkthroughTarget>
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { WalkthroughTarget } from "../../components/Walkthrough";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
@@ -192,28 +194,31 @@ export default function AgentsPage() {
           {activeTab === 'departments' ? (
             <div className="space-y-4">
               {departments.map((dept) => (
-                <div
-                  key={dept.id}
-                  className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
-                    {dept.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
-                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{dept.role}</p>
-                    <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
-
-                    {showAdvanced && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
-                        </span>
-                        <span>Auto-approve: $0</span>
+                <WalkthroughTarget id={`agent-card-${dept.id}`} key={dept.id}>
+                  <WithTooltip id={`agent-${dept.id}-tooltip`} defaultText={`Hire or assign tasks to the ${dept.name} department.`}>
+                    <div
+                      className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
+                        {dept.icon}
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
+                        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{dept.role}</p>
+                        <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
+
+                        {showAdvanced && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
+                            </span>
+                            <span>Auto-approve: $0</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </WithTooltip>
+                </WalkthroughTarget>
               ))}
             </div>
 
