@@ -23,7 +23,6 @@ describe('TooltipRegistry', () => {
 
     const button = screen.getByText('Hover me');
     await new Promise(resolve => setTimeout(resolve, 50));
-    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Wait for context to be populated via fetch call in TooltipProvider
     await waitFor(() => {

@@ -9,5 +9,4 @@ global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
   json: () => Promise.resolve({})
 })) as any;
 
-// Mock scrollIntoView for jsdom
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
