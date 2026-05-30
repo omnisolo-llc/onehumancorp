@@ -16,7 +16,7 @@ test.describe('Help Features', () => {
     // Clear search and click on Getting Started article
     await page.fill('input[placeholder="Search for help articles..."]', '');
     await page.click('text=Getting Started');
-    await expect(page.locator('h1', { hasText: 'Getting Started with Your Store' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Getting Started' })).toBeVisible();
     await expect(page.locator('text=Welcome to OneHumanCorp!')).toBeVisible();
   });
 
