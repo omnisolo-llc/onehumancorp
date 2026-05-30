@@ -638,6 +638,29 @@ impl DepartmentOrchestrator {
             ]);
 
             if approved {
+                if let Some(payload_val) = &original_payload {
+                    if let Some(po_id) = payload_val.get("purchase_order_id").and_then(|v| v.as_str()) {
+                        match &self.db.store {
+                            DbStore::Postgres => {
+                                let _ = sqlx::query("UPDATE purchase_orders SET status = 'Sent', updated_at = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(now)
+                                    .bind(po_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            },
+                            DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query("UPDATE purchase_orders SET status = 'Sent', updated_at = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(now.to_rfc3339())
+                                    .bind(po_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,

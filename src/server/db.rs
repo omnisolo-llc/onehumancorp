@@ -363,6 +363,70 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS vendors (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        name TEXT,
+                        contact_info TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS raw_materials (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        name TEXT,
+                        current_quantity INTEGER DEFAULT 0,
+                        reorder_threshold INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS bom_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        finished_good_id TEXT,
+                        raw_material_id TEXT,
+                        quantity_required INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS purchase_orders (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        vendor_id TEXT,
+                        status TEXT DEFAULT 'Draft',
+                        total_cost REAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS po_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        purchase_order_id TEXT,
+                        raw_material_id TEXT,
+                        quantity INTEGER DEFAULT 1,
+                        price REAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS depletion_logs (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        raw_material_id TEXT,
+                        order_id TEXT,
+                        quantity INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
                         id TEXT PRIMARY KEY,
