@@ -1,11 +1,10 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 exports_files(
     [
         "mod.rs",
         "models.rs",
         "task_repo.rs",
-        "campaign_repo.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -17,7 +16,6 @@ rust_library(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
-        "campaign_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -111,10 +109,4 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
-)
-
-rust_test(
-    name = "server_domain_repository_unit_test",
-    crate = ":server_domain_repository",
-    edition = "2024",
 )

@@ -202,54 +202,6 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
-  if (type === "Testimonials") {
-    return (
-      <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">What People Say</h2>
-        <div className="flex flex-col gap-4">
-          {(props.quotes || []).map((quote: any, i: number) => (
-            <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-4 rounded-[16px]">
-              <p className="text-sm italic text-gray-700 dark:text-[#A1A1A6] mb-2">"{quote.text}"</p>
-              <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">- {quote.author}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "BookingCalendar") {
-    return (
-      <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
-          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title || "Schedule an Appointment"}</h2>
-          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
-             <p className="text-sm text-gray-500">Calendar Widget</p>
-          </div>
-          <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-semibold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
-            Confirm Booking
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "ContactForm") {
-    return (
-      <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px]">
-          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Contact Us</h2>
-          <input className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Your Name" />
-          <input className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Your Email" />
-          <textarea className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Message"></textarea>
-          <button className="w-full bg-black dark:bg-white text-white dark:text-black font-semibold py-3 rounded-[8px] shadow-md transition-all">
-            Send Message
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (type === "Contact") {
     return (
       <div className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center border-y border-white/50 dark:border-white/10">
@@ -264,12 +216,6 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
-    const isPremium = props.isPremium || false;
-
-    if (isPremium) {
-      return null;
-    }
-
     return (
       <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a

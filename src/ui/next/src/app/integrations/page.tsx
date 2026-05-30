@@ -8,13 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified API for Instagram DMs, Facebook Messenger, WhatsApp, and SMS." },
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📨", description: "Email Marketing & Audience Management." },
+    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Shipping Rate Calculation and Labels." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -35,8 +35,8 @@ export default function Integrations() {
       ));
       router.push("/dashboard");
     }
-    if (id === 'manychat' || id === 'mailchimp' || id === 'zoom') {
-      alert(`Connecting ${id} via OAuth...`);
+    if (id === 'manychat') {
+      alert("Connecting Manychat via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
