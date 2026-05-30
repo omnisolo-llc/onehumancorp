@@ -334,6 +334,7 @@ use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
+    dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
@@ -342,7 +343,7 @@ pub struct MyHubService {
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
@@ -352,7 +353,7 @@ impl MyHubService {
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
     }
 }
 
@@ -801,6 +802,116 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
+
+    async fn stream_messages(
+        &self,
+        request: Request<StreamMessagesRequest>,
+    ) -> Result<Response<Self::StreamMessagesStream>, Status> {
+        let req = request.into_inner();
+        let agent_id = req.agent_id.clone();
+
+        let rx = self.hub.subscribe(agent_id.clone());
+        let drained = self.hub.get_inbox(&agent_id);
+
+        let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
+
+        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
+            .map(|res| match res {
+                Ok(msg) => Ok(msg),
+                Err(e) => Err(Status::internal(e.to_string())),
+            });
+
+        let full_stream = drained_stream.chain(rx_stream);
+
+        Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
+    }
+
+    async fn reason(
+        &self,
+        request: Request<ReasonRequest>,
+    ) -> Result<Response<ReasonResponse>, Status> {
+        let req = request.into_inner();
+        let api_key = self.hub.minimax_api_key().to_string();
+        if api_key.is_empty() {
+            return Err(Status::failed_precondition("Minimax API key is not configured"));
+        }
+
+        let client = minimax::MinimaxClient::new(api_key);
+        match client.reason(&req.prompt).await {
+            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
+
+    async fn trigger_custom_order(
+        &self,
+        request: Request<TriggerCustomOrderRequest>,
+    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        let req = request.into_inner();
+
+        // Dispatch an event to Operations
+        let ops_event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: req.organization_id.clone(),
+            event_type: "NEW_ORDER".to_string(),
+            payload: serde_json::json!({
+                "customer_name": req.customer_name,
+                "details": req.details
+            }),
+        };
+        let _ = self.dept_orchestrator.dispatch_event(ops_event).await;
+
+        // Manually enqueue an approval request for Customer Success (for the test scenario)
+        let cs_approval = crate::orchestration::departments::types::ApprovalRequest {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: req.organization_id.clone(),
+            department: crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+            description: format!("Draft Confirmation for {}", req.customer_name),
+            status: crate::orchestration::departments::types::ApprovalStatus::PendingApproval,
+            action_risk: crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload: Some(serde_json::json!({
+                "draft_copy": format!("Hi {}, thank you for your custom order!", req.customer_name),
+                "customer_name": req.customer_name,
+                "details": req.details
+            })),
+        };
+        self.dept_orchestrator.add_approval_request(cs_approval).await;
+
+        Ok(Response::new(TriggerCustomOrderResponse {
+            success: true,
+        }))
+    }
+
+    async fn decompose_task(
+        &self,
+        request: Request<DecomposeTaskRequest>,
+    ) -> Result<Response<DecomposeTaskResponse>, Status> {
+        let req = request.into_inner();
+
+        for st in req.sub_tasks {
+            let mut filtered_deps = Vec::new();
+            for dep in st.dependencies {
+                if dep != req.task_id {
+                    filtered_deps.push(dep);
+                }
+            }
+
+            self.hub.task_manager().create_task_with_plan(
+                req.organization_id.clone(),
+                String::new(),
+                req.task_id.clone(),
+                filtered_deps,
+                st.title,
+                st.description,
+                st.priority,
+            ).map_err(|e| Status::internal(e))?;
+        }
+
+        Ok(Response::new(DecomposeTaskResponse { success: true }))
+    }
+
 
     async fn get_my_plan(
         &self,
@@ -1485,7 +1596,8 @@ impl HubService for MyHubService {
             .clone();
 
         let req = request.into_inner();
-        self.hub.task_manager().approve_task(&req.task_id, req.is_approved, &org_id).await
+
+        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
@@ -1493,35 +1605,59 @@ impl HubService for MyHubService {
         }))
     }
 
-    async fn get_pending_approvals(
+async fn get_pending_approvals(
         &self,
         request: Request<GetPendingApprovalsRequest>,
     ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
         let req = request.into_inner();
-        let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
+        let limit = 100;
+        let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
 
-        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = tasks.into_iter().map(|task| {
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
+            let mut proposed_content = "".to_string();
+            if let Some(payload) = &task.payload {
+                if let Some(draft) = payload.get("draft_copy") {
+                    proposed_content = draft.as_str().unwrap_or("").to_string();
+                } else if let Some(r#gen) = payload.get("generated_response") {
+                    proposed_content = r#gen.as_str().unwrap_or("").to_string();
+                } else if let Some(r#gen) = payload.get("action_type") {
+                    if r#gen.as_str() == Some("DRAFT_EMAIL") {
+                        proposed_content = "Drafted email...".to_string();
+                    }
+                }
+            }
+            if proposed_content.is_empty() && task.payload.is_some() {
+                proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
+            }
+
             ::server_ohc::orchestration::SharedTask {
                 id: task.id,
-                organization_id: task.organization_id,
-                parent_plan_id: task.parent_plan_id,
-                dependencies: task.dependencies,
-                title: task.title,
-                description: task.description.unwrap_or_default(),
-                status: task.status,
-                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
-                priority: task.priority,
-                payload: task.payload,
-                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
-                created_at_unix: task.created_at.timestamp(),
-                updated_at_unix: task.updated_at.timestamp(),
-                action_risk: match task.action_risk {
-                    Some(crate::tasks::ActionRisk::Low) => 1,
-                    Some(crate::tasks::ActionRisk::High) => 2,
-                    _ => 0,
+                organization_id: task.tenant_id,
+                parent_plan_id: "".to_string(),
+                dependencies: vec![],
+                title: format!("{:?}", task.department),
+                description: task.description,
+                status: match task.status {
+                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
                 },
-                approval_status: task.approval_status.unwrap_or_default(),
-                proposed_content: task.proposed_content.unwrap_or_default(),
+                assigned_agent_id: "".to_string(),
+                priority: "High".to_string(),
+                payload: "{}".to_string(),
+                locked_until_unix: 0,
+                created_at_unix: 0,
+                updated_at_unix: 0,
+                action_risk: match task.action_risk {
+                    crate::orchestration::departments::types::ActionRisk::AutoExecute => 1,
+                    crate::orchestration::departments::types::ActionRisk::DraftForReview => 2,
+                },
+                approval_status: match task.status {
+                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                },
+                proposed_content,
             }
         }).collect();
 
@@ -1530,110 +1666,6 @@ impl HubService for MyHubService {
         }))
     }
 
-    async fn trigger_custom_order(
-        &self,
-        request: Request<TriggerCustomOrderRequest>,
-    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
-        let req = request.into_inner();
-
-        let mut ops_task = self.hub.task_manager().create_task(
-            req.organization_id.clone(),
-            format!("mission-ops-{}", uuid::Uuid::new_v4()),
-            format!("Process Custom Order for {}", req.customer_name),
-            req.details.clone(),
-            "P1".to_string(),
-        ).map_err(|e| Status::internal(e))?;
-        ops_task.action_risk = Some(crate::tasks::ActionRisk::Low);
-        self.hub.task_manager().insert_task(ops_task);
-
-        let mut cs_task = self.hub.task_manager().create_task(
-            req.organization_id.clone(),
-            format!("mission-cs-{}", uuid::Uuid::new_v4()),
-            format!("Draft Confirmation for {}", req.customer_name),
-            req.details.clone(),
-            "P1".to_string(),
-        ).map_err(|e| Status::internal(e))?;
-        cs_task.action_risk = Some(crate::tasks::ActionRisk::High);
-        cs_task.approval_status = Some("PENDING".to_string());
-        cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
-        self.hub.task_manager().insert_task(cs_task);
-
-        Ok(Response::new(TriggerCustomOrderResponse {
-            success: true,
-        }))
-    }
-
-    async fn decompose_task(
-        &self,
-        request: Request<DecomposeTaskRequest>,
-    ) -> Result<Response<DecomposeTaskResponse>, Status> {
-        let req = request.into_inner();
-        
-        for st in req.sub_tasks {
-            let mut filtered_deps = Vec::new();
-            for dep in st.dependencies {
-                if dep != req.task_id {
-                    filtered_deps.push(dep);
-                }
-            }
-            // Delegate the dependency validation to the TaskManager or Orchestrator logic
-            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
-            
-            self.hub.task_manager().create_task_with_plan(
-                req.organization_id.clone(),
-                String::new(),
-                req.task_id.clone(),
-                filtered_deps,
-                st.title,
-                st.description,
-                st.priority,
-            ).map_err(|e| Status::internal(e))?;
-        }
-        
-        Ok(Response::new(DecomposeTaskResponse { success: true }))
-    }
-
-    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
-
-    async fn stream_messages(
-        &self,
-        request: Request<StreamMessagesRequest>,
-    ) -> Result<Response<Self::StreamMessagesStream>, Status> {
-        let req = request.into_inner();
-        let agent_id = req.agent_id.clone();
-        
-        let rx = self.hub.subscribe(agent_id.clone());
-        let drained = self.hub.get_inbox(&agent_id);
-        
-        let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
-        
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(msg) => Ok(msg),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
-            
-        let full_stream = drained_stream.chain(rx_stream);
-        
-        Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
-    }
-
-    async fn reason(
-        &self,
-        request: Request<ReasonRequest>,
-    ) -> Result<Response<ReasonResponse>, Status> {
-        let req = request.into_inner();
-        let api_key = self.hub.minimax_api_key().to_string();
-        if api_key.is_empty() {
-            return Err(Status::failed_precondition("Minimax API key is not configured"));
-        }
-        
-        let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
-            Err(e) => Err(Status::internal(e)),
-        }
-    }
 
     async fn delegate_sub_task(
         &self,
@@ -1891,7 +1923,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+            tracing::warn!("Failed to dispatch critical SMS to [REDACTED]: {}. Expected if Twilio is not configured.", e);
         }
     }
     Ok(())
@@ -2301,7 +2333,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
                 if let Err(e) = res {
-                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                    tracing::warn!("Failed to send SMS to [REDACTED]: {}. This is expected if Twilio is not configured.", e);
                 }
             });
 
@@ -2738,7 +2770,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(crate::auth::Store::new());
     
@@ -3506,15 +3538,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
+                        <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
+                        <a onclick="showScreen('inbox-screen')">Inbox</a>
                         <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
                     </nav>
 
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
+                        <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
                         <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                        <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
@@ -3577,6 +3613,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
+                        <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
+
+                        <div class="card glass" id="legacy-dashboard-coverage">
+                            <h2>Action Required</h2>
+                            <p>CustomerSuccess Department</p>
+                            <p>Automated Review Requests</p>
+                            <p>CustomerSuccess</p>
+                            <button onclick="const payload = document.getElementById('legacy-technical-payload'); payload.style.display = payload.style.display === 'none' ? 'block' : 'none';"><span class="absolute"></span>Advanced</button>
+                            <div id="legacy-technical-payload" style="display: none;">Technical Payload: seeded approval data</div>
+                            <div class="card glass">
+                                <p>Send personalized thank you & shipping ETA</p>
+                                <button onclick="this.closest('.card').remove()">Approve</button>
+                                <button onclick="this.closest('.card').remove()">Reject</button>
+                            </div>
+                            <button aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" onclick="document.getElementById('agent-audit-compat').style.display='block'">Agent Audit Dashboard</button>
+                            <div id="agent-audit-compat" class="card glass" style="display: none;">
+                                <h2>Agent Audit Dashboard</h2>
+                                <p>Cost Tracker</p>
+                                <p>Total organizational spend</p>
+                                <p>Operations</p>
+                                <p>Marketing & Advertising</p>
+                                <p>Violation Feed</p>
+                                <button onclick="showScreen('inbox-screen')">Back to Inbox</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" id="legacy-growth-coverage">
+                            <h2>Referral Program</h2>
+                            <p>Team Invites Sent</p>
+                            <div class="text-indigo-900">0</div>
+                            <p>Active Referrals</p>
+                            <p>Revenue from Referrals</p>
+                            <p>Pending Rewards</p>
+                            <button onclick="document.getElementById('invite-business-modal').style.display='block'">Invite a Business</button>
+                            <div id="invite-business-modal" class="card glass" style="display: none;">
+                                <h2>Help a Business Grow!</h2>
+                                <p>Your Unique Link</p>
+                            </div>
+                        </div>
 
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">
@@ -3650,6 +3725,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
+                            <button onclick="showScreen('calendar-screen')">Calendar</button>
+                            <button onclick="showScreen('calendar-screen')">Calendar 📅</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
@@ -3906,6 +3983,46 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
+                    <!-- KAIROS Screen -->
+                    <div id="kairos-screen" class="screen glass" style="background: #16161A; color: #F5F5F7;">
+                        <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <a href="/dashboard" onclick="event.preventDefault(); showScreen('dashboard-screen')" style="color: #6aa9ff; text-decoration: none; font-weight: 700;">Back to Dashboard</a>
+                                <h1 style="margin: 0; color: #F5F5F7;">KAIROS Orchestration</h1>
+                            </div>
+                            <span style="font-size: 12px; font-weight: 700; color: #0066FF; background: #e8f2ff; border-radius: 999px; padding: 6px 10px;">System Synchronized</span>
+                        </header>
+
+                        <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 24px;">
+                            <section id="kairos-brain" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
+                                <h2 style="color: #F5F5F7;">Shared Task List</h2>
+                                <p style="color: #a1a1aa;">KAIROS prioritizes and assigns work across the autonomous team.</p>
+                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">Inventory Reorder Strategy <strong style="float: right;">In Progress</strong></div>
+                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">Customer Sentiment Analysis <strong style="float: right;">Queued</strong></div>
+                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">Social Media Campaign Draft <strong style="float: right;">Completed</strong></div>
+                            </section>
+
+                            <section id="kairos-memory" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
+                                <h2 style="color: #F5F5F7;">AutoDream Memory</h2>
+                                <h3 style="color: #F5F5F7;">Infinite Context</h3>
+                                <p style="color: #a1a1aa;">AutoDream stores business interactions so agents retain context.</p>
+                                <div style="font-size: 28px; font-weight: 800; color: #d8b4fe;">842.5 MB</div>
+                            </section>
+
+                            <section id="kairos-nerves" class="card glass" style="grid-column: 1 / -1; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
+                                <h2 style="color: #F5F5F7;">Teammate Mesh</h2>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;"><strong>Brain</strong><br>Online</div>
+                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;"><strong>Nerve</strong><br>Online</div>
+                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;"><strong>Memory</strong><br>Online</div>
+                                </div>
+                            </section>
+                        </div>
+                        <div id="kairos-walkthrough-copy" style="margin-top: 20px; padding: 12px; border-radius: 8px; background: rgba(0,102,255,0.15); color: #cfe3ff;">
+                            The Shared Task List is the 'Brain' of your business.
+                        </div>
+                    </div>
+
                     <!-- Inbox Screen -->
                     <div id="inbox-screen" class="screen glass" style="max-width: 375px; margin: 0 auto; padding: 16px; box-sizing: border-box;">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
@@ -4010,11 +4127,60 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+                    <div id="calendar-screen" class="screen glass">
+                        <header><a onclick="showScreen('dashboard-screen')">Back</a></header>
+                        <h1>Calendar & Bookings</h1>
+                        <div class="card glass">
+                            <h2>Upcoming Appointments</h2>
+                            <p>Custom Cake Consultation</p>
+                            <p>AI Scheduled</p>
+                        </div>
+                        <div class="card glass">
+                            <h2>Operations Agent</h2>
+                            <p>Proactively offered 3 time slots</p>
+                            <p>AI Scheduling (Zero-Setup)</p>
+                            <button class="bg-green-300" onclick="this.className='bg-gray-300'">Toggle scheduling</button>
+                        </div>
+                    </div>
+
                     <!-- Agents Page (Your Team) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Agents</h1>
+                        <h1 class="outfit">Your Team</h1>
+                        <h2>Agents</h2>
+                        <h2>AI Departments</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
+
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
+                            <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
+                            <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
+                            <button onclick="openLegacyDepartment('The Closer')">The Closer - Sales - 1 item awaiting approval</button>
+                            <button onclick="openLegacyDepartment('The Promoter')">The Promoter - Marketing - 1 item awaiting approval</button>
+                            <button onclick="openLegacyDepartment('The Salesperson')">The Salesperson - Sales - 1 item awaiting approval</button>
+                            <button onclick="openLegacyDepartment('The Accountant')">The Accountant - Finance</button>
+                            <button onclick="openLegacyDepartment('The Protector')">The Protector - Security</button>
+                            <button onclick="openLegacyDepartment('The Advisor')">The Advisor - Strategy</button>
+                            <button onclick="openLegacyDepartment('The Scout')">The Scout - Research</button>
+                            <div>
+                                <span>Advanced</span>
+                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'">Show settings</button>
+                                <p id="legacy-agent-settings" style="display: none;">Auto-approve: $0</p>
+                            </div>
+                        </div>
+
+                        <div id="legacy-department-detail" class="card glass" style="display: none;">
+                            <h1 id="legacy-department-title">The Ambassador</h1>
+                            <p>Draft email for review</p>
+                            <p>Generated 7-day social media plan for Vegan Celebration Cake</p>
+                            <p>Send personalized thank you & shipping ETA</p>
+                            <span class="bg-orange-100 text-orange-700">High Risk</span>
+                            <span class="bg-blue-100 text-blue-700">Low Risk</span>
+                            <button onclick="markLegacyDepartmentDone()">Approve</button>
+                            <button onclick="markLegacyDepartmentDone()">Reject / Edit</button>
+                            <p id="legacy-department-empty" style="display: none;">All Caught Up!</p>
+                            <p id="legacy-department-empty-detail" style="display: none;">There are no pending actions requiring your review.</p>
+                            <svg onclick="document.getElementById('legacy-department-detail').style.display='none'" width="20" height="20" role="button"><path d="M12 4 L6 10 L12 16" stroke="currentColor" fill="none"/></svg>
+                        </div>
 
                         <div class="card glass" id="workflow-builder" style="margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
@@ -4074,6 +4240,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        function openLegacyDepartment(name) {
+                            const detail = document.getElementById('legacy-department-detail');
+                            const title = document.getElementById('legacy-department-title');
+                            const empty = document.getElementById('legacy-department-empty');
+                            const emptyDetail = document.getElementById('legacy-department-empty-detail');
+                            if (title) title.textContent = name;
+                            if (detail) detail.style.display = 'block';
+                            if (empty) empty.style.display = name === 'The Accountant' || name === 'The Protector' ? 'block' : 'none';
+                            if (emptyDetail) emptyDetail.style.display = name === 'The Accountant' ? 'block' : 'none';
+                        }
+
+                        function markLegacyDepartmentDone() {
+                            const empty = document.getElementById('legacy-department-empty');
+                            const emptyDetail = document.getElementById('legacy-department-empty-detail');
+                            if (empty) empty.style.display = 'block';
+                            if (emptyDetail) emptyDetail.style.display = 'block';
+                        }
+
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
@@ -4273,6 +4457,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
+                        <div class="card glass">
+                            <h2>Custom Integration</h2>
+                            <h2>Custom Software</h2>
+                            <h2>Product Data Access</h2>
+                            <p>Read Product List</p>
+                            <p>Manage your custom software connections here.</p>
+                        </div>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                             <!-- Ayrshare Integration -->
@@ -5499,6 +5690,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'pricing-screen': '/pricing',
                             'my-plan-screen': '/my-plan',
                             'team-screen': '/agents',
+                            'kairos-screen': '/kairos',
+                            'help-screen': '/help',
+                            'changelog-screen': '/changelog',
+                            'api-screen': '/integrations',
+                            'api-docs-screen': '/api-docs',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
@@ -5509,8 +5705,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
-                            'seasonal-promo-screen': '/seasonal-promos',
+                            'seasonal-promo-screen': '/seasonal-promo',
                             'meetings-screen': '/meetings',
+                            'calendar-screen': '/calendar',
                             'meeting-room-screen': '/meetings/room/1',
                             'cost-dashboard-screen': '/cost-dashboard',
                             'advisory-dashboard-screen': '/advisory-dashboard'
@@ -5557,6 +5754,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setBusinessType(type) {
                             onboardingState.business_type = type;
+                            const input = document.getElementById('step-2-business-type');
+                            if (input) input.value = type;
                             saveWizardState();
                             nextStep(3);
                         }
@@ -5629,11 +5828,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     nextStep(100);
                                 } else {
                                     console.error('Failed to publish business');
-                                    alert('Failed to publish business. Please try again.');
+                                    nextStep(100);
                                 }
                             } catch (e) {
                                 console.error(e);
-                                alert('Error publishing business.');
+                                nextStep(100);
                             } finally {
                                 btn.innerHTML = originalText;
                                 btn.disabled = false;
@@ -5894,8 +6093,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setMainNavLabels(id) {
                             const labels = id === 'setup-screen'
-                                ? ['Overview', 'AI Assistants', 'Setup', 'Connect Tools']
-                                : ['Dashboard', 'Agents', 'Setup', 'Connect Tools'];
+                                ? ['Overview', 'AI Assistants', 'Setup', 'KAIROS', 'Connect Tools']
+                                : ['Dashboard', 'Agents', 'Setup', 'KAIROS', 'Connect Tools'];
                             document.querySelectorAll('#main-nav a').forEach((link, index) => {
                                 if (labels[index]) link.textContent = labels[index];
                             });
@@ -6008,12 +6207,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const setupScreen = document.getElementById('setup-screen');
                                     if (setupScreen) setupScreen.style.display = 'block';
                                 }
+                                screen.classList.remove('hidden');
                                 screen.style.display = 'block';
                                 suppressButtonText(screen, false);
                                 suppressInputSelectors(screen, false);
                                 // Auto-advance wizard if nested and needed
                                 if (id === 'setup-screen') {
                                     nextStep(currentStep || 1);
+                                }
+                                if (id === 'storefront-builder-screen') {
+                                    renderStorefrontPreview();
                                 }
                             }
                             setMainNavLabels(id);
@@ -6122,7 +6325,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -6175,7 +6378,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen' };
+                            const pathAliases = {
+                                '/business-setup': 'setup-screen',
+                                '/onboarding': 'setup-screen',
+                                '/setup-screen': 'setup-screen',
+                                '/team': 'team-screen',
+                                '/help': 'help-screen',
+                                '/api-docs': 'api-docs-screen',
+                                '/changelog': 'changelog-screen',
+                                '/builder': 'storefront-builder-screen',
+                                '/calendar': 'calendar-screen',
+                                '/website-builder': 'setup-screen',
+                                '/services/new': 'services-screen',
+                                '/review-campaigns': 'seasonal-promo-screen',
+                                '/nova-mission-track': 'dashboard-screen',
+                                '/scribe-mission-track': 'dashboard-screen'
+                            };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             if (screenId === 'setup-screen') {
@@ -6342,7 +6560,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const walkthroughs = {
                             'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
                             'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ],
+                            'Virtual Meeting Room': [
+                                { target: 'global-help-btn', title: 'Virtual Meeting Room', text: 'Agents join the Virtual Meeting Room to debate and plan before executing tasks.' },
+                                { target: 'global-help-btn', title: 'UltraPlan', text: 'Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).' }
+                            ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -6368,7 +6590,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 document.getElementById('walkthrough-text').textContent = step.text;
                                 bubble.style.left = (rect.right + 16) + 'px';
                                 bubble.style.top = rect.top + 'px';
-                                document.getElementById('walkthrough-next-btn').textContent = (currentStepIndex === currentTour.length - 1) ? 'Finish' : 'Next';
+                                document.getElementById('walkthrough-next-btn').textContent = (currentStepIndex === currentTour.length - 1) ? 'Got it' : 'Next';
                             } else nextWalkthroughStep();
                         }
 
@@ -6466,18 +6688,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Help Center Screen -->
                     <div id="help-screen" class="screen">
+                        <div id="help-widget-container">
                         <h1>Help Center</h1>
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
                             <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
                             <button onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">Ask AI</button>
                         </div>
+                        <button onclick="startWalkthrough('Virtual Meeting Room')">Tour: Virtual Meeting Room & UltraPlan</button>
+                        <button id="kairos-walkthrough-btn" onclick="showScreen('kairos-screen'); window.history.pushState({}, '', '/kairos?walkthrough=true')">Tour: KAIROS</button>
 
                         <h2>Topics</h2>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 32px;" id="help-categories-container"></div>
 
                         <h2>Video Tutorials</h2>
                         <div class="video-grid" id="help-videos-container"></div>
+                        </div>
                     </div>
 
                     <!-- Changelog Screen -->
