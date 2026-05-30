@@ -120,6 +120,8 @@ mod tests {
             id: "1".to_string(),
             tenant_id: "2".to_string(),
             business_id: Some("3".to_string()),
+            customer_id: Some("4".to_string()),
+            event_type: Some("interaction".to_string()),
             department: Some("sales".to_string()),
             content: "hello".to_string(),
             embedding: Some(vec![0.1, 0.2]),

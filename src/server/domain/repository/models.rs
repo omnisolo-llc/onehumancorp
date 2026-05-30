@@ -48,6 +48,8 @@ pub struct AgentMemory {
     pub id: String,
     pub tenant_id: String,
     pub business_id: Option<String>,
+    pub customer_id: Option<String>,
+    pub event_type: Option<String>,
     pub department: Option<String>,
     pub content: String,
     pub embedding: Option<Vec<f32>>,
