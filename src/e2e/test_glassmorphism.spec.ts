@@ -55,7 +55,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
       await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
       await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
-      // 2. Wait for dashboard and verify "Action Required"
+      // 2. Wait for dashboard and verify "Agent Updates"
       await page.waitForURL('**/*');
 
       const advancedSettingsSpan = page.locator('span', { hasText: 'Advanced Settings' }).first();
