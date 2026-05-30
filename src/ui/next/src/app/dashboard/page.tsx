@@ -35,6 +35,14 @@ export default function Dashboard() {
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
   const [productAdded, setProductAdded] = useState<boolean>(false);
 
+  // Growth Loop: Loyalty Program State
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState<boolean>(false);
+  const [isGeneratingLoyalty, setIsGeneratingLoyalty] = useState<boolean>(false);
+  const [loyaltyMessage, setLoyaltyMessage] = useState<string>("");
+  const [loyaltyCopied, setLoyaltyCopied] = useState<boolean>(false);
+  const [loyaltyGoal, setLoyaltyGoal] = useState<string>("Buy 5 items");
+  const [loyaltyItem, setLoyaltyItem] = useState<string>("");
+
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
@@ -942,6 +950,36 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Digital Punch Card (Loyalty Program) Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Customer Loyalty Program</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Retention Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn First-Time Buyers into Regulars</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate a digital punch card for your customers. Send them a personalized "Buy 5, get 1 free" offer directly to their inbox or SMS.</p>
+                    <button
+                        onClick={() => {
+                            setShowLoyaltyModal(true);
+                        }}
+                        className="px-5 py-2.5 bg-pink-600 text-white rounded-xl text-sm font-semibold hover:bg-pink-700 transition-colors shadow-sm whitespace-nowrap"
+                    >
+                        Create Loyalty Program
+                    </button>
+                </div>
+                <div className="w-full md:w-1/3 bg-pink-50 rounded-xl p-4 flex flex-col items-center justify-center border border-pink-100 min-h-[160px] relative overflow-hidden">
+                    <div className="text-4xl mb-3 z-10">☕️ 🎟️</div>
+                    <span className="text-sm font-medium text-pink-800 text-center z-10">Digital Punch Card</span>
+                </div>
+            </div>
+         </section>
+
          {/* Growth & Promotions Generator Card */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1830,6 +1868,104 @@ export default function Dashboard() {
                     )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loyalty Program Modal */}
+      {showLoyaltyModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-pink-100">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-pink-100/50 to-transparent rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-pink-600 border border-pink-200">
+                    🎟️
+                  </div>
+                  <div>
+                      <h2 className="text-2xl font-bold font-outfit text-gray-900">Loyalty Program</h2>
+                      <p className="text-sm text-gray-500 font-medium">Create a digital punch card</p>
+                  </div>
+              </div>
+              <button
+                onClick={() => setShowLoyaltyModal(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+               <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Target Action</label>
+                  <select
+                      value={loyaltyGoal}
+                      onChange={(e) => setLoyaltyGoal(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  >
+                      <option>Buy 5 items</option>
+                      <option>Spend $100</option>
+                      <option>Visit 3 times</option>
+                  </select>
+               </div>
+               <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Reward</label>
+                  <input
+                      type="text"
+                      value={loyaltyItem}
+                      onChange={(e) => setLoyaltyItem(e.target.value)}
+                      placeholder="e.g. Free Coffee"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  />
+               </div>
+
+               {loyaltyMessage && (
+                  <div className="p-4 bg-pink-50 rounded-lg border border-pink-100 mt-4">
+                     <p className="text-sm text-pink-900">{loyaltyMessage}</p>
+                     <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(loyaltyMessage);
+                            setLoyaltyCopied(true);
+                            setTimeout(() => setLoyaltyCopied(false), 2000);
+                        }}
+                        className={`mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all w-full ${loyaltyCopied ? 'bg-green-500 text-white' : 'bg-pink-600 text-white hover:bg-pink-700'}`}
+                     >
+                        {loyaltyCopied ? 'Copied to Clipboard!' : 'Copy Promotional Message'}
+                     </button>
+                  </div>
+               )}
+
+               {!loyaltyMessage && (
+                  <button
+                    onClick={async () => {
+                       if (!loyaltyItem) return;
+                       setIsGeneratingLoyalty(true);
+                       try {
+                           const response = await fetch('/api/v1/growth/loyalty-program/generate', {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({ rewardGoal: loyaltyGoal, rewardItem: loyaltyItem })
+                           });
+                           if (response.ok) {
+                               const data = await response.json();
+                               setLoyaltyMessage(data.result);
+                           } else {
+                               setLoyaltyMessage(`Join our loyalty program! ${loyaltyGoal} and get a free ${loyaltyItem}.`);
+                           }
+                       } catch (e) {
+                           setLoyaltyMessage(`Join our loyalty program! ${loyaltyGoal} and get a free ${loyaltyItem}.`);
+                       }
+                       setIsGeneratingLoyalty(false);
+                    }}
+                    disabled={!loyaltyItem}
+                    className={`w-full py-3 rounded-xl text-white font-bold transition-all shadow-md ${isGeneratingLoyalty || !loyaltyItem ? 'bg-pink-400 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700 hover:shadow-lg'}`}
+                  >
+                    {isGeneratingLoyalty ? 'Generating with AI...' : 'Generate Loyalty Program'}
+                  </button>
+               )}
             </div>
           </div>
         </div>

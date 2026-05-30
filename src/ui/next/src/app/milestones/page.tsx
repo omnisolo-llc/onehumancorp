@@ -82,7 +82,7 @@ export default function MilestonesPage() {
                                 <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
                                 <p className="text-sm text-gray-600">{m.description}</p>
                                 {m.unlocked && <p className="text-xs text-gray-400 mt-1">Achieved on {m.date}</p>}
-                                {!m.unlocked && <p className="text-xs text-gray-400 mt-1 text-center font-semibold uppercase tracking-widest pt-1 flex gap-2"><span className="text-gray-400">🔒</span>Locked</p>}
+                                {!m.unlocked && <p className="text-xs text-gray-400 mt-1 font-semibold uppercase tracking-widest pt-1 flex items-center gap-1.5"><span className="text-gray-400">🔒</span>Locked</p>}
                             </div>
                         </div>
                     </div>
