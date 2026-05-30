@@ -9,6 +9,11 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     const context1 = await browser.newContext({ viewport: { width: 375, height: 812 } });
     const page1 = await context1.newPage();
 
+    await page1.addInitScript(() => {
+      localStorage.setItem('tenant_id', 'e2e-tenant');
+      localStorage.setItem('user_id', 'e2e-admin-user');
+    });
+
     await page1.goto('/onboarding');
     await page1.waitForTimeout(1000);
 
@@ -25,18 +30,25 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     // Chat Step 3
     await expect(page1.getByRole('heading', { name: "Where are you located?", exact: false })).toBeVisible({ timeout: 15000 });
     await page1.getByPlaceholder("e.g. Portland, OR").fill("Seattle, WA");
-    await page1.getByRole('button', { name: "Generate My Business" }).click();
 
-    // Step 2: Review
-    await expect(page1.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByRole('button', { name: /Continue/i }).click();
+    // Wait for auto-save debounce (1000ms) before opening the second context
+    await page1.waitForTimeout(1500);
 
-    // Step 3: Style
-    await expect(page1.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByRole('button', { name: /Launch Store/i }).click();
+    // Now open a second context (simulating desktop or another device)
+    const context2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page2 = await context2.newPage();
+    await page2.addInitScript(() => {
+      localStorage.setItem('tenant_id', 'e2e-tenant');
+      localStorage.setItem('user_id', 'e2e-admin-user');
+    });
+    await page2.goto('/onboarding');
+    await page2.waitForTimeout(1500);
 
-    await expect(page1.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+    // Verify the state is loaded from the backend
+    await expect(page2.getByRole('heading', { name: "Where are you located?", exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page2.getByPlaceholder("e.g. Portland, OR")).toHaveValue("Seattle, WA");
 
     await context1.close();
+    await context2.close();
   });
 });

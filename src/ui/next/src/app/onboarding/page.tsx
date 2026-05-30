@@ -38,20 +38,20 @@ export default function OnboardingWizard() {
     })
     .then(res => res.json())
     .then(data => {
-      if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      if (data && Object.keys(data).length > 0) {
+        if (data.step) setStep(data.step);
+        if (data.chatStep) setChatStep(data.chatStep);
+        if (data.businessDescription) setBusinessDescription(data.businessDescription);
+        if (data.businessName) setBusinessName(data.businessName);
+        if (data.whatYouSell) setWhatYouSell(data.whatYouSell);
+        if (data.location) setLocation(data.location);
+        if (data.businessType) setBusinessType(data.businessType);
+        if (data.categories) setCategories(data.categories);
+        if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+        if (data.firstProductName) setFirstProductName(data.firstProductName);
+        if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+        if (data.aiAgents) setAiAgents(data.aiAgents);
+        if (data.aiAutoRespond !== undefined) setAiAutoRespond(data.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));

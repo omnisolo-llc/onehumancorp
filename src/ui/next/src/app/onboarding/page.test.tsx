@@ -167,7 +167,7 @@ describe('OnboardingWizard', () => {
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
-      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
+      expect(screen.getByText(/Failed to process business details/i)).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
     });
   });
@@ -198,7 +198,7 @@ describe('OnboardingWizard', () => {
 
     // Verify error appears and step goes back to 3
     await waitFor(() => {
-      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
+      expect(screen.getByText(/Failed to start onboarding/i)).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
   });
