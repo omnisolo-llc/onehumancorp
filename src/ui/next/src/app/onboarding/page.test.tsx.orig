@@ -89,7 +89,7 @@ describe('OnboardingWizard', () => {
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await userEvent.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Finish & Generate/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -159,7 +159,7 @@ describe('OnboardingWizard', () => {
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await userEvent.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Finish & Generate/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await act(async () => {
       button.click();
