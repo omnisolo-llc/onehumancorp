@@ -128,6 +128,9 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
+                                let cache = crate::builder::edge::get_edge_cache();
+                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -158,6 +161,9 @@ impl OperationsWorker {
                                     .bind(&tenant_id)
                                     .execute(pool)
                                     .await;
+
+                                let cache = crate::builder::edge::get_edge_cache();
+                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
