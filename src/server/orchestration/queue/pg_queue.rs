@@ -143,6 +143,7 @@ impl TaskQueue for PgTaskQueue {
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_lock_contention(::server_telemetry::get_deployment_mode(), "postgres");
         }
 
         if let Some(row) = job_opt {

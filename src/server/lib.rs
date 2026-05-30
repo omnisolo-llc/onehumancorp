@@ -1682,7 +1682,10 @@ impl HubService for MyHubService {
             &req.target_role,
             &req.instruction,
             &req.parent_thread_id,
-        ).await.map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| {
+            ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
+            Status::internal(e)
+        })?;
         tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
@@ -2308,6 +2311,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 if success {
                     let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
                 } else {
+                    ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                     let _ = sub_agent_queue_clone.fail(&job.id, &job.tenant_id, &error_msg).await;
                 }
             } else {

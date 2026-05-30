@@ -600,6 +600,7 @@ impl QueueManager {
                     retry_count += 1;
                     if retry_count > 3 {
                         ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                        ::server_telemetry::record_sub_agent_lock_contention(::server_telemetry::get_deployment_mode(), "postgres");
                         return Err(e);
                     }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -609,6 +610,7 @@ impl QueueManager {
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_lock_contention(::server_telemetry::get_deployment_mode(), "postgres");
         }
 
         tx.commit().await?;
