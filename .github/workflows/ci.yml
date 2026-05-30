@@ -238,6 +238,7 @@ jobs:
   bazel-test:
     name: Bazel test
     needs:
+      - bazel-build
       - check-changes
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
@@ -301,10 +302,11 @@ jobs:
   bazel-test-e2e:
     name: Bazel Playwright E2E
     needs:
+      - bazel-build
       - check-changes
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -359,8 +361,8 @@ jobs:
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test Playwright E2E target
-        run: bazelisk test //src/e2e:playwright
+      - name: Test Playwright E2E suite
+        run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
 
   kind-e2e:
     name: Kind E2E
