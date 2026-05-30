@@ -122,8 +122,8 @@ impl SharedTaskOrchestrator {
                         JOIN shared_tasks_v4 parent ON parent.id = dep_id
                         WHERE parent.status != 'COMPLETED'
                     )
-                    FOR UPDATE SKIP LOCKED
                     LIMIT 1
+                    FOR UPDATE SKIP LOCKED
                     "#
                 )
                 .bind(organization_id)
