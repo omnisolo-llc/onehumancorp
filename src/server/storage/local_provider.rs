@@ -169,7 +169,7 @@ impl Provider for LocalProvider {
         }.await;
 
         #[cfg(not(unix))]
-        let res = tokio::fs::write(&path, final_data).await;
+        let res = tokio::fs::write(&path, &final_data).await;
 
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
