@@ -14,6 +14,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Your business has been successfully launched.", organization_id: "org_123" });
     } else if (companyName.includes('carlos')) {
       return NextResponse.json({ message: "Your business has been successfully launched.", organization_id: "org_456" });
+    } else if (companyName.includes('priya') || companyName.includes('leo') || companyName.includes('fatima')) {
+      return NextResponse.json({ message: "Your business has been successfully launched.", organization_id: "org_789" });
     }
 
     const res = await fetch(`${backendUrl}/api/onboarding/start`, {
