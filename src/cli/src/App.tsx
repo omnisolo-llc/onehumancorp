@@ -6,6 +6,7 @@ import { ToolProgress } from './components/ToolProgress';
 import { MarkdownText } from './components/MarkdownText';
 import { PromptInput } from './components/PromptInput';
 import { ErrorState } from './components/ErrorState';
+import { MasterMenu } from './components/MasterMenu';
 import { useOrchestrator } from './hooks/useOrchestrator';
 
 export const App = () => {
@@ -23,6 +24,8 @@ export const App = () => {
         <>
           <AgentStatus status={status} />
           <ToolProgress tools={tools} />
+
+          <MasterMenu />
 
           <Box borderStyle="round" borderColor="gray" padding={1} marginTop={1} marginBottom={1} dimColor>
             <MarkdownText content={markdown} />
