@@ -3857,12 +3857,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             <p style="font-size: 14px; font-weight: bold; margin-bottom: 8px; position: relative; z-index: 1; color: white;">Your Referral Link</p>
                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
-                                <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); alert('Copied');">Copy</button>
+                                <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">https://ohc.store/join?ref=DEFAULT</p>
+                                <button style="margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('https://ohc.store/join?ref=DEFAULT'); alert('Copied');">Copy</button>
                             </div>
 
                             <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('https://ohc.store/join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
                                 <div id="invite-copied-msg" style="display: none; width: 100%; font-size: 14px; color: #a7f3d0; margin-top: 4px;">Invite message copied!</div>
                             </div>
 
@@ -3872,7 +3872,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
                             </div>
                             <div style="margin-top: 16px; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! https://ohc.store/join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
                                 <div id="invite-copied-msg" style="display: none; margin-top: 8px; color: white; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">Invite message copied!</div>
                             </div>
                         </div>
@@ -5204,7 +5204,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             <p><strong>${escapeHtml(block.content.title)}</strong></p>
                                             <p>${escapeHtml(block.content.offer)}</p>
                                             <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
-                                            <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
+                                            <a href="https://ohc.store/join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
                                         </div>`;
                                     }
                                 }
@@ -5221,7 +5221,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             footer.style.border = 'none';
                             footer.style.boxShadow = 'none';
                             const tenant = localStorage.getItem('tenant_id') || 'storefront';
-                            footer.innerHTML = `<a href="ohc://join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
+                            footer.innerHTML = `<a href="https://ohc.store/join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
                             container.appendChild(footer);
                         }
 
@@ -5281,7 +5281,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`ohc://join?ref=${tenant}`);
+                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
@@ -5304,7 +5304,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function claimTrialExtension() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
                             localStorage.setItem('has_pro', 'true');
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
@@ -5495,7 +5495,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function receive5StarReview() {
                             showMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.');
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const shareUrl = encodeURIComponent(`Just got a 5-star review! 🌟 Launch your business on OHC today: ohc://join?ref=${tenant}`);
+                            const shareUrl = encodeURIComponent(`Just got a 5-star review! 🌟 Launch your business on OHC today: https://ohc.store/join?ref=${tenant}`);
                             const whatsappBtn = document.getElementById('whatsapp-share-btn');
                             whatsappBtn.href = `https://wa.me/?text=${shareUrl}`;
                             whatsappBtn.style.display = 'inline-block';
@@ -5520,7 +5520,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             let htmlBody = body;
                             if (title === '🎉 10th Order!') {
                                 const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
+                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: https://ohc.store/join?ref=' + tenantId);
                                 htmlBody += '<div style="margin-top: 15px;">' +
                                     '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
                                     '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
@@ -5541,7 +5541,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function shareMilestoneToX(milestoneId) {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: ohc://join?ref=${tenant}`);
+                            const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: https://ohc.store/join?ref=${tenant}`);
                             const url = encodeURIComponent(window.location.origin + '/join?ref=' + tenant);
 
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');

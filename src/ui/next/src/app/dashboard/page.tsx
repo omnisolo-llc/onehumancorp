@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -96,12 +96,12 @@ export default function Dashboard() {
       } else {
         // Fallback to local storage tenant if API fails or no auth
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`ohc://join?ref=${tenant}`);
+        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`ohc://join?ref=${tenant}`);
+      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
       setShowReferralModal(true);
@@ -270,7 +270,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -599,11 +599,11 @@ export default function Dashboard() {
                                      const finalMessage = data.share_message.replace("a new milestone", `${activeCustomers} customers`);
                                      shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
                                  } else {
-                                     const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                     const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                                      if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
                                  }
                              } catch (e) {
-                                 const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                 const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                                  if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
                              }
 
@@ -1056,7 +1056,7 @@ export default function Dashboard() {
                                      if (trialStatus) trialStatus.textContent = 'Unlocked: 7-day Pro Trial Extension';
                                  }
                              }
-                             const shareText = `Just secured my 10th order on my own store! 🎉 Launch your own store today: ohc://join?ref=${tenant} ⚡ Powered by OHC`;
+                             const shareText = `Just secured my 10th order on my own store! 🎉 Launch your own store today: https://ohc.store/join?ref=${tenant} ⚡ Powered by OHC`;
                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
                          } catch (e) {
                              console.error("Failed to share milestone", e);
@@ -1136,7 +1136,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1156,7 +1156,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
@@ -1191,11 +1191,11 @@ export default function Dashboard() {
                                       const finalMessage = data.share_message.replace("a new milestone", `100 customers`);
                                       shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
                                   } else {
-                                      const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                      const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                                       if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
                                   }
                               } catch (e) {
-                                  const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                  const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                                   if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
                               }
                               setShowMilestoneBanner(false);

@@ -346,7 +346,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -501,7 +501,7 @@ async fn handle_get_milestone_card(
 }
 
 #[derive(Debug, Serialize)]
-pub struct MilestoneShareResponse {
+pub struct MilestoneShareInfoResponse {
     pub share_message: String,
     pub referral_link: String,
 }
@@ -515,7 +515,7 @@ async fn handle_get_milestone_share_info(
 
     let share_message = format!("I just reached a new milestone on my store! Start your own business today with One Human Corp: {}", referral_link);
 
-    Json(MilestoneShareResponse {
+    Json(MilestoneShareInfoResponse {
         share_message,
         referral_link,
     })

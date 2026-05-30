@@ -20,7 +20,7 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.powered-by-footer')).toBeVisible();
     await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
-    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
+    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'https://ohc.store/join?ref=storefront');
   });
 
   test('provides an embed widget snippet for storefront sharing', async ({ page }) => {
@@ -40,7 +40,7 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.builder-block').filter({ hasText: 'Refer a Friend' })).toBeVisible();
     await expect(page.locator('.builder-block').filter({ hasText: 'Get 10% off your next order!' })).toBeVisible();
-    await expect(page.locator('.builder-block a[href="ohc://join?ref=storefront-referral"]')).toBeVisible();
+    await expect(page.locator('.builder-block a[href="https://ohc.store/join?ref=storefront-referral"]')).toBeVisible();
   });
 
   test('renders the embed widget directly with viral footer', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('Viral Storefront E2E', () => {
     const footer = page.locator('.footer');
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
+    await expect(footer.locator('a')).toHaveAttribute('href', 'https://ohc.store/join?ref=embed');
   });
 
   test('generates social share og card with branding', async ({ request }) => {
