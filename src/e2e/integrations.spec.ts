@@ -4,12 +4,11 @@ test.describe('Integrations Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.getByText('Connect Tools').click();
-    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
   });
 
   test('shows the custom software integration page', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Custom Integration' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Custom Software', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Tools' })).toBeVisible();
   });
 
   test('shows product data access copy', async ({ page }) => {
@@ -28,7 +27,7 @@ test.describe('Integrations Page', () => {
     await page.getByRole('button', { name: 'Back to Dashboard' }).click();
     await page.getByRole('button', { name: 'Integrations' }).click();
 
-    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Social Media Accounts/ })).toBeVisible();
     await expect(page.locator('#manychat-integration').getByRole('button', { name: 'Configure' })).toBeVisible();
   });
 

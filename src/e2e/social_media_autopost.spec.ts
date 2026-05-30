@@ -32,7 +32,7 @@ test.describe('Social Media Autoposting Flow', () => {
 
   test('user can configure Manychat from dashboard integrations', async ({ page }) => {
     await page.getByRole('button', { name: 'Integrations' }).click();
-    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Social Media Accounts/ })).toBeVisible();
     await page.locator('#manychat-integration').getByRole('button', { name: 'Configure' }).click();
 
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();

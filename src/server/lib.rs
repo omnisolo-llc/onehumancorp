@@ -3579,9 +3579,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="manychat-integration" class="card glass" style="display: none;">
-                            <h3>💬 Manychat</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
-                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
+                            <h3>📱 Social Media Accounts</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Manage all your social media messages and posts in one place.</p>
+                            <button onclick="alert('Connecting to ManyChat...'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
