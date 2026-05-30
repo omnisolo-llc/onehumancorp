@@ -1,12 +1,13 @@
+use sqlx::Row;
 use std::collections::HashMap;
 use crate::services::onboarding::preflight;
 use crate::services::onboarding::provisioner;
 
-pub struct InteractiveWizard;
+pub struct InteractiveWizard { pub pool: Option<sqlx::PgPool> }
 
 impl InteractiveWizard {
-    pub fn new() -> Self {
-        InteractiveWizard
+    pub fn new(pool: Option<sqlx::PgPool>) -> Self {
+        InteractiveWizard { pool }
     }
 
     pub fn run_interactive_setup(&self, is_cloud: bool) -> Result<HashMap<String, String>, String> {
@@ -42,14 +43,50 @@ impl InteractiveWizard {
     }
 
 
-    pub fn save_onboarding_state(&self, _org_id: &str, _user_id: &str, _step: i32, _state_json: &str) -> Result<(), String> {
-        // Here we would use sqlx to persist to the onboarding_state table
+        pub async fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
+        let pool = self.pool.as_ref().ok_or("Database pool not configured")?;
+        let state_val: serde_json::Value = serde_json::from_str(state_json).map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
+             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
+        )
+        .bind(org_id)
+        .bind(user_id)
+        .bind(step)
+        .bind(state_val)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
-    pub fn get_onboarding_state(&self, _org_id: &str) -> Result<String, String> {
-        // Return dummy json for now
-        Ok(r#"{"step": 0}"#.to_string())
+        pub async fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+        let pool = self.pool.as_ref().ok_or("Database pool not configured")?;
+
+        let row = sqlx::query(
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 ORDER BY updated_at DESC LIMIT 1"
+        )
+        .bind(org_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if let Some(record) = row {
+            let mut state: serde_json::Value = record.get("state_json");
+            let current_step: i32 = record.get("current_step");
+            if let Some(obj) = state.as_object_mut() {
+                obj.insert("step".to_string(), serde_json::json!(current_step));
+            }
+            Ok(serde_json::to_string(&state).unwrap_or_else(|_| r#"{"step": 0}"#.to_string()))
+        } else {
+            Ok(r#"{"step": 0}"#.to_string())
+        }
     }
 
     pub fn reset_environment(&self, is_cloud: bool) -> Result<(), String> {
@@ -66,21 +103,21 @@ mod tests {
 
     #[test]
     fn test_interactive_wizard_cloud() {
-        let w = InteractiveWizard::new();
+        let w = InteractiveWizard::new(None);
         let cfg = w.run_interactive_setup(true).unwrap();
         assert_eq!(cfg.get("mode").unwrap(), "cloud");
     }
 
     #[test]
     fn test_interactive_wizard_standalone() {
-        let w = InteractiveWizard::new();
+        let w = InteractiveWizard::new(None);
         let cfg = w.run_interactive_setup(false).unwrap();
         assert_eq!(cfg.get("mode").unwrap(), "standalone");
     }
 
     #[test]
     fn test_reset_environment() {
-        let w = InteractiveWizard::new();
+        let w = InteractiveWizard::new(None);
         
         // Ensure clean slate
         let _ = fs::remove_dir_all(".ohc-local-data");

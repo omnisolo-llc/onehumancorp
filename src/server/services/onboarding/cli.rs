@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 
 pub fn run_cli(mut writer: impl Write, is_cloud: bool) -> Result<(), String> {
-    let wizard = InteractiveWizard::new();
+    let wizard = InteractiveWizard::new(None);
     let config = wizard.run_interactive_setup(is_cloud)?;
 
     let mode = if is_cloud { "Cloud-native" } else { "Standalone" };

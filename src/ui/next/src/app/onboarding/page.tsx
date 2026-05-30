@@ -193,8 +193,8 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter antialiased flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto rounded-[24px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative backdrop-blur-[20px] saturate-[200%] bg-white/10 dark:bg-black/20 border border-white/20">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -203,20 +203,20 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center animate-fade-in transform-gpu transition-all duration-500 ease-out">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
                 Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
+                <div className="flex flex-col flex-1 animate-fade-in transform-gpu transition-all duration-500 ease-out">
+                  <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     Our AI will instantly generate your storefront, products, and back-office agents.
                   </p>
@@ -228,7 +228,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full min-h-[56px] p-4 rounded-[14px] border border-white/20 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 outline-none bg-white/40 dark:bg-black/30 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -237,7 +237,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => setChatStep(2)}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[52px] p-4 rounded-[12px] font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -246,11 +246,11 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in transform-gpu transition-all duration-500 ease-out">
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
+                  <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     Tell us a bit about your products or services.
                   </p>
@@ -270,7 +270,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[52px] p-4 rounded-[12px] font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -279,11 +279,11 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in transform-gpu transition-all duration-500 ease-out">
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
+                  <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     This helps us set up your shipping and tax settings.
                   </p>
@@ -295,7 +295,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full min-h-[56px] p-4 rounded-[14px] border border-white/20 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 outline-none bg-white/40 dark:bg-black/30 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -304,7 +304,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={handleIntake}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[52px] p-4 rounded-[12px] font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
                     </button>
@@ -315,11 +315,11 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in transform-gpu transition-all duration-500 ease-out">
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                 Here's what our AI figured out. Feel free to tweak these.
               </p>
@@ -386,7 +386,7 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[52px] p-4 rounded-[12px] font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -395,11 +395,11 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in transform-gpu transition-all duration-500 ease-out">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
+              <h2 className="text-3xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                 Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
               </p>
@@ -467,7 +467,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[52px] p-4 rounded-[12px] font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.96] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Launch Store
                 </button>
@@ -476,12 +476,12 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in transform-gpu transition-all duration-500 ease-out">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+               <h2 className="text-2xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
                <div className="space-y-2">
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
@@ -492,13 +492,13 @@ export default function OnboardingWizard() {
           )}
 
           {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in transform-gpu transition-all duration-500 ease-out">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
+              <h2 className="text-2xl font-bold font-outfit tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>

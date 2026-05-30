@@ -8,7 +8,7 @@ pub fn run_day_one_setup(is_cloud: bool) -> Result<String, String> {
     provisioner::provision_environment(is_cloud)?;
 
     // 2. Interactive setup
-    let wizard = InteractiveWizard::new();
+    let wizard = InteractiveWizard::new(None);
     let config = wizard.run_interactive_setup(is_cloud)?;
 
     // 3. Validate config
