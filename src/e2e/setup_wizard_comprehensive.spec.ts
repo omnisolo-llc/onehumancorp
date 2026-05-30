@@ -11,27 +11,42 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     }, id);
     await page.goto('/onboarding');
 
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Online Store/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
-    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Physical Products/).check();
-    await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Custom Print');
-    await page.getByPlaceholder('0.00').fill('49.00');
-    await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Online', exact: true }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Art');
-    await page.getByPlaceholder('you@email.com').fill(email);
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Modern' }).click();
-    await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Publish my business/ }).click();
+    // Step 1: chatStep 1
+    const businessNameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+    await expect(businessNameInput).toBeVisible();
+    await businessNameInput.fill('Alex Art');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+    // Step 1: chatStep 2
+    const sellInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
+    await expect(sellInput).toBeVisible();
+    await sellInput.fill('Original art and prints');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1: chatStep 3
+    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+    await expect(locationInput).toBeVisible();
+    await locationInput.fill('Portland, OR');
+
+    // Submit details and generate business
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    // Step 2: Review Details
+    const continueBtn = page.getByRole('button', { name: 'Continue' });
+    await expect(continueBtn).toBeVisible({ timeout: 10000 });
+    await continueBtn.click();
+
+    // Step 3: Style & Team
+    const modernTemplate = page.locator('div').filter({ hasText: /^Modern$/ });
+    await expect(modernTemplate).toBeVisible();
+    await modernTemplate.click();
+
+    const launchBtn = page.getByRole('button', { name: 'Launch Store' });
+    await expect(launchBtn).toBeVisible();
+    await launchBtn.click();
+
+    // Step 5: You're Live!
+    await expect(page.getByRole('heading', { name: /You're Live!/ })).toBeVisible();
+    await expect(page.locator('a:has-text("Go to Dashboard")')).toBeVisible();
   });
 });
