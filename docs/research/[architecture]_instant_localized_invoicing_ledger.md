@@ -1,109 +1,85 @@
-# [Architecture] Instant Localized Invoicing & Smart Ledger Engine
+# [architecture] Instant Localized Invoicing Ledger
 
 ## Title
-Instant Localized Invoicing & Smart Ledger Engine
+Instant Localized Invoicing Ledger
 
 ## Problem Statement
-Service providers, freelancers, and small business owners (like Carlos the handyman and Leo the music tutor) struggle with the friction of getting paid globally. They rely on manual, disconnected tools (Word documents, separate accounting software, manual bank transfers) to create invoices, track who has paid, and manage different currencies or local tax requirements. This creates massive administrative overhead, delayed payments, and cash flow anxiety. They need a zero-configuration, automated invoicing system that generates professional, localized invoices instantly from their phone, syncs with a unified ledger, and automatically follows up on unpaid bills, so they can focus on their actual work, not chasing payments.
+Small business owners like Priya (boutique owner) and Leo (music tutor) need to quickly issue invoices to their customers that look professional, are accurate, and follow local tax laws. Current platforms either don't provide native invoicing, forcing users to use separate accounting software (like QuickBooks) which they find confusing, or they provide generic invoicing that doesn't cater to local requirements (like multi-currency or specific tax calculations). They need a system that can instantly generate localized invoices that feel premium and integrate directly with their unified ledger.
 
 ## Research Report
-
-### Competitive Landscape
-*   **Stripe Invoicing / Stripe Billing**: Extremely powerful and globally compliant, but requires complex dashboard setup, API knowledge for advanced features, and feels disconnected from a unified "business operations" view for true beginners. High fee structure.
-*   **QuickBooks / Xero**: Industry standards for accounting, but overwhelming for solopreneurs. They require understanding of double-entry bookkeeping (charts of accounts, reconciliation) which fails the "grandmother test". Mobile apps are companion viewers, not primary creation tools.
-*   **Wave Accounting**: Free and good for simple invoices, but lacks deep AI automation (e.g., automatically drafting an invoice based on an Instagram DM conversation or a finished calendar appointment).
-*   **Wix / Squarespace**: Offer basic invoice generation, but they are often bolt-on features without a robust underlying ledger capable of handling complex scenarios (deposits, milestone payments, multi-currency) natively.
-
-### The OHC Gap
-OneHumanCorp currently lacks a native, robust financial ledger system tightly integrated with its conversational AI agents. To enable "business in a box", we need an architecture where an AI Operations Agent can observe a completed service (e.g., a calendar event ending) and proactively draft an invoice, ready for a 1-tap approval on mobile.
+*   **Shopify:** Has basic invoicing, but complex B2B or localized invoicing often requires expensive third-party apps.
+*   **Wix/Squarespace:** Invoicing is present but rudimentary; localizing for different tax jurisdictions is largely a manual setup process.
+*   **Stripe Invoicing:** Powerful but developer-focused. The UI is complex for a non-technical user.
+*   **OHC Differentiation:** The Finance & Payments agent handles this invisibly. It observes an order or a quote approval, determines the customer's location, applies the correct local tax rules (VAT, GST, State Sales Tax), and instantly generates a localized invoice with a payment link, all recorded seamlessly into the underlying multi-tenant ledger.
 
 ## Design Doc
 
 ### Architecture Diagram
-
 ```mermaid
 erDiagram
-    TENANT ||--o{ INVOICE : generates
-    TENANT ||--o{ LEDGER_ACCOUNT : owns
-    INVOICE ||--o{ LINE_ITEM : contains
-    INVOICE ||--o{ PAYMENT_EVENT : records
-    PAYMENT_EVENT }|--|| LEDGER_ENTRY : triggers
+    INVOICE_REQUEST ||--o{ INVOICE_ROUTER : "Triggers"
+    INVOICE_ROUTER }|--|| FINANCE_AGENT : "Delegates to"
 
-    TENANT {
-        string id PK
-        string currency
-        string tax_nexus
+    FINANCE_AGENT {
+        string spiffe_identity "Zero Trust routing"
+        string tenant_id "Multi-tenant isolation"
     }
-    INVOICE {
-        string id PK
-        string status "Draft | Sent | Paid | Overdue"
-        date due_date
-        float total_amount
-    }
-    PAYMENT_EVENT {
-        string id PK
-        float amount
-        string method "TapToPay | Link | Transfer"
-        timestamp completed_at
-    }
+
+    FINANCE_AGENT ||--o{ TAX_SERVICE : "Consults for localization"
+    FINANCE_AGENT ||--o{ PAYMENT_GATEWAY : "Generates payment link"
+
+    FINANCE_AGENT }|--|| LEDGER_ENTRY : "Records to"
+
     LEDGER_ENTRY {
-        string id PK
-        float credit
-        float debit
-        timestamp posted_at
-        string entry_type "Revenue | Tax | Fee"
+        string invoice_id
+        string currency
+        decimal amount
+        string tax_jurisdiction
     }
+
+    LEDGER_ENTRY ||--o{ MOBILE_UI : "Syncs to"
 ```
 
-```mermaid
-sequenceDiagram
-    participant Mobile as Mobile App (375px)
-    participant Agent as AI Finance Agent
-    participant Ledger as Smart Ledger
-    participant Gateway as Payment Gateway
+### UI Wireframes & 375px Baseline
+**Core Layout: macOS-style Translucent Glass + Ubiquiti UniFi Modular Dashboard Cards**
+*   **Global Viewport:** 375px width (Mobile First).
+*   **Invoice Generator Card:** A simple form to input the customer name and items. The agent auto-fills the rest based on context.
+*   **Preview Mode:** A beautiful, glassmorphic preview of the invoice exactly as the customer will see it.
+*   **Action Button:** A prominent "Send & Record" button.
 
-    Agent->>Mobile: "Carlos, the roof repair for Sarah is done. Send $450 invoice?"
-    Mobile->>Agent: 1-Tap Approve
-    Agent->>Ledger: Create Invoice & Pending Ledger Entry
-    Agent->>Mobile: Returns localized payment link
-    Mobile->>Sarah: Sends link via SMS/WhatsApp
-    Sarah->>Gateway: Pays $450 via Apple Pay
-    Gateway->>Ledger: Webhook: Payment Success
-    Ledger->>Ledger: Commit Event (Credit Revenue, Debit Cash)
-    Ledger->>Agent: Notify success
-    Agent->>Mobile: Push: "Sarah paid $450. Funds in transit."
-```
-
-### Mobile UX Flow (375px First)
-1.  **The Proactive Prompt:** The user receives a push notification after a service is marked complete or a booking ends: "Generate invoice for [Client] for [Amount]?"
-2.  **The Draft View (Translucent Glass UI):** Tapping the notification opens a pristine, macOS-style card. It shows the client's name, the auto-calculated line items (pulled from context), the local tax added, and the total.
-3.  **1-Tap Action:** A large, prominent primary button at the bottom: "Send via WhatsApp" or "Send via Email".
-4.  **The Dashboard Widget:** The main dashboard features a simple, unified "Cash Flow" module. Green for money in, gray for pending invoices, red for overdue. No complex accounting terminology (no "Accounts Receivable", just "Unpaid").
+### Mobile UX Flow
+1. **Trigger:** Leo finishes a lesson and taps "Send Invoice" for his student.
+2. **Review:** The agent has already drafted the invoice with the correct amount, currency, and local tax based on the student's profile. Leo reviews it in a frosted glass card.
+3. **Action:** Leo taps "Approve".
+4. **Fulfillment:** The customer receives a localized email with a secure payment link. The transaction is recorded in Leo's OHC ledger.
 
 ### AI Agent Integration Points
-*   **AI Finance Department (Trigger):** Listens to calendar events, CRM status changes, or direct user commands (e.g., "Bill Maya 50 bucks for the cake").
-*   **AI Localization Engine:** Automatically translates the invoice into the recipient's language and converts to their local currency, applying the correct local tax rates (integrating with Stripe Tax / TaxJar).
-*   **AI Collector:** Automatically sends polite, escalating follow-up messages on WhatsApp/Email for overdue invoices, adjusting tone based on the client relationship history.
+*   **Finance Department:** Handles the generation, tax calculation, and ledger recording.
+*   **Customer Success Department:** Handles sending the invoice via the preferred channel (email, WhatsApp) and following up if it remains unpaid.
 
-### Key Design Decisions & Integrity
-*   **Event-Sourced Ledger:** The underlying ledger must be immutable and event-sourced. Instead of updating a balance, we append credit/debit events. This guarantees auditability and allows us to easily reconstruct past states or sync gracefully when the user goes back online.
-*   **Offline-First:** The merchant can draft and "send" an invoice even in a dead zone (e.g., a basement). The app queues the action locally and dispatches it the moment cellular connection is restored.
-*   **Zero-Trust & Multi-Tenancy:** Financial data is strictly isolated via SPIFFE/SPIRE identity routing. The ledger queries must always include the `tenant_id` at the lowest repository level to prevent cross-contamination.
-*   **"Grandmother Test" Approved:** Zero accounting jargon is exposed to the user.
+### Key Design Decisions
+*   **Invisible Localization:** The user should never have to manually calculate VAT or state tax; the system uses the customer's location to do this automatically.
+*   **Unified Ledger:** Every invoice must tie directly back to the core multi-tenant ledger to ensure accurate weekly financial reports without manual reconciliation.
+*   **Zero-Trust Isolation:** Financial data is highly sensitive; strict tenant isolation is required for all ledger reads and writes.
 
 ## Implementation Prompt
-Implement the core Instant Localized Invoicing & Smart Ledger Engine. Create a robust, multi-tenant capable API for generating invoices and an immutable, event-sourced double-entry ledger backend to track them.
+**To the Implementer Swarm:**
+Your goal is to build the architecture and UI for the "Instant Localized Invoicing Ledger".
 
-The system must expose endpoints for an AI Agent to draft an invoice, which a user can then approve via a mobile client. When an invoice is paid, the system must automatically record the corresponding credit/debit entries in the ledger to track revenue and pending balances. Ensure that the database operations for payment events are transactional and strictly scoped to the requesting tenant. Do not implement the actual third-party payment gateway integration yet; focus on the internal data model, the state transitions of the invoice (Draft -> Sent -> Paid), and the ledger integrity.
+**Customer User Journey (CUJ):**
+1. Leo navigates to the Finance tab and selects "New Invoice".
+2. He selects a customer and a service (e.g., "Guitar Lesson").
+3. The system automatically calculates the correct local tax and generates a preview.
+4. He taps "Send", and the invoice is recorded in the ledger and sent to the customer.
 
 **Acceptance Criteria:**
-1.  Can create an invoice draft with multiple line items, tax, and total calculation.
-2.  Can transition an invoice state and automatically write the appropriate balancing entries to an immutable ledger.
-3.  A tenant's ledger balance can be accurately calculated by aggregating its ledger entries.
-4.  Strict multi-tenant isolation is enforced on all queries.
+*   **Mobile Parity:** Perfect layout on 375px viewport with Translucent Glass aesthetics.
+*   **Localization:** The system must accurately apply different tax rates based on mocked customer locations.
+*   **Ledger Integration:** The generated invoice must create a corresponding, isolated entry in the database.
+*   **Isolation Guarantee:** Strict multi-tenant boundaries for financial records.
 
 ## Priority
-P0 (Critical)
+P1
 
 ## Estimated Scope
-Large
+Medium

@@ -50,6 +50,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -76,7 +78,9 @@ export default function OnboardingWizard() {
       categories,
       websiteTemplate,
       firstProductName,
-      firstProductPrice
+      firstProductPrice,
+      aiAgents,
+      aiAutoRespond
     };
 
     const timer = setTimeout(() => {
@@ -84,13 +88,14 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      }).catch(err => console.error('Failed to sync onboarding state', err));
+      })?.catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
