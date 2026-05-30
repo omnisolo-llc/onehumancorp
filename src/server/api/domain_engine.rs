@@ -93,7 +93,7 @@ pub async fn configure_dns(Json(req): Json<ConfigureRequest>) -> Json<serde_json
     }))
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
+pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     Router::new()
         .route("/search", get(search_domain))
         .route("/purchase", post(purchase_domain))
