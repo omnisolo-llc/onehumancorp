@@ -147,7 +147,26 @@ export default function Dashboard() {
         console.error("Failed to fetch approvals", e);
       }
     }
+
+    async function fetchActivity() {
+      try {
+        const res = await fetch('/api/agents/approvals/activity');
+        const data = await res.json();
+        if (data && data.pending_approvals) {
+          setSwarmActivity(data.pending_approvals.map((a: any) => ({
+            id: a.id || Math.random().toString(),
+            agent: a.department || "Swarm Agent",
+            action: a.description || "Working on task...",
+            time: "Recently"
+          })));
+        }
+      } catch (e) {
+        console.error("Failed to fetch activity", e);
+      }
+    }
+
     fetchApprovals();
+    fetchActivity();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
