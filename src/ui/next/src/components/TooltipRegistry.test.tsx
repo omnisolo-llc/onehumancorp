@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -32,11 +32,6 @@ describe('TooltipRegistry', () => {
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
       width: 100, height: 20, top: 0, left: 0, bottom: 20, right: 100, x: 0, y: 0, toJSON: () => {}
     }));
-
-    // Wait for the fetch in TooltipProvider to complete
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 0));
-    });
 
     fireEvent.mouseEnter(button.parentElement!);
 
