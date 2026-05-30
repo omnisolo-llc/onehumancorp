@@ -21,7 +21,11 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
+
+
+
     global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })) as any;
+
   });
 
   afterEach(() => {
@@ -40,6 +44,7 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
+
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('/intake')) {
         return Promise.resolve({
@@ -60,6 +65,7 @@ describe('OnboardingWizard', () => {
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
+
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -122,12 +128,14 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
+
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('/intake')) {
         return Promise.resolve({ ok: false });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
+
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -169,12 +177,14 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
+
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('/start')) {
         return Promise.resolve({ ok: false });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
+
 
     act(() => { render(<OnboardingWizard />); });
 
