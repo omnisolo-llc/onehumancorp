@@ -112,7 +112,7 @@ jobs:
             os_name: windows
             arch: x86_64
             bazel_config: windows_x86_64
-            tauri_cli_bazel_flags: --noenable_platform_specific_config
+            tauri_cli_bazel_flags: --noenable_platform_specific_config --spawn_strategy=local
             install_linux_deps: false
           - name: macos-universal
             runner: macos-15
