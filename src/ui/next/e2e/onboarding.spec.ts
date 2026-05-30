@@ -34,6 +34,11 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Select Template and Launch
     await page.locator('text="Classic"').click();
+
+    // Select Domain Choice
+    await expect(page.locator('text="Domain Choice"')).toBeVisible();
+    await page.locator('text="Custom Domain"').click();
+
     await page.locator('button:has-text("Launch Store")').click();
 
     // 4. Loading screen

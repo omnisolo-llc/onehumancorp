@@ -227,7 +227,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 3: Can select AI agents and toggle auto-respond', async () => {
-    useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
+    useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -253,6 +253,26 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
+    });
+  });
+
+  it('Step 3: Can select Domain Choice', async () => {
+    useOnboardingStore.setState({ step: 3, domainChoice: 'subdomain' });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    // Verify initial state
+    const customDomainBtn = screen.getByText('Custom Domain');
+    expect(customDomainBtn).toBeInTheDocument();
+
+    // Select Custom Domain
+    await act(async () => {
+      customDomainBtn.click();
+    });
+
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.domainChoice).toBe('custom');
     });
   });
 

@@ -295,6 +295,8 @@ impl OnboardingAgent {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
+        flags.insert("domain_choice".to_string(), serde_json::json!(req.domain_choice));
+
         // Add initial artifact placeholders to state
         flags.insert("storefront_status".to_string(), json!("generating"));
         flags.insert("policies_status".to_string(), json!("generating"));
