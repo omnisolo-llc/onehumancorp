@@ -21,7 +21,10 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ wizardState: {} })
+    });
   });
 
   afterEach(() => {
@@ -39,21 +42,29 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
+    // Mock initial fetch empty then intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('intake')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      } else if (url.includes('start')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      } else {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ wizardState: {} })
+        });
+      }
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -116,9 +127,19 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    // Mock initial state fetch then intake failure
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('intake')) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({})
+        });
+      } else {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ wizardState: {} })
+        });
+      }
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -160,9 +181,19 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    // Mock initial state fetch then start failure
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('start')) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({})
+        });
+      } else {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ wizardState: {} })
+        });
+      }
     });
 
     act(() => { render(<OnboardingWizard />); });

@@ -80,11 +80,14 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
-      fetch('/api/onboarding/state', {
+      const p = fetch('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      }).catch(err => console.error('Failed to sync onboarding state', err));
+      });
+      if (p && typeof p.catch === 'function') {
+        p.catch(err => console.error('Failed to sync onboarding state', err));
+      }
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
@@ -223,7 +226,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -290,7 +293,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>

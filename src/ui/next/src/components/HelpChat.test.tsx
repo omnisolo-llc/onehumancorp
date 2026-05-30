@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { HelpChat } from './HelpChat';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the fetch call
 global.fetch = vi.fn() as any;
@@ -9,6 +10,7 @@ global.fetch = vi.fn() as any;
 describe('HelpChat Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
   it('renders the floating button initially', () => {
@@ -19,7 +21,7 @@ describe('HelpChat Component', () => {
   it('opens the chat interface when floating button is clicked', () => {
     render(<HelpChat />);
     const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+    act(() => { fireEvent.click(button!); });
 
     expect(screen.getByText('Help Agent')).toBeInTheDocument();
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
@@ -27,6 +29,7 @@ describe('HelpChat Component', () => {
   });
 
   it('sends a message and displays user and agent reply', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -39,7 +42,7 @@ describe('HelpChat Component', () => {
 
     // Open chat
     const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+    act(() => { fireEvent.click(button!); });
 
     // Type message
     const input = screen.getByPlaceholderText('Ask me anything...');
@@ -47,7 +50,7 @@ describe('HelpChat Component', () => {
 
     // Submit
     const submitBtn = input.closest('form')!.querySelector('button[type="submit"]');
-    fireEvent.click(submitBtn!);
+    await act(async () => { fireEvent.click(submitBtn!); });
 
     // Check user message is displayed immediately
     expect(screen.getByText('How do I add a product?')).toBeInTheDocument();
@@ -62,18 +65,19 @@ describe('HelpChat Component', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
     render(<HelpChat />);
 
     const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+    act(() => { fireEvent.click(button!); });
 
     const input = screen.getByPlaceholderText('Ask me anything...');
     fireEvent.change(input, { target: { value: 'Will this fail?' } });
 
     const submitBtn = input.closest('form')!.querySelector('button[type="submit"]');
-    fireEvent.click(submitBtn!);
+    await act(async () => { fireEvent.click(submitBtn!); });
 
     await waitFor(() => {
       expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
