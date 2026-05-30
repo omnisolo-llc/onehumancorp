@@ -103,7 +103,7 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt, None) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -149,7 +149,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set(prompt, &content, prompt.len() / 4, None); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -191,7 +191,7 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt, None) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -355,7 +355,7 @@ impl LocalLLMClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt, None) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -379,7 +379,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
-        self.cache.set(prompt, response, prompt.len() / 4);
+        self.cache.set(prompt, response, prompt.len() / 4, None);
         Ok(response.to_string())
     }
 

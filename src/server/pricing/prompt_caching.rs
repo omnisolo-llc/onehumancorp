@@ -7,6 +7,7 @@ pub struct CachedResponse {
     pub text: String,
     pub created_at: Instant,
     pub token_count: usize,
+    pub tenant_id: Option<String>,
 }
 
 pub struct PromptCache {
@@ -35,23 +36,44 @@ impl PromptCache {
         None
     }
 
-    pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
+    pub fn get_with_cost_cents(&self, prompt: &str, tenant_id: Option<&str>) -> (Option<CachedResponse>, i64) {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
+            // Check tenant match if required
+            if let Some(tid) = tenant_id {
+                if r.tenant_id.as_deref() != Some(tid) {
+                    return (None, 0); // Miss due to tenant isolation
+                }
+            }
+
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
-            // very rough estimate of saved cents for cache hit
-            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new(); let ratio = RATIO.get_or_init(|| { std::env::var("MISER_TOKEN_RATIO").unwrap_or_else(|_| "0.0001".to_string()).parse::<f64>().unwrap_or(0.0001) }); (r.token_count as f64 * ratio).round() as i64
+
+            // Dynamic ratio via ENV, defaults to 0.0001 cents per token (estimated fallback)
+            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+            let ratio = RATIO.get_or_init(|| {
+                std::env::var("MISER_TOKEN_RATIO").unwrap_or_else(|_| "0.0001".to_string()).parse::<f64>().unwrap_or(0.0001)
+            });
+
+            (r.token_count as f64 * ratio).round() as i64
         } else {
             0
         };
         (res, cost)
     }
 
-    pub fn set(&self, prompt: &str, response: &str, token_count: usize) {
-        self.cache.insert(prompt.to_string(), CachedResponse {
+    pub fn set(&self, prompt: &str, response: &str, token_count: usize, tenant_id: Option<String>) {
+        // Truncate overly long prompts to save memory (Cost engineering: intelligent context truncation)
+        let truncated_prompt = if prompt.len() > 10000 {
+            &prompt[..10000]
+        } else {
+            prompt
+        };
+
+        self.cache.insert(truncated_prompt.to_string(), CachedResponse {
             text: response.to_string(),
             created_at: Instant::now(),
             token_count,
+            tenant_id,
         });
     }
 
@@ -69,7 +91,7 @@ mod tests {
     #[test]
     fn test_prompt_cache_get_set() {
         let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set("What is the capital of France?", "Paris", 1);
+        cache.set("What is the capital of France?", "Paris", 1, None);
 
         let response = cache.get("What is the capital of France?");
         assert!(response.is_some());
@@ -79,7 +101,7 @@ mod tests {
     #[test]
     fn test_prompt_cache_expiration() {
         let cache = PromptCache::new(Duration::from_millis(50));
-        cache.set("Hello", "World", 1);
+        cache.set("Hello", "World", 1, None);
 
         thread::sleep(Duration::from_millis(60));
         assert!(cache.get("Hello").is_none());
@@ -88,7 +110,7 @@ mod tests {
     #[test]
     fn test_prompt_cache_clear_expired() {
         let cache = PromptCache::new(Duration::from_millis(50));
-        cache.set("Test", "Data", 1);
+        cache.set("Test", "Data", 1, None);
 
         thread::sleep(Duration::from_millis(60));
         cache.clear_expired();
@@ -99,12 +121,36 @@ mod tests {
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
         let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set("What is the capital of France?", "Paris", 10000);
+        cache.set("What is the capital of France?", "Paris", 10000, None);
 
-        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
+        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?", None);
         assert!(response.is_some());
         assert_eq!(response.unwrap().text, "Paris");
         // 10000 * 0.0001 = 1.0 = 1 cent
         assert_eq!(cost, 1);
+    }
+
+    #[test]
+    fn test_prompt_cache_tenant_isolation() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("Secret data", "123", 10, Some("tenantA".to_string()));
+
+        let (response, _) = cache.get_with_cost_cents("Secret data", Some("tenantB"));
+        assert!(response.is_none(), "Tenant B should not access Tenant A's cache");
+
+        let (response, _) = cache.get_with_cost_cents("Secret data", Some("tenantA"));
+        assert!(response.is_some(), "Tenant A should access its own cache");
+    }
+
+    #[test]
+    fn test_prompt_cache_truncation() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        let long_prompt = "A".repeat(15000);
+        cache.set(&long_prompt, "Done", 10, None);
+
+        // Access via truncated string
+        let truncated = "A".repeat(10000);
+        let response = cache.get(&truncated);
+        assert!(response.is_some());
     }
 }

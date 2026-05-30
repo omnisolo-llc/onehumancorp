@@ -3,6 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Billing & Rate Limits', () => {
   test('should display dashboard', async ({ page }) => {
     await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 

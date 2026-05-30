@@ -150,7 +150,7 @@ export default function AgentsPage() {
               </button>
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">AI Departments</h1>
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">Agents</h1>
           <p className="text-sm text-gray-500 mt-1">Your autonomous business team.</p>
         </header>
 
