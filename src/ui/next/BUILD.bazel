@@ -14,7 +14,7 @@ sh_test(
         "tsconfig.json",
         "vitest.config.ts",
         "vitest.setup.ts",
-        "//src/ui/next/__mocks__:mocks",
+
     ],
     tags = ["no-sandbox"],
 )

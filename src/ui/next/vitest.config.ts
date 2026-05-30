@@ -10,14 +10,14 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     exclude: ['**/node_modules/**', '**/e2e/**', '**/*.spec.ts'],
     alias: {
-      'next/server': path.resolve(__dirname, './__mocks__/next/server.js'),
-      'next/link': path.resolve(__dirname, './__mocks__/next/link.js'),
+      'next/server': path.resolve(__dirname, './src/mocks/next/server.ts'),
+      'next/link': path.resolve(__dirname, './src/mocks/next/link.tsx'),
     }
   },
   resolve: {
     alias: {
-      'next/server': path.resolve(__dirname, './__mocks__/next/server.js'),
-      'next/link': path.resolve(__dirname, './__mocks__/next/link.js'),
+      'next/server': path.resolve(__dirname, './src/mocks/next/server.ts'),
+      'next/link': path.resolve(__dirname, './src/mocks/next/link.tsx'),
     }
   }
 })

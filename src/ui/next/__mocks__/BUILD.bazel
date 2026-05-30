@@ -1,5 +1,0 @@
-filegroup(
-    name = "mocks",
-    srcs = glob(["**/*"]),
-    visibility = ["//visibility:public"],
-)
