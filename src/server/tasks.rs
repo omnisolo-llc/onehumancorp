@@ -640,4 +640,38 @@ mod tests {
         assert_eq!(row.0, "APPROVED");
     }
 
+    #[tokio::test]
+    async fn test_reject_task_integration() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await;
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+        });
+
+        let tm = TaskManager::with_db(db);
+        let mut task = tm.create_task("org_int_rej".to_string(), "mission1".to_string(), "Int Rej Task".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        task.approval_status = Some("PENDING".to_string());
+        tm.insert_task(task.clone());
+
+        // Insert into DB directly for the query test
+        let _ = sqlx::query("INSERT INTO shared_tasks_decomposition (id, organization_id, status) VALUES (?, ?, ?)")
+            .bind(&task.id).bind("org_int_rej").bind("PENDING")
+            .execute(&pool).await.unwrap();
+
+        tm.approve_task(&task.id, false, "org_int_rej").await.unwrap();
+
+        let row: (String, String, String) = sqlx::query_as("SELECT approval_status, status, payload FROM shared_tasks_decomposition WHERE id = ?")
+            .bind(&task.id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "REJECTED");
+        assert_eq!(row.1, "FAILED");
+        let payload: serde_json::Value = serde_json::from_str(&row.2).unwrap();
+        assert_eq!(payload["error"], "Task was rejected by user");
+    }
+
 }

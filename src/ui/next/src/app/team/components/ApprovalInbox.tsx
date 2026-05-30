@@ -427,23 +427,23 @@ export default function ApprovalInbox({
 
         {/* Review Modal */}
         {selectedReview && (
-          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end backdrop-blur-[2px]">
             <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              className="bg-white/80 backdrop-blur-[20px] saturate-200 rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 border-t border-white/40"
               style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
               <h2 className="text-xl font-bold mb-4 font-outfit text-gray-900">Review Draft</h2>
 
               <div className="mb-4">
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Context</p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
+                <div className="bg-white/60 backdrop-blur-md p-3 rounded-xl border border-white/40 shadow-sm text-sm text-gray-700">
                    {extractPayload(selectedReview.description).payload?.original_message || "N/A"}
                 </div>
               </div>
 
               <div className="mb-6">
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Draft</p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                <div className="bg-blue-50/70 backdrop-blur-md p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative shadow-sm">
                   {extractPayload(selectedReview.description).payload?.generated_response || "N/A"}
                 </div>
               </div>
