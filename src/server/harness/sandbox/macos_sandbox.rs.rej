@@ -1,0 +1,17 @@
+--- src/server/harness/sandbox/macos_sandbox.rs
++++ src/server/harness/sandbox/macos_sandbox.rs
+@@ -64,6 +64,7 @@ impl SandboxAdapter for MacOsSandbox {
+                 "ast_security_violation",
+                 details
+             ).await;
++            ::server_telemetry::record_sandbox_violation("unknown_agent", "unknown_task", "ast_security_violation");
+             return Err(reason);
+         }
+
+@@ -76,6 +77,7 @@ impl SandboxAdapter for MacOsSandbox {
+                 "command_execution",
+                 details
+             ).await;
++            ::server_telemetry::record_sandbox_violation("unknown_agent", "unknown_task", "command_execution_denied");
+             return Err("Command execution denied by sandbox policy".to_string());
+         }

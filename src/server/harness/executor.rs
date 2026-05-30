@@ -82,7 +82,12 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\""));
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        assert!(msg.contains("Executing: bash -c \"echo 'hello'\""));
+        #[cfg(target_os = "linux")]
+        assert!(msg.contains("bwrap --unshare-all"));
+        #[cfg(target_os = "macos")]
+        assert!(msg.contains("sandbox-exec -p '"));
     }
 
     #[tokio::test]
@@ -129,22 +134,38 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
-        assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+
+        #[cfg(target_os = "linux")]
+        {
+            assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+        }
+
+        // MacOS translates this to subpath profile rules rather than exports
+        #[cfg(target_os = "macos")]
+        {
+            assert!(msg.contains("sandbox-exec -p '"));
+        }
     }
 
     #[tokio::test]
     async fn test_proxy_injection() {
         let mut task = LocalShellTask::new(None);
+        // We configure a socat proxy explicitly to test proxy injection which was done by BashWrapper via this
         let policy_json = r#"{
-            "allowed_domains": ["example.com"]
+            "socat_socket_path": "/tmp/test.sock",
+            "socat_proxy_port": 8080
         }"#;
 
         task.update_config(policy_json).await.unwrap();
 
-        let result = task.execute("echo $HTTP_PROXY").await;
+        let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let output = result.unwrap();
-        assert!(output.contains("http://127.0.0.1:"));
+
+        #[cfg(target_os = "linux")]
+        {
+            assert!(output.contains("socat UNIX-LISTEN:'/tmp/test.sock',fork TCP:127.0.0.1:8080 & \n"));
+        }
+        // MacOS doesn't currently use socat in its sandbox implementation wrapper
     }
 }

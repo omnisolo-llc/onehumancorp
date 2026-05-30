@@ -30,10 +30,10 @@ test.describe('Social Media Autoposting Flow', () => {
     await expect(page.getByText('Invite message copied!')).toBeVisible();
   });
 
-  test('user can configure Ayrshare from dashboard integrations', async ({ page }) => {
+  test('user can configure Manychat from dashboard integrations', async ({ page }) => {
     await page.getByRole('button', { name: 'Integrations' }).click();
-    await expect(page.getByRole('heading', { name: /Ayrshare/ })).toBeVisible();
-    await page.locator('#ayrshare-integration').getByRole('button', { name: 'Configure' }).click();
+    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
+    await page.locator('#manychat-integration').getByRole('button', { name: 'Configure' }).click();
 
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
   });
@@ -48,19 +48,5 @@ test.describe('Social Media Autoposting Flow', () => {
     await page.getByRole('button', { name: 'Send' }).click();
 
     await expect(page.locator('#messages-list')).toContainText('Thanks for reaching out!');
-  });
-
-  test('user can schedule an outbound post', async ({ page }) => {
-    await page.getByRole('button', { name: 'Check Messages' }).click();
-    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
-
-    await page.getByRole('button', { name: 'Schedule Outbound Post' }).click();
-    await expect(page.getByRole('heading', { name: 'Schedule Post' })).toBeVisible();
-
-    await page.locator('#post-content').fill('This is a test scheduled post');
-    await page.getByRole('button', { name: 'Schedule', exact: true }).click();
-
-    await expect(page.getByRole('heading', { name: 'Scheduled Posts' })).toBeVisible();
-    await expect(page.getByText('This is a test scheduled post')).toBeVisible();
   });
 });

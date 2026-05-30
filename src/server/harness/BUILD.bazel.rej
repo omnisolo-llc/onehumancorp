@@ -1,0 +1,10 @@
+--- src/server/harness/BUILD.bazel
++++ src/server/harness/BUILD.bazel
+@@ -15,6 +15,7 @@ rust_library(
+         "sandbox/catalog.rs",
+         "sandbox/wrapper.rs",
+         "sandbox/macos_sandbox.rs",
++        "sandbox/linux_sandbox.rs",
+         "mcp/mod.rs",
+         "mcp/client.rs",
+     ],

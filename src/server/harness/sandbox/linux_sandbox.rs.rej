@@ -1,0 +1,31 @@
+--- src/server/harness/sandbox/linux_sandbox.rs
++++ src/server/harness/sandbox/linux_sandbox.rs
+@@ -89,6 +89,7 @@ impl SandboxAdapter for LinuxSandbox {
+                 details
+             ).await;
+             record_bubblewrap_violation("unknown_agent", "unknown_task", "ast_security_violation");
++            ::server_telemetry::record_sandbox_violation("unknown_agent", "unknown_task", "ast_security_violation");
+             return Err(reason);
+         }
+
+@@ -102,6 +103,7 @@ impl SandboxAdapter for LinuxSandbox {
+                 details
+             ).await;
+             record_bubblewrap_violation("unknown_agent", "unknown_task", "command_execution_denied");
++            ::server_telemetry::record_sandbox_violation("unknown_agent", "unknown_task", "command_execution_denied");
+             return Err("Command execution denied by sandbox policy".to_string());
+         }
+
+@@ -198,10 +200,10 @@ mod tests {
+         sandbox.update_config(policy_json).await.unwrap();
+         let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
+
+-        assert!(wrapped.contains("socat UNIX-LISTEN:\\'/tmp/test.sock\\',fork TCP:127.0.0.1:8080 & "));
++        assert!(wrapped.contains("socat UNIX-LISTEN:'/tmp/test.sock',fork TCP:127.0.0.1:8080 & "));
+         assert!(wrapped.contains("SOCAT_PID=$!"));
+-        assert!(wrapped.contains("trap \\'kill $SOCAT_PID"));
+-        assert!(wrapped.contains("while [ ! -S \\'/tmp/test.sock\\' ]; do sleep 0.05; done"));
++        assert!(wrapped.contains("trap 'kill $SOCAT_PID"));
++        assert!(wrapped.contains("while [ ! -S '/tmp/test.sock' ]; do sleep 0.05; done"));
+         assert!(wrapped.contains("bwrap --unshare-all"));
+     }
