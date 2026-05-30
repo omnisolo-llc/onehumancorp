@@ -243,52 +243,16 @@ impl AgentProgress {
 // 5. Conversation History (happens at run loop)
 
 pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
-    let mut current_dir = start_dir.to_path_buf();
-    let mut contents = Vec::new();
-    let mut max_depth = 50;
-
-    loop {
-        let agent_file = current_dir.join("AGENTS.md");
-        if agent_file.exists() && agent_file.is_file() {
-            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
-                contents.push(content);
-            }
-        }
-
-        if !current_dir.pop() || max_depth == 0 {
-            break;
-        }
-        max_depth -= 1;
-    }
-
-    // Order: more deeply-nested files take precedence
-    let mut combined = String::new();
-    for (i, content) in contents.iter().enumerate() {
-        if i > 0 {
-            combined.push_str("\n\n---\n\n");
-        }
-        combined.push_str(content);
-    }
-
-    let max_bytes = 32 * 1024;
-    if combined.len() > max_bytes {
-        let mut end_idx = max_bytes;
-        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
-            end_idx -= 1;
-        }
-        combined.truncate(end_idx);
-        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
-    }
-
-    combined
+    crate::agents_md::AgentsMdLoader::load_cascading(start_dir).await
 }
 
-/// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification:
-/// 1. Server-controlled System Message (Highest Priority)
-/// 2. Tool Definitions
-/// 3. Developer Instructions
-/// 4. User Instructions (capped at 32 KiB)
+// Prompt Construction: OpenAI Codex Mechanic
+// 1. Server-controlled System Message (Highest Priority)
+// 2. Tool Definitions
+// 3. Developer Instructions
+// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
+// 5. Conversation History (happens at run loop)
+
 pub(crate) struct HierarchicalPromptBuilder {
     server_system_message: String,
     tool_definitions: String,
@@ -3150,61 +3114,6 @@ mod tests {
             }
         );
     }
-
-    #[tokio::test]
-    async fn test_cascading_agents_md() {
-        use tempfile::tempdir;
-        use tokio::fs;
-
-        let root_dir = tempdir().unwrap();
-        let sub_dir = root_dir.path().join("sub");
-        let deep_dir = sub_dir.join("deep");
-
-        fs::create_dir_all(&deep_dir).await.unwrap();
-
-        let root_md = root_dir.path().join("AGENTS.md");
-        let sub_md = sub_dir.join("AGENTS.md");
-        let deep_md = deep_dir.join("AGENTS.md");
-
-        fs::write(&root_md, "Root level instructions").await.unwrap();
-        fs::write(&sub_md, "Sub level instructions").await.unwrap();
-        fs::write(&deep_md, "Deep level instructions").await.unwrap();
-
-        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
-
-        // Since it loops from deep to root, the deeper files are collected first.
-        // The results should be: Deep -> Sub -> Root.
-        assert!(combined.contains("Deep level instructions"));
-        assert!(combined.contains("Sub level instructions"));
-        assert!(combined.contains("Root level instructions"));
-
-        let parts: Vec<&str> = combined.split("\n\n---\n\n").collect();
-        assert_eq!(parts.len(), 3);
-        assert_eq!(parts[0], "Deep level instructions");
-        assert_eq!(parts[1], "Sub level instructions");
-        assert_eq!(parts[2], "Root level instructions");
-    }
-
-    #[tokio::test]
-    async fn test_load_cascading_agents_md_truncation() {
-        use tempfile::tempdir;
-        use tokio::fs;
-
-        let root_dir = tempdir().unwrap();
-        let root_path = root_dir.path();
-
-        let root_md = root_path.join("AGENTS.md");
-        // Create an AGENTS.md that is slightly over 32 KiB
-        let large_content = "A".repeat(33000);
-        fs::write(&root_md, large_content).await.unwrap();
-
-        let combined = crate::agent::load_cascading_agents_md(root_path).await;
-
-        // Verify the size is close to 32KiB + notice
-        assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
-        assert!(combined.ends_with("[System: AGENTS.md content truncated to 32KiB limit.]"));
-    }
-
 
     #[tokio::test]
     async fn test_harness_thickness_optimization() {

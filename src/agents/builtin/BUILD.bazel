@@ -7,6 +7,7 @@ rust_library(
     name = "core",
     srcs = [
         "acon_context.rs",
+        "agents_md.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",
@@ -47,6 +48,7 @@ rust_library(
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
+        "agents_md.rs",
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
