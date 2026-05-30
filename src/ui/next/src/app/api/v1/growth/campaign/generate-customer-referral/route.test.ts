@@ -2,8 +2,15 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 
 describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
+    let errorSpy: any;
+
     beforeEach(() => {
         global.fetch = vi.fn();
+        errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        if (errorSpy) errorSpy.mockRestore();
     });
 
     it('returns 200 with message on successful backend fetch', async () => {
