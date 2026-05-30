@@ -858,10 +858,23 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let tenant_id_clone = tenant_id.clone();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let hub_clone = self.hub.clone();
+
+        let (costs_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || {
+                let llm = auditor.get_total_cost();
+                let rev = auditor.get_total_revenue();
+                (llm, rev)
+            }),
+            async move {
+                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
+            }
+        );
+
+        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2232,13 +2245,74 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     };
 
     let sub_agent_queue_clone = sub_agent_queue.clone();
+    let dept_orchestrator_clone = dept_orchestrator.clone();
+    let mesh_clone = handoff_mesh.clone();
     tokio::spawn(async move {
         loop {
-            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
-                tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string(), "customer_success_agent".to_string(), "operations_agent".to_string(), "chat_agent".to_string()]).await {
+                tracing::info!("Processing sub-agent job: {} ({})", job.id, job.agent_role);
+
+                let mut success = true;
+                let mut error_msg = String::new();
+
+                if job.agent_role == "customer_success_agent" || job.agent_role == "operations_agent" || job.agent_role == "chat_agent" {
+                    if let Ok(payload) = serde_json::from_str::<serde_json::Value>(&job.payload) {
+                        let action = payload.get("description").and_then(|v| v.as_str()).unwrap_or("Background action").to_string();
+                        let risk = crate::orchestration::departments::types::ActionRisk::AutoExecute;
+
+                        let department = match job.agent_role.as_str() {
+                            "customer_success_agent" => crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+                            "operations_agent" => crate::orchestration::departments::types::DepartmentType::Operations,
+                            "chat_agent" => {
+                                let dt_str = payload.get("department").and_then(|v| v.as_str()).unwrap_or("operations");
+                                std::str::FromStr::from_str(dt_str).unwrap_or(crate::orchestration::departments::types::DepartmentType::Operations)
+                            },
+                            _ => crate::orchestration::departments::types::DepartmentType::Operations,
+                        };
+
+                        let actual_payload = payload.get("payload").cloned().unwrap_or(payload.clone());
+
+                        match dept_orchestrator_clone.execute_action(
+                            department,
+                            action.clone(),
+                            job.tenant_id.clone(),
+                            risk,
+                            actual_payload
+                        ).await {
+                            Ok(_) => {
+                                // For real-time updates on the frontend
+                                let mesh_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                    agent_id: department.to_string(),
+                                    action,
+                                    status: "completed".to_string(),
+                                    payload: job.payload.into_bytes(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                };
+                                let mut buf = Vec::new();
+                                if prost::Message::encode(&mesh_event, &mut buf).is_ok() {
+                                    let _ = mesh_clone.publish("system", buf).await;
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to execute action for job {}: {}", job.id, e);
+                                success = false;
+                                error_msg = e.to_string();
+                            }
+                        }
+                    } else {
+                        success = false;
+                        error_msg = "Invalid payload".to_string();
+                    }
+                }
+
+                if success {
+                    let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+                } else {
+                    let _ = sub_agent_queue_clone.fail(&job.id, &job.tenant_id, &error_msg).await;
+                }
+            } else {
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
     });
 
@@ -2627,8 +2701,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
-        .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/agents/chat", api::agents::chat::router(api::agents::chat::ChatState { orchestrator: dept_orchestrator.clone(), queue: sub_agent_queue.clone() }))
+        .nest("/api/agents/webhook", api::agents::webhook::router(api::agents::webhook::WebhookState { orchestrator: dept_orchestrator.clone(), queue: sub_agent_queue.clone() }))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .nest("/api/supply", api::supply::router(db.clone()))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -5207,7 +5281,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            const url = encodeURIComponent(`ohc://join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
