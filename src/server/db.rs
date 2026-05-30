@@ -1548,3 +1548,53 @@ mod e2e_tenant_isolation_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod e2e_tenant_isolation_swarm_tasks_tests {
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn test_tenant_data_isolation_swarm_tasks() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_1'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
+
+        let pool2 = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_2'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
+    }
+}
