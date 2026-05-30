@@ -363,70 +363,6 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                    CREATE TABLE IF NOT EXISTS vendors (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        name TEXT,
-                        contact_info TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS raw_materials (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        name TEXT,
-                        current_quantity INTEGER DEFAULT 0,
-                        reorder_threshold INTEGER DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS bom_items (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        finished_good_id TEXT,
-                        raw_material_id TEXT,
-                        quantity_required INTEGER DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS purchase_orders (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        vendor_id TEXT,
-                        status TEXT DEFAULT 'Draft',
-                        total_cost REAL DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS po_line_items (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        purchase_order_id TEXT,
-                        raw_material_id TEXT,
-                        quantity INTEGER DEFAULT 1,
-                        price REAL DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS depletion_logs (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        raw_material_id TEXT,
-                        order_id TEXT,
-                        quantity INTEGER DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
                         id TEXT PRIMARY KEY,
@@ -1043,36 +979,6 @@ impl DB {
             }
         }
         Ok(())
-    }
-
-    pub async fn get_knowledge_embedding(&self, id: &str) -> Result<Option<(String, String)>, Box<dyn std::error::Error>> {
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let row = sqlx::query("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
-                    .bind(id)
-                    .fetch_optional(sqlite_pool)
-                    .await?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    Ok(Some((r.get("id"), r.get("content"))))
-                } else {
-                    Ok(None)
-                }
-            }
-            DbStore::Postgres => {
-                let parsed_id = uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4());
-                let row = sqlx::query("SELECT id::text, content FROM knowledge_embeddings WHERE id = $1")
-                    .bind(parsed_id)
-                    .fetch_optional(&self.pool)
-                    .await?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    Ok(Some((r.get("id"), r.get("content"))))
-                } else {
-                    Ok(None)
-                }
-            }
-        }
     }
 
     pub async fn insert_knowledge_embedding(
