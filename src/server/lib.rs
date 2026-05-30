@@ -30,7 +30,7 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
-static ADVISORY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static ADVISORY_CACHE: std::sync::OnceLock<crate::utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -702,11 +702,11 @@ pub async fn advisory_insights_handler(
     let cache = ADVISORY_CACHE.get_or_init(|| {
         let redis_url = std::env::var("REDIS_URL").ok();
         let redis_client = redis_url.and_then(|url| redis::Client::open(url).ok());
-        ::server_utils::cache::HybridCache::new(redis_client)
+        crate::utils::cache::HybridCache::new(redis_client)
     });
 
     // Include active_orders in the cache key so it reflects dynamic changes
-    let cache_key = format!("advisory_insights_{}_{}", tenant_id, active_orders);
+    let cache_key = format!("advisory_insights_{}_{}_{}_{}", tenant_id, active_orders, business_name.len(), industry.len());
     if let Some(cached_output) = cache.get(&cache_key).await {
         return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": cached_output }))).into_response();
     }
