@@ -6,10 +6,6 @@ export async function GET(request: Request) {
   const tenant = encodeURIComponent(tenantRaw);
   const theme = searchParams.get('theme') || 'light';
 
-  const host = request.headers.get('host') || 'ohc.app';
-  const protocol = request.headers.get('x-forwarded-proto') || 'https';
-  const baseUrl = `${protocol}://${host}`;
-
   const isDark = theme === 'dark';
   const bgClass = isDark ? 'bg-gray-900' : 'bg-white';
   const textClass = isDark ? 'text-white' : 'text-gray-900';
@@ -140,7 +136,6 @@ export async function GET(request: Request) {
         }
         .footer a:hover { color: #2563eb; text-decoration: underline; }
       </style>
-      <meta property="og:image" content="${baseUrl}/api/v1/growth/storefront/og-card?tenant=${tenant}&amp;product_name=Premium%20Collection" />
     </head>
     <body>
       <div class="card">
