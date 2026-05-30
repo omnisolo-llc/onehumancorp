@@ -2,12 +2,15 @@ use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
+use dashmap::DashMap;
+use std::sync::Arc;
 
 pub struct HybridCache<T> {
     local: OnceLock<RwLock<HashMap<String, (T, std::time::Instant)>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
+    locks: DashMap<String, Arc<tokio::sync::Mutex<()>>>,
 }
 
 impl<T> HybridCache<T>
@@ -20,6 +23,7 @@ where
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: 1000,
+            locks: DashMap::new(),
         }
     }
 
@@ -29,6 +33,7 @@ where
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: capacity,
+            locks: DashMap::new(),
         }
     }
 
@@ -119,11 +124,49 @@ where
             let _: Result<(), _> = conn.del(key).await;
         }
     }
+
+    pub async fn get_or_insert_with<F, Fut, E>(&self, key: &str, fetch: F, ttl: Duration) -> Result<T, E>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+    {
+        // Fast path
+        if let Some(val) = self.get(key).await {
+            return Ok(val);
+        }
+
+        let lock = {
+            let ref_mut = self.locks.entry(key.to_string()).or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())));
+            ref_mut.clone()
+        };
+
+        let _guard = lock.lock().await;
+
+        // Double check
+        if let Some(val) = self.get(key).await {
+            return Ok(val);
+        }
+
+        // Fetch
+        let val = match fetch().await {
+            Ok(v) => v,
+            Err(e) => {
+                self.locks.remove(key);
+                return Err(e);
+            }
+        };
+
+        self.set(key, val.clone(), ttl).await;
+        self.locks.remove(key);
+
+        Ok(val)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[tokio::test]
     async fn test_hybrid_cache_capacity_eviction() {
@@ -134,5 +177,33 @@ mod tests {
 
         let local = cache.get_local().read().unwrap();
         assert_eq!(local.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_or_insert_with_concurrency() {
+        let cache = Arc::new(HybridCache::<String>::with_capacity(None, 10));
+        let counter = Arc::new(AtomicUsize::new(0));
+
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let cache_clone = cache.clone();
+            let counter_clone = counter.clone();
+
+            handles.push(tokio::spawn(async move {
+                let res = cache_clone.get_or_insert_with("concurrent_key", || async {
+                    counter_clone.fetch_add(1, Ordering::SeqCst);
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    Ok::<_, String>("value".to_string())
+                }, Duration::from_secs(60)).await;
+                assert_eq!(res.unwrap(), "value");
+            }));
+        }
+
+        for handle in handles {
+            handle.await.unwrap();
+        }
+
+        // The fetch closure should only be executed once despite 10 concurrent requests
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
 }

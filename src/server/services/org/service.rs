@@ -74,79 +74,75 @@ impl OrgService for MyOrgService {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
-        if let Some(cached) = self.analytics_cache.get(&cache_key).await {
-            return Ok(Response::new(cached));
-        }
+        let response = self.analytics_cache.get_or_insert_with(&cache_key, || async {
+            let hub1 = self.hub.clone();
+            let hub2 = self.hub.clone();
+            let hub3 = self.hub.clone();
+            let hub4 = self.hub.clone();
+            let org_id_clone = org_id.clone();
 
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-        let hub3 = self.hub.clone();
-        let hub4 = self.hub.clone();
-        let org_id_clone = org_id.clone();
+            let (agents_res, meetings_res, summary_res, quota_res) = tokio::join!(
+                tokio::spawn(async move { hub1.get_agents().await }),
+                tokio::spawn(async move { hub2.get_meetings().await }),
+                tokio::task::spawn_blocking(move || hub3.tracker().summary("system")),
+                tokio::spawn(async move { hub4.tracker().check_agent_quota(&org_id_clone).await })
+            );
+            let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+            let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+            let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
+            let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?;
 
-        let (agents_res, meetings_res, summary_res, quota_res) = tokio::join!(
-            tokio::spawn(async move { hub1.get_agents().await }),
-            tokio::spawn(async move { hub2.get_meetings().await }),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system")),
-            tokio::spawn(async move { hub4.tracker().check_agent_quota(&org_id_clone).await })
-        );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
-        let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
-        let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?;
-        
-        let mut total_msgs = 0;
-        let mut audited_msgs = 0;
-        let mut agent_set = std::collections::HashSet::new();
-        for a in agents.iter() {
-            agent_set.insert(a.id.clone());
-        }
-        
-        for m in meetings.iter() {
-            for msg in &m.transcript {
-                total_msgs += 1;
-                if agent_set.contains(&msg.from_agent) {
-                    audited_msgs += 1;
+            let mut total_msgs = 0;
+            let mut audited_msgs = 0;
+            let mut agent_set = std::collections::HashSet::new();
+            for a in agents.iter() {
+                agent_set.insert(a.id.clone());
+            }
+
+            for m in meetings.iter() {
+                for msg in &m.transcript {
+                    total_msgs += 1;
+                    if agent_set.contains(&msg.from_agent) {
+                        audited_msgs += 1;
+                    }
                 }
             }
-        }
-        
-        let audit_fidelity_pct = if total_msgs > 0 {
-            (audited_msgs as f64 / total_msgs as f64) * 100.0
-        } else {
-            100.0
-        };
-        
-        let total_agents = agents.len() as i32;
-        let total_humans = 10; 
-        
-        let human_agent_ratio = if total_humans > 0 {
-            total_agents as f64 / total_humans as f64
-        } else {
-            0.0
-        };
-        
-        let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
-            user_message: None,
-        });
 
-        let response = AnalyticsSummaryResponse {
-            human_agent_ratio,
-            total_agents,
-            total_humans,
-            audit_fidelity_pct,
-            resumption_latency_ms: 4800,
-            pending_approvals: 2,
-            active_handoffs: 1,
-            token_velocity: summary.total_tokens,
-            soft_limit_reached: status.soft_limit_reached,
-            upgrade_message: status.user_message.unwrap_or_default(),
-            is_allowed: status.is_allowed,
-        };
+            let audit_fidelity_pct = if total_msgs > 0 {
+                (audited_msgs as f64 / total_msgs as f64) * 100.0
+            } else {
+                100.0
+            };
 
-        self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+            let total_agents = agents.len() as i32;
+            let total_humans = 10;
+
+            let human_agent_ratio = if total_humans > 0 {
+                total_agents as f64 / total_humans as f64
+            } else {
+                0.0
+            };
+
+            let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            });
+
+            Ok::<_, Status>(AnalyticsSummaryResponse {
+                human_agent_ratio,
+                total_agents,
+                total_humans,
+                audit_fidelity_pct,
+                resumption_latency_ms: 4800,
+                pending_approvals: 2,
+                active_handoffs: 1,
+                token_velocity: summary.total_tokens,
+                soft_limit_reached: status.soft_limit_reached,
+                upgrade_message: status.user_message.unwrap_or_default(),
+                is_allowed: status.is_allowed,
+            })
+        }, std::time::Duration::from_secs(60)).await?;
 
         Ok(Response::new(response))
     }

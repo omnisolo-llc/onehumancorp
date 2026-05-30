@@ -25,57 +25,56 @@ impl MyAgentManagerService {
 
     async fn get_snapshot(&self, org_id: &str) -> Result<DashboardSnapshot, Status> {
         let cache_key = format!("agent_dashboard_snapshot_{}", org_id);
-        if let Some(snapshot) = self.snapshot_cache.get(&cache_key).await {
-            return Ok(snapshot);
-        }
 
-        let hub_cost = self.hub.clone();
-        let (agents, meetings, cost_res) = tokio::join!(
-            async { self.hub.get_agents().await },
-            async { self.hub.get_meetings().await },
-            async {
-                tokio::task::spawn_blocking(move || {
-                    let cost_auditor = hub_cost.get_cost_auditor();
-                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-                }).await.unwrap_or((0.0, 0, vec![]))
+        let snapshot = self.snapshot_cache.get_or_insert_with(&cache_key, || async {
+            let hub_cost = self.hub.clone();
+            let (agents, meetings, cost_res) = tokio::join!(
+                async { self.hub.get_agents().await },
+                async { self.hub.get_meetings().await },
+                async {
+                    tokio::task::spawn_blocking(move || {
+                        let cost_auditor = hub_cost.get_cost_auditor();
+                        (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+                    }).await.unwrap_or((0.0, 0, vec![]))
+                }
+            );
+            let (total_cost, total_tokens, agent_costs_data) = cost_res;
+
+            let mut agent_costs = Vec::new();
+            for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
+                let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+                agent_costs.push(AgentCostSummary {
+                    name,
+                    cost_usd: cost,
+                    roi,
+                    efficiency,
+                    pct,
+                });
             }
-        );
-        let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
-        let mut agent_costs = Vec::new();
-        for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
-            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
-            agent_costs.push(AgentCostSummary {
-                name,
-                cost_usd: cost,
-                roi,
-                efficiency,
-                pct,
-            });
-        }
+            let costs = Summary {
+                total_cost_usd: total_cost,
+                agent_costs,
+                total_tokens,
+            };
 
-        let costs = Summary {
-            total_cost_usd: total_cost,
-            agent_costs,
-            total_tokens,
-        };
+            let mut status_map = std::collections::HashMap::new();
+            for a in agents.iter() {
+                *status_map.entry(a.status.clone()).or_insert(0) += 1;
+            }
+            let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
-        let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
-            *status_map.entry(a.status.clone()).or_insert(0) += 1;
-        }
-        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
+            Ok::<_, Status>(DashboardSnapshot {
+                meetings: meetings.to_vec(),
+                costs: Some(costs),
+                agents: agents.to_vec(),
+                statuses,
+                task_queue: vec![],
+                queue_length: 0,
+                updated_at_unix: Utc::now().timestamp(),
+            })
+        }, std::time::Duration::from_secs(5)).await?;
 
-        let snapshot = DashboardSnapshot {
-            meetings: meetings.to_vec(),
-            costs: Some(costs),
-            agents: agents.to_vec(),
-            statuses,
-            task_queue: vec![],
-            queue_length: 0,
-            updated_at_unix: Utc::now().timestamp(),
-        };
-        self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
         Ok(snapshot)
     }
 }
