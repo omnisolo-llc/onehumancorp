@@ -8,14 +8,11 @@ on:
       - docs/**
       - mkdocs.yml
       - .github/workflows/docs-site.yml
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.sha }}
-  cancel-in-progress: ${{ github.ref_name != 'main' }}
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -23,42 +20,7 @@ permissions:
   id-token: write
 
 jobs:
-  check-changes:
-    name: Check what files changed
-    runs-on: ubuntu-latest
-    outputs:
-      markdown-changed: ${{ steps.check.outputs.markdown-changed }}
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Check if markdown files changed
-        id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}"
-            changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          else
-            changed_files=$(git diff --name-only HEAD~1 HEAD)
-          fi
-
-          echo "Changed files:"
-          echo "$changed_files"
-
-          md_files=$(echo "$changed_files" | grep '\.md$' || true)
-
-          if [ -n "$md_files" ]; then
-            echo "markdown-changed=true" >> "$GITHUB_OUTPUT"
-            echo "Markdown files changed: $md_files"
-          else
-            echo "markdown-changed=false" >> "$GITHUB_OUTPUT"
-            echo "No markdown files changed"
-          fi
-
   build:
-    needs: check-changes
-    if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
