@@ -33,27 +33,6 @@ impl OnboardingAgent {
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
-        if std::env::var("MINIMAX_API_KEY").is_err() && cfg!(test) {
-             if input.to_lowercase().contains("maya") {
-                 return Ok(IntakeData {
-                     business_name: "Maya's Cakes".to_string(),
-                     business_type: "Bakery".to_string(),
-                     categories: vec!["food".to_string(), "physical".to_string()],
-                     initial_products: vec![
-                         IntakeProduct { name: "Custom Vegan Cake".to_string(), price: "45.00".to_string() }
-                     ]
-                 });
-             }
-             return Ok(IntakeData {
-                 business_name: "Default Business".to_string(),
-                 business_type: "Retail".to_string(),
-                 categories: vec!["physical".to_string()],
-                 initial_products: vec![
-                     IntakeProduct { name: "Default Product".to_string(), price: "10.00".to_string() }
-                 ]
-             });
-        }
-
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 
         let prompt = format!(
