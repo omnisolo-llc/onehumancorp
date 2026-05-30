@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -96,12 +96,12 @@ export default function Dashboard() {
       } else {
         // Fallback to local storage tenant if API fails or no auth
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(`ohc://join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(`ohc://join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
       setShowReferralModal(true);
@@ -147,7 +147,26 @@ export default function Dashboard() {
         console.error("Failed to fetch approvals", e);
       }
     }
+
+    async function fetchActivity() {
+      try {
+        const res = await fetch('/api/agents/approvals/activity');
+        const data = await res.json();
+        if (data && data.pending_approvals) {
+          setSwarmActivity(data.pending_approvals.map((a: any) => ({
+            id: a.id || Math.random().toString(),
+            agent: a.department || "Swarm Agent",
+            action: a.description || "Working on task...",
+            time: "Recently"
+          })));
+        }
+      } catch (e) {
+        console.error("Failed to fetch activity", e);
+      }
+    }
+
     fetchApprovals();
+    fetchActivity();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
@@ -365,6 +384,9 @@ export default function Dashboard() {
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
+             </Link>
+             <Link href="/orders" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
+               Orders 📦
              </Link>
              <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
                Inbox
@@ -996,7 +1018,50 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Interactive Analytics Soft Paywall */}
+
+         {/* Milestone Viral Share Growth Loop Component */}
+         <div className="bg-white rounded-3xl p-8 mb-12 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-indigo-50 to-purple-50" style={{ backdropFilter: 'blur(20px) saturate(200%)' }}>
+             <div className="flex-1">
+                 <h3 className="text-xl font-bold text-gray-900 mb-2 font-outfit">🎉 You reached 10 Orders!</h3>
+                 <p className="text-gray-600 mb-6 font-inter">Your business is growing fast. Share your milestone and unlock a <strong>7-day Pro Trial Extension</strong>.</p>
+
+                 <button
+                     id="share-milestone-btn"
+                     onClick={async () => {
+                         try {
+                             const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                             const response = await fetch('/api/v1/growth/milestone/share', {
+                                 method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ tenant_id: tenant, milestone_id: '10_orders' })
+                             });
+                             if (response.ok) {
+                                 const data = await response.json();
+                                 if (data.reward_unlocked) {
+                                     alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
+                                     const trialStatus = document.getElementById('milestone-reward-status');
+                                     if (trialStatus) trialStatus.textContent = 'Unlocked: 7-day Pro Trial Extension';
+                                 }
+                             }
+                             const shareText = `Just secured my 10th order on my own store! 🎉 Launch your own store today: ohc://join?ref=${tenant} ⚡ Powered by OHC`;
+                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
+                         } catch (e) {
+                             console.error("Failed to share milestone", e);
+                         }
+                     }}
+                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold font-inter shadow-md hover:shadow-lg transition-all"
+                 >
+                     Share & Claim Reward
+                 </button>
+                 <p id="milestone-reward-status" className="text-sm text-green-600 mt-4 font-inter font-medium"></p>
+             </div>
+             <div className="w-48 h-48 relative rounded-2xl overflow-hidden shadow-lg transform rotate-3 hover:rotate-0 transition-transform">
+                 <img src={`/api/v1/growth/milestone/card?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&milestone_id=10_orders`} alt="Milestone Graphic" className="object-cover w-full h-full" id="milestone-banner-img" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&q=80'; }} />
+             </div>
+         </div>
+
+
+        {/* Growth Loop: Interactive Analytics Soft Paywall */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
@@ -1123,35 +1188,6 @@ export default function Dashboard() {
               </div>
            </section>
          )}
-
-         {/* Growth Loop: Link-in-Bio Generator */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
-                        <span className="text-xs font-medium text-pink-600">Social Growth</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Centralize Your Links</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Create a beautiful, mobile-friendly landing page for your social media bios. Add your storefront, booking links, and custom pages in one place.</p>
-                    <Link
-                        href="/link-in-bio-generator"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-semibold hover:bg-pink-700 transition-colors shadow-sm"
-                    >
-                        <span>Create Link-in-Bio Page</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                    </Link>
-                </div>
-                <div className="hidden md:flex w-48 h-32 bg-gray-50 rounded-xl border border-gray-200 items-center justify-center flex-shrink-0 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink-100/50 to-purple-100/50"></div>
-                    <div className="text-4xl relative z-10">🔗</div>
-                </div>
-            </div>
-         </section>
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
