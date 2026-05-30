@@ -35,6 +35,14 @@ impl CalComProvider {
 }
 
 impl CalComProvider {
+    pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
+        self._client.get_free_busy(time_min, time_max).await
+    }
+
+    pub async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
+        self._client.create_event(summary, start_time, end_time).await
+    }
+
     pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
         self._client.get_booking_link(event_type).await
     }

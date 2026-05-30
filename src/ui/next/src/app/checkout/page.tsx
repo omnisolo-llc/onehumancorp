@@ -91,6 +91,35 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={async () => {
+                setIsProcessing(true);
+                try {
+                  const res = await fetch('/api/v1/checkout/mercadopago', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: [{ title: 'Store Item', price: 100 }] })
+                  });
+                  const data = await res.json();
+                  if (data.init_point) {
+                    // Simulate redirect
+                    setTimeout(() => {
+                        setShowSuccessModal(true);
+                    }, 500);
+                  }
+                } catch (e) {
+                  alert("Failed to initialize Mercado Pago checkout");
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              Pay with Mercado Pago
+            </button>
+          </WithTooltip>
+
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button
               onClick={() => router.push('/pricing')}

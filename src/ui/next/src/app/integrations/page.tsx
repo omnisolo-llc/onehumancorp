@@ -45,6 +45,29 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
+    if (id === 'mercadopago' || id === 'cal_com') {
+      const connectAPI = async () => {
+        try {
+          const endpoint = id === 'cal_com' ? '/api/integrations/cal_com' : '/api/v1/checkout/mercadopago';
+          const res = await fetch(endpoint, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ action: 'connect' })
+          });
+          const data = await res.json();
+          if (data.success || data.init_point) {
+             setIntegrations(prev => prev.map(integration =>
+               integration.id === id ? { ...integration, status: "connected" } : integration
+             ));
+          } else {
+             alert(`Failed to connect ${id}`);
+          }
+        } catch (e) {
+          alert(`Error connecting ${id}`);
+        }
+      };
+      connectAPI();
+    }
   };
 
   const saveTwilioIntegration = () => {
