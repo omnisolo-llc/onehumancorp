@@ -17,7 +17,7 @@ type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_MEMBER_USER;
 async function loginAs(page: Page, user: E2EUser) {
   // Wait, there's no auth in the NextJS local builder mock app
   // Just navigate to the root route so it doesn't fail
-  await page.goto('/');
+  await page.goto('/onboarding');
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
