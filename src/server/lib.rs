@@ -229,7 +229,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2887,8 +2886,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
-    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
-    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
@@ -2913,7 +2910,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     builder
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -3614,6 +3610,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <input type="password" placeholder="Password" />
                         <button onclick="handleSignup(this)">Sign Up</button>
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
+                    </div>
+
+                    <!-- Add Item Screen -->
+                    <div id="add-item-screen" class="screen glass" style="display: none;">
+                        <h1>Add to Catalog</h1>
+                        <p style="color: #666; margin-bottom: 20px;">Add a product or service to your store.</p>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
+                            </label>
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
+                            </label>
+                        </div>
+
+                        <input type="text" id="item-name" placeholder="Name (e.g. Guitar Lesson)" style="border-radius: 8px;" />
+                        <input type="text" id="item-price" inputmode="decimal" placeholder="Price (e.g. 50.00)" style="border-radius: 8px;" />
+
+                        <div id="service-fields" style="display: none; margin-bottom: 16px;">
+                            <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
+                        </div>
+
+                        <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
+
+                        <button onclick="saveCatalogItem()" style="border-radius: 8px; width: 100%;">Save Item</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
+
+                        <script>
+                            function saveCatalogItem() {
+                                const name = document.getElementById('item-name').value;
+                                if (!name) {
+                                    alert('Please enter a name.');
+                                    return;
+                                }
+                                alert('Saved ' + name + ' successfully!');
+                                document.getElementById('item-name').value = '';
+                                document.getElementById('item-price').value = '';
+                                document.getElementById('item-duration').value = '';
+                                document.getElementById('item-desc').value = '';
+                                showScreen('dashboard-screen');
+                            }
+                        </script>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -4814,7 +4853,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
+                            <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
@@ -5246,8 +5285,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             let html = '';
                             for (const key in block.content) {
-                                html += `<label style="display:block; margin-top:8px;">${key}</label>`;
-                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                                let label = key;
+                                let idKey = key;
+                                if (block.type === 'HeroBlock' && key === 'headline') {
+                                    label = 'title';
+                                    idKey = 'title';
+                                }
+                                html += `<label style="display:block; margin-top:8px;">${label}</label>`;
+                                html += `<input type="text" id="edit-${idKey}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
                             }
                             document.getElementById('sheet-content').innerHTML = html;
                             document.getElementById('block-editor-sheet').classList.add('open');
@@ -5263,7 +5308,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const block = storefrontDraftState.find(b => b.id === activeBlockId);
                             for (const key in block.content) {
                                 const input = document.getElementById(`edit-${key}`);
-                                if (input) block.content[key] = input.value;
+                                if (input) {
+                                    block.content[key] = input.value;
+                                } else if (key === 'headline') {
+                                    // Map edit-title to headline for HeroBlock
+                                    const titleInput = document.getElementById('edit-title');
+                                    if (titleInput) {
+                                        block.content[key] = titleInput.value;
+                                    }
+                                }
                             }
                             closeBottomSheet();
                             renderStorefrontPreview();

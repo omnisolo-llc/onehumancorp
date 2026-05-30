@@ -31,31 +31,39 @@ impl ToolExecutor for WriteExecutor {
                 .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
-        fs::write(&actual_path, content)
-            .await
-            .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
-
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let actual_path_str = actual_path.to_string_lossy();
+            let tmp_path = actual_path.with_extension("tmp.rs");
+            fs::write(&tmp_path, content)
+                .await
+                .map_err(|e| format!("write: temp file {}: {}", tmp_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+            let tmp_path_str = tmp_path.to_string_lossy();
             // Note: In Bazel/Cargo projects, `rustc` alone may miss external crate dependencies
             // and fail with `E0432`. However, it catches pure syntax errors and basic type errors
             // within the file itself without requiring a full `cargo check` of a potentially broken tree.
             // We ignore errors related to missing external crates (E0432, E0463) as they are false positives
             // when running `rustc` outside the build system.
-            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+            let res = self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &tmp_path_str], None, vec![]).await;
+
+            // Clean up temp file
+            let _ = fs::remove_file(&tmp_path).await;
+
+            match res {
                 Ok(output) => {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                            let actual_path_str = actual_path.to_string_lossy();
+                            let clean_stderr = stderr.replace(&*tmp_path_str, &actual_path_str);
                             return Err(ToolError::LlmRecoverable(format!(
-                                "Verification Loop Failed: `rustc` reported syntax errors after writing to {}.
+                                "Verification Loop Failed: `rustc` reported syntax errors before writing to {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                                path, stderr
+                                path, clean_stderr
                             )));
                         }
                     }
@@ -65,6 +73,10 @@ Please fix the errors and try again.",
                 }
             }
         }
+
+        fs::write(&actual_path, content)
+            .await
+            .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
 
 
@@ -170,5 +182,8 @@ mod tests {
         } else {
             panic!("Expected LlmRecoverable error");
         }
+
+        // Assert the target file was NOT created/written since validation failed
+        assert!(!dir.path().join("test.rs").exists(), "Target file should not be created if verification fails");
     }
 }
