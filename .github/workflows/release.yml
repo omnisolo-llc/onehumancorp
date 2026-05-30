@@ -103,6 +103,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    env:
+      MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_KEYCHAIN_PASSWORD != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -112,24 +114,28 @@ jobs:
             os_name: windows
             arch: x86_64
             bazel_config: windows_x86_64
+            tauri_cli_bazel_flags: --config=windows_x86_64
             install_linux_deps: false
           - name: macos-universal
             runner: macos-15
             os_name: macos
             arch: universal
             bazel_config: macos_aarch64
+            tauri_cli_bazel_flags: --config=macos_aarch64
             install_linux_deps: false
           - name: linux-x86_64
             runner: ubuntu-22.04
             os_name: linux
             arch: x86_64
             bazel_config: linux_x86_64
+            tauri_cli_bazel_flags: --config=linux_x86_64
             install_linux_deps: true
           - name: linux-arm64
             runner: ubuntu-22.04-arm
             os_name: linux
             arch: arm64
             bazel_config: linux_arm64
+            tauri_cli_bazel_flags: --config=linux_arm64
             install_linux_deps: true
     steps:
       - uses: actions/checkout@v6
@@ -168,9 +174,25 @@ jobs:
 
       - name: Build Tauri CLI with Bazel
         run: |
-          bazelisk build @crates//:tauri-cli__cargo-tauri --config=${{ matrix.bazel_config }}
-          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri --config=${{ matrix.bazel_config }} | tail -n 1)"
-          echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
+          if ! bazelisk build @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }}; then
+            if [[ "${{ runner.os }}" != "Windows" ]]; then
+              exit 1
+            fi
+            echo "::warning::Bazel failed to build cargo-tauri on Windows; falling back to cargo install until the Windows rules_rust host toolchain is fixed."
+            cargo install tauri-cli --version 2.11.2 --locked
+            echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
+            exit 0
+          fi
+
+          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
+          cli_ext=""
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cli_ext=".exe"
+          fi
+          mkdir -p "$RUNNER_TEMP/tauri-cli-bin"
+          cp "$(pwd)/$tauri_cli" "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          chmod +x "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          echo "$RUNNER_TEMP/tauri-cli-bin" >> "$GITHUB_PATH"
 
       - name: Prepare release version and updater signing
         env:
@@ -189,24 +211,25 @@ jobs:
             exit 1
           fi
 
-          decode_key_if_needed() {
+          normalize_tauri_signing_key() {
             local value="$1"
             if [[ "$value" == *"untrusted comment:"* ]]; then
-              printf '%s' "$value"
+              printf '%s' "$value" | base64 | tr -d '\r\n'
               return
             fi
 
             local decoded
             decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
             if [[ "$decoded" == *"untrusted comment:"* ]]; then
-              printf '%s' "$decoded"
+              printf '%s' "$decoded" | base64 | tr -d '\r\n'
             else
               printf '%s' "$value"
             fi
           }
 
-          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
-          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
+          echo "::add-mask::$TAURI_SIGNING_PRIVATE_KEY_SECRET"
 
           export VERSION
           node <<'NODE'
@@ -227,11 +250,10 @@ jobs:
           fs.writeFileSync(cargoPath, cargo);
           NODE
 
-          {
-            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_SIGNING_PRIVATE_KEY__"
-            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_SECRET"
-            echo "__TAURI_SIGNING_PRIVATE_KEY__"
-          } >> "$GITHUB_ENV"
+          private_key_path="$RUNNER_TEMP/tauri-updater-signing.key"
+          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_SECRET" > "$private_key_path"
+          chmod 600 "$private_key_path" 2>/dev/null || true
+          echo "TAURI_SIGNING_PRIVATE_KEY=$private_key_path" >> "$GITHUB_ENV"
 
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
@@ -240,7 +262,7 @@ jobs:
           echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install macOS signing assets
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -331,7 +353,7 @@ jobs:
           ls -lh dist/
 
       - name: Verify macOS signing and notarization
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
           BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
