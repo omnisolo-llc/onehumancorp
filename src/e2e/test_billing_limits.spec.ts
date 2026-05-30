@@ -17,6 +17,16 @@ test.describe('Billing & Rate Limits', () => {
   });
 });
 
+test.describe('Cost Transparency Dashboard Link', () => {
+  test('should navigate to cost dashboard from plan page', async ({ page }) => {
+    await page.goto('/plan');
+    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
+    await page.getByRole('button', { name: /View Cost Details/i }).click();
+    await expect(page.getByRole('heading', { name: 'Business Advisory Dashboard' })).toBeVisible();
+    await expect(page.getByText('Cost Transparency')).toBeVisible();
+  });
+});
+
 test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
     await page.goto('/');
