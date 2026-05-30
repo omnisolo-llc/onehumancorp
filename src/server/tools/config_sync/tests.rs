@@ -125,4 +125,42 @@ async fn test_config_sync_push_and_get() {
     assert_eq!(get_json["status"], "success");
     assert!(get_json.get("hash").is_some());
     assert!(get_json["hash"].as_str().unwrap().len() > 0);
+
+    // Pull Config
+    let pull_req = McpInvokeRequest {
+        tool_id: "mcp_config_sync".to_string(),
+        action: "".to_string(),
+        agent_id: "".to_string(),
+        spiffe_id: spiffe_id.to_string(),
+        params: json!({
+            "action": "pull_config"
+        }).to_string(),
+    };
+
+    let pull_res = server.invoke_tool(&pull_req).await.unwrap();
+    let pull_json: serde_json::Value = serde_json::from_str(&pull_res.payload).unwrap();
+    assert_eq!(pull_json["status"], "success");
+    assert!(pull_json.get("config").is_some());
+    assert_eq!(pull_json["config"]["some_setting"], "enabled");
+    assert_eq!(pull_json["config"]["local_proxy_password"].as_str().unwrap(), "my_secret_password");
+}
+
+#[tokio::test]
+async fn test_config_sync_pull_missing() {
+    if std::env::var("DATABASE_URL").is_err() { return; }
+    let pool = crate::db::get_pool();
+    let server = ConfigSyncServer::new(pool);
+
+    let req = McpInvokeRequest {
+        tool_id: "mcp_config_sync".to_string(),
+        action: "".to_string(),
+        agent_id: "".to_string(),
+        spiffe_id: "spiffe://missing_user".to_string(),
+        params: json!({"action": "pull_config"}).to_string(),
+    };
+
+    let res = server.invoke_tool(&req).await.unwrap();
+    let res_json: serde_json::Value = serde_json::from_str(&res.payload).unwrap();
+    assert_eq!(res_json["status"], "success");
+    assert!(res_json["config"].is_null());
 }

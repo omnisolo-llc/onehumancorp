@@ -106,6 +106,42 @@ impl ConfigSyncServer {
                 })).unwrap();
                 Ok(McpInvokeResponse { payload: resp_payload })
             }
+            "pull_config" => {
+                let row = sqlx::query("SELECT config_json FROM user_configs WHERE spiffe_id = $1")
+                    .bind(&req.spiffe_id)
+                    .fetch_optional(&self.db)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("DB error: {}", e)))?;
+
+                let config_str: Option<String> = row.map(|r| r.get("config_json"));
+
+                match config_str {
+                    Some(s) => {
+                        let mut parsed: serde_json::Value = serde_json::from_str(&s)
+                            .map_err(|e| tonic::Status::internal(format!("Invalid json in db: {}", e)))?;
+
+                        if let serde_json::Value::Object(ref mut map) = parsed {
+                            if let Some(pwd) = map.get("local_proxy_password").and_then(|v| v.as_str()) {
+                                let decrypted = crate::crypto::decrypt_deterministic(pwd);
+                                map.insert("local_proxy_password".to_string(), serde_json::Value::String(decrypted));
+                            }
+                        }
+
+                        let resp_payload = serde_json::to_string(&serde_json::json!({
+                            "status": "success",
+                            "config": parsed,
+                        })).unwrap();
+                        Ok(McpInvokeResponse { payload: resp_payload })
+                    }
+                    None => {
+                        let resp_payload = serde_json::to_string(&serde_json::json!({
+                            "status": "success",
+                            "config": null,
+                        })).unwrap();
+                        Ok(McpInvokeResponse { payload: resp_payload })
+                    }
+                }
+            }
             _ => Err(tonic::Status::invalid_argument("Invalid action")),
         }
     }
