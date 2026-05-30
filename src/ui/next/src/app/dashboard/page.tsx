@@ -641,7 +641,7 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Wall of Love Generator */}
+         {/* Growth Loop: Wall of Love Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
@@ -1332,7 +1332,7 @@ export default function Dashboard() {
          <section>
             <div className="flex items-center justify-between mb-4">
                 <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
-                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active and ready to help."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                     <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
                     <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
                 </div></WithTooltip>

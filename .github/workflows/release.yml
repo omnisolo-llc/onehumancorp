@@ -77,6 +77,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-release-artifacts-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -161,9 +165,32 @@ jobs:
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
+      - name: Cache Cargo and Tauri build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+            target/*/release/.fingerprint
+            target/*/release/build
+            target/*/release/deps
+          key: ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'src/ui/tauri/Cargo.toml', 'src/ui/tauri/tauri.conf.json') }}
+          restore-keys: |
+            ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-
+            ${{ runner.os }}-desktop-cargo-tauri-
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-desktop-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -327,9 +354,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
-          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+            BUNDLE_ROOT="target/release/bundle"
           fi
 
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
@@ -356,9 +383,9 @@ jobs:
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+            BUNDLE_ROOT="target/release/bundle"
           fi
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
           DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
@@ -385,7 +412,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $versionTag = $env:GITHUB_REF_NAME
 
-          $msi = Get-ChildItem -Path 'src/ui/tauri/target/release/bundle' -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
+          $bundleRoots = @(
+            'target/release/bundle',
+            'target/x86_64-pc-windows-msvc/release/bundle'
+          ) | Where-Object { Test-Path $_ }
+          $msi = $bundleRoots | ForEach-Object {
+            Get-ChildItem -Path $_ -Recurse -Include *.msi -ErrorAction SilentlyContinue
+          } | Select-Object -First 1
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
@@ -398,8 +431,8 @@ jobs:
           }
 
           $exeCandidates = @(
-            'src/ui/tauri/target/release/app.exe',
-            'src/ui/tauri/target/x86_64-pc-windows-msvc/release/app.exe'
+            'target/release/app.exe',
+            'target/x86_64-pc-windows-msvc/release/app.exe'
           )
           $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if ($null -eq $exe) {
@@ -420,7 +453,7 @@ jobs:
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
           ARCH="${{ matrix.arch }}"
-          BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+          BUNDLE_ROOT="target/release/bundle"
 
           APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
           DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
@@ -530,6 +563,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-mobile-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -595,6 +632,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-server-web-image
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -810,6 +851,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-push-docker
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
