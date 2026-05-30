@@ -32,21 +32,22 @@ pub struct CostAuditor {
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
+    tenant_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
-    llm_cost_counter: Counter<f64>,
+    llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<f64>,
-    compute_cost_counter: Counter<f64>,
+    compute_cost_counter: Counter<u64>,
 }
 
 impl CostAuditor {
     pub fn new(config: CostConfig) -> Self {
         let meter = global::meter("ohc.billing");
-        let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
+        let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
         let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
-        let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
+        let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
 
         CostAuditor {
             config,
@@ -59,6 +60,7 @@ impl CostAuditor {
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
+            tenant_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
@@ -106,7 +108,8 @@ impl CostAuditor {
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
-        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        let cost_cents = (cost * 100.0).round() as u64;
+        self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -213,6 +216,11 @@ impl CostAuditor {
         agent_revenues.values().sum()
     }
 
+    pub fn get_tenant_revenue(&self, tenant_id: &str) -> f64 {
+        let tenant_revenues = self.tenant_revenues.lock().unwrap();
+        *tenant_revenues.get(tenant_id).unwrap_or(&0.0)
+    }
+
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
     }
@@ -221,10 +229,14 @@ impl CostAuditor {
         calculator::calculate_efficiency(cost, output_tokens)
     }
 
-    pub fn record_revenue(&self, agent_id: &str, amount: f64) {
+    pub fn record_revenue(&self, agent_id: &str, tenant_id: &str, amount: f64) {
         let mut agent_revenues = self.agent_revenues.lock().unwrap();
         let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
         *current_revenue += amount;
+
+        let mut tenant_revenues = self.tenant_revenues.lock().unwrap();
+        let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
+        *current_tenant_revenue += amount;
     }
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
@@ -243,7 +255,8 @@ impl CostAuditor {
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
 
-        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        let total_cents = (total * 100.0).round() as u64;
+        self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
@@ -326,6 +339,26 @@ mod tests {
     use ::server_pricing::calculator::CostConfig;
 
     #[test]
+    fn test_tenant_revenue() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        auditor.record_revenue("agent1", "tenant1", 10.0);
+        auditor.record_revenue("agent2", "tenant1", 15.0);
+        auditor.record_revenue("agent3", "tenant2", 20.0);
+
+        assert_eq!(auditor.get_tenant_revenue("tenant1"), 25.0);
+        assert_eq!(auditor.get_tenant_revenue("tenant2"), 20.0);
+        assert_eq!(auditor.get_tenant_revenue("non_existent"), 0.0);
+
+        assert_eq!(auditor.get_total_revenue(), 45.0);
+    }
+
+    #[test]
     fn test_cost_auditor() {
         let config = CostConfig {
             cost_per_input_token: 0.001,
@@ -347,7 +380,7 @@ mod tests {
         let cost = auditor.record_event(event);
         assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
 
-        auditor.record_revenue("agent1", 5.0);
+        auditor.record_revenue("agent1", "tenant1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
         

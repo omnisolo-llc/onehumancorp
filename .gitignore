@@ -139,7 +139,3 @@ dummy.*
 dummy_*
 .next/
 /*.patch
-bazel-*
-target/
-src/ui/next/.next/
-node_modules/
