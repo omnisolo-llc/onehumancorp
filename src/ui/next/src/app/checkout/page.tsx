@@ -27,7 +27,7 @@ export default function CheckoutPage() {
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
-      console.error("Failed to generate dynamic referral link", e);
+
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     }
