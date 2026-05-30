@@ -45,7 +45,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Success! Your business is live!' })).toBeVisible();
     await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });

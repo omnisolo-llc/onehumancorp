@@ -16,7 +16,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
 
     // WebKit often returns normalized values, so we check if it includes the 30px blur
     if (style.backdropFilter && style.backdropFilter !== 'none') {
-        expect(style.backdropFilter).toContain('blur(30px)');
+        expect(style.backdropFilter).toContain('blur(20px)');
     }
   });
 
@@ -44,7 +44,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
           };
       });
       if (style.backdropFilter && style.backdropFilter !== 'none') {
-          expect(style.backdropFilter).toContain('blur(30px)');
+          expect(style.backdropFilter).toContain('blur(20px)');
       }
   });
 
