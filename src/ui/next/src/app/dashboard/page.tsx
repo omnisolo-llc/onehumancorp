@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -598,11 +599,13 @@ export default function Dashboard() {
                          <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
                      </div>
                  </div>
-                 <WithTooltip id="stripe-setup-tooltip" defaultText="Connect your bank account securely with Stripe to start getting paid.">
-                     <button id="stripe-setup-btn" className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
-                         Complete Stripe Setup
-                     </button>
-                 </WithTooltip>
+                 <WalkthroughTarget id="stripe-setup-btn">
+                   <WithTooltip id="stripe-setup-tooltip" defaultText="Connect your bank account securely with Stripe to start getting paid.">
+                       <button id="stripe-setup-btn" className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
+                           Complete Stripe Setup
+                       </button>
+                   </WithTooltip>
+                 </WalkthroughTarget>
              </div>
          </section>
 
