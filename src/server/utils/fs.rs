@@ -18,7 +18,6 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
 
     let base_name = filename.file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid filename"))?;
     let base_name_str = base_name.to_string_lossy();
-    // Optimized Atomic Write File
     
     let random_suffix: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
