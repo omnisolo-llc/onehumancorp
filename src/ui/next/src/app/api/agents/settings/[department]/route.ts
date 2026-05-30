@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest, context: { params: { department: string } }) {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/agents/chat`, {
+    const res = await fetch(`${backendUrl}/api/agents/settings/${context.params.department}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body)
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({ error: 'Failed to process chat' }, { status: res.status });
+    return NextResponse.json({ error: 'Failed to update settings' }, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }

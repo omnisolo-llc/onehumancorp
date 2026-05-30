@@ -32,13 +32,9 @@ impl Department for CustomerSuccessAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = &config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
+        let config = self.orchestrator.load_department_config(&event.tenant_id, DepartmentType::CustomerSuccess).await.unwrap_or_default();
+        let risk = if config.auto_execute_enabled {
+            ActionRisk::AutoExecute
         } else {
             ActionRisk::DraftForReview
         };

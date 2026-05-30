@@ -131,11 +131,15 @@ mod tests {
         };
         orchestrator.write_long_term_memory(record).await.unwrap();
 
-        // 1. Test Draft Mode (auto_approve_limits = 0.0)
+        // 1. Test Draft Mode (auto_execute_enabled = false)
         {
             let mut agent = cs_agent.write().await;
             use crate::orchestration::departments::types::DepartmentConfig;
-            agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
+            agent.set_config(tenant_id.clone(), DepartmentConfig {
+                tone_of_voice: "friendly".to_string(),
+                auto_approve_limits: 0.0,
+                auto_execute_enabled: false,
+            });
         }
 
         let event = DepartmentEvent {

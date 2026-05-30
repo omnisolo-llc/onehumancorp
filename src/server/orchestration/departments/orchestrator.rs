@@ -4,6 +4,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
+use sqlx::Row;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus, ActionRisk};
 use crate::db::DbStore;
@@ -269,16 +270,28 @@ impl DepartmentOrchestrator {
 
         match risk {
             ActionRisk::AutoExecute => {
+                let req_id = Uuid::new_v4().to_string();
                 let req = ApprovalRequest {
-                    id: Uuid::new_v4().to_string(),
-                    tenant_id,
+                    id: req_id.clone(),
+                    tenant_id: tenant_id.clone(),
                     department,
                     description: description.clone(),
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
-                    payload: Some(_action_payload),
+                    payload: Some(_action_payload.clone()),
                 };
                 self.add_approval_request(req.clone()).await;
+
+                // Immediately trigger execution for AutoExecute
+                let payload = serde_json::json!({
+                    "request_id": req_id,
+                    "tenant_id": tenant_id,
+                    "original_payload": _action_payload,
+                });
+                let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
+                let topic = format!("agent:{}:approved", department);
+                let _ = self.mesh.publish(&topic, payload_bytes).await;
+
                 Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
@@ -665,14 +678,90 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
-        let deps = self.departments.read().await;
         let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+        let config_json = serde_json::to_string(&config).map_err(|e| e.to_string())?;
+        let now = Utc::now();
+        let id = Uuid::new_v4().to_string();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query(
+                    "INSERT INTO agent_departments (id, tenant_id, department_type, config, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5) \
+                     ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = $4, updated_at = $5"
+                )
+                .bind(&id)
+                .bind(tenant_id)
+                .bind(dep_type.to_string())
+                .bind(serde_json::from_str::<serde_json::Value>(&config_json).unwrap_or_default())
+                .bind(now)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query(
+                    "INSERT INTO agent_departments (id, tenant_id, department_type, config, updated_at) \
+                     VALUES (?, ?, ?, ?, ?) \
+                     ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = ?, updated_at = ?"
+                )
+                .bind(&id)
+                .bind(tenant_id)
+                .bind(dep_type.to_string())
+                .bind(&config_json)
+                .bind(now)
+                .bind(&config_json)
+                .bind(now)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        let deps = self.departments.read().await;
         if let Some(dep_lock) = deps.get(&dep_type) {
             let mut dep = dep_lock.write().await;
             dep.set_config(tenant_id.to_string(), config);
             Ok(())
         } else {
-            Err("Department not found".to_string())
+            Ok(()) // Persisted in DB, but agent not currently registered in-memory
+        }
+    }
+
+    pub async fn load_department_config(&self, tenant_id: &str, dep_type: DepartmentType) -> Result<crate::orchestration::departments::types::DepartmentConfig, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = $1 AND department_type = $2")
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    let cfg_val: serde_json::Value = r.get("config");
+                    let cfg: crate::orchestration::departments::types::DepartmentConfig = serde_json::from_value(cfg_val).map_err(|e| e.to_string())?;
+                    Ok(cfg)
+                } else {
+                    Ok(crate::orchestration::departments::types::DepartmentConfig::default())
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = ? AND department_type = ?")
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    let cfg_str: String = r.get("config");
+                    let cfg: crate::orchestration::departments::types::DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
+                    Ok(cfg)
+                } else {
+                    Ok(crate::orchestration::departments::types::DepartmentConfig::default())
+                }
+            }
         }
     }
 

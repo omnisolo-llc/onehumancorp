@@ -783,6 +783,16 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
                     );
+
+                    CREATE TABLE IF NOT EXISTS agent_departments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department_type TEXT NOT NULL,
+                        config TEXT NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, department_type)
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }

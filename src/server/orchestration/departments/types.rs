@@ -47,6 +47,17 @@ impl std::fmt::Display for DepartmentType {
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,
+    pub auto_execute_enabled: bool,
+}
+
+impl Default for DepartmentConfig {
+    fn default() -> Self {
+        Self {
+            tone_of_voice: "professional".to_string(),
+            auto_approve_limits: 0.0,
+            auto_execute_enabled: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

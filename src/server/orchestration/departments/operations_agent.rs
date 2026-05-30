@@ -26,13 +26,9 @@ impl Department for OperationsAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
+        let config = self.orchestrator.load_department_config(&event.tenant_id, DepartmentType::Operations).await.unwrap_or_default();
+        let risk = if config.auto_execute_enabled {
+            ActionRisk::AutoExecute
         } else {
             ActionRisk::DraftForReview
         };
@@ -51,6 +47,19 @@ impl Department for OperationsAgent {
             event.payload.clone(),
         ).await?;
 
+        // Simulate inventory check
+        if event.payload.get("order_id").is_some() {
+             // Logic to check inventory levels would go here.
+             // For now, simulate a low inventory event for some items.
+             let inventory_low_event = DepartmentEvent {
+                 id: uuid::Uuid::new_v4().to_string(),
+                 tenant_id: event.tenant_id.clone(),
+                 event_type: "tenant.inventory.low".to_string(),
+                 payload: serde_json::json!({"item_id": "item_456", "remaining": 2}),
+             };
+             self.orchestrator.dispatch_event(inventory_low_event).await?;
+        }
+
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),
@@ -62,7 +71,7 @@ impl Department for OperationsAgent {
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
+        None
     }
 
     fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {

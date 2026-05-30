@@ -33,6 +33,7 @@ export default function ApprovalInbox({
         body: JSON.stringify({
           tone_of_voice: "Friendly",
           auto_approve_limits: newValue ? 0.0 : 1000.0,
+          auto_execute_enabled: !newValue,
         }),
       });
     } catch (e) {

@@ -19,25 +19,32 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "tenant.order.fulfillment_ready".to_string(),
+            "tenant.payment.received".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
+        let config = self.orchestrator.load_department_config(&event.tenant_id, DepartmentType::BusinessAdvisory).await.unwrap_or_default();
+        let risk = if config.auto_execute_enabled {
+            ActionRisk::AutoExecute
         } else {
             ActionRisk::DraftForReview
+        };
+
+        let description = match event.event_type.as_str() {
+            "tenant.report.weekly_health" => "Draft weekly business health report and next-action suggestions".to_string(),
+            "tenant.order.fulfillment_ready" => "Analyze order trends and fulfillment efficiency".to_string(),
+            "tenant.payment.received" => "Update revenue forecasts and financial health status".to_string(),
+            _ => "Review business operations".to_string(),
         };
 
         // Scheduled background worker triggers tenant.report.weekly_health to generate brief.
         self.orchestrator.execute_action(
             DepartmentType::BusinessAdvisory,
-            "Draft weekly business health report and next-action suggestions".to_string(),
+            description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),

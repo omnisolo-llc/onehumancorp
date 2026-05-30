@@ -19,7 +19,10 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec![
+            "tenant.quote.requested".to_string(),
+            "tenant.message.received".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -27,13 +30,29 @@ impl Department for SalesAgent {
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
-        let risk = ActionRisk::DraftForReview;
+        let config = self.orchestrator.load_department_config(&event.tenant_id, DepartmentType::Sales).await.unwrap_or_default();
+        let risk = if config.auto_execute_enabled {
+            ActionRisk::AutoExecute
+        } else {
+            ActionRisk::DraftForReview
+        };
+
+        let description = if event.event_type == "tenant.message.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            if message.to_lowercase().contains("quote") || message.to_lowercase().contains("how much") {
+                "Generate quote based on customer inquiry".to_string()
+            } else {
+                return Ok(()); // CS handles general messages
+            }
+        } else {
+            "Quote generated for review".to_string()
+        };
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
         self.orchestrator.execute_action(
             DepartmentType::Sales,
-            "Quote generated for review".to_string(),
+            description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),

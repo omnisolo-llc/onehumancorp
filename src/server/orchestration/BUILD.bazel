@@ -56,6 +56,7 @@ rust_library(
         "//src/server/orchestration/departments:customer_success_agent.rs",
         "//src/server/orchestration/departments:finance_agent.rs",
         "//src/server/orchestration/departments:flow_test.rs",
+        "//src/server/orchestration/departments:isolation_test.rs",
         "//src/server/orchestration/departments:legal_agent.rs",
         "//src/server/orchestration/departments:marketing_agent.rs",
         "//src/server/orchestration/departments:mod.rs",
