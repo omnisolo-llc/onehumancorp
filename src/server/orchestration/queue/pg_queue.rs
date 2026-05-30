@@ -45,14 +45,7 @@ impl TaskQueue for PgTaskQueue {
         }
 
         let bursts_threshold = 10;
-        let mut ids = Vec::with_capacity(jobs.len());
-        let mut parent_task_ids = Vec::with_capacity(jobs.len());
-        let mut agent_roles = Vec::with_capacity(jobs.len());
-        let mut payloads = Vec::with_capacity(jobs.len());
-        let mut run_afters = Vec::with_capacity(jobs.len());
-        let mut organization_ids = Vec::with_capacity(jobs.len());
-
-        for job in &jobs {
+        for job in jobs {
             let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
 
             let mut run_after = job.run_after;
@@ -63,23 +56,16 @@ impl TaskQueue for PgTaskQueue {
             *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
 
             let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
-
-            ids.push(job.id.clone());
-            parent_task_ids.push(job.parent_task_id.clone());
-            agent_roles.push(job.agent_role.clone());
-            payloads.push(payload_json);
-            run_afters.push(run_after);
-            organization_ids.push(job.tenant_id.clone());
+            query = query
+                .bind(job.id)
+                .bind(job.parent_task_id)
+                .bind(job.agent_role)
+                .bind(payload_json)
+                .bind(run_after)
+                .bind(job.tenant_id);
         }
 
-        sqlx::query("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) SELECT * FROM UNNEST($1::text[], $2::text[], $3::text[], $4::jsonb[], array_fill('QUEUED'::text, ARRAY[cardinality($1)]), $5::timestamptz[], $6::text[])")
-            .bind(&ids)
-            .bind(&parent_task_ids)
-            .bind(&agent_roles)
-            .bind(&payloads)
-            .bind(&run_afters)
-            .bind(&organization_ids)
-            .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
