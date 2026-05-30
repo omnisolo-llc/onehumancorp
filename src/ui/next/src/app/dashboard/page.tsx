@@ -999,7 +999,50 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Interactive Analytics Soft Paywall */}
+
+         {/* Milestone Viral Share Growth Loop Component */}
+         <div className="bg-white rounded-3xl p-8 mb-12 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-indigo-50 to-purple-50" style={{ backdropFilter: 'blur(20px) saturate(200%)' }}>
+             <div className="flex-1">
+                 <h3 className="text-xl font-bold text-gray-900 mb-2 font-outfit">🎉 You reached 10 Orders!</h3>
+                 <p className="text-gray-600 mb-6 font-inter">Your business is growing fast. Share your milestone and unlock a <strong>7-day Pro Trial Extension</strong>.</p>
+
+                 <button
+                     id="share-milestone-btn"
+                     onClick={async () => {
+                         try {
+                             const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                             const response = await fetch('/api/v1/growth/milestone/share', {
+                                 method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ tenant_id: tenant, milestone_id: '10_orders' })
+                             });
+                             if (response.ok) {
+                                 const data = await response.json();
+                                 if (data.reward_unlocked) {
+                                     alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
+                                     const trialStatus = document.getElementById('milestone-reward-status');
+                                     if (trialStatus) trialStatus.textContent = 'Unlocked: 7-day Pro Trial Extension';
+                                 }
+                             }
+                             const shareText = `Just secured my 10th order on my own store! 🎉 Launch your own store today: ohc://join?ref=${tenant} ⚡ Powered by OHC`;
+                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
+                         } catch (e) {
+                             console.error("Failed to share milestone", e);
+                         }
+                     }}
+                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold font-inter shadow-md hover:shadow-lg transition-all"
+                 >
+                     Share & Claim Reward
+                 </button>
+                 <p id="milestone-reward-status" className="text-sm text-green-600 mt-4 font-inter font-medium"></p>
+             </div>
+             <div className="w-48 h-48 relative rounded-2xl overflow-hidden shadow-lg transform rotate-3 hover:rotate-0 transition-transform">
+                 <img src={`/api/v1/growth/milestone/card?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&milestone_id=10_orders`} alt="Milestone Graphic" className="object-cover w-full h-full" id="milestone-banner-img" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&q=80'; }} />
+             </div>
+         </div>
+
+
+        {/* Growth Loop: Interactive Analytics Soft Paywall */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
