@@ -132,6 +132,7 @@ describe('OnboardingWizard', () => {
       return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
+
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
@@ -178,6 +179,7 @@ describe('OnboardingWizard', () => {
       }
       return { ok: true, json: async () => ({ wizardState: {} }) };
     });
+
 
     act(() => { render(<OnboardingWizard />); });
 
