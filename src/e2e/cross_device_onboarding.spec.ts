@@ -13,18 +13,8 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await page1.waitForTimeout(1000);
 
     // Chat Step 1
-    await expect(page1.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Bakery");
-    await page1.getByRole('button', { name: "Next" }).click();
-
-    // Chat Step 2
-    await expect(page1.getByRole('heading', { name: "What do you sell?", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...").fill("maya bakes cakes");
-    await page1.getByRole('button', { name: "Next" }).click();
-
-    // Chat Step 3
-    await expect(page1.getByRole('heading', { name: "Where are you located?", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByPlaceholder("e.g. Portland, OR").fill("Seattle, WA");
+    await expect(page1.getByRole('heading', { name: "Tell us about your business", exact: false })).toBeVisible({ timeout: 15000 });
+    await page1.getByPlaceholder("e.g. I'm Maya and I bake custom vegan cakes for weddings and parties in Portland, OR...").fill("Maya's Custom Cakes");
     await page1.getByRole('button', { name: "Generate My Business" }).click();
 
     // Step 2: Review
