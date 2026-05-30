@@ -20,6 +20,8 @@ mod tests {
         let customer_id = uuid::Uuid::new_v4().to_string();
         let product_id = uuid::Uuid::new_v4().to_string();
         let order_id = uuid::Uuid::new_v4().to_string();
+        let node_id = uuid::Uuid::new_v4().to_string();
+        let ledger_id = uuid::Uuid::new_v4().to_string();
 
         // First, insert data as system
         match pool.begin().await {
@@ -51,6 +53,26 @@ mod tests {
                     .bind(tenant_2)
                     .bind(&customer_id)
                     .execute(&mut *tx).await;
+
+                // Ensure the migrations are fully run by checking if table exists, else ignore
+                let check_location_nodes: Result<i64, _> = sqlx::query_scalar("SELECT count(*) FROM pg_tables WHERE tablename = 'location_nodes'").fetch_one(&mut *tx).await;
+                if let Ok(count) = check_location_nodes {
+                    if count > 0 {
+                        // Insert a location node for tenant 2
+                        let _ = sqlx::query("INSERT INTO location_nodes (id, tenant_id, name) VALUES ($1, $2, 'Test Node') ON CONFLICT DO NOTHING")
+                            .bind(&node_id)
+                            .bind(tenant_2)
+                            .execute(&mut *tx).await;
+
+                        // Insert an inventory ledger for tenant 2
+                        let _ = sqlx::query("INSERT INTO inventory_ledgers (id, node_id, product_id, tenant_id, quantity_on_hand) VALUES ($1, $2, $3, $4, 10) ON CONFLICT DO NOTHING")
+                            .bind(&ledger_id)
+                            .bind(&node_id)
+                            .bind(&product_id)
+                            .bind(tenant_2)
+                            .execute(&mut *tx).await;
+                    }
+                }
 
                 tx.commit().await.expect("Failed to commit test data");
             },
@@ -94,6 +116,17 @@ mod tests {
 
                 let result = sqlx::query("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
                 assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+
+                let check_location_nodes: Result<i64, _> = sqlx::query_scalar("SELECT count(*) FROM pg_tables WHERE tablename = 'location_nodes'").fetch_one(&mut *tx).await;
+                if let Ok(count) = check_location_nodes {
+                    if count > 0 {
+                        let result = sqlx::query("SELECT COUNT(*) FROM location_nodes WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
+                        assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+
+                        let result = sqlx::query("SELECT COUNT(*) FROM inventory_ledgers WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
+                        assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+                    }
+                }
             },
             Err(_) => {
                 // Ignore errors if test db is not running
@@ -132,7 +165,53 @@ mod tests {
 
     #[test]
     fn test_new_models_struct_compilation() {
-        use crate::domain::repository::models::{Customer, Product, Order, Booking, AIAgent};
+        use crate::domain::repository::models::{Customer, Product, Order, Booking, AIAgent, LocationNode, InventoryLedger, StaffRoster, LocalTaxNexus};
+
+        let ln = LocationNode {
+            id: "ln1".to_string(),
+            tenant_id: "t1".to_string(),
+            name: "Main Store".to_string(),
+            address: None,
+            geo_coordinate: None,
+            is_active: Some(true),
+            created_at: None,
+            updated_at: None,
+        };
+        assert_eq!(ln.id, "ln1");
+
+        let il = InventoryLedger {
+            id: "il1".to_string(),
+            node_id: "ln1".to_string(),
+            product_id: "p1".to_string(),
+            tenant_id: "t1".to_string(),
+            quantity_on_hand: Some(10),
+            local_price_override: None,
+            created_at: None,
+            updated_at: None,
+        };
+        assert_eq!(il.id, "il1");
+
+        let sr = StaffRoster {
+            id: "sr1".to_string(),
+            node_id: "ln1".to_string(),
+            user_id: "u1".to_string(),
+            tenant_id: "t1".to_string(),
+            role: "Manager".to_string(),
+            created_at: None,
+            updated_at: None,
+        };
+        assert_eq!(sr.id, "sr1");
+
+        let ltn = LocalTaxNexus {
+            id: "ltn1".to_string(),
+            node_id: "ln1".to_string(),
+            tenant_id: "t1".to_string(),
+            tax_rate: 0.08,
+            tax_region: "NY".to_string(),
+            created_at: None,
+            updated_at: None,
+        };
+        assert_eq!(ltn.id, "ltn1");
 
         let c = Customer {
             id: "c1".to_string(),

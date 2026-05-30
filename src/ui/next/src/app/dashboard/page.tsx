@@ -50,6 +50,15 @@ export default function Dashboard() {
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
 
+  // Location Selector State
+  const [isLocationSwitcherOpen, setIsLocationSwitcherOpen] = useState<boolean>(false);
+  const [activeLocation, setActiveLocation] = useState<string>("Empire View");
+  const [locations, setLocations] = useState<string[]>(["Empire View", "Downtown Store"]);
+  const [showAddLocationModal, setShowAddLocationModal] = useState<boolean>(false);
+  const [cloneCatalog, setCloneCatalog] = useState<boolean>(true);
+  const [shareStaff, setShareStaff] = useState<boolean>(false);
+  const [setupTax, setSetupTax] = useState<boolean>(true);
+
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
@@ -350,19 +359,58 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
+      <header className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+         <div className="flex justify-between items-center w-full sm:w-auto">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
           <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
             Offline - Changes saved locally
           </div>
         </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
+
+        {/* Location Switcher */}
+        <div className="relative mx-auto sm:mx-0">
+          <button
+            onClick={() => setIsLocationSwitcherOpen(!isLocationSwitcherOpen)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/80 border border-gray-200 shadow-sm rounded-full text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-all font-outfit"
+          >
+            <span className="text-lg">{activeLocation === "Empire View" ? "🌍" : "📍"}</span>
+            {activeLocation}
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+
+          {isLocationSwitcherOpen && (
+            <div className="absolute top-full mt-2 w-56 bg-white/90 backdrop-blur-xl border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0">
+              <div className="py-1">
+                {locations.map((loc) => (
+                  <button
+                    key={loc}
+                    onClick={() => {
+                      setActiveLocation(loc);
+                      setIsLocationSwitcherOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm ${activeLocation === loc ? 'bg-gray-100 font-semibold text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <span className="mr-2">{loc === "Empire View" ? "🌍" : "📍"}</span>
+                    {loc}
+                  </button>
+                ))}
+                <div className="h-px bg-gray-200 my-1"></div>
+                <button
+                  onClick={() => {
+                    setShowAddLocationModal(true);
+                    setIsLocationSwitcherOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  Add Location
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-         <nav className="flex items-center gap-3">
+
+         <nav className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
              </Link>
@@ -1420,6 +1468,101 @@ export default function Dashboard() {
         </div>
       )}
 
+
+      {/* Add Location Modal */}
+      {showAddLocationModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center sm:items-center p-4">
+          <div className="bg-white/90 backdrop-blur-xl w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-gray-200 animate-slide-up">
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+                📍
+              </div>
+              <button
+                onClick={() => setShowAddLocationModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Deploy New Location</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Instantly spin up a new node for your business at <strong className="text-gray-900">5th Ave</strong>. AI Operations will handle the backend routing.
+            </p>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Clone Catalog & Pricing</h4>
+                  <p className="text-xs text-gray-500">Duplicate master inventory ledger</p>
+                </div>
+                <button
+                  onClick={() => setCloneCatalog(!cloneCatalog)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${cloneCatalog ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${cloneCatalog ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Share Current Staff</h4>
+                  <p className="text-xs text-gray-500">Grant current team access to this node</p>
+                </div>
+                <button
+                  onClick={() => setShareStaff(!shareStaff)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${shareStaff ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${shareStaff ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Setup Local Tax Profile</h4>
+                  <p className="text-xs text-gray-500">Auto-detected (NY State Sales Tax)</p>
+                </div>
+                <button
+                  onClick={() => setSetupTax(!setupTax)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${setupTax ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${setupTax ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/v1/locations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: "5th Ave",
+                      cloneCatalog,
+                      shareStaff,
+                      setupTax,
+                      tenant_id: typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'
+                    })
+                  });
+                  if (res.ok) {
+                    setLocations([...locations, "5th Ave"]);
+                    setActiveLocation("5th Ave");
+                    setShowAddLocationModal(false);
+                  } else {
+                    console.error("Failed to provision location node");
+                  }
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+              className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/30 active:scale-[0.98]"
+            >
+              Launch Location
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {showAddItemModal && (

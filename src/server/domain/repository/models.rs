@@ -123,3 +123,49 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocationNode {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub address: Option<String>,
+    pub geo_coordinate: Option<String>,
+    pub is_active: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct InventoryLedger {
+    pub id: String,
+    pub node_id: String,
+    pub product_id: String,
+    pub tenant_id: String,
+    pub quantity_on_hand: Option<i32>,
+    pub local_price_override: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct StaffRoster {
+    pub id: String,
+    pub node_id: String,
+    pub user_id: String,
+    pub tenant_id: String,
+    pub role: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocalTaxNexus {
+    pub id: String,
+    pub node_id: String,
+    pub tenant_id: String,
+    pub tax_rate: f64,
+    pub tax_region: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
