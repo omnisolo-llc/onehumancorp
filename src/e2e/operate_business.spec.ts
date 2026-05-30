@@ -1,50 +1,42 @@
 import { test, expect } from './fixtures';
 
 test('Maya operates her custom cake business', async ({ page }) => {
-    // Navigate to the onboarding flow
-    await page.goto('/onboarding');
-    await page.waitForTimeout(1000);
+  const id = `operate-business-${Date.now()}-${Math.random()}`;
+  const email = `maya+${Date.now()}@example.com`;
+  await page.addInitScript((tenantId) => {
+    localStorage.setItem('tenant_id', tenantId);
+    localStorage.setItem('user_id', tenantId);
+    localStorage.removeItem('ohc_wizard_state');
+  }, id);
 
-    // Step 1: Business Name
-    const businessNameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
-    await businessNameInput.waitFor({ state: 'visible' });
-    await businessNameInput.fill('Maya Bakery');
-    await page.locator('button:has-text("Next")').click();
+  await page.goto('/onboarding');
 
-    // Step 2: What do you sell
-    const sellInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
-    await sellInput.waitFor({ state: 'visible' });
-    await sellInput.fill('I bake amazing custom cakes and pastries.');
-    await page.locator('button:has-text("Next")').click();
+  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Online Store/ }).click();
+  await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
+  await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
+  await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 
-    // Step 3: Location
-    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
-    await locationInput.waitFor({ state: 'visible' });
-    await locationInput.fill('Portland, OR');
+  await page.getByLabel(/Physical Products/).check();
+  await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
+  await page.getByPlaceholder('What is the name of this product?').fill('Custom Cake');
+  await page.getByPlaceholder('0.00').fill('75.00');
+  await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
 
-    // Submit details and generate business
-    await page.locator('button:has-text("Generate My Business")').click();
-    await page.waitForTimeout(1500);
+  await page.getByRole('button', { name: 'Online', exact: true }).click();
+  await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Baker');
+  await page.getByPlaceholder('you@email.com').fill(email);
+  await page.getByPlaceholder('Password').fill('password123');
+  await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
 
-    // Step 4: Continue from details overview
-    const continueBtn = page.locator('button:has-text("Continue")');
-    await continueBtn.waitFor({ state: 'visible' });
-    await continueBtn.click();
-    await page.waitForTimeout(1000);
+  await page.getByRole('button', { name: 'Modern' }).click();
+  await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
+  await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+  await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
+  await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    // Step 5: Launch Store
-    const launchBtn = page.locator('button:has-text("Launch Store")');
-    await launchBtn.waitFor({ state: 'visible' });
-    await launchBtn.click();
-    await page.waitForTimeout(1000);
+  await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+  await page.getByRole('button', { name: /Launch My Business/ }).click();
 
-    // Step 6: Go to Dashboard
-    const dashboardLink = page.locator('a:has-text("Go to Dashboard")');
-    await dashboardLink.waitFor({ state: 'visible' });
-    await dashboardLink.click();
-    await page.waitForTimeout(2000);
-
-    // Verify Dashboard
-    expect(page.url()).toContain('/dashboard');
-    await expect(page.locator('h1')).toContainText('Dashboard');
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 });
