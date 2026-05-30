@@ -216,6 +216,12 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
+    const isPremium = props.isPremium || false;
+
+    if (isPremium) {
+      return null;
+    }
+
     return (
       <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
