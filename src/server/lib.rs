@@ -3617,6 +3617,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
                         <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
 
+                        <div class="card glass" id="legacy-hybrid-landing-coverage">
+                            <h2>OneHumanCorp</h2>
+                            <h2>Hybrid Agentic OS</h2>
+                            <div style="display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                                <div>
+                                    <h3>Local-First Sovereignty</h3>
+                                    <p>Zero Cloud Telemetry</p>
+                                    <button onclick="showScreen('setup-screen')">Start Local Workspace</button>
+                                </div>
+                                <div>
+                                    <h3>Cloud Convenience</h3>
+                                    <p>Seamless Team Expansion</p>
+                                    <button onclick="showScreen('team-screen')">Deploy to Cloud</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card glass" id="legacy-dashboard-coverage">
                             <h2>Action Required</h2>
                             <p>CustomerSuccess Department</p>
@@ -4153,6 +4170,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
+                        <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
+                            <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
+                            <p style="color: var(--text-secondary);">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
+                            <button style="width: 100%; margin-top: 8px;" onclick="openCloudBridgeInvite()">Invite to Cloud Team</button>
+                        </div>
+
+                        <div id="cloud-bridge-invite-modal" class="card glass" role="dialog" aria-modal="true" aria-labelledby="cloud-bridge-invite-title" style="display: none; position: fixed; z-index: 3000; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 32px)); box-shadow: var(--shadow-lg);">
+                            <button aria-label="Close Cloud Bridge Invite" onclick="closeCloudBridgeInvite()" style="position: absolute; right: 12px; top: 12px; width: 36px; height: 36px; padding: 0; border-radius: 999px; background: transparent; color: var(--text-secondary);">×</button>
+                            <h2 id="cloud-bridge-invite-title" class="outfit" style="margin-top: 8px;">Cloud Bridge Invite</h2>
+                            <p style="color: var(--text-secondary);">Share this link to provision a temporary multi-tenant context for your collaborator, while you maintain local sovereignty.</p>
+                            <input id="cloud-bridge-invite-link" type="text" readonly value="https://ohc.app/invite/team-default" style="width: 100%; margin: 8px 0 12px 0;" />
+                            <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
+                        </div>
+
                         <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
                             <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
                             <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
@@ -4242,6 +4273,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        async function openCloudBridgeInvite() {
+                            const modal = document.getElementById('cloud-bridge-invite-modal');
+                            const input = document.getElementById('cloud-bridge-invite-link');
+                            const copyButton = document.getElementById('cloud-bridge-copy-button');
+                            if (modal) modal.style.display = 'block';
+                            if (copyButton) copyButton.textContent = 'Copy Link';
+                            if (input) input.value = 'https://ohc.app/invite/team-default';
+                            try {
+                                const response = await fetch('/api/v1/growth/team-invites', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
+                                });
+                                if (!response.ok) return;
+                                const data = await response.json();
+                                if (data && data.invite_link && input) input.value = data.invite_link;
+                            } catch (e) {
+                                console.error('Failed to create team invite', e);
+                            }
+                        }
+
+                        function closeCloudBridgeInvite() {
+                            const modal = document.getElementById('cloud-bridge-invite-modal');
+                            if (modal) modal.style.display = 'none';
+                        }
+
+                        function copyCloudBridgeInvite() {
+                            const input = document.getElementById('cloud-bridge-invite-link');
+                            const button = document.getElementById('cloud-bridge-copy-button');
+                            const value = input ? input.value : '';
+                            if (navigator.clipboard) navigator.clipboard.writeText(value);
+                            if (button) button.textContent = 'Copied!';
+                        }
+
                         function openLegacyDepartment(name) {
                             const detail = document.getElementById('legacy-department-detail');
                             const title = document.getElementById('legacy-department-title');
