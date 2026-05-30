@@ -3546,11 +3546,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
                             <button onclick="receive5StarReview()">Simulate 5-Star Review</button>
-                            <div id="milestone-card" class="card glass" style="display: none;">
-                                <h3 id="milestone-title"></h3>
-                                <p id="milestone-body"></p>
-                                <button onclick="dismissMilestone()">Dismiss</button>
-                                <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 8px; text-align: center;">Share to WhatsApp</a>
+
+                            <div id="milestone-card" class="card glass" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 70; display: flex; align-items: center; justify-content: center; padding: 16px;">
+                              <div style="background: rgba(255, 255, 255, 0.9); width: 100%; max-width: 384px; border-radius: 16px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden; font-family: 'Inter', sans-serif; text-align: center; backdrop-filter: blur(20px) saturate(200%); border: 1px solid #fef08a;">
+                                <div style="position: absolute; top: 0; right: 0; width: 128px; height: 128px; background: #fef08a; border-bottom-left-radius: 9999px; z-index: -10;"></div>
+                                <div style="font-size: 36px; margin-bottom: 16px;">🏆</div>
+                                <h3 id="milestone-title" style="font-size: 24px; font-weight: 700; font-family: 'Outfit', sans-serif; color: #111827; margin-bottom: 8px;"></h3>
+                                <p id="milestone-body" style="color: #4b5563; margin-bottom: 24px; font-size: 14px;"></p>
+                                <button onclick="dismissMilestone()" style="width: 100%; padding: 12px; border-radius: 12px; font-weight: 700; color: #374151; background: #f3f4f6; border: none; cursor: pointer; transition: background 0.2s;">Dismiss</button>
+                                <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; text-decoration: none; margin-top: 16px; text-align: center; width: 100%; box-sizing: border-box;">Share to WhatsApp</a>
+                              </div>
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
@@ -5281,12 +5286,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
                                 htmlBody += '<div style="margin-top: 15px;">' +
                                     '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
-                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
-                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; background: #1DA1F2; color: white; text-decoration: none; border-radius: 4px;">Share to X</a>' +
+                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 12px; margin-top: 8px; width: 100%; box-sizing: border-box; background: #25D366; color: white; text-decoration: none; border-radius: 12px; font-weight: bold;">Share to WhatsApp</a>' +
+                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 12px; margin-top: 8px; width: 100%; box-sizing: border-box; background: #000; color: white; text-decoration: none; border-radius: 12px; font-weight: bold;">Share to X</a>' +
                                     '</div>';
                             }
                             document.getElementById('milestone-body').innerHTML = htmlBody;
-                            document.getElementById('milestone-card').style.display = 'block';
+                            document.getElementById('milestone-card').style.display = 'flex';
                         }
 
                         function dismissMilestone() {

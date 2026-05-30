@@ -10,6 +10,12 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [orderCount, setOrderCount] = useState(0);
+  const [showSimulateMilestoneModal, setShowSimulateMilestoneModal] = useState(false);
+  const [simulateMilestoneTitle, setSimulateMilestoneTitle] = useState('');
+  const [simulateMilestoneBody, setSimulateMilestoneBody] = useState('');
+  const [showSimulateMilestoneShareLinks, setShowSimulateMilestoneShareLinks] = useState(false);
+  const [simulateMilestoneShareUrl, setSimulateMilestoneShareUrl] = useState('');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -248,6 +254,48 @@ export default function Dashboard() {
     setIsSendingCampaign(false);
     setCampaignSuccess(true);
   };
+
+  const triggerSimulateMilestone = (title: string, body: string, shareText: string = '') => {
+    setSimulateMilestoneTitle(title);
+    setSimulateMilestoneBody(body);
+
+    if (shareText) {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+      const url = encodeURIComponent(shareText + ' ohc://join?ref=' + tenantId);
+      setSimulateMilestoneShareUrl(url);
+      setShowSimulateMilestoneShareLinks(true);
+    } else {
+      setShowSimulateMilestoneShareLinks(false);
+    }
+    setShowSimulateMilestoneModal(true);
+  };
+
+  const handleMarkOrderReady = () => {
+    const newCount = orderCount + 1;
+    setOrderCount(newCount);
+
+    if (newCount === 1) {
+      triggerSimulateMilestone('First Sale!', 'You completed your first order!');
+    } else if (newCount === 3) {
+      triggerSimulateMilestone('🎉 3rd Order!', 'You completed 3 orders!');
+    } else if (newCount === 10) {
+      triggerSimulateMilestone('🎉 10th Order!', 'You completed 10 orders!', 'I just reached my 10th Order on One Human Corp! Join me and start your own business:');
+    } else if (newCount === 100) {
+      triggerSimulateMilestone('🎉 100th Order!', 'You completed 100 orders!');
+    }
+  };
+
+  const handleSimulateReview = () => {
+    triggerSimulateMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.', 'Just got a 5-star review! 🌟 Launch your business on OHC today:');
+  };
+
+  // Setup 100 Visitors trigger as per e2e tests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+       triggerSimulateMilestone('🚀 100 Visitors Today!', 'You reached 100 store visitors today! Keep up the great work.');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
@@ -711,6 +759,19 @@ export default function Dashboard() {
             </div>
          </section>
 
+
+         {/* Growth Loops: Milestones */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Simulate Business Activity</h2>
+            <div className="flex gap-4">
+                <button onClick={handleMarkOrderReady} className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02]">
+                    Mark Order Ready
+                </button>
+                <button onClick={handleSimulateReview} className="px-6 py-3 font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl shadow-md border border-indigo-200 transition-transform hover:scale-[1.02]">
+                    Simulate 5-Star Review
+                </button>
+            </div>
+         </section>
 
          {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
          <section className="mb-8">
@@ -1398,6 +1459,33 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+      )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                  >
+                    Share to WhatsApp
+                  </a>
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent("I just reached a new milestone on One Human Corp! Join me and start your own business: ohc://join?ref=" + (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT'))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                  >
+                    Share to X
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowMilestoneModal(false)}
+              className="w-full py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
       )}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
               >
@@ -2007,6 +2095,51 @@ export default function Dashboard() {
                 Maybe later
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Simulate Milestone Modal */}
+      {showSimulateMilestoneModal && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100 text-center" style={{ backdropFilter: 'blur(20px) saturate(200%)' }}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
+
+            <div className="text-4xl mb-4">🏆</div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">{simulateMilestoneTitle}</h2>
+            <p className="text-gray-600 mb-6 text-sm">{simulateMilestoneBody}</p>
+
+            {showSimulateMilestoneShareLinks && (
+              <div className="mb-6">
+                <p className="font-bold text-sm mb-3">Share Your Success</p>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={`https://wa.me/?text=${simulateMilestoneShareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                  >
+                    Share to WhatsApp
+                  </a>
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${simulateMilestoneShareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                  >
+                    Share to X
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowSimulateMilestoneModal(false)}
+              className="w-full py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}
