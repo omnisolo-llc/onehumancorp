@@ -18,7 +18,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     // The network status indicator should show offline
-    await expect(page.locator('#network-status-indicator')).toHaveClass(/block/);
+    await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/, { timeout: 10000 });
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
     await page.evaluate(() => {

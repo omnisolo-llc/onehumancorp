@@ -5,7 +5,59 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
+  const [isOffline, setIsOffline] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
+
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const handleOnline = async () => {
+      setIsOffline(false);
+
+      // Flush offline queue when coming back online
+      try {
+        const queueStr = localStorage.getItem('ohc_offline_queue');
+        if (queueStr) {
+          const queue = JSON.parse(queueStr);
+          if (queue.length > 0) {
+            console.log(`Flushing ${queue.length} items from offline queue`);
+            const response = await fetch('/api/v1/sync/offline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transactions: queue })
+            });
+
+            if (response.ok) {
+              console.log('Successfully flushed offline queue');
+              localStorage.removeItem('ohc_offline_queue');
+
+              // Trigger a small delay then re-evaluate the queue display
+              setTimeout(() => {
+                const queueDisplay = document.getElementById('queue-dashboard');
+                if (queueDisplay) {
+                   queueDisplay.classList.remove('block');
+                   queueDisplay.classList.add('hidden');
+                }
+              }, 100);
+            } else {
+              console.error('Failed to flush offline queue');
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error during background sync', e);
+      }
+    };
+
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -351,14 +403,9 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
+         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
-        </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+          <div id="network-status-indicator" className={`${isOffline ? 'block' : 'hidden'} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
             Offline - Changes saved locally
           </div>
         </div>
