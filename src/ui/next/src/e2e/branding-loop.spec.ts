@@ -5,8 +5,6 @@ test.describe('Branding Growth Loop', () => {
         // Go to a simulated storefront builder preview which renders the blocks.
         // The storefront-builder page renders the blocks from localstorage.
         await page.goto('http://localhost:3000/storefront-builder');
-        await page.evaluate(() => localStorage.setItem('ohc_builder_status', 'draft'));
-        await page.reload();
 
         // We can test the presence of the footer directly
         const footerLink = page.locator('a[href^="ohc://join?ref="]');
@@ -17,8 +15,6 @@ test.describe('Branding Growth Loop', () => {
 
     test('Website Builder also shows Powered by OHC footer', async ({ page }) => {
         await page.goto('http://localhost:3000/website-builder');
-        await page.evaluate(() => localStorage.setItem('ohc_builder_status', 'draft'));
-        await page.reload();
         const footerLink = page.locator('a[href^="ohc://join?ref="]');
         await expect(footerLink).toBeVisible();
     });

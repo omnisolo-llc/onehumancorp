@@ -16,11 +16,6 @@ pub struct SocialPostRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateTeamInviteResponse {
-    pub invite_link: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostResponse {
     pub posted: bool,
     pub post_id: String,
@@ -292,7 +287,7 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let tenant = query.tenant.as_deref().unwrap_or("my-store");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
@@ -337,7 +332,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -683,7 +678,7 @@ async fn handle_team_invite_accept(
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
-) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
+) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -697,9 +692,7 @@ async fn handle_create_team_invite(
                 };
                 state.hub.append_recent_event(msg);
             }
-            Ok(Json(CreateTeamInviteResponse {
-                invite_link: format!("https://ohc.app/invite/{}/{}", req.team_id, req.invitee_id),
-            }))
+            Ok(Json(()))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
