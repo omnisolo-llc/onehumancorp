@@ -1,0 +1,15 @@
+--- loyalty_program.spec.ts
++++ loyalty_program.spec.ts
+@@ -23,9 +23,10 @@
+     await expect(page.getByText('Give $15, Get $15 when you refer friends!')).toBeVisible();
+
+     // Simulate Launching Campaign (Copy Message)
+-    const copyButton = page.getByRole('button', { name: 'Copy Message' });
+-    await copyButton.click();
+-    await expect(page.getByRole('button', { name: 'Copied Message!' })).toBeVisible();
++    const sendButton = page.getByRole('button', { name: 'Email to Customers' });
++    await sendButton.click();
++    // After click it should transition
++    await expect(page.getByRole('button', { name: 'Emails Sent!' })).toBeVisible();
+   });
+ });

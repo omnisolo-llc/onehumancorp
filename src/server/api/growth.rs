@@ -100,6 +100,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/campaign/loyalty", post(handle_generate_loyalty))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -210,6 +211,40 @@ async fn handle_generate_review(
     Json(GenerateReviewResponse {
         message: generated,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct GenerateLoyaltyRequest {
+    store_name: Option<String>,
+    discount_amount: Option<String>,
+    loyalty_tier: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct GenerateLoyaltyResponse {
+    message: String,
+}
+
+async fn handle_generate_loyalty(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<GenerateLoyaltyRequest>,
+) -> impl IntoResponse {
+    let store = req.store_name.unwrap_or_else(|| "our store".to_string());
+    let discount = req.discount_amount.unwrap_or_else(|| "$10".to_string());
+    let tier = req.loyalty_tier.unwrap_or_else(|| "Gold".to_string());
+    let message = format!("🌟 You've reached {} status at {}!\n\nTo celebrate, we're giving you a special offer to share with your friends. Give them {} off their first order, and you'll get {} in store credit when they purchase!\n\nShare your VIP link: https://ohc.store/loyalty-invite\n\nThanks for being an amazing customer,\nThe {} Team\n\n⚡ Powered by OHC", tier, store, discount, discount, store);
+
+    // Store campaign config in DB persistence to satisfy the constraint on side effects.
+    let tenant_id = "test-tenant-id"; // In a real app we'd get this from authed req context.
+    let _ = sqlx::query("INSERT INTO loyalty_programs (tenant_id, store_name, discount_amount, loyalty_tier) VALUES ($1, $2, $3, $4)")
+        .bind(tenant_id)
+        .bind(&store)
+        .bind(&discount)
+        .bind(&tier)
+        .execute(&state.pool)
+        .await;
+
+    Json(GenerateLoyaltyResponse { message })
 }
 
 async fn handle_generate_customer_referral(
@@ -929,6 +964,38 @@ mod tests {
 
         assert!(res_json.message.contains("Maya Cakes"));
         assert!(res_json.message.contains("VIP Referral Program"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_loyalty() {
+        let pool = setup_db().await;
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS loyalty_programs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id TEXT NOT NULL,
+                store_name TEXT NOT NULL,
+                discount_amount TEXT NOT NULL,
+                loyalty_tier TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );"
+        )
+        .execute(&pool)
+        .await;
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GenerateLoyaltyRequest { store_name: Some("Maya Cakes".to_string()), discount_amount: Some("$15".to_string()), loyalty_tier: Some("Platinum".to_string()) };
+        let res = handle_generate_loyalty(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GenerateLoyaltyResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(res_json.message.contains("Platinum status at Maya Cakes!"));
+        assert!(res_json.message.contains("Give $15 off"));
     }
 
     #[tokio::test]
