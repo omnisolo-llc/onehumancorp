@@ -39,24 +39,46 @@ pub trait SandboxAdapter: Send + Sync {
 }
 
 pub struct SandboxManager {
-    evaluator: PermissionEvaluator,
-    wrapper: BashWrapper,
-    violation_store: Arc<ViolationStore>,
-    policy: SandboxPolicy,
+    os_adapter: Box<dyn SandboxAdapter>,
 }
 
 impl SandboxManager {
     pub fn get_policy(&self) -> SandboxPolicy {
-        self.policy.clone()
+        // Not used right now but can be stored if needed.
+        SandboxPolicy::default()
     }
 
     pub fn new(pool: Option<PgPool>) -> Self {
-        let violation_store = Arc::new(ViolationStore::new(pool.clone()));
-        SandboxManager {
-            evaluator: PermissionEvaluator::new(),
-            wrapper: BashWrapper::new(),
-            violation_store,
-            policy: SandboxPolicy::default(),
+        #[cfg(target_os = "linux")]
+        {
+            SandboxManager {
+                os_adapter: Box::new(crate::sandbox::LinuxSandbox::new(pool)),
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            SandboxManager {
+                os_adapter: Box::new(crate::sandbox::MacOsSandbox::new(pool)),
+            }
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        {
+            struct FallbackAdapter;
+            #[async_trait]
+            impl SandboxAdapter for FallbackAdapter {
+                async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
+                    Ok(format!("bash -c \"{}\"", cmd.replace("\"", "\\\"")))
+                }
+                async fn update_config(&mut self, _policy_json: &str) -> Result<(), String> {
+                    Ok(())
+                }
+                fn annotate_error(&self, err: String, stdout: String) -> String {
+                    format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
+                }
+            }
+            SandboxManager {
+                os_adapter: Box::new(FallbackAdapter),
+            }
         }
     }
 }
@@ -64,46 +86,14 @@ impl SandboxManager {
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        let mut ast_parser = ASTParser::new();
-        if let Err(reason) = ast_parser.parse_for_security(cmd) {
-            let details = json!({ "command": cmd, "reason": reason });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "ast_security_violation",
-                details
-            ).await;
-            return Err(reason);
-        }
-
-        if !self.evaluator.evaluate(cmd) {
-            let details = json!({ "command": cmd });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "command_execution",
-                details
-            ).await;
-            return Err("Command execution denied by sandbox policy".to_string());
-        }
-
-        Ok(self.wrapper.wrap(cmd))
+        self.os_adapter.wrap_command(cmd).await
     }
 
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
-        let policy: SandboxPolicy = serde_json::from_str(policy_json)
-            .map_err(|e| format!("Invalid policy JSON: {}", e))?;
-
-        self.evaluator.update_policy(policy.clone());
-        self.wrapper.update_policy(policy.clone());
-        self.policy = policy;
-
-        Ok(())
+        self.os_adapter.update_config(policy_json).await
     }
 
     fn annotate_error(&self, err: String, stdout: String) -> String {
-        format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
+        self.os_adapter.annotate_error(err, stdout)
     }
 }

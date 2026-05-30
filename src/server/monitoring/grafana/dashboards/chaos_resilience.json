@@ -242,6 +242,21 @@
       ],
       "title": "Sandbox Violations",
       "type": "timeseries"
+    },
+    {
+      "type": "text",
+      "title": "Sandbox Violations Overview",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "id": 4,
+      "options": {
+        "content": "<div class=\"bg-glass\" style=\"background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 16px; color: white;\">\n  <h2 style=\"margin-top: 0;\">Sandbox Protection</h2>\n  <p>This panel monitors OS-level sandbox boundary drops and AST security violations. Any execution attempting to escape the configured policies or leveraging dangerously desynchronized quotes will be intercepted and logged here as a violation.</p>\n  <p><strong>Note:</strong> Network isolation and file-system read-only rules are actively enforced using Bubblewrap on Linux and sandbox-exec on macOS.</p>\n</div>",
+        "mode": "html"
+      }
     }
   ],
   "refresh": false,

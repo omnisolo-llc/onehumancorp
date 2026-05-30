@@ -17,6 +17,7 @@ static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static SANDBOX_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
@@ -54,6 +55,16 @@ pub fn get_error_signal_counter() -> &'static Counter<u64> {
         meter
             .u64_counter("ohc_error_signals_total")
             .with_description("Total number of error signals categorized")
+            .build()
+    })
+}
+
+pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
+    SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter
+            .i64_up_down_counter("ohc_sandbox_violation_total")
+            .with_description("Total number of sandbox violations")
             .build()
     })
 }
@@ -152,6 +163,19 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
             opentelemetry::KeyValue::new("role", role.to_string()),
             opentelemetry::KeyValue::new("model", model.to_string()),
             opentelemetry::KeyValue::new("type", token_type.to_string()),
+        ],
+    );
+}
+
+pub fn record_sandbox_violation(agent_id: &str, task_id: &str, reason: &str) {
+    let gauge = get_sandbox_violation_total();
+    gauge.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+            opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("EnvMode", crate::get_deployment_mode().to_string()),
         ],
     );
 }
