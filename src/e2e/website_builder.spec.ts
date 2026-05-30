@@ -17,7 +17,7 @@ test.describe('Website Builder Full E2E', () => {
     await expect(page.getByPlaceholder('mybusiness')).toHaveValue('test-store');
   });
 
-  test('generates storefront via AI without mocks', async ({ page }) => {
+  test('generates storefront via AI with real fallback or minimax AI', async ({ page }) => {
     // Navigate to step AI
     await page.goto('/');
     // Trigger the generation directly or navigate the UI to step-ai. For testing UI flow:
@@ -39,7 +39,7 @@ test.describe('Website Builder Full E2E', () => {
     await expect(page.locator('#builder-preview-container')).toBeVisible({ timeout: 20000 });
   });
 
-  test('publishes storefront with generated payload without mocks', async ({ page }) => {
+  test('publishes storefront with generated payload with real fallback or minimax AI', async ({ page }) => {
     await page.goto('/storefront-builder');
 
     // Simulate clicking publish and publishing

@@ -403,7 +403,8 @@ async fn generate_storefront(
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let minimax = crate::minimax::MinimaxClient::new(api_key);
+    let primary = crate::minimax::MinimaxClient::new(api_key);
+    let minimax = crate::minimax::ResilientClient::new(primary);
 
     // Step 1: The Advisor extracts metadata
     let advisor_prompt = format!(
