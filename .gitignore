@@ -139,4 +139,3 @@ dummy.*
 dummy_*
 .next/
 /*.patch
-src/cli/coverage/
