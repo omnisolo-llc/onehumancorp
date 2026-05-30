@@ -36,9 +36,14 @@ impl TwilioProvider {
         }
     }
 
-    pub fn into_integration_provider(self) -> IntegrationProvider {
+    pub fn to_integration_provider(&self) -> IntegrationProvider {
         IntegrationProvider {
-            metadata: self.metadata,
+            metadata: ProviderMetadata {
+                id: self.metadata.id.clone(),
+                name: self.metadata.name.clone(),
+                category: self.metadata.category.clone(),
+                base_url: self.metadata.base_url.clone(),
+            }
         }
     }
 
@@ -88,9 +93,9 @@ mod tests {
     }
 
     #[test]
-    fn test_twilio_provider_into() {
+    fn test_twilio_provider_to_integration_provider() {
         let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
-        let integration = provider.into_integration_provider();
+        let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "twilio");
     }
 }

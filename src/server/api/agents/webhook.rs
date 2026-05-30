@@ -1,8 +1,8 @@
 use axum::{
-    extract::{State, Json},
+    extract::{State, Json, Query},
     response::IntoResponse,
     http::StatusCode,
-    routing::post,
+    routing::{post, get},
     Router,
 };
 use std::sync::Arc;
@@ -25,13 +25,37 @@ pub struct WebhookResponse {
     pub request_id: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct MetaWebhookChallenge {
+    #[serde(rename = "hub.mode")]
+    pub mode: Option<String>,
+    #[serde(rename = "hub.challenge")]
+    pub challenge: Option<String>,
+    #[serde(rename = "hub.verify_token")]
+    pub verify_token: Option<String>,
+}
+
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/", post(handle_webhook))
+        .route("/", get(verify_meta_webhook).post(handle_webhook))
         .with_state(orchestrator)
+}
+
+async fn verify_meta_webhook(
+    Query(query): Query<MetaWebhookChallenge>,
+) -> impl IntoResponse {
+    let verify_token = std::env::var("META_WEBHOOK_VERIFY_TOKEN").unwrap_or_else(|_| "ohc-meta-secret".to_string());
+
+    if query.mode.as_deref() == Some("subscribe") && query.verify_token.as_deref() == Some(verify_token.as_str()) {
+        if let Some(challenge) = query.challenge {
+            return (StatusCode::OK, challenge).into_response();
+        }
+    }
+
+    (StatusCode::FORBIDDEN, "Forbidden").into_response()
 }
 
 async fn handle_webhook(

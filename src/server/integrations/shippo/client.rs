@@ -15,3 +15,14 @@ impl ShippoClient {
         Ok("https://api.goshippo.com/v1/mock_label.pdf".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shippo_client_creation() {
+        let client = ShippoClient::new("test_api_key".to_string());
+        assert_eq!(client.api_key, "test_api_key");
+    }
+}

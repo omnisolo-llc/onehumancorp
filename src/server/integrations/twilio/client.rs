@@ -52,3 +52,15 @@ impl TwilioClientWrapper for RealTwilioClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_real_twilio_client_creation() {
+        let client = RealTwilioClient::new("test_sid".to_string(), "test_token".to_string());
+        assert_eq!(client.account_sid, "test_sid");
+        assert_eq!(client.auth_token, "test_token");
+    }
+}

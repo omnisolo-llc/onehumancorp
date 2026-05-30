@@ -21,6 +21,17 @@ impl RealGoogleCalendarClient {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_real_google_calendar_client_creation() {
+        let client = RealGoogleCalendarClient::new("test_token".to_string());
+        assert_eq!(client.access_token, "test_token");
+    }
+}
+
 #[async_trait]
 impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {

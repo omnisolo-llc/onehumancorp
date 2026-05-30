@@ -42,3 +42,14 @@ impl SendGridClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sendgrid_client_creation() {
+        let client = SendGridClient::new("test_api_key".to_string());
+        assert_eq!(client.api_key, "test_api_key");
+    }
+}
