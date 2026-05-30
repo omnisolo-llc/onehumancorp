@@ -366,9 +366,6 @@ export default function Dashboard() {
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
              </Link>
-             <Link href="/orders" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
-               Orders 📦
-             </Link>
              <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
                Inbox
              </Link>

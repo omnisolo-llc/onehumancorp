@@ -115,20 +115,7 @@ pub async fn bench_api_response_time() {
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    println!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
-
-    let mut standalone_mobile_times = Vec::new();
-    for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-        let start = Instant::now();
-
-        let _ = dashboard_service_standalone.get_dashboard(request).await;
-        standalone_mobile_times.push(start.elapsed().as_micros());
-    }
-    standalone_mobile_times.sort();
-    println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[(iterations as f32 * 0.95) as usize], standalone_mobile_times[(iterations as f32 * 0.99) as usize]);
+    println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {

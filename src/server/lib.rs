@@ -229,7 +229,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -601,7 +600,7 @@ async fn http_login_handler(
         }
     };
 
-    let _claims = ::server_common::Claims {
+    let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -2031,28 +2030,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
 
-    let tm_mesh = handoff_mesh.clone();
-    hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
-        let payload = match serde_json::to_string(&task) {
-            Ok(p) => p,
-            Err(e) => {
-                tracing::error!("Failed to serialize task: {}", e);
-                return;
-            }
-        };
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: event_type,
-            status: "ok".to_string(),
-            payload: payload.into_bytes(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-        let tm_mesh_clone = tm_mesh.clone();
-        tokio::spawn(async move {
-            let _ = tm_mesh_clone.publish("tasks", msg.payload).await;
-        });
-    }));
-
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
@@ -2804,14 +2781,11 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
-    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
-    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -2910,16 +2884,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         .animated-dropdown {
@@ -2949,8 +2923,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -2994,7 +2968,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -3004,8 +2978,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -3015,8 +2989,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body.dark-theme .card {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -3099,8 +3073,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -3179,8 +3153,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -3247,7 +3221,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-left-color: var(--primary) !important;
                             color: var(--text) !important;
                         }
-                        #ayrshare-integration {
+                        #manychat-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -3324,8 +3298,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 375px;
@@ -3336,8 +3310,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -3370,8 +3344,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
                     background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(20px) saturate(200%) !important;
-                    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+                    backdrop-filter: blur(30px) saturate(210%) !important;
+                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
@@ -3601,13 +3575,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('ayrshare-integration').style.display='block';">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="ayrshare-integration" class="card glass" style="display: none;">
-                            <h3>📱 Ayrshare</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified API for posting and retrieving messages across social networks.</p>
-                            <button onclick="alert('Configure Ayrshare'); showScreen('inbox-screen')">Configure</button>
+                        <div id="manychat-integration" class="card glass" style="display: none;">
+                            <h3>💬 Manychat</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
+                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -4215,14 +4189,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4593,7 +4567,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -4681,7 +4655,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
