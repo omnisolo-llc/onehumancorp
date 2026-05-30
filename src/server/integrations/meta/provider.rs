@@ -45,10 +45,16 @@ impl MetaProvider {
         }
     }
 
+
     pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(platform, to, body).await
     }
+
+    pub async fn register_webhook(&self, webhook_url: &str) -> Result<(), String> {
+        self.client.register_webhook(webhook_url).await
+    }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -60,6 +66,10 @@ mod tests {
     #[async_trait]
     impl MetaClientWrapper for MockMetaClient {
         async fn send_message(&self, _platform: &str, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn register_webhook(&self, _webhook_url: &str) -> Result<(), String> {
             Ok(())
         }
     }

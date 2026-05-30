@@ -94,6 +94,13 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
+
+        "//src/server/integrations/brevo:server_integrations_brevo",
+        "//src/server/integrations/outlook:server_integrations_outlook",
+        "//src/server/integrations/messagebird:server_integrations_messagebird",
+        "//src/server/integrations/whereby:server_integrations_whereby",
+        "//src/server/integrations/shipengine:server_integrations_shipengine",
+
         "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",

@@ -31,3 +31,9 @@ pub use ::server_integrations_razorpay as razorpay;
 pub use ::server_integrations_manychat as manychat;
 pub use ::server_integrations_task_scheduler as task_scheduler;
 pub use ::server_integrations_restic as restic;
+
+pub use ::server_integrations_brevo as brevo;
+pub use ::server_integrations_outlook as outlook;
+pub use ::server_integrations_messagebird as messagebird;
+pub use ::server_integrations_whereby as whereby;
+pub use ::server_integrations_shipengine as shipengine;

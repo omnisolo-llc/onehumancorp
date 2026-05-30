@@ -1,10 +1,13 @@
 use async_trait::async_trait;
 use reqwest::Client;
 
+
 #[async_trait]
 pub trait MetaClientWrapper: Send + Sync {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String>;
+    async fn register_webhook(&self, webhook_url: &str) -> Result<(), String>;
 }
+
 
 pub struct RealMetaClient {
     access_token: String,
@@ -22,11 +25,18 @@ impl RealMetaClient {
 
 #[async_trait]
 impl MetaClientWrapper for RealMetaClient {
+    async fn register_webhook(&self, _webhook_url: &str) -> Result<(), String> {
+        // Mock webhook registration
+        Ok(())
+    }
+
+
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let url = match platform {
             "whatsapp" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
             _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
         };
+
 
         let payload = serde_json::json!({
             "recipient": {
