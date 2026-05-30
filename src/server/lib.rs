@@ -2591,7 +2591,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/v1/domain", api::domain_engine::router())
-        .nest("/api/v1/domain", api::domain_engine::router())
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
@@ -4773,20 +4772,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p>Your free domain:</p>
                                 <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
                                 <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
-                            </div>
-                            <div class="domain-setup" id="domain-step-custom">
-                                <p>Find your custom domain:</p>
-                                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                    <input type="text" id="custom-domain-search-input" placeholder="e.g. mybusiness.com" style="flex: 1;" />
-                                    <button onclick="searchCustomDomain()" style="padding: 0 16px;">Search</button>
-                                </div>
-                                <div id="custom-domain-result" style="display: none; padding: 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-bottom: 16px;">
-                                    <p id="custom-domain-status" style="margin: 0 0 8px 0; font-weight: bold;"></p>
-                                    <button id="custom-domain-buy-btn" style="width: 100%;" onclick="purchaseCustomDomain()">Buy & Configure</button>
-                                </div>
-                                <div id="custom-domain-loading" style="display: none; text-align: center; padding: 16px;">
-                                    <p>Provisioning SSL and configuring DNS...</p>
-                                </div>
                             </div>
                             <div class="domain-setup" id="domain-step-custom">
                                 <p>Find your custom domain:</p>

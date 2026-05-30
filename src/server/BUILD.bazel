@@ -38,7 +38,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:billing_webhook_test.rs",
     "//src/server/api:dynamic_workflows.rs",
     "//src/server/api:domain_engine.rs",
-    "//src/server/api:domain_engine.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
     "//src/server/api:syndication_handler.rs",
