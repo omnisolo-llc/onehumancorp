@@ -264,34 +264,36 @@ impl OperationsWorker {
 
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
+                                    let full_description = format!("{} | Payload: {}", description, drafted_msg);
+                                    let payload = serde_json::json!({"drafted_message": drafted_msg});
                                     if let Err(e) = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                        VALUES ($1, $2, 'operations', $3, 'PENDING_APPROVAL', 'HIGH', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
+                                    .bind(&full_description)
+                                    .bind(&payload)
                                     .execute(&db.pool)
                                     .await {
                                         tracing::error!("Failed to insert restock task: {}", e);
                                     }
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
+                                    let full_description = format!("{} | Payload: {}", description, drafted_msg);
+                                    let payload = serde_json::json!({"drafted_message": drafted_msg});
                                     if let Err(e) = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                        VALUES (?, ?, 'operations', ?, 'PENDING_APPROVAL', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
+                                    .bind(&full_description)
+                                    .bind(payload.to_string())
                                     .execute(pool)
                                     .await {
                                         tracing::error!("Failed to insert restock task: {}", e);
@@ -803,16 +805,18 @@ impl CustomerSuccessWorker {
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     if confidence == "REVIEW" {
+                        let full_description = format!("The Ambassador drafted a response for your review. | Payload: {}", drafted_msg);
+                        let payload = serde_json::json!({"drafted_message": drafted_msg});
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                            VALUES ($1, $2, 'customer_success', $3, 'PENDING_APPROVAL', 'HIGH', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind(&full_description)
+                        .bind(&payload)
                         .execute(&db.pool)
                         .await;
                     } else {
@@ -839,16 +843,18 @@ impl CustomerSuccessWorker {
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     if confidence == "REVIEW" {
+                        let full_description = format!("The Ambassador drafted a response for your review. | Payload: {}", drafted_msg);
+                        let payload = serde_json::json!({"drafted_message": drafted_msg});
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                            VALUES (?, ?, 'customer_success', ?, 'PENDING_APPROVAL', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
-                        .bind(&title)
-                        .bind(&drafted_msg)
+                        .bind(&full_description)
+                        .bind(payload.to_string())
                         .execute(sqlite_pool)
                         .await;
                     } else {
@@ -929,30 +935,34 @@ impl PromoterWorker {
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
+                                    let description = format!("The Promoter drafted a 7-day social media calendar for your review. | Payload: {}", drafted_post);
+                                    let payload = serde_json::json!({"drafted_message": drafted_post});
                                     let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                        VALUES ($1, $2, 'marketing', $3, 'PENDING_APPROVAL', 'HIGH', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
+                                    .bind(&description)
+                                    .bind(&payload)
                                     .execute(&db_social.pool)
                                     .await;
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
+                                    let description = format!("The Promoter drafted a 7-day social media calendar for your review. | Payload: {}", drafted_post);
+                                    let payload = serde_json::json!({"drafted_message": drafted_post});
                                     let _ = sqlx::query(
                                         r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                        VALUES (?, ?, 'marketing', ?, 'PENDING_APPROVAL', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
+                                    .bind(&description)
+                                    .bind(payload.to_string())
                                     .execute(pool)
                                     .await;
                                 }

@@ -198,6 +198,33 @@ export default function Dashboard() {
 
     const ws = connectSwarmMesh();
 
+    const fetchActivityFeed = async () => {
+        try {
+            const res = await fetch('/api/agents/approvals/activity');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.pending_approvals) {
+                    const historical = data.pending_approvals.map((a: any) => ({
+                        id: a.id,
+                        agent: a.department === 'operations' ? 'The Manager' :
+                               a.department === 'customer_success' ? 'The Ambassador' :
+                               a.department === 'marketing' ? 'The Promoter' : 'System Agent',
+                        action: a.description,
+                        time: a.created_at || 'Recently',
+                        status: 'success'
+                    }));
+                    setSwarmActivity(prev => {
+                        const merged = [...prev, ...historical];
+                        const unique = Array.from(new Map(merged.map(item => [item.id, item])).values());
+                        return unique.slice(0, 10);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch activity feed", e);
+        }
+    };
+
     const fetchMetrics = async () => {
         try {
             const token = localStorage.getItem('token') || 'test-token';
@@ -233,6 +260,7 @@ export default function Dashboard() {
     };
 
     fetchMetrics();
+    fetchActivityFeed();
 
     return () => {
         if (ws) ws.close();
