@@ -31,6 +31,7 @@ describe('OnboardingWizard', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -127,6 +128,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Handles intake API failure', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
@@ -170,9 +172,11 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
     });
+    consoleSpy.mockRestore();
   });
 
   it('Step 3: Handles start API failure and returns to Step 3', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
@@ -201,6 +205,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
+    consoleSpy.mockRestore();
   });
 
 
