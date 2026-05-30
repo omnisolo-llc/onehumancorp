@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
+import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode, SmartLabelQRGenerator } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
@@ -52,6 +52,7 @@ export default function BuilderPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [tenantId, setTenantId] = useState("storefront");
+  const [showSmartLabels, setShowSmartLabels] = useState(false);
 
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
@@ -248,6 +249,7 @@ export default function BuilderPage() {
                   { id: 'products', label: 'Selling Products', icon: '🛍️' },
                   { id: 'services', label: 'Offering Services', icon: '🛠️' },
                   { id: 'work', label: 'Showcasing Work', icon: '✨' },
+                  { id: 'smart-labels', label: 'Smart Labels (QR)', icon: '📱' },
                 ].map((option) => (
                   <button
                     key={option.id}
@@ -379,6 +381,49 @@ export default function BuilderPage() {
               </div>
             )}
 
+            {wizardStep === 4 && (
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Phygital Smart Labels</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
+                  Generate beautiful, printable QR codes that instantly link physical items to your digital storefront or AI support agents.
+                </p>
+                <div className="space-y-4 text-left">
+                  <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-black/30 rounded-[12px] border border-white/40 dark:border-white/5">
+                    <div>
+                      <h3 className="font-medium text-[#1D1D1F] dark:text-white">Storefront QR Code</h3>
+                      <p className="text-sm text-gray-500">Links directly to your main website</p>
+                    </div>
+                    <SmartLabelQRGenerator entityType="storefront" entityId="main" label="Generate" />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-black/30 rounded-[12px] border border-white/40 dark:border-white/5">
+                    <div>
+                      <h3 className="font-medium text-[#1D1D1F] dark:text-white">AI Support Agent QR</h3>
+                      <p className="text-sm text-gray-500">Opens a chat with your customer success agent</p>
+                    </div>
+                    <SmartLabelQRGenerator entityType="service" entityId="support" label="Generate" />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={() => setWizardStep(3)}
+                    className="flex-1 py-4 font-semibold text-gray-600 dark:text-gray-300 bg-white/40 dark:bg-black/20 hover:bg-white/60 dark:hover:bg-black/40 backdrop-blur-md transition-all active:scale-[0.98]"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    className="flex-1 py-4 font-semibold text-white bg-[#0071E3] hover:bg-[#0077ED] transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    Finish
+                  </button>
+                </div>
+              </div>
+            )}
+
             {wizardStep === 3 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Final Details</h1>
@@ -416,10 +461,10 @@ export default function BuilderPage() {
                           : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                       }`}
                       style={{ borderRadius: '8px' }}
-                      onClick={handleGenerate}
+                      onClick={() => setWizardStep(4)}
                       disabled={bio.trim().length <= 5}
                     >
-                      Build Store
+                      Next
                     </button>
                   </WithTooltip>
                 </div>
