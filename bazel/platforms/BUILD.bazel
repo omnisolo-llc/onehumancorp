@@ -3,6 +3,7 @@ platform(
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
+        "@rules_rust//rust/platform:windows_gnullvm",
     ],
     visibility = ["//visibility:public"],
 )
@@ -12,6 +13,7 @@ platform(
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:aarch64",
+        "@rules_rust//rust/platform:windows_gnullvm",
     ],
     visibility = ["//visibility:public"],
 )
@@ -21,6 +23,7 @@ platform(
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_32",
+        "@rules_rust//rust/platform:windows_gnullvm",
     ],
     visibility = ["//visibility:public"],
 )
