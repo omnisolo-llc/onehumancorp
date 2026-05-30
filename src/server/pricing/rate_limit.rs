@@ -309,6 +309,19 @@ impl RedisRateLimiter {
         Ok(())
     }
 
+    pub async fn decrease_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<(), String> {
+        let mut conn = self.get_connection().await?;
+        let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+
+        let current: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+        let current = current.unwrap_or(0);
+
+        let new_val = if current - delta_bytes < 0 { 0 } else { current - delta_bytes };
+        let _ : () = conn.set(&storage_key, new_val).await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
@@ -426,6 +439,36 @@ mod tests {
                 let status = limiter.check_product_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_decrease_storage_quota() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-decrease-storage";
+
+                // Clear any existing storage used
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+
+                // Set initial storage
+                let _ : i64 = redis::AsyncCommands::incr(&mut conn, &storage_key, 1000).await.unwrap();
+
+                // Decrease storage
+                limiter.decrease_storage_quota(tenant_id, 300).await.unwrap();
+
+                let current: Option<i64> = redis::AsyncCommands::get(&mut conn, &storage_key).await.unwrap();
+                assert_eq!(current, Some(700));
+
+                // Decrease below zero
+                limiter.decrease_storage_quota(tenant_id, 1000).await.unwrap();
+
+                let current: Option<i64> = redis::AsyncCommands::get(&mut conn, &storage_key).await.unwrap();
+                assert_eq!(current, Some(0));
             }
         }
     }

@@ -48,6 +48,14 @@ impl Tracker {
             }
         }
         if let Some(ref limiter) = self.rate_limiter {
+            if delta_bytes < 0 {
+                let _ = limiter.decrease_storage_quota(tenant_id, -delta_bytes).await;
+                return Ok(RateLimitStatus {
+                    is_allowed: true,
+                    soft_limit_reached: false,
+                    user_message: None,
+                });
+            }
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
                 Err(_) => {
