@@ -57,7 +57,7 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
+  if (false) {
     return null; // Disable in E2E
   }
 
