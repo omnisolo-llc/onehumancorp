@@ -95,6 +95,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/trial/extend", post(handle_trial_extend))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -1008,6 +1009,20 @@ async fn handle_aggregated_team_invites_metrics(
 
     match tracker.get_total_invites_count().await {
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_trial_extend(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Extension(state): Extension<GrowthState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    match sqlx::query("UPDATE tenants SET trial_days_left = trial_days_left + 7 WHERE id = $1")
+        .bind(&auth_info.org_id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(serde_json::json!({ "success": true }))),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

@@ -1200,7 +1200,7 @@ export default function Dashboard() {
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Connect Twitter</h4>
+                                    <h4 className="text-sm font-semibold text-gray-900">Share on Twitter</h4>
                                     <p className="text-xs text-gray-500">+7 Days</p>
                                 </div>
                             </div>
@@ -1208,13 +1208,14 @@ export default function Dashboard() {
                                 onClick={() => {
                                     if (!twitterConnected) {
                                         setTwitterConnected(true);
+                                        fetch("/api/v1/growth/trial/extend", { method: "POST" });
                                         setTrialDaysLeft(prev => prev + 7);
                                     }
                                 }}
                                 disabled={twitterConnected}
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${twitterConnected ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                             >
-                                {twitterConnected ? 'Connected' : 'Connect'}
+                                {twitterConnected ? 'Shared' : 'Share'}
                             </button>
                         </div>
 
