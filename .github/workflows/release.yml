@@ -114,7 +114,7 @@ jobs:
             os_name: windows
             arch: x86_64
             bazel_config: windows_x86_64
-            tauri_cli_bazel_flags: --config=windows_x86_64
+            tauri_cli_bazel_flags: --noenable_platform_specific_config --spawn_strategy=local
             install_linux_deps: false
           - name: macos-universal
             runner: macos-15
@@ -174,16 +174,7 @@ jobs:
 
       - name: Build Tauri CLI with Bazel
         run: |
-          if ! bazelisk build @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }}; then
-            if [[ "${{ runner.os }}" != "Windows" ]]; then
-              exit 1
-            fi
-            echo "::warning::Bazel failed to build cargo-tauri on Windows; falling back to cargo install until the Windows rules_rust host toolchain is fixed."
-            cargo install tauri-cli --version 2.11.2 --locked
-            echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
-            exit 0
-          fi
-
+          bazelisk build @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }}
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
           cli_ext=""
           if [[ "${{ runner.os }}" == "Windows" ]]; then
