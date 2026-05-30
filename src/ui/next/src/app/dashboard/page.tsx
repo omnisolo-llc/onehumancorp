@@ -589,10 +589,23 @@ export default function Dashboard() {
                          </div>
                      </div>
                      <button
-                         onClick={() => {
+                         onClick={async () => {
+                             const shareWindow = window.open('about:blank', '_blank');
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
-                             window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                             try {
+                                 const res = await fetch(`/api/v1/growth/milestone/share?tenant=${tenant}`);
+                                 const data = await res.json();
+                                 if (data && data.share_message && shareWindow) {
+                                     const finalMessage = data.share_message.replace("a new milestone", `${activeCustomers} customers`);
+                                     shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
+                                 } else {
+                                     const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                     if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                                 }
+                             } catch (e) {
+                                 const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                 if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                             }
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
                              setBannerDismissed(true);
@@ -1168,11 +1181,23 @@ export default function Dashboard() {
                       </div>
                       <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
                       <button
-                          onClick={() => {
+                          onClick={async () => {
+                              const shareWindow = window.open('about:blank', '_blank');
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `ohc://join?ref=${tenant}`;
-                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
-                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              try {
+                                  const res = await fetch(`/api/v1/growth/milestone/share?tenant=${tenant}`);
+                                  const data = await res.json();
+                                  if (data && data.share_message && shareWindow) {
+                                      const finalMessage = data.share_message.replace("a new milestone", `100 customers`);
+                                      shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
+                                  } else {
+                                      const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                      if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                                  }
+                              } catch (e) {
+                                  const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                  if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                              }
                               setShowMilestoneBanner(false);
                           }}
                           className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
