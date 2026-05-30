@@ -389,10 +389,12 @@ struct DraftReplyRequest {
     customer_message: Option<String>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DraftReplyResponse {
     output: String,
 }
+
+static DRAFT_REPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<DraftReplyResponse>> = std::sync::OnceLock::new();
 
 
 #[derive(serde::Deserialize)]
@@ -400,12 +402,14 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
 }
+
+static HTTP_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
@@ -440,6 +444,16 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let cache = HTTP_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache_key = format!("http_metrics_{}", tenant_id);
+    if let Some(cached_response) = cache.get(&cache_key).await {
+        return (
+            StatusCode::OK,
+            axum::Json(cached_response),
+        )
+            .into_response();
+    }
+
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
@@ -465,9 +479,12 @@ async fn http_metrics_handler(
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
 
+    let response = HttpMetricsResponse { active_customers, pending_orders, total_sales };
+    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
+        axum::Json(response),
     )
         .into_response()
 }
@@ -772,14 +789,30 @@ async fn draft_reply_handler(
         format!("A {} business named {}", industry, business_name)
     };
 
-    let prompt = format!(
+    let raw_prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
+    let prompt = ::server_pricing::compression::reduce_tokens(&raw_prompt);
+
+    let cache = DRAFT_REPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    use sha2::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(prompt.as_bytes());
+    let hash_str = hex::encode(hasher.finalize());
+    let cache_key = format!("draft_reply_{}_{}", tenant_id, hash_str);
+
+    if let Some(cached_response) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(cached_response)).into_response();
+    }
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
+        Ok(output) => {
+            let response = DraftReplyResponse { output };
+            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(3600)).await;
+            (StatusCode::OK, axum::Json(response)).into_response()
+        },
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
