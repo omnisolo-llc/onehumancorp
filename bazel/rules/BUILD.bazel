@@ -1,18 +1,10 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 exports_files([
     "msvc_lib_ar_wrapper.sh",
     "protoc-gen-es.js",
     "ts_proto_wrapper.js",
 ])
-
-rust_binary(
-    name = "rust_sharded_test_runner",
-    srcs = ["rust_sharded_test.rs"],
-    edition = "2024",
-    visibility = ["//visibility:public"],
-)
 
 toolchain_type(
     name = "gradle_toolchain_type",

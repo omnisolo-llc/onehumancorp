@@ -23,43 +23,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: read
-      pages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}
+          disk-cache: ${{ github.workflow }}
           repository-cache: true
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build docs site
         run: bazelisk run //:docs_build
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
@@ -67,10 +57,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -1,1 +1,3 @@
-// Intentionally empty: this package does not need the monolithic server crate.
+#![allow(unused_imports)]
+
+pub use ::server_lib::*;

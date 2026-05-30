@@ -1,35 +1,22 @@
+use sqlx::PgPool;
+use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+use sqlx::SqlitePool;
+use std::str::FromStr;
+use std::env;
+use sqlx::Row;
 use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
-use sqlx::Row;
-use sqlx::SqlitePool;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::env;
 use std::path::Path;
-use std::str::FromStr;
 use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
-        let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
@@ -62,20 +49,8 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
-                .before_acquire(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("SET app.current_tenant = ''").await?;
-                        Ok(true)
-                    })
-                })
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
+                .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
+                .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
             // Ensure secure directory creation for SQLite database in Standalone mode
@@ -129,10 +104,7 @@ impl DB {
                             if perms.mode() & 0o777 != 0o600 {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!(
-                                        "Failed to securely update existing standalone database file permissions: {}",
-                                        e
-                                    );
+                                    tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
                                     return Err(e.into());
                                 }
                             }
@@ -145,8 +117,8 @@ impl DB {
                 }
             }
 
-            let mut conn_opts =
-                SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
+            let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?
+                .create_if_missing(true);
 
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
@@ -176,8 +148,8 @@ impl DB {
 
                     #[cfg(unix)]
                     {
-                        use std::io::Write;
                         use std::os::unix::fs::OpenOptionsExt;
+                        use std::io::Write;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
                             .create(true)
@@ -197,9 +169,7 @@ impl DB {
             };
 
             if key.trim().is_empty() {
-                panic!(
-                    "CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode."
-                );
+                panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
             let pragma_key = format!("'{}'", key.replace('\'', "''"));
@@ -212,19 +182,13 @@ impl DB {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("PRAGMA secure_delete = ON").await?;
-                        conn.execute("PRAGMA foreign_keys = ON").await?;
-                        conn.execute("PRAGMA journal_mode = WAL").await?;
-                        conn.execute("PRAGMA synchronous = NORMAL").await?;
                         Ok(())
                     })
                 })
                 .connect_with(conn_opts)
                 .await?;
 
-            Ok(DB {
-                pool: dummy_pool,
-                store: DbStore::Sqlite(sqlite_pool),
-            })
+            Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
             let mut pg_url = database_url.clone();
             if !pg_url.contains("statement_cache_capacity=0") {
@@ -236,26 +200,11 @@ impl DB {
             }
 
             let mut attempt = 0;
-            let max_attempts = env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
-                .ok()
-                .and_then(|raw| raw.parse::<u32>().ok())
-                .unwrap_or(30);
+            let max_attempts = 30;
             let pool = loop {
                 match sqlx::postgres::PgPoolOptions::new()
-                    .before_acquire(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("SET app.current_tenant = ''").await?;
-                            Ok(true)
-                        })
-                    })
-                    .after_release(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("DISCARD ALL").await?;
-                            Ok(true)
-                        })
-                    })
+                    .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
                     .await
@@ -266,24 +215,17 @@ impl DB {
                         if attempt >= max_attempts {
                             return Err(e.into());
                         }
-                        tracing::debug!(
-                            "Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...",
-                            attempt,
-                            max_attempts,
-                            e
-                        );
+                        tracing::debug!("Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...", attempt, max_attempts, e);
                         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
                 }
             };
 
             let _ = GLOBAL_POOL.set(pool.clone());
-            Ok(DB {
-                pool: pool.clone(),
-                store: DbStore::Postgres,
-            })
+            Ok(DB { pool: pool.clone(), store: DbStore::Postgres })
         }
     }
+
 
     pub async fn execute_with_retry<F, Fut, T, E>(&self, operation: &str, mut f: F) -> Result<T, E>
     where
@@ -300,34 +242,13 @@ impl DB {
                 Ok(val) => return Ok(val),
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
-                    let is_sqlite_lock = self.is_sqlite()
-                        && (err_str.contains("database is locked")
-                            || err_str.contains("sqlite_busy"));
-                    let is_postgres_lock = !self.is_sqlite()
-                        && (err_str.contains("serialization failure")
-                            || err_str.contains("deadlock detected")
-                            || err_str.contains("40001"));
-
-                    if is_sqlite_lock || is_postgres_lock {
+                    if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                                &self.pool, operation,
-                            )
-                            .await;
-                            return Err(E::from(format!(
-                                "Database retry exhausted after {} attempts: {}",
-                                max_attempts, err
-                            )));
+                            let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
+                            return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
-                        if is_postgres_lock {
-                            tracing::warn!("postgres_skip_locked contention in {}", operation);
-                        } else {
-                            let _ = ::server_telemetry::record_sqlite_lock_contention(
-                                &self.pool, operation,
-                            )
-                            .await;
-                        }
+                        let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {
@@ -347,8 +268,7 @@ impl DB {
                     .execute(&self.pool)
                     .await?;
 
-                let migrator =
-                    sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
+                let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
                 migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -791,10 +711,7 @@ impl DB {
         Ok(())
     }
 
-    pub async fn delete_stale_sessions(
-        &self,
-        threshold: DateTime<Utc>,
-    ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+    pub async fn delete_stale_sessions(&self, threshold: DateTime<Utc>) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
         match &self.store {
@@ -805,7 +722,7 @@ impl DB {
                     let data: String = row.get("context_data");
                     result.push((id, data));
                 }
-            }
+            },
             DbStore::Postgres => {
                 let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1").bind(threshold).fetch_all(&self.pool).await?;
                 for row in rows {
@@ -817,36 +734,16 @@ impl DB {
         };
 
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?")
-                    .bind(threshold)
-                    .execute(sqlite_pool)
-                    .await?;
-            }
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
-                    .bind(threshold)
-                    .execute(&mut *tx)
-                    .await?;
-                tx.commit().await?;
-            }
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?").bind(threshold).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { let mut tx = self.pool.begin().await?; ::server_common::auth_utils::set_system_context(&mut *tx).await?; sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1").bind(threshold).execute(&mut *tx).await?; tx.commit().await?; }
         };
 
         Ok(result)
     }
 
-    pub async fn inject_truth(
-        &self,
-        memory_id: &str,
-        context: &str,
-        embedding: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?;
-            }
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?; },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
@@ -856,16 +753,13 @@ impl DB {
                 .bind(embedding)
                 .execute(&mut *tx)
                 .await?;
-                tx.commit().await?;
-            }
+                tx.commit().await?; }
         };
 
         Ok(())
     }
 
-    pub async fn get_completed_tasks(
-        &self,
-    ) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
+    pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
         match &self.store {
@@ -885,7 +779,7 @@ impl DB {
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
-            }
+            },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
@@ -911,34 +805,23 @@ impl DB {
         Ok(result)
     }
 
-    pub async fn insert_agent_memory(
-        &self,
-        id: &str,
-        org_id: &str,
-        task_id: &str,
-        content: &str,
-        embedding: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
-            }
-            DbStore::Postgres => {
-                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
                 .execute(&self.pool)
-                .await?;
-            }
+                .await?; }
         };
 
         Ok(())
     }
 
-    pub async fn insert_autodream_memory(
+pub async fn insert_autodream_memory(
         &self,
         id: &str,
         org_id: &str,
@@ -1016,11 +899,8 @@ impl DB {
         Ok(())
     }
 
-    pub async fn handoff_mission(
-        &self,
-        mission_id: &str,
-        blockers: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+
+    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -1034,7 +914,7 @@ impl DB {
                 .bind(mission_id)
                 .execute(sqlite_pool)
                 .await?;
-            }
+            },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
@@ -1055,10 +935,7 @@ impl DB {
         Ok(())
     }
 
-    pub async fn cleanup_stagnant_missions(
-        &self,
-        timeout_secs: i64,
-    ) -> Result<u64, Box<dyn std::error::Error>> {
+    pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
@@ -1079,20 +956,12 @@ impl DB {
             }
         };
         if affected > 0 {
-            tracing::debug!(
-                "Cleaned up {} stagnant missions older than {} seconds",
-                affected,
-                timeout_secs
-            );
+            tracing::debug!("Cleaned up {} stagnant missions older than {} seconds", affected, timeout_secs);
         }
         Ok(affected)
     }
 
-    pub async fn mark_task_auto_dreamed(
-        &self,
-        task_id: &str,
-        table: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
@@ -1100,11 +969,8 @@ impl DB {
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
                 };
-                sqlx::query(query)
-                    .bind(task_id)
-                    .execute(sqlite_pool)
-                    .await?;
-            }
+                sqlx::query(query).bind(task_id).execute(sqlite_pool).await?;
+            },
             DbStore::Postgres => {
                 let query = if table == "swarm_tasks" {
                     // swarm_tasks uses UUID primary key
@@ -1129,25 +995,12 @@ mod tests {
 
     #[test]
     fn test_db_new_fails_without_server() {
-        temp_env::with_vars(
-            vec![
-                (
-                    "DATABASE_URL",
-                    Some("postgres://localhost:54321/nonexistent"),
-                ),
-                ("OHC_DB_CONNECT_MAX_ATTEMPTS", Some("1")),
-            ],
-            || {
-                tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .unwrap()
-                    .block_on(async {
-                        let db = DB::new().await;
-                        assert!(db.is_err());
-                    });
-            },
-        );
+        temp_env::with_vars(vec![("DATABASE_URL", Some("postgres://localhost:54321/nonexistent"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let db = DB::new().await;
+                assert!(db.is_err());
+            });
+        });
     }
 }
 
@@ -1162,29 +1015,14 @@ mod autodream_db_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
+
             .connect_lazy(database_url)
             .unwrap();
 
-        let db = DB {
-            pool: pool.clone(),
-            store: DbStore::Postgres,
-        };
+        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
 
         // This is primarily to ensure the code compiles and syntax is fundamentally sound
         // Real tests would run migrations and populate data first.
@@ -1199,22 +1037,10 @@ mod autodream_db_tests {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
+
             .connect_lazy(database_url)
             .unwrap();
 
@@ -1231,17 +1057,7 @@ mod autodream_db_tests {
         let embedding = "[0.0, 0.1, 0.2]";
         let source_type = "test";
 
-        let result = db
-            .insert_knowledge_embedding(
-                id,
-                org_id,
-                agent_id,
-                task_id,
-                content,
-                embedding,
-                source_type,
-            )
-            .await;
+        let result = db.insert_knowledge_embedding(id, org_id, agent_id, task_id, content, embedding, source_type).await;
         assert!(result.is_ok() || result.is_err()); // test db may not be migrated
 
         // Cleanup
@@ -1251,27 +1067,15 @@ mod autodream_db_tests {
             .await;
     }
 
+
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -1285,13 +1089,7 @@ mod autodream_db_tests {
         // we use a SQLite in-memory test to verify connection pools don't reuse tenant state
         // and verify our query bindings safely isolate the tenant parameter natively.
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA secure_delete = ON").await?;
-                    Ok(())
-                })
-            })
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
@@ -1333,8 +1131,8 @@ mod autodream_db_tests {
         // without causing thread safety or panic issues in parsing logic
         // We bypass full sqlcipher linkage issues by just simulating the connect string
         // via standard sqlx SqliteConnectOptions to ensure it doesn't crash on invalid pragma
-        use sqlx::sqlite::SqliteConnectOptions;
         use std::str::FromStr;
+        use sqlx::sqlite::SqliteConnectOptions;
 
         // Ensure we handle cipher directives explicitly and gracefully
         let opts = SqliteConnectOptions::from_str("sqlite::memory:")
@@ -1342,13 +1140,7 @@ mod autodream_db_tests {
             .pragma("key", "secure_test_key_123");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA secure_delete = ON").await?;
-                    Ok(())
-                })
-            })
+            .after_connect(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("PRAGMA secure_delete = ON").await?; Ok(()) }) })
             .connect_with(opts)
             .await;
 
@@ -1356,10 +1148,15 @@ mod autodream_db_tests {
         // but it must NOT panic, leak memory or expose cleartext fallback unconditionally
         assert!(pool_result.is_ok() || pool_result.is_err());
     }
+
 }
 
+
 #[cfg(test)]
+
 #[cfg(test)]
+
+
 #[cfg(test)]
 mod security_tests_final {
     use super::*;
@@ -1377,66 +1174,56 @@ mod security_tests_final {
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-        temp_env::with_vars(
-            vec![
-                ("DATABASE_URL", Some(&*database_url)),
-                ("OHC_SQLITE_KEY", Some("dummy_key")),
-            ],
-            || {
-                tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .unwrap()
-                    .block_on(async {
-                        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-                        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-                        // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
-                        let parent_dir = db_path.parent().unwrap();
-                        let _ = fs::create_dir_all(parent_dir);
+        temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
+        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
+        // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
+        let parent_dir = db_path.parent().unwrap();
+        let _ = fs::create_dir_all(parent_dir);
 
-                        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        let _ = fs::File::create(&db_path);
+        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
+        let _ = fs::File::create(&db_path);
 
-                        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-                        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-                        let _ = DB::new().await;
-                        let parent_dir = db_path.parent().unwrap();
-                        let _ = fs::create_dir_all(parent_dir);
+        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
+        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
+        let _ = DB::new().await;
+        let parent_dir = db_path.parent().unwrap();
+        let _ = fs::create_dir_all(parent_dir);
 
-                        // Securely create the database file with restricted permissions initially to avoid TOCTOU
-                        #[cfg(unix)]
-                        {
-                            use std::fs::OpenOptions;
-                            use std::os::unix::fs::OpenOptionsExt;
-                            use std::os::unix::fs::PermissionsExt;
-                            let file = OpenOptions::new()
-                                .read(true)
-                                .write(true)
-                                .create(true)
-                                .mode(0o600)
-                                .open(&db_path)
-                                .unwrap();
-                            let metadata = file.metadata().unwrap();
-                            let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
-                                perms.set_mode(0o600);
-                                file.set_permissions(perms).unwrap();
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            let _ = fs::File::create(&db_path);
-                        }
+        // Securely create the database file with restricted permissions initially to avoid TOCTOU
+        #[cfg(unix)]
+        {
+            use std::fs::OpenOptions;
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::os::unix::fs::PermissionsExt;
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(&db_path)
+                .unwrap();
+            let metadata = file.metadata().unwrap();
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o777 != 0o600 {
+                perms.set_mode(0o600);
+                file.set_permissions(perms).unwrap();
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = fs::File::create(&db_path);
+        }
 
-                        let parent_dir = db_path.parent().unwrap();
-                        assert!(parent_dir.exists(), "Secure directory should be created");
+        let parent_dir = db_path.parent().unwrap();
+        assert!(parent_dir.exists(), "Secure directory should be created");
 
-                        let meta = fs::metadata(&db_path).unwrap();
-                        let mode = meta.permissions().mode();
-                        assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
-                    });
-            },
-        );
+        let meta = fs::metadata(&db_path).unwrap();
+        let mode = meta.permissions().mode();
+        assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
+            });
+        });
     }
 }
 
@@ -1449,21 +1236,8 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let _pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1475,21 +1249,8 @@ mod e2e_tenant_isolation_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let _pool2 = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+        let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1516,35 +1277,16 @@ mod e2e_tenant_isolation_tests {
 
         // Create a basic pool using our implementation logic
         let pool_opts = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            });
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
 
         let pool = pool_opts.connect(database_url).await.unwrap();
 
         // Check if the tenant was reset
         let mut conn = pool.acquire().await.unwrap();
-        let row: (Option<String>,) =
-            sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
-                .fetch_one(&mut *conn)
-                .await
-                .unwrap();
+        let row: (Option<String>,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+            .fetch_one(&mut *conn).await.unwrap();
 
-        assert_eq!(
-            row.0.unwrap_or_default(),
-            "",
-            "Verified PgPoolOptions handles initialization securely with app.current_tenant reset."
-        );
+        assert_eq!(row.0.unwrap_or_default(), "", "Verified PgPoolOptions handles initialization securely with app.current_tenant reset.");
     }
 }

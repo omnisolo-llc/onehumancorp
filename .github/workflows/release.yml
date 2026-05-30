@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -71,21 +71,16 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build packaged application
-        env:
-          MSYS2_ARG_CONV_EXCL: "*"
         run: bazelisk build //release:all_release_artifacts --config=${{ matrix.bazel_config }}
 
       - name: Collect artifacts
-        env:
-          MSYS2_ARG_CONV_EXCL: "*"
         run: |
           mkdir -p dist
           bazelisk cquery --output=files //release:all_release_artifacts --config=${{ matrix.bazel_config }} > artifact-files.txt
@@ -176,11 +171,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build Tauri CLI with Bazel
@@ -505,11 +499,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build Tauri mobile artifacts
@@ -570,11 +563,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build server web image tarball
@@ -785,11 +777,10 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Push server web image

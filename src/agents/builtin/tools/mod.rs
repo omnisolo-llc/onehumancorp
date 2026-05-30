@@ -27,7 +27,6 @@ pub mod subagent;
 pub mod head;
 pub mod tail;
 pub mod hybrid_blob;
-pub mod restic;
 pub mod anthropic_memory;
 pub mod repo_map;
 pub mod lazy_load;
@@ -39,9 +38,9 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
+pub mod claude_plugins;
 pub mod marketplace;
 pub mod marketplace_tool;
-pub mod workflow;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -137,7 +136,6 @@ pub fn all_tools(
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone()),
-        workflow::workflow_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
@@ -145,7 +143,6 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        restic::restic_tool(runner.clone()),
     ];
 
     if let Some(accessor) = memory_accessor {

@@ -8,11 +8,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  BAZEL_BUILD_FLAGS: "--remote_download_minimal"
 
 permissions:
   contents: read
@@ -69,14 +70,11 @@ jobs:
         if: startsWith(matrix.name, 'macos-')
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
-
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, matrix.name, github.event.pull_request.number) || format('{0}-{1}', github.workflow, matrix.name) }}
+          disk-cache: ${{ github.workflow }}-${{ matrix.name }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -87,15 +85,12 @@ jobs:
             - src/server/Cargo.lock
             - src/ui/next/package-lock.json
           external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
           cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
             build --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build non-test artifacts
@@ -115,6 +110,7 @@ jobs:
             --config=${{ matrix.bazel_config }} \
             --skip_incompatible_explicit_targets \
             --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
+            $BAZEL_BUILD_FLAGS \
             < build-targets.txt
 
       - name: Install Linux Tauri desktop dependencies
@@ -136,12 +132,13 @@ jobs:
           bazelisk build \
             //src/ui/tauri:app \
             --config=linux_x86_64 \
-            --//src/ui/tauri:build_tauri=true
+            --//src/ui/tauri:build_tauri=true \
+            $BAZEL_BUILD_FLAGS
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
+          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
@@ -149,7 +146,8 @@ jobs:
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64
+            --config=linux_x86_64 \
+            $BAZEL_BUILD_FLAGS
 
       - name: Install iOS signing assets
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -181,8 +179,8 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 $BAZEL_BUILD_FLAGS
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild $BAZEL_BUILD_FLAGS

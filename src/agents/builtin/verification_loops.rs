@@ -73,28 +73,6 @@ impl VerificationManager {
 }
 
 /// An InferentialSensor that uses an LlmClient to act as a judge.
-pub struct PlaywrightVisualVerifier;
-
-#[async_trait::async_trait]
-impl VisualVerifier for PlaywrightVisualVerifier {
-    async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-        let output = std::process::Command::new("npx")
-            .arg("playwright")
-            .arg("screenshot")
-            .arg(ui_state_path)
-            .arg("test.png")
-            .output()
-            .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
-
-        if output.status.success() {
-            Ok(())
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}", stderr))
-        }
-    }
-}
-
 pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
 }
@@ -171,18 +149,6 @@ mod tests {
                 Err("Visual check failed".to_string())
             }
         }
-    }
-
-    #[tokio::test]
-    async fn test_playwright_visual_verifier() {
-        // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
-        // but test the struct initialization.
-        let verifier = PlaywrightVisualVerifier;
-        // Run against an invalid path, expecting an error
-        let res = verifier.verify_visual("invalid_path_123").await;
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:"));
     }
 
     struct MockLlmClient {

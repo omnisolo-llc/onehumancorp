@@ -115,8 +115,6 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-
-# Tauri v2 generated ACL/capability schemas
 /src/ui/tauri/gen/
 site/
 

@@ -55,19 +55,6 @@ use_repo(go_sdk, "go_sdk")
 
 register_toolchains("@go_sdk//:all")
 
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-python.toolchain(
-    python_version = "3.12.12",
-)
-
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "docs_pip",
-    python_version = "3.12.12",
-    requirements_lock = "//:docs/requirements_lock.txt",
-)
-use_repo(pip, "docs_pip")
-
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
 single_version_override(
