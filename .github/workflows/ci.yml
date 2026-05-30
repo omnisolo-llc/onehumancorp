@@ -71,7 +71,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - name: linux-x86_64
@@ -141,6 +141,8 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
+            build --nokeep_going
+            build --verbose_failures
 
       - name: Build non-test artifacts
         if: matrix.name != 'android'
@@ -185,7 +187,9 @@ jobs:
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
+          bazelisk build //deploy:server_web_image_tar \
+            --config=linux_x86_64 \
+            --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
@@ -282,6 +286,10 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
+            build --nokeep_going
+            build --verbose_failures
+            test --test_output=errors
+            test --test_summary=detailed
 
       - name: Test fast targets
         run: |
@@ -341,6 +349,10 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
+            build --nokeep_going
+            build --verbose_failures
+            test --test_output=errors
+            test --test_summary=detailed
 
       - name: Pull E2E Docker images
         run: |
@@ -444,6 +456,10 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
+            build --nokeep_going
+            build --verbose_failures
+            test --test_output=errors
+            test --test_summary=detailed
 
       - name: Run Kind smoke test
         run: |
