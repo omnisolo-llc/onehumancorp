@@ -8,7 +8,7 @@ describe('OnboardingWizard', () => {
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
-      step: 1,
+      step: 0,
       chatStep: 1,
       businessName: '',
       whatYouSell: '',
@@ -32,6 +32,36 @@ describe('OnboardingWizard', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+
+  it('Handles magic onboarding flow', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    useOnboardingStore.setState({ step: 0 });
+
+    (global.fetch as any).mockImplementation((url, options) => {
+      if (url === '/api/onboarding/magic') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Your business has been successfully launched." })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const magicInput = screen.getByPlaceholderText(/Handyman in Chicago/i);
+    await userEvent.type(magicInput, 'Handyman in Chicago');
+
+    const magicBtn = screen.getByRole('button', { name: /Magic Setup/i });
+    await act(async () => { magicBtn.click(); });
+
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
+    });
   });
 
   it('Step 1: Renders initial screen correctly', async () => {

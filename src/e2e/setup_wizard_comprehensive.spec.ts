@@ -5,6 +5,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
+    await page.getByRole('button', { name: "Or do Step-by-Step Setup" }).click();
+
     // Step 1: Chat 1
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Alex Art');

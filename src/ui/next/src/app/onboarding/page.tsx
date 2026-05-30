@@ -24,8 +24,9 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
-  const [isLoaded, setIsLoaded] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [magicInput, setMagicInput] = useState('');
 
   // Read state from server on mount
   useEffect(() => {
@@ -139,6 +140,43 @@ export default function OnboardingWizard() {
     }
   };
 
+
+  const handleMagic = async () => {
+    setIsLoading(true);
+    setError('');
+    setStep(4); // Go to loading screen
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const magicRes = await fetch('/api/onboarding/magic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: magicInput })
+      });
+
+      if (!magicRes.ok) {
+        throw new Error('Failed to start magic onboarding');
+      }
+
+      const result = await magicRes.json();
+      setStartResult(result);
+      localStorage.setItem('has_onboarded', 'true');
+      setStep(5); // Go to "You're Live" screen
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during magic onboarding');
+      setStep(0); // Go back to magic input screen on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
@@ -199,6 +237,49 @@ export default function OnboardingWizard() {
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
+            </div>
+          )}
+
+
+          {step === 0 && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">One-Tap Business Setup</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Type what you do, and we'll instantly generate your storefront, products, and back-office agents.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <div>
+                  <input
+                    type="text"
+                    value={magicInput}
+                    onChange={(e) => setMagicInput(e.target.value)}
+                    placeholder="e.g. Handyman in Chicago"
+                    className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6 space-y-3">
+                <button
+                  onClick={handleMagic}
+                  disabled={!magicInput.trim() || isLoading}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Building...' : 'Magic Setup'}
+                </button>
+                <button
+                  onClick={() => setStep(1)}
+                  className="w-full bg-transparent text-[#0066FF] p-4 rounded-[8px] font-bold hover:bg-[#0066FF]/10 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                >
+                  Or do Step-by-Step Setup
+                </button>
+              </div>
             </div>
           )}
 
