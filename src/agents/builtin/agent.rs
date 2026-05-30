@@ -4036,13 +4036,6 @@ mod tests {
             ]),
         });
 
-        pub struct MockToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for MockToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("tool output".to_string())
-            }
-        }
 
         let tools: Vec<Tool> = vec![
             Tool {
