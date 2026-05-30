@@ -54,4 +54,71 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('text="Morning Briefing"')).toBeVisible();
     await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
   });
+
+  test('fails gracefully when intake API returns error', async ({ page }) => {
+    // Mock intake API to return 500 error
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 500,
+      body: JSON.stringify({ error: 'Internal Server Error' })
+    }));
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Error should be shown on the same step
+    await expect(page.locator('text="Failed to process business details"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+  });
+
+  test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details Step
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+    await page.locator('button:has-text("Continue")').click();
+
+    // Style & Team Step
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
+
+    // Ensure Sales Agent is selectable
+    const salesAgent = page.locator('text="Sales Agent"');
+    await expect(salesAgent).toBeVisible();
+    await salesAgent.click();
+
+    // Ensure the toggle works
+    const toggle = page.locator('label:has-text("Allow AI to Auto-Respond")');
+    await expect(toggle).toBeVisible();
+    await toggle.click(); // Uncheck
+    await toggle.click(); // Check again
+
+    // Verify template selection
+    await page.locator('text="Minimal"').click();
+  });
 });
