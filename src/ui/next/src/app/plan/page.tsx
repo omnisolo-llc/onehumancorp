@@ -124,7 +124,7 @@ export default function MyPlanPage() {
                             style={{
                                 width: planData?.ai_actions_limit ?
                                     `${Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100)}%`
-                                    : '10%'
+                                    : '100%'
                             }}
                         ></div>
                     </div>
@@ -150,7 +150,7 @@ export default function MyPlanPage() {
                             style={{
                                 width: planData?.storage_limit_bytes ?
                                     `${Math.min(((planData.storage_used_bytes || 0) / planData.storage_limit_bytes) * 100, 100)}%`
-                                    : '5%'
+                                    : '100%'
                             }}
                         ></div>
                     </div>
