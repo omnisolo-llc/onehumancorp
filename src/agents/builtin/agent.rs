@@ -4824,6 +4824,87 @@ mod tests {
     }
 
     #[tokio::test]
+    #[tokio::test]
+    async fn test_verification_loops_llm_judge_sensor_rejection_recovery() {
+        struct MockLlmClientJudge {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientJudge {
+            async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                if *count == 1 {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Here is the answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-1".to_string()),
+                    })
+                } else if *count == 2 {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message {
+                            role: crate::types::Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![crate::types::ToolCall {
+                                id: "call_1".to_string(),
+                                name: "structured_output".to_string(),
+                                arguments: serde_json::json!({
+                                    "data": {"status": "REJECT", "reason": "Missing details", "confidence": 0.9}
+                                }),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id-judge".to_string()),
+                    })
+                } else if *count == 3 {
+                    let last_msg = req.messages.last().unwrap();
+                    assert!(last_msg.content.contains("LLM-as-judge subagent rejected the output. Reason: Missing details. Confidence: 0.90"));
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Here is the fixed answer with details"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-3".to_string()),
+                    })
+                } else {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message {
+                            role: crate::types::Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![crate::types::ToolCall {
+                                id: "call_2".to_string(),
+                                name: "structured_output".to_string(),
+                                arguments: serde_json::json!({
+                                    "data": {"status": "APPROVE", "reason": "Good", "confidence": 0.95}
+                                }),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id-judge2".to_string()),
+                    })
+                }
+            }
+        }
+        let client = Arc::new(MockLlmClientJudge { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_llm_judge = true;
+        cfg.max_iterations = 5;
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+        let result = agent.run(&cfg, "Solve task", &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Here is the fixed answer with details");
+    }
+
     async fn test_telemetry_metrics_emission() {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
