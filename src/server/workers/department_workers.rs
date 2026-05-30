@@ -339,13 +339,15 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else if order_count == 10 { "🎉 Milestone: 10th Order!" } else { "🎉 Milestone: 100th Order!" };
+                        let milestone_type = if order_count == 1 { "first_sale" } else if order_count == 10 { "10th_order" } else { "100th_order" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
+                        } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
+                        } else {
+                            "You've reached 100 orders! Your business is incredibly successful."
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -400,13 +402,15 @@ impl OperationsWorker {
                         .await
                         .unwrap_or(0);
 
-                    if order_count == 1 || order_count == 10 {
-                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
+                    if order_count == 1 || order_count == 10 || order_count == 100 {
+                        let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else if order_count == 10 { "🎉 Milestone: 10th Order!" } else { "🎉 Milestone: 100th Order!" };
+                        let milestone_type = if order_count == 1 { "first_sale" } else if order_count == 10 { "10th_order" } else { "100th_order" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
-                        } else {
+                        } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
+                        } else {
+                            "You've reached 100 orders! Your business is incredibly successful."
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
