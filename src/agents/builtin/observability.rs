@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use serde_json::Value;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolCall};
+
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};
 
 /// DeerFlow Unique Harness Innovations: Built-in observability: LangSmith and Langfuse integration
 pub trait ObservabilityProvider: Send + Sync {
@@ -13,8 +13,8 @@ pub trait ObservabilityProvider: Send + Sync {
     fn log_error(&self, run_id: &str, error: &str);
 }
 
+#[allow(dead_code)]
 pub struct LangSmithProvider {
-    #[allow(dead_code)]
     api_key: String,
     project_name: String,
 }
@@ -49,8 +49,8 @@ impl ObservabilityProvider for LangSmithProvider {
     }
 }
 
+#[allow(dead_code)]
 pub struct LangfuseProvider {
-    #[allow(dead_code)]
     public_key: String,
     secret_key: String,
 }

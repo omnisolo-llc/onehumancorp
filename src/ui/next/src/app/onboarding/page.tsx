@@ -39,8 +39,7 @@ export default function OnboardingWizard() {
     .then(res => res.json())
     .then(data => {
       if (data && data.wizardState) {
-            if (data.step) setStep(data.step);
-            else if (data.wizardState.step) setStep(data.wizardState.step);
+        if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
@@ -88,7 +87,7 @@ export default function OnboardingWizard() {
       fetch('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-            body: JSON.stringify({ wizardState, step })
+        body: JSON.stringify({ wizardState })
       })?.catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
@@ -119,7 +118,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedDescription })
       });
 
-      if (!intakeRes.ok) {
+      if (!intakeRes || !intakeRes.ok) {
         throw new Error('Failed to process business details');
       }
 
@@ -159,7 +158,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
+          company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -173,7 +172,7 @@ export default function OnboardingWizard() {
         })
       });
 
-      if (!startRes.ok) {
+      if (!startRes || !startRes.ok) {
         throw new Error('Failed to start onboarding');
       }
 
@@ -228,14 +227,8 @@ export default function OnboardingWizard() {
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && businessName.trim()) {
-                            e.preventDefault();
-                            setChatStep(2);
-                          }
-                        }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -267,12 +260,6 @@ export default function OnboardingWizard() {
                       <textarea
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey && whatYouSell.trim()) {
-                            e.preventDefault();
-                            setChatStep(3);
-                          }
-                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -307,14 +294,8 @@ export default function OnboardingWizard() {
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && location.trim() && !isLoading) {
-                            e.preventDefault();
-                            handleIntake();
-                          }
-                        }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>

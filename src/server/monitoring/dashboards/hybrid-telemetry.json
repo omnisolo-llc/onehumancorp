@@ -33,10 +33,9 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<div style=\"backdrop-filter: blur(30px) saturate(210%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
-      "transparent": true,
-      "id": 1
+      "transparent": true
     },
     {
       "gridPos": {
@@ -65,12 +64,13 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -149,7 +149,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "rate(http_requests_total[5m])",
@@ -165,7 +165,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -178,7 +178,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket[5m])))",
           "legendFormat": "{{method}} {{path}}",
@@ -254,12 +254,13 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -272,7 +273,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_token_usage_total[5m])) by (model, type)",
           "legendFormat": "{{model}} - {{type}}",
@@ -340,7 +341,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -353,7 +354,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "ohc_token_burn_rate_predicted_24h",
           "legendFormat": "{{organization_id}}",
@@ -421,7 +422,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -434,7 +435,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "ohc_token_burn_rate_predicted_24h",
           "legendFormat": "{{organization_id}}",
@@ -588,12 +589,13 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -606,7 +608,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_agent_api_calls_total[5m])) by (role, api)",
           "legendFormat": "{{role}} - {{api}}",
@@ -674,7 +676,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -687,7 +689,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_agent_api_errors_total[5m])) by (role, api)",
           "legendFormat": "{{role}} - {{api}}",
@@ -755,7 +757,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -834,7 +836,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum by(role) (rate(ohc_agent_api_errors_total[5m]))",
@@ -850,7 +852,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -929,7 +931,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum by(api) (rate(ohc_agent_api_errors_total[5m]))",
@@ -1017,7 +1019,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1030,7 +1032,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
           "legendFormat": "{{transition}}",
@@ -1098,7 +1100,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1177,7 +1179,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_tool_autocorrection_total[5m])) by (status, role)",
@@ -1193,7 +1195,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1272,7 +1274,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum by (le, phase) (rate(ohc_deliberation_phase_duration_seconds_bucket[5m])))",
@@ -1296,7 +1298,8 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1372,7 +1375,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1385,7 +1388,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_mesh_broadcast_total[5m])) by (deployment_mode)",
           "legendFormat": "{{deployment_mode}}",
@@ -1453,7 +1456,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1472,7 +1475,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_postgres_skip_locked_total[1m])) by (operation)",
           "legendFormat": "{{operation}}",
@@ -1540,7 +1543,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1619,7 +1622,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "rate(ohc_postgres_lock_contention_total[5m])",
@@ -1633,46 +1636,6 @@
       "transparent": true
     },
     {
-      "id": 999,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 71
-      },
-      "type": "timeseries",
-      "title": "LLM Network Latency",
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
-          "legendFormat": "{{model}} 95th Percentile"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
-          "legendFormat": "{{model}} 99th Percentile"
-        }
-      ],
-      "transparent": true,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisPlacement": "auto",
-            "axisLabel": "Seconds",
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "spanNulls": false,
-            "showPoints": "auto"
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
       "id": 55,
       "title": "AutoDream",
       "type": "row",
@@ -1683,7 +1646,8 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "id": 24,
@@ -1848,7 +1812,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -1927,10 +1891,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_autodream_memories_ingested_total[5m]))",
+          "expr": "sum(rate(ohc_ohc_autodream_memories_ingested_total[5m]))",
           "legendFormat": "Ingested",
           "range": true,
           "refId": "A"
@@ -1938,10 +1902,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_autodream_memories_compressed_total[5m]))",
+          "expr": "sum(rate(ohc_ohc_autodream_memories_compressed_total[5m]))",
           "legendFormat": "Compressed",
           "range": true,
           "refId": "B"
@@ -1954,7 +1918,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -1967,7 +1931,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",
@@ -2035,7 +1999,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
@@ -2048,7 +2012,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",
@@ -2114,302 +2078,6 @@
       "transparent": true
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "Errors",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 104
-      },
-      "id": 69018,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum by (error) (rate(ohc_autodream_sync_errors_total[5m]))",
-          "legendFormat": "Sync Errors - {{error}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "AutoDream Sync Errors",
-      "type": "timeseries",
-      "transparent": true
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "Errors",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 104
-      },
-      "id": 69019,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum by (error) (rate(ohc_autodream_ingestion_error_total[5m]))",
-          "legendFormat": "Ingestion Errors - {{error}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum by (error) (rate(ohc_autodream_compression_error_total[5m]))",
-          "legendFormat": "Compression Errors - {{error}}",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "AutoDream Processing Errors",
-      "type": "timeseries",
-      "transparent": true
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "Cycles",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 112
-      },
-      "id": 69020,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(ohc_autodream_consolidation_total[5m]))",
-          "legendFormat": "Consolidation Cycles",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "AutoDream Consolidation",
-      "type": "timeseries",
-      "transparent": true
-    },
-    {
       "id": 56,
       "title": "LLM Performance",
       "type": "row",
@@ -2417,28 +2085,29 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 104
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 121
+        "y": 105
       },
       "id": 19,
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_cache_hits_total[5m])) by (cache_type)",
           "legendFormat": "Hits - {{cache_type}}",
@@ -2447,7 +2116,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_cache_misses_total[5m])) by (cache_type)",
           "legendFormat": "Misses - {{cache_type}}",
@@ -2517,7 +2186,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 121
+        "y": 105
       },
       "title": "LLM Cache Efficiency",
       "type": "timeseries",
@@ -2594,7 +2263,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -2654,7 +2323,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 129
+        "y": 113
       },
       "id": 39,
       "options": {
@@ -2673,7 +2342,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_cache_hits_total[5m]))",
@@ -2684,7 +2353,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_cache_misses_total[5m]))",
@@ -2700,7 +2369,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -2760,7 +2429,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 129
+        "y": 113
       },
       "id": 29,
       "options": {
@@ -2779,7 +2448,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(ohc_llm_network_latency_seconds_bucket[5m])))",
@@ -2795,20 +2464,20 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 137
+        "y": 121
       },
       "id": 20,
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "sum(rate(ohc_api_rate_limit_exceeded_total[5m])) by (endpoint)",
           "legendFormat": "{{endpoint}}",
@@ -2880,10 +2549,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 145
+        "y": 129
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "id": 27,
@@ -2891,7 +2561,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 146
+        "y": 130
       },
       "title": "Sync Daemon Health",
       "type": "timeseries",
@@ -2975,7 +2645,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 146
+        "y": 130
       },
       "title": "Telemetry Batch Size",
       "type": "timeseries",
@@ -3051,7 +2721,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 154
+        "y": 138
       },
       "title": "Telemetry Sync Backoff Duration",
       "type": "timeseries",
@@ -3127,7 +2797,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 154
+        "y": 138
       },
       "type": "timeseries",
       "title": "PostgreSQL Job Queue Batch Size",
@@ -3201,10 +2871,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 162
+        "y": 146
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "id": 34,
@@ -3212,7 +2883,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 163
+        "y": 147
       },
       "type": "timeseries",
       "title": "Swarm Task Queue Length",
@@ -3284,13 +2955,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 163
+        "y": 147
       },
       "type": "timeseries",
       "title": "Sub-Agent Queue Length",
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "targets": [
         {
@@ -3367,7 +3038,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3443,13 +3114,13 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 171
+        "y": 155
       },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "ohc_task_queue_length",
@@ -3462,7 +3133,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3538,13 +3209,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 171
+        "y": 155
       },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
@@ -3557,7 +3228,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3633,13 +3304,13 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 179
+        "y": 163
       },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_task_failed_total[5m])) by (error)",
@@ -3652,7 +3323,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3728,13 +3399,13 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 179
+        "y": 163
       },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_redis_redlock_total[5m])) by (operation)",
@@ -3752,15 +3423,16 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 187
+        "y": 171
       },
       "collapsed": false,
-      "panels": []
+      "panels": [],
+      "transparent": true
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3820,7 +3492,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 188
+        "y": 172
       },
       "id": 36,
       "options": {
@@ -3839,7 +3511,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "rate(ohc_minimax_api_latency_seconds[5m])",
@@ -3855,7 +3527,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${datasource}"
+        "uid": "Prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3915,7 +3587,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 188
+        "y": 172
       },
       "id": 37,
       "options": {
@@ -3934,7 +3606,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_minimax_api_calls_total[5m]))",
@@ -3945,7 +3617,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_minimax_api_errors_total[5m]))",
@@ -3971,7 +3643,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 196
+        "y": 180
       },
       "targets": [
         {
@@ -4066,7 +3738,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 196
+        "y": 180
       },
       "targets": [
         {
@@ -4161,7 +3833,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 204
+        "y": 188
       },
       "targets": [
         {
@@ -4256,7 +3928,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 204
+        "y": 188
       },
       "targets": [
         {
@@ -4352,7 +4024,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${datasource}"
+            "uid": "Prometheus"
           },
           "expr": "ohc_token_burn_rate_predicted_24h",
           "legendFormat": "{{organization_id}}",
@@ -4418,109 +4090,6 @@
         },
         "overrides": []
       },
-      "transparent": true
-    },
-    {
-      "type": "timeseries",
-      "title": "PostgreSQL Job Queue Batch Size",
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(ohc_sync_daemon_batch_size_bucket[5m])))",
-          "legendFormat": "P95 Batch Size",
-          "refId": "A"
-        },
-        {
-          "expr": "ohc_sync_daemon_batch_size",
-          "legendFormat": "Batch Size",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "drawStyle": "line",
-            "axisPlacement": "auto"
-          }
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 200
-      },
-      "id": 9991
-    },
-    {
-      "type": "timeseries",
-      "title": "Agent Execution Traces",
-      "targets": [
-        {
-          "expr": "sum by (agent_id, trace_type) (rate(ohc_agent_execution_traces_total[5m]))",
-          "legendFormat": "{{agent_id}} - {{trace_type}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "drawStyle": "line",
-            "axisPlacement": "auto"
-          }
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 200
-      },
-      "id": 9992
-    },
-    {
-      "id": 69025,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 200
-      },
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "targets": [
-        {
-          "expr": "sum(rate(ohc_token_usage_by_outcome[5m])) by (agent_role)",
-          "legendFormat": "{{agent_role}}"
-        }
-      ],
-      "transparent": true
-    },
-    {
-      "id": 69026,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 200
-      },
-      "type": "stat",
-      "title": "Swarm ROI",
-      "targets": [
-        {
-          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m])) / sum(rate(ohc_agent_cost[5m]))",
-          "legendFormat": "Total Successes / Total USD Cost"
-        }
-      ],
       "transparent": true
     }
   ],

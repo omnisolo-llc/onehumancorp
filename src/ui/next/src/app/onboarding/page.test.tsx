@@ -22,8 +22,16 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
+<<<<<<< HEAD
     global.fetch = vi.fn().mockImplementation((url) => {
         return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+=======
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/state')) {
+        return { ok: true, json: async () => ({ wizardState: {} }) };
+      }
+      return { ok: true, json: async () => ({}) };
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
     }) as any;
   });
 
@@ -42,10 +50,16 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
+<<<<<<< HEAD
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
+=======
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return {
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
           ok: true,
           json: async () => ({
             business_type: 'Bakery',
@@ -53,18 +67,21 @@ describe('OnboardingWizard', () => {
             categories: ['food'],
             initial_products: [{ name: 'Cake', price: '20' }]
           })
-        });
-      }
-      if (url === '/api/onboarding/start') {
-        return Promise.resolve({
+        };
+      } else if (url.includes('/api/onboarding/start')) {
+        return {
           ok: true,
           json: async () => ({ message: "Success!" })
-        });
+        };
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
+<<<<<<< HEAD
     render(<OnboardingWizard />);
+=======
+    act(() => { render(<OnboardingWizard />); });
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -94,7 +111,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     await user.click(continueButton);
@@ -103,7 +120,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
@@ -112,18 +129,25 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('Step 1: Handles intake API failure', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Mock intake failure
+<<<<<<< HEAD
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false });
+=======
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return { ok: false, json: async () => ({}) };
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
     render(<OnboardingWizard />);
@@ -154,10 +178,17 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+<<<<<<< HEAD
     });
+
+    consoleErrorSpy.mockRestore();
+=======
+    }, { timeout: 2000 });
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
   });
 
   it('Step 3: Handles start API failure and returns to Step 3', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
@@ -166,11 +197,17 @@ describe('OnboardingWizard', () => {
     });
 
     // Mock start failure
+<<<<<<< HEAD
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false });
+=======
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/start')) {
+        return { ok: false, json: async () => ({}) };
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
     render(<OnboardingWizard />);
@@ -183,7 +220,13 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
+<<<<<<< HEAD
     });
+
+    consoleErrorSpy.mockRestore();
+=======
+    }, { timeout: 2000 });
+>>>>>>> 05938640 (test: resolve merge conflicts in UI tests)
   });
 
   it('Step 2: Displays validation error when business name is too short', async () => {

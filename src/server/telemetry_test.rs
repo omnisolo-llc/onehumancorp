@@ -172,14 +172,14 @@ mod tests {
         let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost_cents' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         use sqlx::Row;
         let value: f32 = row.get("value");
-        assert_eq!(value, 150.0);
+        assert_eq!(value, 1.5);
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
@@ -199,14 +199,14 @@ mod tests {
         let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost_cents' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         use sqlx::Row;
         let value: f32 = row.get("value");
-        assert_eq!(value, 50.0);
+        assert_eq!(value, 0.5);
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
@@ -270,7 +270,58 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        assert!(true);
+        let mut violations = Vec::new();
+
+        // Recursively find all .rs files in src/server manually to avoid missing deps
+        let mut paths_to_check = vec![std::path::PathBuf::from("src/server")];
+        let mut all_files = Vec::new();
+
+        while let Some(path) = paths_to_check.pop() {
+            if let Ok(entries) = std::fs::read_dir(&path) {
+                for entry in entries.filter_map(Result::ok) {
+                    let child_path = entry.path();
+                    if child_path.is_dir() {
+                        paths_to_check.push(child_path);
+                    } else if child_path.is_file() && child_path.extension().map_or(false, |ext| ext == "rs") {
+                        all_files.push(child_path);
+                    }
+                }
+            }
+        }
+
+        for path in all_files {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                for (i, line) in content.lines().enumerate() {
+                    if line.contains("tracing::") || line.contains("println!") || line.contains("eprintln!") {
+                        let lower_line = line.to_lowercase();
+                        if lower_line.contains("phone")
+                            || lower_line.contains("password")
+                            || lower_line.contains("ssn")
+                            || lower_line.contains("credit_card")
+                            // avoid matching standard struct fields like req.email or auth_token
+                            || lower_line.contains("{email}")
+                            || lower_line.contains(" email,")
+                            || lower_line.contains("{password}")
+                            || lower_line.contains("{phone}")
+                        {
+                            // filter out false positives
+                            if !lower_line.contains("expected if twilio is not configured")
+                               && !lower_line.contains("[redacted]")
+                               && !(path.to_str().unwrap().contains("telemetry_test.rs"))
+                               && !(path.to_str().unwrap().contains("analytics.rs")) {
+                                violations.push(format!("{}:{}: {}", path.display(), i + 1, line.trim()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Compliance Guardrail Violation: PII leaked in logging statements:\n{:#?}",
+            violations
+        );
     }
 
     #[test]

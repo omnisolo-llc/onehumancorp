@@ -7,9 +7,11 @@ import { describe, it, expect, vi } from 'vitest';
 // Mock the fetch call
 global.fetch = vi.fn() as any;
 
+// Mock scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
 describe('HelpChat Component', () => {
   beforeEach(() => {
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     vi.clearAllMocks();
   });
 
