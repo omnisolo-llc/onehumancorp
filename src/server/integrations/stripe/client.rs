@@ -31,6 +31,9 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        let amount_cents = (amount_usd * 100.0).round() as i64;
+        let routing_method = ::server_pricing::payment_routing::route_payment(amount_cents);
+        tracing::info!("💰 Miser cost optimization: Routing ${} payment via {}", amount_usd, routing_method);
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
@@ -105,7 +108,8 @@ impl StripeClient {
         amount_cents: i64,
         batcher: &crate::integrations::stripe::payout_batcher::PayoutBatcher,
     ) -> Result<Option<String>, String> {
-        let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
+        let should_batch = ::server_pricing::payment_routing::should_batch_payout(amount_cents);
+        let payout_amount = if should_batch { batcher.record_payout(account_id, amount_cents).await? } else { Some(amount_cents) };
         if let Some(total_cents) = payout_amount {
             let _ = ::server_telemetry::record_api_call_cost(
                 &crate::db::get_pool(),
