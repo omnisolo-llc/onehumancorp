@@ -14,8 +14,28 @@ pub struct LocalProvider {
 
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
+        let mut builder = fs::DirBuilder::new();
+        builder.recursive(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        builder.create(base_path.as_ref())?;
+
         let abs_path = fs::canonicalize(base_path)?;
-        fs::create_dir_all(&abs_path)?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(&abs_path)?;
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o777 != 0o700 {
+                perms.set_mode(0o700);
+                fs::set_permissions(&abs_path, perms)?;
+            }
+        }
+
         Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
     }
 
@@ -139,7 +159,13 @@ impl Provider for LocalProvider {
 
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
+            let mut builder = tokio::fs::DirBuilder::new();
+            builder.recursive(true);
+            #[cfg(unix)]
+            {
+                builder.mode(0o700);
+            }
+            builder.create(parent).await?;
         }
 
         // Quota Enforcement
