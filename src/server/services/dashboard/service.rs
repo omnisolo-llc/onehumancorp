@@ -19,6 +19,412 @@ impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
         Self { db, hub }
     }
+
+    pub async fn get_dashboard_sequential(
+        &self,
+        request: Request<GetDashboardRequest>,
+    ) -> Result<Response<DashboardSnapshot>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
+
+        let req = request.into_inner();
+
+        if ::server_config::get().multitenant && req.organization_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
+        }
+        if ::server_config::get().multitenant
+            && auth_info.org_id != "system"
+            && auth_info.org_id != req.organization_id
+        {
+            return Err(Status::permission_denied(
+                "You do not have permission to view this organization's dashboard.",
+            ));
+        }
+
+        let hub = self.hub.clone();
+        let db = self.db.clone();
+        let org_id = req.organization_id.clone();
+        let mobile_optimized = req.mobile_optimized;
+
+        // Fetch agents
+        let cache_key_agents = format!("hub:agents:{}:{}", org_id, mobile_optimized);
+        let cache_agents = AGENTS_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
+        let agents = if let Some(a) = cache_agents.get(&cache_key_agents).await {
+            a
+        } else {
+            let a = hub.get_agents().await.to_vec();
+            cache_agents.set(&cache_key_agents, a.clone(), std::time::Duration::from_secs(5)).await;
+            a
+        };
+
+        // Fetch meetings
+        let meetings = hub.get_meetings().await;
+
+        // Fetch costs
+        let (total_cost, total_tokens, _agent_costs_data) = {
+            let cost_auditor = hub.get_cost_auditor();
+            (
+                cost_auditor.get_total_cost(),
+                cost_auditor.get_total_tokens(),
+                cost_auditor.get_agent_costs_snapshot(),
+            )
+        };
+
+        // Fetch products
+        let cache_key_products = format!("hub:products:{}:{}", org_id, mobile_optimized);
+        let cache_products = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
+        let products = if let Some(p) = cache_products.get(&cache_key_products).await {
+            p
+        } else {
+            let q = if mobile_optimized {
+                "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
+            } else {
+                "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+            };
+            use sqlx::Row;
+            let mut results = Vec::new();
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db.pool).await {
+                        for r in rows {
+                            let p = ::server_ohc::organization::Product {
+                                id: r.try_get("id").unwrap_or_default(),
+                                organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                name: r.try_get("name").unwrap_or_default(),
+                                description: r.try_get("description").unwrap_or_default(),
+                                price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                metadata_json: if mobile_optimized {
+                                    r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
+                                } else {
+                                    match r.try_get::<serde_json::Value, _>("metadata") {
+                                        Ok(v) => v.to_string(),
+                                        Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                    }
+                                },
+                            };
+                            results.push(p);
+                        }
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                        for r in rows {
+                            let p = ::server_ohc::organization::Product {
+                                id: r.try_get("id").unwrap_or_default(),
+                                organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                name: r.try_get("name").unwrap_or_default(),
+                                description: r.try_get("description").unwrap_or_default(),
+                                price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                metadata_json: if mobile_optimized {
+                                    r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
+                                } else {
+                                    match r.try_get::<serde_json::Value, _>("metadata") {
+                                        Ok(v) => v.to_string(),
+                                        Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                    }
+                                },
+                            };
+                            results.push(p);
+                        }
+                    }
+                }
+            }
+            cache_products.set(&cache_key_products, results.clone(), std::time::Duration::from_secs(3600)).await;
+            results
+        };
+
+        // Fetch orders
+        let cache_key_orders = format!("hub:orders:{}:{}", org_id, mobile_optimized);
+        let cache_orders = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
+        let orders = if let Some(o) = cache_orders.get(&cache_key_orders).await {
+            o
+        } else {
+            let q = if mobile_optimized {
+                "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
+            } else {
+                "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
+            };
+            use sqlx::Row;
+            let mut results = Vec::new();
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db.pool).await {
+                        for r in rows {
+                            let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                            let o = ::server_ohc::app::Order {
+                                id: r.try_get("id").unwrap_or_default(),
+                                organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                product_id: "".to_string(),
+                                amount_cents: (amount_real * 100.0) as i64,
+                                status: r.try_get("status").unwrap_or_default(),
+                                created_at_unix: 0,
+                            };
+                            results.push(o);
+                        }
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                        for r in rows {
+                            let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
+                            let o = ::server_ohc::app::Order {
+                                id: r.try_get("id").unwrap_or_default(),
+                                organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                product_id: "".to_string(),
+                                amount_cents: (amount_real * 100.0) as i64,
+                                status: r.try_get("status").unwrap_or_default(),
+                                created_at_unix: 0,
+                            };
+                            results.push(o);
+                        }
+                    }
+                }
+            }
+            cache_orders.set(&cache_key_orders, results.clone(), std::time::Duration::from_secs(5)).await;
+            results
+        };
+
+        // Fetch org
+        let cache_key_org = format!("hub:org:{}:{}", org_id, mobile_optimized);
+        let cache_org = ORG_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
+        let org = if let Some(o) = cache_org.get(&cache_key_org).await {
+            o
+        } else {
+            let q = if mobile_optimized {
+                "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+            } else {
+                "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+            };
+            use sqlx::Row;
+            let mut org = None;
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&db.pool).await {
+                        org = Some(::server_ohc::organization::Organization {
+                            id: row.try_get("tenant_id").unwrap_or_default(),
+                            name: row.try_get("business_name").unwrap_or_default(),
+                            domain: "".to_string(),
+                            ceo_id: "".to_string(),
+                            created_at_unix: 0,
+                            members: vec![],
+                            role_profiles: vec![],
+                            tier: row.try_get("tier").unwrap_or_default(),
+                        });
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                        org = Some(::server_ohc::organization::Organization {
+                            id: row.try_get("tenant_id").unwrap_or_default(),
+                            name: row.try_get("business_name").unwrap_or_default(),
+                            domain: "".to_string(),
+                            ceo_id: "".to_string(),
+                            created_at_unix: 0,
+                            members: vec![],
+                            role_profiles: vec![],
+                            tier: row.try_get("tier").unwrap_or_default(),
+                        });
+                    }
+                }
+            }
+            cache_org.set(&cache_key_org, org.clone(), std::time::Duration::from_secs(3600)).await;
+            org
+        };
+
+        let products = if req.mobile_optimized {
+            products.into_iter().map(|p| ::server_ohc::organization::Product {
+                description: String::new(),
+                metadata_json: String::new(),
+                fulfillment_strategy: String::new(),
+                currency: String::new(),
+                ..p
+            }).collect()
+        } else {
+            products
+        };
+
+        let orders = if req.mobile_optimized {
+            orders.into_iter().map(|o| ::server_ohc::app::Order {
+                product_id: String::new(),
+                status: String::new(),
+                organization_id: String::new(),
+                ..o
+            }).collect()
+        } else {
+            orders
+        };
+
+        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        for m in meetings.iter() {
+            let mut transcript = Vec::new();
+            if !req.mobile_optimized {
+                for msg in &m.transcript {
+                    transcript.push(::server_ohc::agent::AgentMessage {
+                        id: msg.id.clone(),
+                        from_agent_id: msg.from_agent.clone(),
+                        to_agent_id: msg.to_agent.clone(),
+                        message_type: msg.r#type.clone(),
+                        content: msg.content.clone(),
+                        meeting_id: m.id.clone(),
+                        occurred_at_unix: msg.occurred_at_unix,
+                    });
+                }
+            }
+            out_meetings.push(::server_ohc::app::MeetingRoom {
+                id: m.id.clone(),
+                participants: m.participants.clone(),
+                transcript,
+            });
+        }
+
+        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let mut final_cost_summary = None;
+        let mut final_statuses = Vec::new();
+
+        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+            .iter()
+            .filter(|a| {
+                a.organization_id == req.organization_id
+                    || a.id.starts_with(&format!("{}-", req.organization_id))
+            })
+            .cloned()
+            .collect();
+
+        let final_agents_payload = _filtered_agents
+            .into_iter()
+            .map(|a| {
+                let status_val = match a.status.to_uppercase().as_str() {
+                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                };
+
+                let role_val = match a.role.to_uppercase().as_str() {
+                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                    _ => ::server_ohc::common::Role::Unspecified as i32,
+                };
+
+                let name = if req.mobile_optimized {
+                    String::new()
+                } else {
+                    ::server_pricing::compression::reduce_tokens(&a.name)
+                };
+
+                ::server_ohc::agent::Agent {
+                    id: a.id,
+                    name,
+                    role: role_val,
+                    status: status_val,
+                    organization_id: a.organization_id,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        if !req.mobile_optimized {
+            let mut status_map = std::collections::HashMap::new();
+            for a in agents.iter() {
+                *status_map.entry(a.status.clone()).or_insert(0) += 1;
+            }
+            final_statuses = status_map
+                .into_iter()
+                .map(|(status, count)| ::server_ohc::app::StatusCount { status, count })
+                .collect();
+
+            let mut original_prompts_len = 0;
+            let mut compressed_prompts_len = 0;
+
+            let org_agents: Vec<_> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .collect();
+
+            for agent in org_agents {
+                let prompt = &agent.name;
+                let orig_len = prompt.len();
+                if orig_len > 0 {
+                    original_prompts_len += orig_len;
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    compressed_prompts_len += compressed.len();
+                }
+            }
+
+            if let Some(ref o) = org {
+                let prompt = &o.name;
+                let orig_len = prompt.len();
+                if orig_len > 0 {
+                    original_prompts_len += orig_len;
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    compressed_prompts_len += compressed.len();
+                }
+            }
+
+            let mut optimized_total_tokens = total_tokens;
+            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
+                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
+                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
+            }
+
+            let mut agent_summaries = Vec::new();
+            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
+                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                    agent_id,
+                    cost_usd,
+                    token_used: tokens_used,
+                    roi,
+                    efficiency,
+                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                    storage_usage_bytes: _storage,
+                });
+            }
+
+            final_cost_summary = Some(::server_ohc::billing::CostSummary {
+                organization_id: req.organization_id.clone(),
+                total_cost_usd: total_cost,
+                total_tokens: optimized_total_tokens,
+                projected_monthly_usd: 0.0,
+                agents: agent_summaries,
+            });
+        }
+
+        let org = if req.mobile_optimized {
+            org.map(|mut o| {
+                o.domain = String::new();
+                o.members = vec![];
+                o.role_profiles = vec![];
+                o.ceo_id = String::new();
+                o.created_at_unix = 0;
+                o
+            })
+        } else {
+            org
+        };
+
+        Ok(Response::new(DashboardSnapshot {
+            organization: org,
+            agents: final_agents_payload,
+            meetings: final_meetings,
+            cost_summary: final_cost_summary,
+            statuses: final_statuses,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+            products,
+            orders,
+        }))
+    }
 }
 
 #[tonic::async_trait]
