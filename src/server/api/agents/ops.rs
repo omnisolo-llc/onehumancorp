@@ -100,18 +100,3 @@ async fn approve_restock_order(
         },
         crate::db::DbStore::Sqlite(pool) => {
             sqlx::query("UPDATE supplier_orders SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
-                .bind(&order_id)
-                .bind(tenant_id)
-                .execute(pool)
-                .await
-        }
-    };
-
-    match result {
-        Ok(_) => (StatusCode::OK, Json(json!({"success": true}))).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to approve restock order: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to approve order"}))).into_response()
-        }
-    }
-}

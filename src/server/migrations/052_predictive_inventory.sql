@@ -20,10 +20,3 @@ CREATE TABLE IF NOT EXISTS stock_forecasts (
     product_id TEXT REFERENCES products(id) ON DELETE CASCADE,
     daily_velocity DECIMAL DEFAULT 0,
     days_until_stockout DECIMAL DEFAULT 0,
-    predicted_stockout_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE stock_forecasts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_stock_forecasts ON stock_forecasts USING (tenant_id::text = current_setting('app.current_tenant', true));
