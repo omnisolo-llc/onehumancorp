@@ -22,6 +22,27 @@ pub struct SocialPostResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCustomerReferralRequest {
+    pub store_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCustomerReferralResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CampaignRequest {
     pub name: String,
     pub subject: String,
@@ -79,6 +100,8 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -166,6 +189,35 @@ async fn handle_social_post(
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
     })
+}
+
+async fn handle_generate_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCartRequest>,
+) -> impl IntoResponse {
+    let name = req.customer_name.unwrap_or_else(|| "there".to_string());
+    let value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
+
+    let message = format!(
+        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        name, value
+    );
+
+    Json(GenerateCartResponse { message })
+}
+
+async fn handle_generate_customer_referral(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCustomerReferralRequest>,
+) -> impl IntoResponse {
+    let store = req.store_name.unwrap_or_else(|| "our store".to_string());
+
+    let message = format!(
+        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
+        store, store
+    );
+
+    Json(GenerateCustomerReferralResponse { message })
 }
 
 async fn handle_generate_review(
@@ -853,6 +905,54 @@ mod tests {
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_cart() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GenerateCartRequest {
+            customer_name: Some("Alice".to_string()),
+            cart_value: Some("$45.00".to_string()),
+        };
+
+        let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
+        let res_json = axum::response::IntoResponse::into_response(res);
+        let body_bytes = axum::body::to_bytes(res_json.into_body(), usize::MAX).await.unwrap();
+        let json_res: GenerateCartResponse = serde_json::from_slice(&body_bytes).unwrap();
+        assert!(json_res.message.contains("Hi Alice"));
+        assert!(json_res.message.contains("$45.00"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_customer_referral() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GenerateCustomerReferralRequest {
+            store_name: Some("Super Store".to_string()),
+        };
+
+        let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
+        let res_json = axum::response::IntoResponse::into_response(res);
+        let body_bytes = axum::body::to_bytes(res_json.into_body(), usize::MAX).await.unwrap();
+        let json_res: GenerateCustomerReferralResponse = serde_json::from_slice(&body_bytes).unwrap();
+        assert!(json_res.message.contains("Super Store"));
     }
 
     #[tokio::test]
