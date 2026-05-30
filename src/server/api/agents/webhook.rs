@@ -25,17 +25,23 @@ pub struct WebhookResponse {
     pub request_id: Option<String>,
 }
 
-pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
+#[derive(Clone)]
+pub struct WebhookState {
+    pub orchestrator: Arc<DepartmentOrchestrator>,
+    pub queue: Arc<dyn crate::queue::TaskQueue>,
+}
+
+pub fn router<S>(state: WebhookState) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/", post(handle_webhook))
-        .with_state(orchestrator)
+        .with_state(state)
 }
 
 async fn handle_webhook(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    State(state): State<WebhookState>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
@@ -52,16 +58,23 @@ async fn handle_webhook(
             payload: serde_json::json!({"source": payload.source, "message": payload.message}),
         };
 
-        match orchestrator.dispatch_event(event).await {
-            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
-            Err(e) => {
-                if e.contains("AI Budget exhausted") {
-                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                } else {
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                }
-            }
-        }
+        let job = crate::queue::Job {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: event.tenant_id.clone(),
+            parent_task_id: "".to_string(),
+            agent_role: "operations_agent".to_string(),
+            payload: serde_json::to_string(&event).unwrap_or_default(),
+            status: "QUEUED".to_string(),
+            attempts: 0,
+            max_attempts: 3,
+            run_after: chrono::Utc::now(),
+            locked_until: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        let _ = state.queue.enqueue(job).await;
+        return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
     }
 
     if payload.source == "mercadopago" {
@@ -77,16 +90,23 @@ async fn handle_webhook(
                 payload: serde_json::json!({"source": payload.source, "message": payload.message}),
             };
 
-            match orchestrator.dispatch_event(event).await {
-                Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
-                Err(e) => {
-                    if e.contains("AI Budget exhausted") {
-                        return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                    } else {
-                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                    }
-                }
-            }
+            let job = crate::queue::Job {
+                id: Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                parent_task_id: "".to_string(),
+                agent_role: "operations_agent".to_string(),
+                payload: serde_json::to_string(&event).unwrap_or_default(),
+                status: "QUEUED".to_string(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: chrono::Utc::now(),
+                locked_until: None,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+
+            let _ = state.queue.enqueue(job).await;
+            return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
         } else if payload.message == "pending" || payload.message == "rejected" {
             return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
         }
@@ -94,24 +114,7 @@ async fn handle_webhook(
 
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
-    // We route external messages (like DMs) to the Customer Success department
-    let risk = ActionRisk::DraftForReview;
-
-    // Generate a draft reply
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let draft_reply = if !api_key.is_empty() {
-        let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
-        let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
-        );
-        let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
-    } else {
-        "Thank you for reaching out! We will get back to you shortly.".to_string()
-    };
-
-    // Save to inbox_messages
+    // Save to inbox_messages to ack quickly
     let id = Uuid::new_v4().to_string();
     let status = "pending";
     let pool = get_pool();
@@ -123,37 +126,43 @@ async fn handle_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
     }
     let _ = sqlx::query(
-        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', $5)"
     )
     .bind(&id)
     .bind(&payload.tenant_id)
     .bind(&payload.source)
     .bind(&payload.message)
-    .bind(&draft_reply)
     .bind(&status)
     .execute(&mut *tx)
     .await;
     let _ = tx.commit().await;
 
-    match orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        description,
-        payload.tenant_id,
-        risk,
-        serde_json::json!({
+    let payload_val = serde_json::json!({
+        "type": "customer_message",
+        "description": description,
+        "payload": {
             "source": payload.source,
             "message": payload.message,
-            "draft_reply": draft_reply,
             "inbox_message_id": id,
-        }),
-    ).await {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
-        Err(e) => {
-            if e.contains("AI Budget exhausted") {
-                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-            } else {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
-            }
         }
-    }
+    });
+
+    let job = crate::queue::Job {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: payload.tenant_id.clone(),
+        parent_task_id: "".to_string(),
+        agent_role: "customer_success_agent".to_string(),
+        payload: serde_json::to_string(&payload_val).unwrap_or_default(),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: chrono::Utc::now(),
+        locked_until: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+
+    let _ = state.queue.enqueue(job).await;
+
+    (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(id) })).into_response()
 }
