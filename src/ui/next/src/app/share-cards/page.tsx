@@ -34,7 +34,7 @@ export default function ShareCardsPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between mac-glass-container border-b sticky top-0 z-50">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Social Share Cards 🎴</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -49,7 +49,7 @@ export default function ShareCardsPage() {
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Editor Settings */}
         <section className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div className="p-6 shadow-sm flex flex-col justify-between mac-glass-container rounded-2xl">
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Card Settings</h2>
                 <div className="flex flex-col gap-4">
                     <div>
@@ -82,7 +82,7 @@ export default function ShareCardsPage() {
                 </div>
             </div>
 
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div className="p-6 shadow-sm flex flex-col justify-between mac-glass-container rounded-2xl">
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Share</h2>
                 <div className="flex flex-col gap-3">
                     <button
