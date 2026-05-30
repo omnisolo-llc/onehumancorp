@@ -1484,6 +1484,17 @@ export default function Dashboard() {
                             setProductAdded(true);
                             setTrialDaysLeft(prev => prev + 7);
                         }
+
+                        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+                        fetch('/api/agents/webhook', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                tenant_id: tenant,
+                                source: "ui",
+                                message: newItemType === 'product' ? "product_added" : "service_added"
+                            })
+                        }).catch(console.error);
                     }
                 }}
                 className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
