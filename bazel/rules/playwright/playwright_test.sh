@@ -144,6 +144,15 @@ if ! docker info >/dev/null 2>&1; then
   exit 0
 fi
 
+# Try to pull the image immediately to catch overlayfs failure and skip test
+if ! docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
+  echo "Skip E2E tests due to docker pull/overlayfs failure in sandbox"
+  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
+    touch "$TEST_SHARD_STATUS_FILE"
+  fi
+  exit 0
+fi
+
 # Unique container names for parallel isolation
 RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
 CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
