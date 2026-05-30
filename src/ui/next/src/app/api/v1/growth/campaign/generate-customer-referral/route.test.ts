@@ -3,7 +3,12 @@ import { POST } from './route';
 
 describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
     beforeEach(() => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
         global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('returns 200 with message on successful backend fetch', async () => {

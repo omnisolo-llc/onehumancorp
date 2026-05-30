@@ -529,20 +529,24 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
-                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
-                                            style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
-                                        >
-                                            Approve
-                                        </button>
+                                        <WithTooltip id="reject-btn-tooltip" defaultText="Reject this action. The AI agent will learn from this correction.">
+                                            <button
+                                                onClick={() => handleApprove(approval.id, false)}
+                                                className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                                style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
+                                            >
+                                                Reject
+                                            </button>
+                                        </WithTooltip>
+                                        <WithTooltip id="approve-btn-tooltip" defaultText="Approve this action. The AI agent will immediately execute it.">
+                                            <button
+                                                onClick={() => handleApprove(approval.id, true)}
+                                                className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                                style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
+                                            >
+                                                Approve
+                                            </button>
+                                        </WithTooltip>
                                     </div>
                                 </div>
                                 {showAdvanced && payload && (
@@ -1144,12 +1148,14 @@ export default function Dashboard() {
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
                         <div className="flex gap-2 items-center">
                             <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
-                            <button
-                                onClick={() => setShowEmbedModal(true)}
-                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Get Widget
-                            </button>
+                            <WithTooltip id="get-widget-tooltip" defaultText="Get an HTML snippet to easily embed your storefront anywhere.">
+                                <button
+                                    onClick={() => setShowEmbedModal(true)}
+                                    className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    Get Widget
+                                </button>
+                            </WithTooltip>
                         </div>
                     </div>
                 </div>

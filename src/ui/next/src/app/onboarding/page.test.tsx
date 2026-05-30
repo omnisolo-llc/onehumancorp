@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 
 describe('OnboardingWizard', () => {
   beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
@@ -28,6 +29,7 @@ describe('OnboardingWizard', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
