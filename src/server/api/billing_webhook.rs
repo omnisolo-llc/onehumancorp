@@ -63,12 +63,6 @@ pub async fn stripe_webhook_handler(
                 };
 
 
-                // Update Redis Rate Limiter
-                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                }
-
-                // Update Database
                 let tier_string = match tier {
                     PlanTier::Free => "Free",
                     PlanTier::Starter => "Starter",
@@ -76,26 +70,32 @@ pub async fn stripe_webhook_handler(
                     PlanTier::Business => "Business",
                 };
 
-                let res = match &webhook_state.db.store {
-                    DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
-                            .bind(tier_string)
-                            .bind(tenant_id)
-                            .execute(pool)
-                            .await
-                            .map(|_| ())
-                    }
-                    DbStore::Postgres => {
-                        sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
-                            .bind(tier_string)
-                            .bind(tenant_id)
-                            .execute(&webhook_state.db.pool)
-                            .await
-                            .map(|_| ())
+                let redis_future = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone());
+
+                let db_future = async {
+                    match &webhook_state.db.store {
+                        DbStore::Sqlite(pool) => {
+                            sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
+                                .bind(tier_string)
+                                .bind(tenant_id)
+                                .execute(pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        DbStore::Postgres => {
+                            sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
+                                .bind(tier_string)
+                                .bind(tenant_id)
+                                .execute(&webhook_state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
                     }
                 };
 
-                if let Err(_e) = res {
+                let (redis_res, db_res) = tokio::join!(redis_future, db_future);
+
+                if redis_res.is_err() || db_res.is_err() {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -113,32 +113,32 @@ pub async fn stripe_webhook_handler(
 
             if let Some(tenant_id) = tenant_id_opt {
 
-                // Update Redis
-                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                }
+                let redis_future = webhook_state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free);
 
-                // Update DB
-                let res = match &webhook_state.db.store {
-                    DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
-                            .bind("Free")
-                            .bind(tenant_id)
-                            .execute(pool)
-                            .await
-                            .map(|_| ())
-                    }
-                    DbStore::Postgres => {
-                        sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
-                            .bind("Free")
-                            .bind(tenant_id)
-                            .execute(&webhook_state.db.pool)
-                            .await
-                            .map(|_| ())
+                let db_future = async {
+                    match &webhook_state.db.store {
+                        DbStore::Sqlite(pool) => {
+                            sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
+                                .bind("Free")
+                                .bind(tenant_id)
+                                .execute(pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        DbStore::Postgres => {
+                            sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
+                                .bind("Free")
+                                .bind(tenant_id)
+                                .execute(&webhook_state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
                     }
                 };
 
-                if let Err(_e) = res {
+                let (redis_res, db_res) = tokio::join!(redis_future, db_future);
+
+                if redis_res.is_err() || db_res.is_err() {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
