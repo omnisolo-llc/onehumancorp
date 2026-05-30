@@ -9,7 +9,6 @@ global.fetch = vi.fn() as any;
 
 describe('HelpChat Component', () => {
   beforeEach(() => {
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     vi.clearAllMocks();
   });
 
