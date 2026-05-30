@@ -1,6 +1,7 @@
 use sqlx::FromRow;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
@@ -23,46 +24,91 @@ pub struct TaskDependency {
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Tenant {
-    pub id: String,
+    pub id: Uuid,
     pub name: String,
-    pub industry: Option<String>,
+    pub domain: Option<String>,
     pub tier: Option<String>,
-    pub owner_email: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
-    pub version: Option<i64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Customer {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub preferences: Option<sqlx::types::Json<serde_json::Value>>,
+    pub last_active: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CatalogItem {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub item_type: String,
+    pub is_active: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ItemVariant {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub catalog_item_id: Uuid,
+    pub sku: Option<String>,
+    pub price: f64,
+    pub inventory_count: Option<i32>,
+    pub attributes: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Order {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub customer_id: Uuid,
+    pub status: Option<String>,
+    pub total_amount: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct OrderLineItem {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub order_id: Uuid,
+    pub variant_id: Uuid,
+    pub quantity: Option<i32>,
+    pub unit_price: f64,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AgentMemory {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub customer_id: Option<Uuid>,
+    pub department: String,
+    pub embedding: Option<Vec<f32>>,
+    pub raw_context: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+// Legacy / Support models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Business {
     pub id: String,
     pub tenant_id: String,
     pub name: String,
     pub r#type: String,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct AgentMemory {
-    pub id: String,
-    pub tenant_id: String,
-    pub business_id: Option<String>,
-    pub department: Option<String>,
-    pub content: String,
-    pub embedding: Option<Vec<f32>>,
-    pub interaction_data: Option<sqlx::types::Json<serde_json::Value>>,
-    pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Customer {
-    pub id: String,
-    pub tenant_id: String,
-    pub name: String,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub preferences: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -82,17 +128,6 @@ pub struct Product {
     pub inventory_count: Option<i32>,
     pub is_sold_out: Option<bool>,
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Order {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    pub status: Option<String>,
-    pub total_amount: Option<f64>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
