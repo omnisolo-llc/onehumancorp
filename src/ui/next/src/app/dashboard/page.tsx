@@ -406,109 +406,6 @@ export default function Dashboard() {
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Morning Briefing / Metrics Row */}
-        <section className="mb-6 animate-fade-in">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 ml-1">Today's Pulse</h2>
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-              <span className="text-gray-500 text-sm font-medium">Revenue</span>
-              <span className="text-3xl font-outfit font-bold text-gray-900">${todaysSales.toFixed(2)}</span>
-            </div>
-            <div className="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all">
-               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
-              <span className="text-gray-500 text-sm font-medium">Orders</span>
-              <span className="text-3xl font-outfit font-bold text-gray-900">{pendingOrders} <span className="text-sm text-gray-400 font-medium ml-1">new</span></span>
-            </div>
-          </div>
-        </section>
-
-        {/* Actionable Feed */}
-        <section className="mb-6 animate-fade-in">
-           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 ml-1 flex items-center justify-between">
-              <span>Action Required</span>
-              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">3 Tasks</span>
-           </h2>
-
-           <div className="space-y-4 max-w-2xl">
-
-              {/* Operations Card */}
-              <div className="bg-white/70 backdrop-blur-md rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 relative overflow-hidden">
-                 <div className="absolute -left-2 top-0 bottom-0 w-1 bg-amber-400 rounded-r-md"></div>
-                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-xl shrink-0 border border-amber-100/50">
-                       📦
-                    </div>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Operations</span>
-                          <span className="text-[10px] text-gray-400 font-medium">2m ago</span>
-                       </div>
-                       <h3 className="font-outfit font-bold text-gray-900 text-lg leading-tight mb-1 truncate">2 Custom Cake Orders to Review</h3>
-                       <p className="text-gray-500 text-sm leading-snug mb-4">Maya, you have two new custom vegan cake requests for this weekend. Total value: $140.</p>
-                       <div className="flex gap-2">
-                          <button className="flex-1 bg-gray-900 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-800 transition-colors shadow-sm">Review Orders</button>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Marketing Card */}
-              <div className="bg-white/70 backdrop-blur-md rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 relative overflow-hidden">
-                 <div className="absolute -left-2 top-0 bottom-0 w-1 bg-purple-500 rounded-r-md"></div>
-                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-xl shrink-0 border border-purple-100/50">
-                       ✨
-                    </div>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Marketing</span>
-                          <span className="text-[10px] text-gray-400 font-medium">1h ago</span>
-                       </div>
-                       <h3 className="font-outfit font-bold text-gray-900 text-lg leading-tight mb-1 truncate">Approve Instagram post</h3>
-                       <p className="text-gray-500 text-sm leading-snug mb-3">I&apos;ve generated a promotional post for your new Vegan Chocolate Cake variant to drive weekend sales.</p>
-
-                       <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100 relative group cursor-pointer hover:bg-gray-100 transition-colors">
-                          <p className="text-xs text-gray-600 italic line-clamp-2">&quot;Craving something sweet but keeping it plant-based? 🌱 Our new Vegan Chocolate Fudge Cake is here to save the weekend! Pre-order now...&quot;</p>
-                       </div>
-
-                       <div className="flex gap-2">
-                          <button className="flex-1 bg-purple-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm flex items-center justify-center gap-1">
-                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                             Approve & Post
-                          </button>
-                          <button className="w-11 h-11 bg-white text-gray-600 rounded-xl flex items-center justify-center border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                          </button>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Advisory Card */}
-              <div className="bg-white/70 backdrop-blur-md rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/50 relative overflow-hidden">
-                 <div className="absolute -left-2 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-md"></div>
-                 <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl shrink-0 border border-emerald-100/50">
-                       📈
-                    </div>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Advisor</span>
-                          <span className="text-[10px] text-gray-400 font-medium">3h ago</span>
-                       </div>
-                       <h3 className="font-outfit font-bold text-gray-900 text-lg leading-tight mb-1 truncate">Weekly Insights Available</h3>
-                       <p className="text-gray-500 text-sm leading-snug mb-4">Your top seller was lemonade. Tuesday was your busiest day. Consider adding a new flavor for the summer.</p>
-                       <div className="flex gap-2">
-                          <button className="flex-1 bg-white text-emerald-700 rounded-xl py-2.5 text-sm font-semibold border border-emerald-200 hover:bg-emerald-50 transition-colors shadow-sm">Read Full Report</button>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-           </div>
-        </section>
-
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1234,24 +1131,6 @@ export default function Dashboard() {
          )}
 
          {/* Growth Loop: Milestone Celebration */}
-         {/* Feature Link: Smart Pricing */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Smart Pricing</h2>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Auto-adjust pricing to optimize revenue</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let AI automatically adjust your prices to maximize revenue and clear inventory.</p>
-                    <button onClick={() => window.location.href=('/smart-pricing')} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                        <span>Configure Smart Pricing</span>
-                    </button>
-                </div>
-            </div>
-         </section>
-
          {showMilestoneBanner && (
            <section className="mb-8 animate-fade-in">
               <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
