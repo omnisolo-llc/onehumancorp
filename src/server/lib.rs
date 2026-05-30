@@ -1926,6 +1926,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    let yield_worker = crate::workers::department_workers::YieldAgentWorker::new(db.clone());
+    yield_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -4127,17 +4130,35 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         container.innerHTML = '<h3>Pending Actions Hub</h3>';
                                         data.pending_approvals.forEach(approval => {
                                             const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
-                                            container.innerHTML += `
-                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
-                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
-                                                    ${payloadStr}
-                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+
+                                            let cardHtml = '';
+                                            if (approval.department === 'business_advisory' || approval.department === 'businessadvisory') {
+                                                // Revenue Recovery Flash Sale Card
+                                                cardHtml = `
+                                                    <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid rgba(255, 100, 100, 0.4); border-radius: 12px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 200, 200, 0.1);">
+                                                        <h4 style="margin: 0 0 8px 0; color: #d32f2f;">🚨 Revenue Recovery Alert</h4>
+                                                        <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-primary); line-height: 1.5;">${approval.description}</p>
+                                                        <div style="display: flex; gap: 12px; margin-top: 10px;">
+                                                            <button style="flex: 1; padding: 14px; border-radius: 8px; font-weight: bold; background: var(--primary);" onclick="decideApproval('${approval.id}', true)">1-Tap Approve</button>
+                                                            <button style="flex: 1; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary);" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            `;
+                                                `;
+                                            } else {
+                                                // Standard Approval Card
+                                                cardHtml = `
+                                                    <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                        <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
+                                                        ${payloadStr}
+                                                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                                            <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                            <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }
+                                            container.innerHTML += cardHtml;
                                         });
                                     } else {
                                         container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';

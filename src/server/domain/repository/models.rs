@@ -123,3 +123,28 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct YieldStrategy {
+    pub id: String,
+    pub tenant_id: String,
+    pub target_entity_id: String,
+    pub target_entity_type: String,
+    pub predicted_spoilage_risk: f64,
+    pub expiration_window: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DynamicPriceAdjustment {
+    pub id: String,
+    pub tenant_id: String,
+    pub yield_strategy_id: String,
+    pub original_price: f64,
+    pub adjusted_price: f64,
+    pub marketing_draft_copy: String,
+    pub approval_status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

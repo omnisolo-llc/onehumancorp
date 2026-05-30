@@ -1002,3 +1002,193 @@ impl PromoterWorker {
         });
     }
 }
+
+pub struct YieldAgentWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: std::time::Duration,
+    pub ledger: Arc<crate::workers::yield_management::UniversalCapacityLedger>,
+}
+
+impl YieldAgentWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        let ledger = Arc::new(crate::workers::yield_management::UniversalCapacityLedger::new(db.clone()));
+        Self {
+            db,
+            poll_interval: std::time::Duration::from_secs(60), // Poll every minute
+            ledger,
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let ledger = self.ledger.clone();
+        let interval_duration = self.poll_interval;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval_duration);
+            loop {
+                interval.tick().await;
+                if let Err(e) = Self::poll(&db, &ledger).await {
+                    tracing::error!("YieldAgentWorker error: {}", e);
+                }
+            }
+        });
+    }
+
+    pub async fn poll(db: &Arc<DB>, ledger: &Arc<crate::workers::yield_management::UniversalCapacityLedger>) -> Result<(), String> {
+        let at_risk_items = ledger.find_at_risk_inventory().await?;
+
+        for item in at_risk_items {
+            let tenant_id = &item.tenant_id;
+            let product_id = &item.id;
+            let current_price = item.price.unwrap_or(0.0);
+
+            // Skip if already has an active yield strategy in draft/approval
+            let has_active_strategy = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM yield_strategies WHERE target_entity_id = $1 AND expiration_window > NOW()")
+                        .bind(product_id)
+                        .fetch_one(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    count.0 > 0
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM yield_strategies WHERE target_entity_id = $1 AND datetime(expiration_window) > datetime('now')")
+                        .bind(product_id)
+                        .fetch_one(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    count.0 > 0
+                }
+            };
+
+            if has_active_strategy {
+                continue;
+            }
+
+            let max_discount_pct = 0.30;
+            let adjusted_price = current_price * (1.0 - max_discount_pct);
+
+            let item_name = item.title.clone().unwrap_or_else(|| item.name.clone().unwrap_or_else(|| "Item".to_string()));
+            let qty = item.inventory_count.unwrap_or(0);
+            let discount_pct_display = (max_discount_pct * 100.0) as i32;
+            let draft_copy = format!("Flash Sale! We have {} {} remaining. Grab yours for {}% off in the next 2 hours!", qty, item_name, discount_pct_display);
+
+            let strategy_id = uuid::Uuid::new_v4().to_string();
+            let adjustment_id = uuid::Uuid::new_v4().to_string();
+
+            let expires_at_str = item.metadata.as_ref()
+                .and_then(|m| m.get("expires_at"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
+            let expires_at: chrono::DateTime<chrono::Utc> = chrono::DateTime::parse_from_rfc3339(expires_at_str)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(2));
+
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                    sqlx::query("INSERT INTO yield_strategies (id, tenant_id, target_entity_id, target_entity_type, predicted_spoilage_risk, expiration_window) VALUES ($1, $2, $3, $4, $5, $6)")
+                        .bind(&strategy_id)
+                        .bind(tenant_id)
+                        .bind(product_id)
+                        .bind("inventory_item")
+                        .bind(0.85) // High spoilage risk
+                        .bind(expires_at)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    sqlx::query("INSERT INTO dynamic_price_adjustments (id, tenant_id, yield_strategy_id, original_price, adjusted_price, marketing_draft_copy, approval_status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(&adjustment_id)
+                        .bind(tenant_id)
+                        .bind(&strategy_id)
+                        .bind(current_price)
+                        .bind(adjusted_price)
+                        .bind(&draft_copy)
+                        .bind("pending")
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    // Insert Approval Request into agent_approvals so it shows in the UI
+                    let approval_id = uuid::Uuid::new_v4().to_string();
+                    let desc = format!("{} remaining. Suggestion: {}% off Flash Sale for the next hour to clear inventory. We'll text your local regulars.", qty, discount_pct_display);
+                    let payload = serde_json::json!({
+                        "adjustment_id": adjustment_id,
+                        "product_id": product_id,
+                        "adjusted_price": adjusted_price,
+                        "marketing_draft_copy": draft_copy
+                    });
+
+                    sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(&approval_id)
+                        .bind(tenant_id)
+                        .bind("business_advisory") // Or Operations/Marketing
+                        .bind(desc)
+                        .bind("PENDING_APPROVAL")
+                        .bind("HIGH") // High risk means it needs manual review
+                        .bind(payload)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                    sqlx::query("INSERT INTO yield_strategies (id, tenant_id, target_entity_id, target_entity_type, predicted_spoilage_risk, expiration_window) VALUES ($1, $2, $3, $4, $5, $6)")
+                        .bind(&strategy_id)
+                        .bind(tenant_id)
+                        .bind(product_id)
+                        .bind("inventory_item")
+                        .bind(0.85)
+                        .bind(expires_at)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    sqlx::query("INSERT INTO dynamic_price_adjustments (id, tenant_id, yield_strategy_id, original_price, adjusted_price, marketing_draft_copy, approval_status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(&adjustment_id)
+                        .bind(tenant_id)
+                        .bind(&strategy_id)
+                        .bind(current_price)
+                        .bind(adjusted_price)
+                        .bind(&draft_copy)
+                        .bind("pending")
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let approval_id = uuid::Uuid::new_v4().to_string();
+                    let desc = format!("{} remaining. Suggestion: {}% off Flash Sale for the next hour to clear inventory. We'll text your local regulars.", qty, discount_pct_display);
+                    let payload = serde_json::json!({
+                        "adjustment_id": adjustment_id,
+                        "product_id": product_id,
+                        "adjusted_price": adjusted_price,
+                        "marketing_draft_copy": draft_copy
+                    });
+
+                    sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(&approval_id)
+                        .bind(tenant_id)
+                        .bind("business_advisory")
+                        .bind(desc)
+                        .bind("PENDING_APPROVAL")
+                        .bind("HIGH")
+                        .bind(payload)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+            }
+
+            tracing::info!("YieldAgent: Drafted flash sale for product {}", product_id);
+        }
+
+        Ok(())
+    }
+}

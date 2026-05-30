@@ -240,6 +240,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:department_workers.rs",
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
+    "//src/server/workers:yield_management.rs",
     "//src/server/workers:mod.rs",
 ]
 
