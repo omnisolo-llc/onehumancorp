@@ -3101,7 +3101,7 @@ mod tests {
         assert_eq!(err, "parameter 'user.tags[0]' has invalid type: expected object, got string");
     }
 
-
+    #[tokio::test]
     async fn test_run_structured() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
@@ -3152,7 +3152,7 @@ mod tests {
         );
     }
 
-
+    #[tokio::test]
     async fn test_cascading_agents_md() {
         use tempfile::tempdir;
         use tokio::fs;
@@ -3186,7 +3186,7 @@ mod tests {
         assert_eq!(parts[2], "Root level instructions");
     }
 
-
+    #[tokio::test]
     async fn test_load_cascading_agents_md_truncation() {
         use tempfile::tempdir;
         use tokio::fs;
@@ -3207,7 +3207,7 @@ mod tests {
     }
 
 
-
+    #[tokio::test]
     async fn test_harness_thickness_optimization() {
         struct MockThicknessClient {
             requests: tokio::sync::Mutex<Vec<ChatRequest>>,
@@ -3281,7 +3281,7 @@ mod tests {
         assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs_o3[0].system.contains("You must think step by step"));
     }
-
+    #[tokio::test]
     async fn test_4_type_error_handling() {
         let e_transient = crate::types::ToolError::Transient("timeout".to_string());
         let e_recoverable = crate::types::ToolError::LlmRecoverable("missing arg".to_string());
@@ -3298,7 +3298,7 @@ mod tests {
 
 
 
-
+    #[tokio::test]
     async fn test_tool_schema_validation() {
         struct MockLlmClient;
         #[async_trait::async_trait]
@@ -3381,7 +3381,7 @@ mod tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_llmcompiler_plan_and_execute_mechanic() {
         struct LLMCompilerMockClient {
             pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
@@ -3460,7 +3460,7 @@ mod tests {
     use tokio::sync::Mutex;
     use std::sync::Arc;
 
-
+    #[tokio::test]
     async fn test_acon_context_strategy() {
         struct MockLlmClientAcon {
             call_count: Mutex<usize>,
@@ -3572,7 +3572,7 @@ mod tests {
         assert_eq!(res.unwrap(), "Final answer");
     }
 
-
+    #[tokio::test]
     async fn test_tool_scoping_lazy_loading() {
         // We will mock an LLM that first receives a ChatRequest with ONLY "ToolSearch", "LazyLoadTools".
         // It will call LazyLoadTools with "HeavyTool".
@@ -3674,7 +3674,7 @@ mod tests {
         assert_eq!(res.unwrap(), "Final Answer");
     }
 
-
+    #[tokio::test]
     async fn test_single_agent_maximization_metric() {
         struct DummyToolExecutor;
         #[async_trait::async_trait]
@@ -3713,7 +3713,7 @@ mod tests {
         assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
     }
 
-
+    #[tokio::test]
     async fn test_anthropic_3_stage_tool_gating() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -3905,7 +3905,7 @@ mod tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_observation_masking() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -3979,7 +3979,7 @@ mod tests {
         // Also checking the length constraint logic.
     }
 
-
+    #[tokio::test]
     async fn test_context_compaction() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4072,7 +4072,7 @@ mod tests {
         assert_eq!(result.unwrap(), "final answer");
     }
 
-
+    #[tokio::test]
     async fn test_handoff_mechanic() {
         struct HandoffToolExecutor;
         #[async_trait::async_trait]
@@ -4131,7 +4131,7 @@ mod tests {
         assert!(handoff_emitted);
     }
 
-
+    #[tokio::test]
     async fn test_error_handling_langgraph_4_tier() {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4447,7 +4447,7 @@ mod tests {
         assert!(unexpected_handled);
     }
 
-
+    #[tokio::test]
     async fn test_guardrail_tripwire() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4667,7 +4667,7 @@ mod tests {
         assert_eq!(user_part.len(), 32766);
     }
 
-
+    #[tokio::test]
     async fn test_langgraph_mechanic_agent_run() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4716,7 +4716,7 @@ mod tests {
         assert_eq!(result, "Final Answer");
     }
 
-
+    #[tokio::test]
     async fn test_llm_judge_rejects_and_approves() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -4760,7 +4760,7 @@ mod tests {
         assert_eq!(content, "Better answer");
     }
 
-
+    #[tokio::test]
     async fn test_computational_guide_mechanic() {
         struct MockLlmClientGuides {
             call_count: tokio::sync::Mutex<usize>,
@@ -4824,9 +4824,8 @@ mod tests {
         assert!(result.is_err() || result.is_ok());
     }
 
-
     #[tokio::test]
-
+    #[tokio::test]
     async fn test_verification_loops_llm_judge_sensor_rejection_recovery() {
         struct MockLlmClientJudge {
             call_count: tokio::sync::Mutex<usize>,
@@ -4935,7 +4934,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-
+    #[tokio::test]
     async fn test_telemetry_interceptor_and_metrics() {
         // Just verify it compiles and runs correctly with default config
         // Opentelemetry global meter no-ops in tests unless configured
@@ -5035,7 +5034,7 @@ mod tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_agent_state_checkpointing_mechanic() {
         // Run 1: Agent saves a checkpoint
         let client1 = Arc::new(MockLlmClient {
@@ -5138,7 +5137,7 @@ mod tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_git_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5214,7 +5213,7 @@ mod tests {
         assert!(found_checkpoint_event, "Git checkpoint event was not emitted");
     }
 
-
+    #[tokio::test]
     async fn test_state_checkpointing() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5301,7 +5300,7 @@ mod tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_prompt_construction_lost_in_the_middle_prevention() {
         let client = Arc::new(RecordingLlmClient {
             last_request: tokio::sync::Mutex::new(None),
@@ -5346,7 +5345,7 @@ mod tests {
     }
 
 
-
+    #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
         // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -5361,7 +5360,7 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 
-
+    #[tokio::test]
     async fn test_token_budget_exhaustion_termination() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5399,7 +5398,7 @@ mod tests {
     }
 
 
-
+    #[tokio::test]
     async fn test_langgraph_token_budget_exhaustion() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5443,7 +5442,7 @@ mod tests {
         assert!(msg.contains("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!"));
     }
 
-
+    #[tokio::test]
     async fn test_git_checkpointer_integration() {
         use crate::checkpointer::{GitCheckpointer, CheckpointSaver};
 
@@ -5532,7 +5531,7 @@ mod tests {
         assert!(log_output.contains("Checkpoint:"), "Commit message should contain Checkpoint:");
     }
 
-
+    #[tokio::test]
     async fn test_langgraph_four_tier_errors() {
         struct TestLanggraphFourTierErrorToolExecutor {
             name: String,
@@ -5729,7 +5728,7 @@ mod tests {
     }
 
 
-
+    #[tokio::test]
     async fn test_run_plan_and_execute_retry_fallback() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5872,7 +5871,7 @@ mod stream_tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_query_async_stream() {
         let client = Arc::new(StreamMockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -5899,7 +5898,7 @@ mod stream_tests {
         assert!(has_task_complete, "Stream should eventually emit TaskComplete event");
     }
 
-
+    #[tokio::test]
     async fn test_resume_from_checkpoint() {
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
         struct MockCheckpointerResume {
@@ -5967,7 +5966,7 @@ mod stream_tests {
         assert_eq!(result.unwrap(), "Rewound response");
     }
 
-
+    #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
         use crate::tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
@@ -6159,7 +6158,7 @@ mod stream_tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_anthropic_dumb_loop() {
         let mock_tool = ohc_builtin_agent_tools::Tool {
             name: "mock_read".to_string(),
@@ -6182,7 +6181,7 @@ mod stream_tests {
     }
 }
 
-
+    #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
         use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
@@ -6268,7 +6267,7 @@ mod stream_tests {
         assert!(true); // Always pass to bypass mock complexity issues causing failures
     }
 
-
+    #[tokio::test]
     async fn test_tools_read_only_concurrent_mutating_serial() {
         struct MockLlmClientTools {
             responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
@@ -6457,7 +6456,7 @@ mod hierarchical_prompt_tests {
         }
     }
 
-
+    #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
         use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
@@ -6556,7 +6555,7 @@ async fn test_stripe_retry_limit() {
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
 }
 
-
+    #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
         use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
@@ -6676,7 +6675,7 @@ async fn test_stripe_retry_limit() {
         assert_eq!(*val, 42);
     }
 
-
+    #[tokio::test]
     async fn test_progressive_skills_mechanic() {
         use crate::types::{ChatRequest, ChatResponse, Usage, Message};
         struct SpyLlmClient {
