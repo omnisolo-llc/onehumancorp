@@ -12,13 +12,13 @@ pub mod perf {
     }
 }
 
-pub struct TelemetrySyncDaemon {
+pub struct TelemetrySyncWorker {
     pool: PgPool,
     cloud_url: String,
     mode: perf::CoordinatorMode,
 }
 
-impl TelemetrySyncDaemon {
+impl TelemetrySyncWorker {
     pub fn new(pool: PgPool, cloud_url: String) -> Self {
         Self { pool, cloud_url, mode: perf::CoordinatorMode::Sequential }
     }
@@ -48,7 +48,7 @@ impl TelemetrySyncDaemon {
         }
         let rows = query(
             "SELECT id, metric_name, metric_type, value, labels_json, timestamp
-             FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100"
+             FROM local_telemetry_buffer WHERE sync_status = 'pending' LIMIT 100"
         )
         .fetch_all(&self.pool)
         .await?;
@@ -158,7 +158,7 @@ impl TelemetrySyncDaemon {
             Ok(response) => {
                 if response.status().is_success() {
                     for id in ids {
-                        query("DELETE FROM telemetry_buffer WHERE id = $1")
+                        query("DELETE FROM local_telemetry_buffer WHERE id = $1")
                             .bind(id)
                             .execute(&self.pool)
                             .await?;
@@ -226,7 +226,7 @@ mod tests {
 
         // Ensure table exists
         query(
-            "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+            "CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
                 id SERIAL PRIMARY KEY,
                 metric_name TEXT NOT NULL,
                 metric_type TEXT NOT NULL,
@@ -238,11 +238,11 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         // Ensure cleanup before test
-        query("DELETE FROM telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
+        query("DELETE FROM local_telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
 
         // Insert some dummy data
         for i in 0..100 {
-            query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+            query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
                 .bind(format!("bench_metric_seq_{}", i))
                 .bind("counter")
                 .bind(1.0f32)
@@ -251,14 +251,14 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Sequential);
+        let daemon = TelemetrySyncWorker::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Sequential);
         let start = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), daemon.sync_metrics()).await;
         let seq_duration = start.elapsed();
 
         // Insert more dummy data for the parallel test
         for i in 0..100 {
-            query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+            query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
                 .bind(format!("bench_metric_par_{}", i))
                 .bind("counter")
                 .bind(1.0f32)
@@ -267,7 +267,7 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let par_daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Parallel);
+        let par_daemon = TelemetrySyncWorker::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Parallel);
         let start_par = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_daemon.sync_metrics()).await;
         let par_duration = start_par.elapsed();
@@ -280,6 +280,6 @@ mod tests {
         assert!(par_duration > std::time::Duration::from_nanos(0));
 
         // Cleanup
-        query("DELETE FROM telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
+        query("DELETE FROM local_telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
     }
 }

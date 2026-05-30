@@ -42,8 +42,8 @@ impl Forecaster {
             val
         };
 
-        // 1. Fetch recent token usage from telemetry_buffer
-        let rows = sqlx::query("SELECT value, labels_json FROM telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1 AND timestamp <= $2")
+        // 1. Fetch recent token usage from local_telemetry_buffer
+        let rows = sqlx::query("SELECT value, labels_json FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1 AND timestamp <= $2")
             .bind(lookback)
             .bind(now)
             .fetch_all(&self.pool)
@@ -131,7 +131,7 @@ mod tests {
 
         // Ensure table exists
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+            "CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
                 id SERIAL PRIMARY KEY,
                 metric_name TEXT NOT NULL,
                 metric_type TEXT NOT NULL,
@@ -147,7 +147,7 @@ mod tests {
         let test_time = Utc::now() - chrono::Duration::seconds(1);
 
         // Insert some recent usage
-        let _ = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+        let _ = sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
             .bind("ohc_token_usage_total")
             .bind("counter")
             .bind(100.0)
@@ -161,7 +161,7 @@ mod tests {
         forecaster.run_forecast_cycle().await.unwrap();
 
         // Check if predicted_24h is recorded
-        let row: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+        let row: (f32,) = sqlx::query_as("SELECT value FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 
@@ -170,7 +170,7 @@ mod tests {
 
         // Cycle 2: No new tokens, should decay
         forecaster.run_forecast_cycle().await.unwrap();
-        let row2: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
+        let row2: (f32,) = sqlx::query_as("SELECT value FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' AND labels_json LIKE $1 ORDER BY timestamp DESC LIMIT 1")
             .bind(format!("%{}%", org_id))
             .fetch_one(&pool).await.unwrap();
 

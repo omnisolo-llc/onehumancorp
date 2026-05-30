@@ -774,6 +774,25 @@ impl DB {
                         sync_status TEXT NOT NULL
                     );
 
+                    -- Migrate existing data to local_telemetry_buffer
+                    CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        metric_name TEXT NOT NULL,
+                        metric_type TEXT NOT NULL,
+                        value REAL NOT NULL,
+                        labels_json TEXT NOT NULL,
+                        timestamp TIMESTAMP NOT NULL,
+                        sync_status TEXT NOT NULL
+                    );
+
+                    -- Migrate data
+                    INSERT INTO local_telemetry_buffer (id, metric_name, metric_type, value, labels_json, timestamp, sync_status)
+                    SELECT id, metric_name, metric_type, value, labels_json, timestamp, sync_status FROM telemetry_buffer
+                    WHERE EXISTS (SELECT name FROM sqlite_master WHERE type='table' AND name='telemetry_buffer')
+                    ON CONFLICT(id) DO NOTHING;
+
+                    DROP TABLE IF EXISTS telemetry_buffer;
+
                     CREATE TABLE IF NOT EXISTS business_milestones (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
