@@ -29,7 +29,6 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -48,13 +47,15 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => setIsLoaded(true));
   }, []);
 
   // Sync state to backend
@@ -67,6 +68,8 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
+    if (!isLoaded) return;
+
     const wizardState = {
       step,
       chatStep,
@@ -77,6 +80,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -94,7 +98,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
