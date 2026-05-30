@@ -34,6 +34,9 @@ export default function Dashboard() {
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
   const [productAdded, setProductAdded] = useState<boolean>(false);
+  const [itemName, setItemName] = useState<string>('');
+  const [itemDesc, setItemDesc] = useState<string>('');
+  const [itemPrice, setItemPrice] = useState<string>('');
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -1488,13 +1491,38 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-4 mb-6">
+                {newItemType === 'product' && (
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload Photo</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            id="photo-upload-input"
+                            onChange={async (e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                    // Mocking an AI API call delay
+                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                    setItemName('Artisan Sourdough Loaf');
+                                    setItemDesc('Freshly baked daily with organic flour.');
+                                    setItemPrice('8.50');
+                                }
+                            }}
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="text-xs text-blue-600 mt-2">✨ AI Instant Cataloger will auto-draft details</p>
+                    </div>
+                )}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
-                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                    <input id="item-name-input" type="text" value={itemName} onChange={(e) => setItemName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input id="item-desc-input" type="text" value={itemDesc} onChange={(e) => setItemDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Description" />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                    <input id="item-price-input" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
                 </div>
 
                 {newItemType === 'product' && (
