@@ -3510,6 +3510,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+                    <!-- Add Item Screen -->
+                    <div id="add-item-screen" class="screen glass" style="display: none;">
+                        <h1>Add to Catalog</h1>
+                        <p style="color: #666; margin-bottom: 20px;">Add a product or service to your store.</p>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
+                            </label>
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
+                            </label>
+                        </div>
+
+                        <input type="text" id="item-name" placeholder="Name (e.g. Guitar Lesson)" style="border-radius: 8px;" />
+                        <input type="text" id="item-price" inputmode="decimal" placeholder="Price (e.g. 50.00)" style="border-radius: 8px;" />
+
+                        <div id="service-fields" style="display: none; margin-bottom: 16px;">
+                            <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
+                        </div>
+
+                        <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
+
+                        <button onclick="saveCatalogItem()" style="border-radius: 8px; width: 100%;">Save Item</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
+
+                        <script>
+                            function saveCatalogItem() {
+                                const name = document.getElementById('item-name').value;
+                                if (!name) {
+                                    alert('Please enter a name.');
+                                    return;
+                                }
+                                alert('Saved ' + name + ' successfully!');
+                                document.getElementById('item-name').value = '';
+                                document.getElementById('item-price').value = '';
+                                document.getElementById('item-duration').value = '';
+                                document.getElementById('item-desc').value = '';
+                                showScreen('dashboard-screen');
+                            }
+                        </script>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
