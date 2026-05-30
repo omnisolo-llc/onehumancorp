@@ -4665,11 +4665,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none;">
+                        <div id="step-ai" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; align-self: flex-start; margin-bottom: 16px; font-size: 14px;">Back</button>
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">Our AI will instantly generate your storefront, products, and back-office agents.</p>
+                            <textarea id="step-ai-prompt" placeholder="e.g. I run a local bakery called Maya Cakes." style="border-radius: 8px; width: 100%; height: 120px; padding: 16px; resize: none; margin-bottom: 24px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); outline: none;"></textarea>
+                            <button onclick="generateAI()" style="border-radius: 8px; width: 100%; padding: 16px; font-weight: bold;">Generate Storefront</button>
                         </div>
                         <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">

@@ -188,12 +188,12 @@ export default function WebsiteBuilderPage() {
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1>
+              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
 
-              <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
+              <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Describe your business in a sentence</label>
               <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
@@ -211,27 +211,35 @@ export default function WebsiteBuilderPage() {
                       }
                     }
                   }}
-                  placeholder="e.g. I run a mobile dog grooming service in Portland"
+                  placeholder="e.g. I run a local bakery called Maya Cakes."
                   rows={6}
                 />
               </WithTooltip>
 
               <div className="flex gap-4">
-                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-                  <button
-                    id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
-                      bio.trim().length > 5
-                        ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
-                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                <button
+                    className="w-full bg-white/70 dark:bg-white/10 text-[#0066FF] dark:text-[#F5F5F7] border border-[#0066FF]/30 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-[#0066FF]/10 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                    onClick={() => { window.location.href = '/onboarding' }}
+                >
+                    🚀 Start My Business Next
+                </button>
+                <button
+                    className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                    onClick={() => {
+                        const tooltip = document.getElementById('bio-input');
+                        if (tooltip) tooltip.focus();
+                    }}
+                >
+                    ⚡ Instant Build
+                </button>
+                <button
+                    className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                     onClick={handleGenerate}
                     disabled={bio.trim().length <= 5}
-                  >
+                    style={{display: bio.trim().length <= 5 ? 'none' : 'block'}}
+                >
                     Build My Storefront
-                  </button>
-                </WithTooltip>
+                </button>
               </div>
             </div>
           </div>

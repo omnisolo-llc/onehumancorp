@@ -26,6 +26,35 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [instantBio, setInstantBio] = useState('');
+  const handleInstantBuild = async () => {
+    setIsLoading(true);
+    setError('');
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    try {
+      const response = await fetch('/api/v1/builder/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ description: instantBio })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate instant build');
+      }
+
+      const data = await response.json();
+      setStartResult({ message: 'Your instant storefront is live!' });
+      setStep(5);
+    } catch (err) {
+      setError('Failed to process instant build details. Please try the manual setup.');
+      setChatStep(1); // fallback
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   // Read state from server on mount
   useEffect(() => {
@@ -240,6 +269,39 @@ export default function OnboardingWizard() {
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+                            {chatStep === 'instant' && (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Describe your business in a sentence</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Our AI will instantly generate your storefront, products, and back-office agents.
+                  </p>
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <textarea
+                        value={instantBio}
+                        onChange={(e) => setInstantBio(e.target.value)}
+                        placeholder="e.g. I run a local bakery called Maya Cakes."
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={handleInstantBuild}
+                      disabled={!instantBio.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Generating Storefront...' : 'Generate Storefront'}
                     </button>
                   </div>
                 </div>

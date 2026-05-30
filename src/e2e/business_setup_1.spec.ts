@@ -49,4 +49,14 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });
+
+
+  test('completes the instant build path', async ({ page }) => {
+    await page.getByRole('button', { name: /Instant Build/ }).click();
+    await expect(page.getByRole('heading', { name: 'Describe your business in a sentence' })).toBeVisible();
+    await page.getByPlaceholder('e.g. I run a local bakery called Maya Cakes.').fill('I run a local bakery called Maya Cakes.');
+    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    await expect(page.getByRole('heading', { name: 'Designing your storefront...' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your live storefront!' })).toBeVisible();
+  });
 });
