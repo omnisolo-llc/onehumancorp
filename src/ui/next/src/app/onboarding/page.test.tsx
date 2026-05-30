@@ -21,7 +21,10 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ wizardState: {} }),
+    });
   });
 
   afterEach(() => {
@@ -40,7 +43,7 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         business_type: 'Bakery',
@@ -117,8 +120,9 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({})
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -161,8 +165,9 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({})
     });
 
     act(() => { render(<OnboardingWizard />); });

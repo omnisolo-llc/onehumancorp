@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -8,18 +9,21 @@ global.fetch = vi.fn() as any;
 describe('TooltipRegistry', () => {
   beforeEach(() => {
     (global.fetch as any).mockResolvedValue({
-      json: async () => ({ "test-id": "Fetched tooltip text" })
+      ok: true,
+      json: async () => ({ "test-id": "Fetched tooltip text" }),
     });
   });
 
   it('renders default text on hover', async () => {
-    render(
-      <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Hover me</button>
-        </WithTooltip>
-      </TooltipProvider>
-    );
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <WithTooltip id="test-id" defaultText="Default Tooltip">
+            <button>Hover me</button>
+          </WithTooltip>
+        </TooltipProvider>
+      );
+    });
 
     const button = screen.getByText('Hover me');
 

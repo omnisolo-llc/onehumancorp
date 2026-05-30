@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { HelpChat } from './HelpChat';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -9,6 +10,8 @@ global.fetch = vi.fn() as any;
 describe('HelpChat Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    global.fetch = vi.fn();
   });
 
   it('renders the floating button initially', () => {
