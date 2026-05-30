@@ -6,10 +6,7 @@ import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 describe('OnboardingWizard', () => {
-  let errorSpy: any;
-
   beforeEach(() => {
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
@@ -31,7 +28,6 @@ describe('OnboardingWizard', () => {
   });
 
   afterEach(() => {
-    if (errorSpy) errorSpy.mockRestore();
     vi.clearAllMocks();
   });
 
