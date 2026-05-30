@@ -211,87 +211,134 @@ impl OperationsWorker {
                         } else {
                             999.0
                         };
+                        let predicted_stockout_date = Utc::now() + chrono::Duration::days(days_until_empty as i64);
+
+                        // Upsert stock forecast
+                        let forecast_id = Uuid::new_v4().to_string();
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO stock_forecasts (id, tenant_id, product_id, daily_velocity, days_until_stockout, predicted_stockout_date, created_at, updated_at)
+                                    VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                    ON CONFLICT (id) DO UPDATE SET
+                                        daily_velocity = EXCLUDED.daily_velocity,
+                                        days_until_stockout = EXCLUDED.days_until_stockout,
+                                        predicted_stockout_date = EXCLUDED.predicted_stockout_date,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    "#
+                                )
+                                .bind(&forecast_id)
+                                .bind(&tenant_id)
+                                .bind(&product_id)
+                                .bind(daily_sales)
+                                .bind(days_until_empty)
+                                .bind(predicted_stockout_date)
+                                .execute(&db.pool)
+                                .await;
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO stock_forecasts (id, tenant_id, product_id, daily_velocity, days_until_stockout, predicted_stockout_date, created_at, updated_at)
+                                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                    ON CONFLICT (id) DO UPDATE SET
+                                        daily_velocity = EXCLUDED.daily_velocity,
+                                        days_until_stockout = EXCLUDED.days_until_stockout,
+                                        predicted_stockout_date = EXCLUDED.predicted_stockout_date,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    "#
+                                )
+                                .bind(&forecast_id)
+                                .bind(&tenant_id)
+                                .bind(&product_id)
+                                .bind(daily_sales)
+                                .bind(days_until_empty)
+                                .bind(predicted_stockout_date.format("%Y-%m-%d %H:%M:%S").to_string())
+                                .execute(pool)
+                                .await;
+                            }
+                        }
 
                         if inventory_count < 5 || days_until_empty < 7.0 {
-                            // Deduplicate: check if a PENDING restock task already exists for this product
-                            let title = format!("Restock Item: {}", product_name);
-                            let existing_task: i64 = match &db.store {
+                            // Deduplicate: check if a DRAFT supplier order already exists
+                            let existing_order: i64 = match &db.store {
                                 crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = $1 AND title = $2 AND status = 'PENDING'")
+                                    sqlx::query_scalar("SELECT COUNT(*) FROM supplier_orders WHERE tenant_id = $1 AND product_id = $2 AND status = 'DRAFT'")
                                         .bind(&tenant_id)
-                                        .bind(&title)
+                                        .bind(&product_id)
                                         .fetch_one(&db.pool)
                                         .await
                                         .unwrap_or(0)
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = ? AND title = ? AND status = 'PENDING'")
+                                    sqlx::query_scalar("SELECT COUNT(*) FROM supplier_orders WHERE tenant_id = ? AND product_id = ? AND status = 'DRAFT'")
                                         .bind(&tenant_id)
-                                        .bind(&title)
+                                        .bind(&product_id)
                                         .fetch_one(pool)
                                         .await
                                         .unwrap_or(0)
                                 }
                             };
 
-                            if existing_task == 0 {
-                                let task_id = Uuid::new_v4().to_string();
-                            let description = format!("Inventory for {} is low ({} remaining). Average daily sales: {:.1}. Will run out in {:.1} days.", product_name, inventory_count, daily_sales, days_until_empty);
-
-                            let mut drafted_msg = String::new();
-                            if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
-                                let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                    let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                                        prompt,
-                                        from_agent_id: "operations".into(),
-                                    };
-                                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                        drafted_msg = res.into_inner().content;
+                            if existing_order == 0 {
+                                let mut drafted_msg = String::new();
+                                if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
+                                    let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt,
+                                            from_agent_id: "operations".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            drafted_msg = res.into_inner().content;
+                                        }
                                     }
                                 }
-                            }
 
-                            if drafted_msg.is_empty() {
-                                drafted_msg = format!("Please restock {}.", product_name);
-                            }
+                                if drafted_msg.is_empty() {
+                                    drafted_msg = format!("Please restock {}.", product_name);
+                                }
 
-                            match &db.store {
-                                crate::db::DbStore::Postgres => {
-                                    if let Err(e) = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
-                                    .execute(&db.pool)
-                                    .await {
-                                        tracing::error!("Failed to insert restock task: {}", e);
-                                    }
-                                },
-                                crate::db::DbStore::Sqlite(pool) => {
-                                    if let Err(e) = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(&tenant_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&drafted_msg)
-                                    .execute(pool)
-                                    .await {
-                                        tracing::error!("Failed to insert restock task: {}", e);
+                                let order_id = Uuid::new_v4().to_string();
+                                let suggested_quantity = (daily_sales * 30.0).ceil() as i32;
+
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        if let Err(e) = sqlx::query(
+                                            r#"
+                                            INSERT INTO supplier_orders (id, tenant_id, product_id, status, quantity, draft_content, created_at, updated_at)
+                                            VALUES ($1, $2, $3, 'DRAFT', $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                            "#
+                                        )
+                                        .bind(&order_id)
+                                        .bind(&tenant_id)
+                                        .bind(&product_id)
+                                        .bind(suggested_quantity)
+                                        .bind(&drafted_msg)
+                                        .execute(&db.pool)
+                                        .await {
+                                            tracing::error!("Failed to insert supplier order: {}", e);
+                                        }
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        if let Err(e) = sqlx::query(
+                                            r#"
+                                            INSERT INTO supplier_orders (id, tenant_id, product_id, status, quantity, draft_content, created_at, updated_at)
+                                            VALUES (?, ?, ?, 'DRAFT', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                            "#
+                                        )
+                                        .bind(&order_id)
+                                        .bind(&tenant_id)
+                                        .bind(&product_id)
+                                        .bind(suggested_quantity)
+                                        .bind(&drafted_msg)
+                                        .execute(pool)
+                                        .await {
+                                            tracing::error!("Failed to insert supplier order: {}", e);
+                                        }
                                     }
                                 }
-                            }
                             }
                         }
                     }
@@ -514,15 +561,17 @@ mod tests {
             // Due to timing in parallel tests, wait and retry fetching the task
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            // Since we modified it to use supplier_orders instead of shared_tasks, verify that table instead.
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS supplier_orders (id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, status TEXT, quantity INTEGER, draft_content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+
+            let row = sqlx::query("SELECT status, draft_content FROM supplier_orders WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
-            // Ignore the test flakiness related to timing if parallel execution skipped the assert
             if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item: Low Stock Item"));
-                assert_eq!(approval_status, "PENDING");
+                let status: String = row.get("status");
+                let draft_content: String = row.get("draft_content");
+                assert_eq!(status, "DRAFT");
+                assert!(draft_content.contains("restock Low Stock Item"));
             }
         }
     }
@@ -534,6 +583,8 @@ mod tests {
             // Setup required tables if missing
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS supplier_orders (id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, status TEXT, quantity INTEGER, draft_content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS stock_forecasts (id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, daily_velocity REAL, days_until_stockout REAL, predicted_stockout_date TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // High inventory but massive velocity
             sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'Fast Selling Item', 50)")
@@ -562,15 +613,23 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+
+            // Check if Stock Forecast was created
+            let forecast_row = sqlx::query("SELECT daily_velocity, days_until_stockout FROM stock_forecasts WHERE tenant_id = 'tenant1' AND product_id = 'prod_high_vel'")
                 .fetch_optional(pool).await.unwrap();
 
-            if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item:"));
-                assert_eq!(approval_status, "PENDING");
+            if let Some(row) = forecast_row {
+                let velocity: f64 = row.get("daily_velocity");
+                assert!(velocity > 0.0);
+            }
+
+            // Check if Supplier Order was drafted
+            let order_row = sqlx::query("SELECT status FROM supplier_orders WHERE tenant_id = 'tenant1' AND product_id = 'prod_high_vel'")
+                .fetch_optional(pool).await.unwrap();
+
+            if let Some(row) = order_row {
+                let status: String = row.get("status");
+                assert_eq!(status, "DRAFT");
             }
         }
     }

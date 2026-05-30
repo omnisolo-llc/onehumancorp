@@ -29,6 +29,26 @@ message Order {
   int64 created_at_unix = 6;
 }
 
+message SupplierOrder {
+  string id = 1;
+  string tenant_id = 2;
+  string product_id = 3;
+  string status = 4;
+  int32 quantity = 5;
+  string draft_content = 6;
+  int64 created_at_unix = 7;
+}
+
+message StockForecast {
+  string id = 1;
+  string tenant_id = 2;
+  string product_id = 3;
+  double daily_velocity = 4;
+  double days_until_stockout = 5;
+  int64 predicted_stockout_date_unix = 6;
+  int64 created_at_unix = 7;
+}
+
 message DashboardSnapshot {
 
   ohc.organization.Organization organization = 1;

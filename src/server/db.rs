@@ -783,6 +783,26 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
                     );
+                    CREATE TABLE IF NOT EXISTS supplier_orders (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        status TEXT DEFAULT 'DRAFT',
+                        quantity INTEGER DEFAULT 0,
+                        draft_content TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS stock_forecasts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        daily_velocity REAL DEFAULT 0,
+                        days_until_stockout REAL DEFAULT 0,
+                        predicted_stockout_date TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }

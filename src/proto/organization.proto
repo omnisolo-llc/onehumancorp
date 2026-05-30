@@ -47,6 +47,8 @@ message Product {
   string currency = 6;
   string fulfillment_strategy = 7;
   string metadata_json = 8;
+  string supplier_name = 9;
+  string supplier_contact = 10;
 }
 
 message OnboardingRequest {
