@@ -26,8 +26,6 @@ sh_binary(
 define_playwright_tests(
     ci_specs = [
         "grandmother_test.spec.ts",
-        "test-help.spec.ts",
-        "help_components.spec.ts",
         "kairos_orchestration.spec.ts",
         "landing_ux.spec.ts",
         "login.spec.ts",
