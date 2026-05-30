@@ -218,9 +218,9 @@ export default function Dashboard() {
 
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
-                setTodaysSales(metricsData.total_sales);
-                setActiveCustomers(metricsData.active_customers);
-                setPendingOrders(metricsData.pending_orders);
+                setTodaysSales(metricsData.total_sales || 0);
+                setActiveCustomers(metricsData.active_customers || 0);
+                setPendingOrders(metricsData.pending_orders || 0);
             }
 
             if (invitesRes.ok) {
