@@ -4,7 +4,7 @@ import { HelpChat } from './HelpChat';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock the fetch call
-global.fetch = vi.fn() as any;
+global.fetch = vi.fn().mockImplementation(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })) as any;
 
 describe('HelpChat Component', () => {
   beforeEach(() => {
