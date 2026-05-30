@@ -129,6 +129,8 @@ impl DashboardService for MyDashboardService {
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                         }
                                     },
+                                    supplier_contact: String::new(),
+                                    supplier_name: String::new(),
                                 };
                                 results.push(p);
                             }
@@ -155,6 +157,8 @@ impl DashboardService for MyDashboardService {
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                         }
                                     },
+                                    supplier_contact: String::new(),
+                                    supplier_name: String::new(),
                                 };
                                 results.push(p);
                             }
