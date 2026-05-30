@@ -2,10 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Onboarding Wizard - Cross Device Resilience', () => {
   test('persists state correctly across separate sessions', async ({ browser }) => {
-    // Tests for cross-device state persistence were relying on an older Next.js setup where state was synced to server or localStorage.
-    // The current React component relies entirely on local React state (`useState`) without persisting intermediate steps to backend/localStorage.
-    // Since `src/ui/next/src/app/onboarding/page.tsx` does NOT load step 2/3 state from localStorage when initialized, this test flow must be updated to just verify completion.
-    // This file might be obsolete but to pass the test suite, we will just perform the onboarding in context 1 completely.
+    // Context 1: Mobile Phone (User starts onboarding)
     const context1 = await browser.newContext({ viewport: { width: 375, height: 812 } });
     const page1 = await context1.newPage();
 
@@ -22,21 +19,34 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await page1.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...").fill("maya bakes cakes");
     await page1.getByRole('button', { name: "Next" }).click();
 
-    // Chat Step 3
-    await expect(page1.getByRole('heading', { name: "Where are you located?", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByPlaceholder("e.g. Portland, OR").fill("Seattle, WA");
-    await page1.getByRole('button', { name: "Generate My Business" }).click();
+    // Wait for auto-save debounce (1000ms in frontend)
+    await page1.waitForTimeout(1500);
+
+    // Close the phone browser without finishing
+    await context1.close();
+
+    // Context 2: Desktop Browser (User resumes onboarding)
+    const context2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page2 = await context2.newPage();
+
+    await page2.goto('/onboarding');
+    await page2.waitForTimeout(1000);
+
+    // The backend should restore state to Chat Step 3 since Step 1 and 2 are completed
+    await expect(page2.getByRole('heading', { name: "Where are you located?", exact: false })).toBeVisible({ timeout: 15000 });
+    await page2.getByPlaceholder("e.g. Portland, OR").fill("Seattle, WA");
+    await page2.getByRole('button', { name: "Generate My Business" }).click();
 
     // Step 2: Review
-    await expect(page1.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByRole('button', { name: /Continue/i }).click();
+    await expect(page2.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
+    await page2.getByRole('button', { name: /Continue/i }).click();
 
     // Step 3: Style
-    await expect(page1.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
-    await page1.getByRole('button', { name: /Launch Store/i }).click();
+    await expect(page2.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
+    await page2.getByRole('button', { name: /Launch Store/i }).click();
 
-    await expect(page1.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page2.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
 
-    await context1.close();
+    await context2.close();
   });
 });
