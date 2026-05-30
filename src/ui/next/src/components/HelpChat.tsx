@@ -55,14 +55,12 @@ export function HelpChat() {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const messageText = inputValue.trim();
+  const handleSendText = async (messageText: string) => {
     if (!messageText) return;
 
     const userMessage: Message = { id: nextMessageId('user'), sender: 'user', text: messageText };
     setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -86,12 +84,30 @@ export function HelpChat() {
         sender: 'agent',
         text: "Sorry, I'm having trouble connecting right now."
       }]);
-    };
+    }
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
-    return null; // Disable in E2E
-  }
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const messageText = inputValue.trim();
+    if (!messageText) return;
+    setInputValue("");
+    await handleSendText(messageText);
+  };
+
+  const quickSuggestions = [
+    "How do I add a product?",
+    "Set up Stripe",
+    "How to get more customers?",
+  ];
+
+  // Provide quick suggestions if user hasn't asked anything yet
+  const showSuggestions = messages.length === 1 && messages[0].sender === 'agent';
+
+  // We actually need this component in E2E to test it!
+  // if (process.env.NEXT_PUBLIC_E2E === 'true') {
+  //   return null; // Disable in E2E
+  // }
 
   return (
     <div className="help-chat-wrapper">
@@ -144,6 +160,19 @@ export function HelpChat() {
                 )}
               </div>
             ))}
+            {showSuggestions && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {quickSuggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendText(suggestion)}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full text-xs font-medium transition-colors shadow-sm"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
