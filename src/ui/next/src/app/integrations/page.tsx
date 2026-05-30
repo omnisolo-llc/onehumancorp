@@ -45,12 +45,6 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
-    if (id === 'mercadopago' || id === 'cal_com') {
-      alert(`Connecting ${id} via OAuth...`);
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-    }
   };
 
   const saveTwilioIntegration = () => {

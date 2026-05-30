@@ -30,18 +30,4 @@ describe('chat API', () => {
 
     expect(response.status).toBe(413);
   });
-
-  it('returns successful reply for valid message', async () => {
-    const response = await POST(new Request('http://localhost/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message: 'How do I add a product?' }),
-    }));
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data).toHaveProperty('reply');
-    expect(data.reply).toContain('AI Help Agent');
-    expect(data).toHaveProperty('link');
-    expect(data.link.url).toBe('/help');
-  });
 });

@@ -40,7 +40,9 @@ impl PromptCache {
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
             // very rough estimate of saved cents for cache hit
-            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new(); let ratio = RATIO.get_or_init(|| { std::env::var("MISER_TOKEN_RATIO").unwrap_or_else(|_| "0.0001".to_string()).parse::<f64>().unwrap_or(0.0001) }); (r.token_count as f64 * ratio).round() as i64
+            // Use 0.0001 directly to avoid unsafe env var modification in parallel tests
+            let ratio = 0.0001;
+            (r.token_count as f64 * ratio).round() as i64
         } else {
             0
         };
@@ -98,7 +100,6 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
-        unsafe { std::env::set_var("MISER_TOKEN_RATIO", "0.0001"); }
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 10000);
 
