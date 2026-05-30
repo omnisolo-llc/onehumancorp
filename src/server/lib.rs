@@ -2620,6 +2620,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/supply", api::supply::router(db.clone()))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -3677,6 +3678,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('supply-chain-screen')">Supply</button>
+                        </div>
+                    </div>
+
+                    <!-- Supply Chain Screen -->
+                    <div id="supply-chain-screen" class="screen glass" style="margin-bottom: 80px; display: none;">
+                        <h1>Supply Chain & Vendors 📦</h1>
+                        <p>Manage your autonomous supply chain, raw materials, and suppliers.</p>
+
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px; overflow-x: auto;">
+                            <button onclick="fetchSupplyData()">Refresh Data</button>
+                        </div>
+
+                        <div class="grid">
+                            <div class="card glass">
+                                <h3>Vendors</h3>
+                                <div id="vendor-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-vendor-name" placeholder="Vendor Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-vendor-contact" placeholder="Contact Info" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createVendor()">Add Vendor</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Raw Materials</h3>
+                                <div id="raw-material-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-rm-name" placeholder="Material Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-qty" placeholder="Current Qty" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-thresh" placeholder="Reorder Threshold" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createRawMaterial()">Add Material</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Bill of Materials (BOM)</h3>
+                                <div id="bom-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-bom-fg" placeholder="Finished Good ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-bom-rm" placeholder="Raw Material ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-bom-qty" placeholder="Qty Required" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createBomItem()">Link BOM</button>
+                            </div>
                         </div>
                     </div>
 
@@ -4134,6 +4174,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } catch (e) {
                                 console.error('Error fetching activity feed:', e);
                             }
+                        }
+
+                        async function fetchSupplyData() {
+                            const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') };
+                            try {
+                                const [vRes, rmRes, bomRes] = await Promise.all([
+                                    fetch('/api/supply/vendors', { headers }),
+                                    fetch('/api/supply/raw_materials', { headers }),
+                                    fetch('/api/supply/bom_items', { headers })
+                                ]);
+
+                                if (vRes.ok) {
+                                    const vendors = await vRes.json();
+                                    document.getElementById('vendor-list').innerHTML = vendors.map(v => `<div style="font-size: 13px; margin-bottom: 4px;">🏷️ ${v.name} (${v.id})</div>`).join('');
+                                }
+                                if (rmRes.ok) {
+                                    const rms = await rmRes.json();
+                                    document.getElementById('raw-material-list').innerHTML = rms.map(rm => {
+                                        const color = rm.current_quantity <= rm.reorder_threshold ? 'var(--accent-red)' : 'var(--text-primary)';
+                                        return `<div style="font-size: 13px; margin-bottom: 4px; color: ${color}">📦 ${rm.name}: ${rm.current_quantity} (Thresh: ${rm.reorder_threshold}) <br><span style="font-size: 10px; color: #888;">ID: ${rm.id}</span></div>`;
+                                    }).join('');
+                                }
+                                if (bomRes.ok) {
+                                    const boms = await bomRes.json();
+                                    document.getElementById('bom-list').innerHTML = boms.map(b => `<div style="font-size: 13px; margin-bottom: 4px;">🔗 Product ${b.finished_good_id.substring(0,8)}... needs ${b.quantity_required}x RM ${b.raw_material_id.substring(0,8)}...</div>`).join('');
+                                }
+                            } catch (e) {
+                                console.error('Error fetching supply data:', e);
+                            }
+                        }
+
+                        async function createVendor() {
+                            const name = document.getElementById('new-vendor-name').value;
+                            const contact = document.getElementById('new-vendor-contact').value;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/vendors', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, contact_info: contact })
+                            });
+                            document.getElementById('new-vendor-name').value = '';
+                            document.getElementById('new-vendor-contact').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createRawMaterial() {
+                            const name = document.getElementById('new-rm-name').value;
+                            const qty = parseInt(document.getElementById('new-rm-qty').value) || 0;
+                            const thresh = parseInt(document.getElementById('new-rm-thresh').value) || 0;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/raw_materials', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, current_quantity: qty, reorder_threshold: thresh })
+                            });
+                            document.getElementById('new-rm-name').value = '';
+                            document.getElementById('new-rm-qty').value = '';
+                            document.getElementById('new-rm-thresh').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createBomItem() {
+                            const fg = document.getElementById('new-bom-fg').value;
+                            const rm = document.getElementById('new-bom-rm').value;
+                            const qty = parseInt(document.getElementById('new-bom-qty').value) || 1;
+                            if (!fg || !rm) return alert('Finished Good ID and Raw Material ID required');
+                            await fetch('/api/supply/bom_items', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", finished_good_id: fg, raw_material_id: rm, quantity_required: qty })
+                            });
+                            document.getElementById('new-bom-fg').value = '';
+                            document.getElementById('new-bom-rm').value = '';
+                            document.getElementById('new-bom-qty').value = '';
+                            fetchSupplyData();
                         }
 
                         async function fetchApprovals() {
