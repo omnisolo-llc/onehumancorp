@@ -2338,6 +2338,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
+        .route("/help", axum::routing::get(ui_handler))
+        .route("/changelog", axum::routing::get(ui_handler))
+        .route("/api-docs", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
