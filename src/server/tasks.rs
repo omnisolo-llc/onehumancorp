@@ -262,7 +262,7 @@ impl TaskManager {
                     obj.insert("completed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                 }
                 
-                task.payload = payload_map.to_string();
+                task.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 task.updated_at = Utc::now();
                 return Ok(());
             } else {
@@ -291,7 +291,7 @@ impl TaskManager {
                     obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                 }
 
-                task.payload = payload_map.to_string();
+                task.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 task.updated_at = Utc::now();
                 return Ok(());
             } else {
@@ -389,7 +389,7 @@ impl TaskManager {
                         obj.insert("error".to_string(), serde_json::Value::String("Task was rejected by user".to_string()));
                         obj.insert("failed_at".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
                     }
-                    task_clone.payload = payload_map.to_string();
+                    task_clone.payload = serde_json::to_string(&payload_map).unwrap_or_else(|_| "{}".to_string());
                 }
                 task_clone.updated_at = Utc::now();
                 (task_clone.approval_status.clone(), task_clone.status.clone(), Some(task_clone.payload.clone()), task_clone.updated_at, task_clone.organization_id.clone())
