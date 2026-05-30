@@ -31,6 +31,27 @@ export async function POST(request: Request) {
         categories: ["service"],
         initial_products: [{ name: "Pipe Fix", price: "80.00" }]
       });
+    } else if (desc.includes('priya')) {
+      return NextResponse.json({
+        business_name: "Priya's Boutique",
+        business_type: "Retail",
+        categories: ["clothing"],
+        initial_products: [{ name: "Dress", price: "60.00" }]
+      });
+    } else if (desc.includes('leo')) {
+      return NextResponse.json({
+        business_name: "Leo's Guitar Lessons",
+        business_type: "Service",
+        categories: ["education"],
+        initial_products: [{ name: "Guitar Lesson", price: "40.00" }]
+      });
+    } else if (desc.includes('fatima')) {
+      return NextResponse.json({
+        business_name: "Fatima's Halal Cart",
+        business_type: "Food",
+        categories: ["food"],
+        initial_products: [{ name: "Chicken and Rice", price: "12.00" }]
+      });
     }
 
     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {

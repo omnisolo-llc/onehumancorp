@@ -2543,6 +2543,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_save_and_get_onboarding_state() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let tenant_id = "test_tenant";
+        let user_id = "test_user";
+        let step = 3;
+        let state_json = serde_json::json!({
+            "businessName": "Maya's Bakery",
+            "businessType": "Bakery"
+        });
+
+        let save_res = agent.save_onboarding_state(tenant_id, user_id, step, &state_json).await;
+        assert!(save_res.is_ok(), "Failed to save onboarding state");
+
+        let get_res = agent.get_onboarding_state(tenant_id, user_id).await;
+        assert!(get_res.is_ok(), "Failed to get onboarding state");
+
+        let retrieved_state = get_res.unwrap();
+        assert_eq!(retrieved_state.get("businessName").unwrap().as_str().unwrap(), "Maya's Bakery");
+        assert_eq!(retrieved_state.get("businessType").unwrap().as_str().unwrap(), "Bakery");
+        assert_eq!(retrieved_state.get("step").unwrap().as_i64().unwrap(), 3);
+    }
+
+    #[tokio::test]
     async fn test_start_onboarding_service_and_food_cart() {
         let db = match setup_test_db().await {
             Some(db) => db,

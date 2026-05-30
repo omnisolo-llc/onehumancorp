@@ -104,4 +104,151 @@ test.describe('Onboarding Wizard', () => {
 
     await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
   });
+
+  test('Priya (Boutique Owner) onboarding flow', async ({ page }) => {
+    // 0. Start from UI Login
+
+
+    // 1. Acquisition & Onboarding start
+    await page.goto('/onboarding');
+    await page.waitForTimeout(1000);
+
+    // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
+    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // Fill in the description
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Priya's Boutique");
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 2
+    await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('priya sells clothing');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 3
+    await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. Portland, OR').fill('Austin, TX');
+
+    // Click Generate
+    await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    // Step 2 - Review
+    await expect(page.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // Step 3 - Style
+    await expect(page.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // Handle either case since the mock data might change
+    const stripeBanner = page.locator('text=1 Action Required: Connect Stripe to accept payments.');
+    const setupBanner = page.getByRole('button', { name: 'Complete Stripe Setup' });
+
+    await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Leo (Music Tutor) onboarding flow', async ({ page }) => {
+    // 0. Start from UI Login
+
+
+    // 1. Acquisition & Onboarding start
+    await page.goto('/onboarding');
+    await page.waitForTimeout(1000);
+
+    // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
+    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // Fill in the description
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Leo's Guitar Lessons");
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 2
+    await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('leo teaches guitar');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 3
+    await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. Portland, OR').fill('Seattle, WA');
+
+    // Click Generate
+    await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    // Step 2 - Review
+    await expect(page.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // Step 3 - Style
+    await expect(page.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // Handle either case since the mock data might change
+    const stripeBanner = page.locator('text=1 Action Required: Connect Stripe to accept payments.');
+    const setupBanner = page.getByRole('button', { name: 'Complete Stripe Setup' });
+
+    await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Fatima (Food Cart Operator) onboarding flow', async ({ page }) => {
+    // 0. Start from UI Login
+
+
+    // 1. Acquisition & Onboarding start
+    await page.goto('/onboarding');
+    await page.waitForTimeout(1000);
+
+    // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
+    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // Fill in the description
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Fatima's Halal Cart");
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 2
+    await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('fatima sells halal food');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1 - Chat 3
+    await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('e.g. Portland, OR').fill('New York, NY');
+
+    // Click Generate
+    await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    // Step 2 - Review
+    await expect(page.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // Step 3 - Style
+    await expect(page.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // Handle either case since the mock data might change
+    const stripeBanner = page.locator('text=1 Action Required: Connect Stripe to accept payments.');
+    const setupBanner = page.getByRole('button', { name: 'Complete Stripe Setup' });
+
+    await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
+  });
 });
