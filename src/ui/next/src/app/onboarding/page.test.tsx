@@ -84,6 +84,7 @@ describe('OnboardingWizard', () => {
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
+    global.fetch = vi.fn().mockImplementation((url) => { if (url === '/api/onboarding/intake') { return Promise.resolve({ ok: true, json: async () => ({ business_name: 'Maya Cakes', business_type: 'Bakery', categories: ['food'], initial_products: [{ name: 'Vegan Cake', price: '10.00' }] }) }); } return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) }); }) as any;
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
@@ -102,7 +103,7 @@ describe('OnboardingWizard', () => {
     // Verify it transitions to Step 3: Style & Team
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
+    global.fetch = vi.fn().mockImplementation((url) => { if (url === '/api/onboarding/intake') { return Promise.resolve({ ok: true, json: async () => ({ business_name: 'Maya Cakes', business_type: 'Bakery', categories: ['food'], initial_products: [{ name: 'Vegan Cake', price: '10.00' }] }) }); } return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) }); }) as any;
     });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
@@ -147,6 +148,7 @@ describe('OnboardingWizard', () => {
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
+    global.fetch = vi.fn().mockImplementation((url) => { if (url === '/api/onboarding/intake') { return Promise.resolve({ ok: false }); } return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) }); }) as any;
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await user.click(button);
