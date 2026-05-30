@@ -260,7 +260,7 @@ impl DepartmentOrchestrator {
         description: String,
         tenant_id: String,
         risk: ActionRisk,
-        _action_payload: serde_json::Value,
+        action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
         if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
@@ -276,7 +276,7 @@ impl DepartmentOrchestrator {
                     description: description.clone(),
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
-                    payload: Some(_action_payload),
+                    payload: Some(action_payload),
                 };
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
@@ -289,7 +289,7 @@ impl DepartmentOrchestrator {
                     description: description.clone(),
                     status: ApprovalStatus::PendingApproval,
                     action_risk: ActionRisk::DraftForReview,
-                    payload: Some(_action_payload),
+                    payload: Some(action_payload),
                 };
                 self.add_approval_request(req.clone()).await;
 
