@@ -225,4 +225,25 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
     }
+
+    #[test]
+    fn test_calculate_compute_cost() {
+        let config = CostConfig {
+            cost_per_compute_hour: 0.50,
+            ..Default::default()
+        };
+        let cost = calculate_compute_cost(10.0, &config);
+        assert_eq!(cost, 5.0);
+    }
+
+    #[test]
+    fn test_calculate_network_cost() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.10,
+            ..Default::default()
+        };
+        let bytes: i64 = 5 * 1024 * 1024 * 1024; // 5 GB
+        let cost = calculate_network_cost(bytes, &config);
+        assert_eq!(cost, 0.50);
+    }
 }

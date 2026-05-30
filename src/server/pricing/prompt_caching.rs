@@ -95,4 +95,28 @@ mod tests {
 
         assert!(cache.cache.is_empty());
     }
+
+    #[test]
+    fn test_get_with_cost_cents() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        // Set environment variable for cost calculation test
+        unsafe {
+            std::env::set_var("MISER_TOKEN_RATIO", "0.05");
+        }
+
+        cache.set("Query", "Response", 100);
+        let (res, cost) = cache.get_with_cost_cents("Query");
+
+        assert!(res.is_some());
+        assert_eq!(res.unwrap().text, "Response");
+        assert_eq!(cost, 5); // 100 * 0.05 = 5
+
+        let (res_none, cost_none) = cache.get_with_cost_cents("Unknown");
+        assert!(res_none.is_none());
+        assert_eq!(cost_none, 0);
+
+        unsafe {
+            std::env::remove_var("MISER_TOKEN_RATIO");
+        }
+    }
 }
