@@ -229,6 +229,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -281,6 +282,16 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let certs = req.peer_certs().map(|c| c.iter().map(|cert| cert.as_ref().to_vec()).collect::<Vec<Vec<u8>>>());
+        let validator = ::server_auth::spiffe::SpiffeValidator::new();
+        use ::server_auth::spiffe::IdentityValidator;
+        match validator.validate_svid(certs) {
+            Ok(svid) => tracing::info!("mTLS successful, verified SVID: {}", svid),
+            Err(e) => return Err(e),
+        }
+    }
+
     let spiffe_id = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
 
@@ -440,7 +451,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
+    let res = tokio::try_join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -461,9 +472,10 @@ async fn http_metrics_handler(
         }
     );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(0.0);
+    let (active_customers_res, pending_orders_res, sales_res) = res.unwrap_or((0, 0, 0.0));
+    let active_customers = active_customers_res;
+    let pending_orders = pending_orders_res;
+    let total_sales = sales_res;
 
     (
         StatusCode::OK,
@@ -600,7 +612,7 @@ async fn http_login_handler(
         }
     };
 
-    let claims = ::server_common::Claims {
+    let _claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -671,7 +683,7 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
+    let res: Result<(Option<(String, String)>, i64), sqlx::Error> = tokio::try_join!(
         async {
             sqlx::query_as::<_, (String, String)>(
                 "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -690,11 +702,8 @@ pub async fn advisory_insights_handler(
         }
     );
 
-    let (business_name, industry) = org_res
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-    let active_orders = active_orders_res.unwrap_or(0);
+    let (org_res, active_orders) = res.unwrap_or((None, 0));
+    let (business_name, industry) = org_res.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
@@ -753,14 +762,14 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
+    let res_org: Option<(String, String)> = sqlx::query_as(
         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
     )
     .bind(&tenant_id)
     .fetch_optional(&db.pool)
     .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    .unwrap_or(None);
+    let (business_name, industry) = res_org.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
@@ -2030,6 +2039,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
 
+    let tm_mesh = handoff_mesh.clone();
+    hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
+        let payload = match serde_json::to_string(&task) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::error!("Failed to serialize task: {}", e);
+                return;
+            }
+        };
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: event_type,
+            status: "ok".to_string(),
+            payload: payload.into_bytes(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        let tm_mesh_clone = tm_mesh.clone();
+        tokio::spawn(async move {
+            let _ = tm_mesh_clone.publish("tasks", msg.payload).await;
+        });
+    }));
+
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
@@ -2201,13 +2232,74 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     };
 
     let sub_agent_queue_clone = sub_agent_queue.clone();
+    let dept_orchestrator_clone = dept_orchestrator.clone();
+    let mesh_clone = handoff_mesh.clone();
     tokio::spawn(async move {
         loop {
-            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
-                tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string(), "customer_success_agent".to_string(), "operations_agent".to_string(), "chat_agent".to_string()]).await {
+                tracing::info!("Processing sub-agent job: {} ({})", job.id, job.agent_role);
+
+                let mut success = true;
+                let mut error_msg = String::new();
+
+                if job.agent_role == "customer_success_agent" || job.agent_role == "operations_agent" || job.agent_role == "chat_agent" {
+                    if let Ok(payload) = serde_json::from_str::<serde_json::Value>(&job.payload) {
+                        let action = payload.get("description").and_then(|v| v.as_str()).unwrap_or("Background action").to_string();
+                        let risk = crate::orchestration::departments::types::ActionRisk::AutoExecute;
+
+                        let department = match job.agent_role.as_str() {
+                            "customer_success_agent" => crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+                            "operations_agent" => crate::orchestration::departments::types::DepartmentType::Operations,
+                            "chat_agent" => {
+                                let dt_str = payload.get("department").and_then(|v| v.as_str()).unwrap_or("operations");
+                                std::str::FromStr::from_str(dt_str).unwrap_or(crate::orchestration::departments::types::DepartmentType::Operations)
+                            },
+                            _ => crate::orchestration::departments::types::DepartmentType::Operations,
+                        };
+
+                        let actual_payload = payload.get("payload").cloned().unwrap_or(payload.clone());
+
+                        match dept_orchestrator_clone.execute_action(
+                            department,
+                            action.clone(),
+                            job.tenant_id.clone(),
+                            risk,
+                            actual_payload
+                        ).await {
+                            Ok(_) => {
+                                // For real-time updates on the frontend
+                                let mesh_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                    agent_id: department.to_string(),
+                                    action,
+                                    status: "completed".to_string(),
+                                    payload: job.payload.into_bytes(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                };
+                                let mut buf = Vec::new();
+                                if prost::Message::encode(&mesh_event, &mut buf).is_ok() {
+                                    let _ = mesh_clone.publish("system", buf).await;
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to execute action for job {}: {}", job.id, e);
+                                success = false;
+                                error_msg = e.to_string();
+                            }
+                        }
+                    } else {
+                        success = false;
+                        error_msg = "Invalid payload".to_string();
+                    }
+                }
+
+                if success {
+                    let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+                } else {
+                    let _ = sub_agent_queue_clone.fail(&job.id, &job.tenant_id, &error_msg).await;
+                }
+            } else {
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
     });
 
@@ -2596,9 +2688,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
-        .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/agents/chat", api::agents::chat::router(api::agents::chat::ChatState { orchestrator: dept_orchestrator.clone(), queue: sub_agent_queue.clone() }))
+        .nest("/api/agents/webhook", api::agents::webhook::router(api::agents::webhook::WebhookState { orchestrator: dept_orchestrator.clone(), queue: sub_agent_queue.clone() }))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/supply", api::supply::router(db.clone()))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -2781,11 +2874,33 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
+    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
+    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
-    Server::builder()
+    let mut builder = Server::builder();
+
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let cert_pem = std::env::var("OHC_TLS_CERT").unwrap_or_default();
+        let key_pem = std::env::var("OHC_TLS_KEY").unwrap_or_default();
+        let ca_pem = std::env::var("OHC_TLS_CA").unwrap_or_default();
+
+        if !cert_pem.is_empty() && !key_pem.is_empty() && !ca_pem.is_empty() {
+            let key = tonic::transport::Identity::from_pem(&cert_pem, &key_pem);
+            let ca = tonic::transport::Certificate::from_pem(&ca_pem);
+
+            let tls = tonic::transport::ServerTlsConfig::new()
+                .identity(key)
+                .client_ca_root(ca);
+
+            builder = builder.tls_config(tls)?;
+        }
+    }
+
+    builder
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -2884,16 +2999,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         .animated-dropdown {
@@ -2923,8 +3038,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -2968,7 +3083,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -2978,8 +3093,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -2989,8 +3104,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body.dark-theme .card {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -3073,8 +3188,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -3153,8 +3268,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -3221,7 +3336,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-left-color: var(--primary) !important;
                             color: var(--text) !important;
                         }
-                        #manychat-integration {
+                        #ayrshare-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -3298,8 +3413,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 375px;
@@ -3310,8 +3425,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -3344,8 +3459,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
                     background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(30px) saturate(210%) !important;
-                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+                    backdrop-filter: blur(20px) saturate(200%) !important;
+                    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
@@ -3575,13 +3690,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('ayrshare-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="manychat-integration" class="card glass" style="display: none;">
-                            <h3>💬 Manychat</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
-                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
+                        <div id="ayrshare-integration" class="card glass" style="display: none;">
+                            <h3>📱 Ayrshare</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified API for posting and retrieving messages across social networks.</p>
+                            <button onclick="alert('Configure Ayrshare'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -3653,6 +3768,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('supply-chain-screen')">Supply</button>
+                        </div>
+                    </div>
+
+                    <!-- Supply Chain Screen -->
+                    <div id="supply-chain-screen" class="screen glass" style="margin-bottom: 80px; display: none;">
+                        <h1>Supply Chain & Vendors 📦</h1>
+                        <p>Manage your autonomous supply chain, raw materials, and suppliers.</p>
+
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px; overflow-x: auto;">
+                            <button onclick="fetchSupplyData()">Refresh Data</button>
+                        </div>
+
+                        <div class="grid">
+                            <div class="card glass">
+                                <h3>Vendors</h3>
+                                <div id="vendor-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-vendor-name" placeholder="Vendor Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-vendor-contact" placeholder="Contact Info" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createVendor()">Add Vendor</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Raw Materials</h3>
+                                <div id="raw-material-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-rm-name" placeholder="Material Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-qty" placeholder="Current Qty" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-thresh" placeholder="Reorder Threshold" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createRawMaterial()">Add Material</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Bill of Materials (BOM)</h3>
+                                <div id="bom-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-bom-fg" placeholder="Finished Good ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-bom-rm" placeholder="Raw Material ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-bom-qty" placeholder="Qty Required" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createBomItem()">Link BOM</button>
+                            </div>
                         </div>
                     </div>
 
@@ -4112,6 +4266,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        async function fetchSupplyData() {
+                            const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') };
+                            try {
+                                const [vRes, rmRes, bomRes] = await Promise.all([
+                                    fetch('/api/supply/vendors', { headers }),
+                                    fetch('/api/supply/raw_materials', { headers }),
+                                    fetch('/api/supply/bom_items', { headers })
+                                ]);
+
+                                if (vRes.ok) {
+                                    const vendors = await vRes.json();
+                                    document.getElementById('vendor-list').innerHTML = vendors.map(v => `<div style="font-size: 13px; margin-bottom: 4px;">🏷️ ${v.name} (${v.id})</div>`).join('');
+                                }
+                                if (rmRes.ok) {
+                                    const rms = await rmRes.json();
+                                    document.getElementById('raw-material-list').innerHTML = rms.map(rm => {
+                                        const color = rm.current_quantity <= rm.reorder_threshold ? 'var(--accent-red)' : 'var(--text-primary)';
+                                        return `<div style="font-size: 13px; margin-bottom: 4px; color: ${color}">📦 ${rm.name}: ${rm.current_quantity} (Thresh: ${rm.reorder_threshold}) <br><span style="font-size: 10px; color: #888;">ID: ${rm.id}</span></div>`;
+                                    }).join('');
+                                }
+                                if (bomRes.ok) {
+                                    const boms = await bomRes.json();
+                                    document.getElementById('bom-list').innerHTML = boms.map(b => `<div style="font-size: 13px; margin-bottom: 4px;">🔗 Product ${b.finished_good_id.substring(0,8)}... needs ${b.quantity_required}x RM ${b.raw_material_id.substring(0,8)}...</div>`).join('');
+                                }
+                            } catch (e) {
+                                console.error('Error fetching supply data:', e);
+                            }
+                        }
+
+                        async function createVendor() {
+                            const name = document.getElementById('new-vendor-name').value;
+                            const contact = document.getElementById('new-vendor-contact').value;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/vendors', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, contact_info: contact })
+                            });
+                            document.getElementById('new-vendor-name').value = '';
+                            document.getElementById('new-vendor-contact').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createRawMaterial() {
+                            const name = document.getElementById('new-rm-name').value;
+                            const qty = parseInt(document.getElementById('new-rm-qty').value) || 0;
+                            const thresh = parseInt(document.getElementById('new-rm-thresh').value) || 0;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/raw_materials', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, current_quantity: qty, reorder_threshold: thresh })
+                            });
+                            document.getElementById('new-rm-name').value = '';
+                            document.getElementById('new-rm-qty').value = '';
+                            document.getElementById('new-rm-thresh').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createBomItem() {
+                            const fg = document.getElementById('new-bom-fg').value;
+                            const rm = document.getElementById('new-bom-rm').value;
+                            const qty = parseInt(document.getElementById('new-bom-qty').value) || 1;
+                            if (!fg || !rm) return alert('Finished Good ID and Raw Material ID required');
+                            await fetch('/api/supply/bom_items', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", finished_good_id: fg, raw_material_id: rm, quantity_required: qty })
+                            });
+                            document.getElementById('new-bom-fg').value = '';
+                            document.getElementById('new-bom-rm').value = '';
+                            document.getElementById('new-bom-qty').value = '';
+                            fetchSupplyData();
+                        }
+
                         async function fetchApprovals() {
                             try {
                                 const res = await fetch('/api/agents/approvals', {
@@ -4189,14 +4418,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- ManyChat Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4567,7 +4796,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -4655,7 +4884,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -5039,7 +5268,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            const url = encodeURIComponent(`ohc://join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
