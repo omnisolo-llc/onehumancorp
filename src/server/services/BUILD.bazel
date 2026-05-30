@@ -29,6 +29,8 @@ rust_library(
         "//src/server/services/billing:mod.rs",
         "//src/server/services/billing:service.rs",
         "//src/server/services/chat:mod.rs",
+        "//src/server/services/collaboration:mod.rs",
+        "//src/server/services/collaboration:service.rs",
         "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
         "//src/server/services/dashboard:service.rs",

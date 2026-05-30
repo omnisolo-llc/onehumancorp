@@ -387,6 +387,48 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    CREATE TABLE IF NOT EXISTS inventory (
+                        id TEXT PRIMARY KEY,
+                        product_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        quantity INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bundle_products (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        price_cents BIGINT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bundle_items (
+                        bundle_id TEXT NOT NULL REFERENCES bundle_products(id) ON DELETE CASCADE,
+                        product_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        split_cents BIGINT NOT NULL,
+                        PRIMARY KEY (bundle_id, product_id, tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS unified_carts (
+                        id TEXT PRIMARY KEY,
+                        customer_id TEXT NOT NULL,
+                        total_cents BIGINT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS cart_items (
+                        id TEXT PRIMARY KEY,
+                        cart_id TEXT NOT NULL REFERENCES unified_carts(id) ON DELETE CASCADE,
+                        bundle_id TEXT NOT NULL REFERENCES bundle_products(id),
+                        quantity INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
                         tenant_id VARCHAR NOT NULL,
