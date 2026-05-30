@@ -123,4 +123,79 @@ mod tests {
             _ => panic!("Expected Fatal error"),
         }
     }
+
+    #[tokio::test]
+    async fn test_unexpected() {
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::Unexpected("unexpected error".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
+            _ => panic!("Expected Unexpected error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handoff_requested() {
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::HandoffRequested("target_agent".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::HandoffRequested(msg) => assert_eq!(msg, "target_agent"),
+            _ => panic!("Expected HandoffRequested error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_success() {
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Ok("success".to_string()),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "success");
+    }
 }
