@@ -316,6 +316,12 @@ impl SharedTaskOrchestrator {
                 .await
                 .map_err(|e| e.to_string())?;
 
+                if new_status == "COMPLETED" {
+                    let unblock_query = "UPDATE shared_tasks_v4 SET dependencies = COALESCE((SELECT jsonb_agg(elem) FROM jsonb_array_elements_text(dependencies::jsonb) AS elem WHERE elem != $1), '[]'::jsonb)::text WHERE dependencies::jsonb @> $1::jsonb";
+                    let dep_json = format!("\"{}\"", id);
+                    sqlx::query(unblock_query).bind(&dep_json).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                }
+
                 tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(())
             }
@@ -360,6 +366,13 @@ impl SharedTaskOrchestrator {
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                if new_status == "COMPLETED" {
+                    sqlx::query("UPDATE shared_tasks_v4 SET dependencies = (SELECT json_group_array(value) FROM json_each(dependencies) WHERE value != ?) WHERE EXISTS (SELECT 1 FROM json_each(dependencies) WHERE value = ?)")
+                        .bind(id)
+                        .bind(id)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                }
 
                 tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(())
