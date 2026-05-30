@@ -354,9 +354,9 @@ async fn test_degradation_fallback_standalone() {
     let tasks = state_manager.pull_available_tasks(10).await.unwrap();
     let elapsed = start.elapsed();
 
-    // It should time out around the configured threshold (50ms x 3 attempts = ~150ms).
-    assert!(elapsed < std::time::Duration::from_millis(300));
-    assert!(elapsed > std::time::Duration::from_millis(120));
+    // It should time out around the configured threshold, not the full lock wait.
+    assert!(elapsed < std::time::Duration::from_millis(100));
+    assert!(elapsed > std::time::Duration::from_millis(40));
 
     // And returned empty list fail-safe
     assert_eq!(tasks.len(), 0);
