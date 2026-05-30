@@ -1,0 +1,50 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_tools_local_log_analyzer",
+    srcs = [
+        "bazel_lib.rs",
+        "mod.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:chrono",
+    ],
+)
+
+rust_test(
+    name = "server_tools_local_log_analyzer_unit_test",
+    size = "large",
+    srcs = [
+        "bazel_lib.rs",
+        "mod.rs",
+        "tests.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:chrono",
+    ],
+)

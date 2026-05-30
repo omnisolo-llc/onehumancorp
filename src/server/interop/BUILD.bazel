@@ -1,4 +1,5 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 exports_files(
     [
@@ -121,4 +122,17 @@ rust_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+go_library(
+    name = "interop_mcp",
+    srcs = ["mcp/log_tool.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/interop/mcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "interop_mcp_test",
+    srcs = ["mcp/log_tool_test.go"],
+    embed = [":interop_mcp"],
 )
