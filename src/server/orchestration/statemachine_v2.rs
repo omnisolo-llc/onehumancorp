@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use super::locks::DistributedLock;
+use super::mesh::TeammateMesh;
+use serde::Serialize;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum State {
     Pending,
     Ready,
@@ -33,11 +35,12 @@ pub trait Repository: Send + Sync {
 pub struct StateMachine {
     repo: Arc<dyn Repository>,
     lock: Arc<dyn DistributedLock>,
+    mesh: Arc<dyn TeammateMesh>,
     allowed_transitions: HashMap<State, Vec<State>>,
 }
 
 impl StateMachine {
-    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>) -> Self {
+    pub fn new(repo: Arc<dyn Repository>, lock: Arc<dyn DistributedLock>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let mut allowed_transitions = HashMap::new();
         allowed_transitions.insert(State::Pending, vec![State::Ready]);
         allowed_transitions.insert(State::Ready, vec![State::InProgress]);
@@ -47,6 +50,7 @@ impl StateMachine {
         Self {
             repo,
             lock,
+            mesh,
             allowed_transitions,
         }
     }
@@ -63,9 +67,14 @@ impl StateMachine {
             return Err(format!("invalid transition from {:?} to {:?}", current_state, new_state));
         }
 
-        self.repo.update_task_state(task_id, new_state, agent_id)?;
+        self.repo.update_task_state(task_id, new_state.clone(), agent_id)?;
 
-        // Publish to Teammate Mesh here
+        let payload_str = serde_json::json!({
+            "task_id": task_id,
+            "new_state": new_state.as_str()
+        }).to_string();
+
+        self.mesh.publish_state_handoff(payload_str.into_bytes()).await?;
 
         Ok(())
     }
