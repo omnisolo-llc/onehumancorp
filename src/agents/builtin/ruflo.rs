@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+#![allow(dead_code)]
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
@@ -325,7 +327,7 @@ impl SwarmCoordinator {
                 let mut futures = Vec::new();
 
                 // Include lead agent in mesh
-                let _task_clone = task.to_string();
+                let task_clone = task.to_string();
                 let instruction = "Analyze the task and provide your independent solution.";
                 let lead_clone = task.to_string();
 

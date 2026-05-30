@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(dead_code)]
+#![allow(unused_mut)]
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -2306,8 +2309,8 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let _retry_count = 0;
-                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let mut retry_count = 0;
+                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
@@ -6335,7 +6338,6 @@ mod hierarchical_prompt_tests {
 }
 
 
-#[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }

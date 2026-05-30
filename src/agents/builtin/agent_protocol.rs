@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::codex_runner::Runner;
 use std::sync::Arc;
 
@@ -63,7 +64,7 @@ impl AgentProtocolServer {
         };
 
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
-        let _cfg = crate::agent::AgentRunConfig::default();
+        let cfg = crate::agent::AgentRunConfig::default();
 
         match self.runner.run_async(&initial_message).await {
             Ok(result) => {
