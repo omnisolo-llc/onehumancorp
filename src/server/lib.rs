@@ -30,6 +30,7 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
+static ADVISORY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -698,9 +699,24 @@ pub async fn advisory_insights_handler(
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
+    let cache = ADVISORY_CACHE.get_or_init(|| {
+        let redis_url = std::env::var("REDIS_URL").ok();
+        let redis_client = redis_url.and_then(|url| redis::Client::open(url).ok());
+        ::server_utils::cache::HybridCache::new(redis_client)
+    });
+
+    // Include active_orders in the cache key so it reflects dynamic changes
+    let cache_key = format!("advisory_insights_{}_{}", tenant_id, active_orders);
+    if let Some(cached_output) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": cached_output }))).into_response();
+    }
+
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            cache.set(&cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        },
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
