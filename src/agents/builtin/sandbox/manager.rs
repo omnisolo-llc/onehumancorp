@@ -10,7 +10,7 @@ use std::process::Stdio;
 use std::time::Instant;
 use serde_json::json;
 use crate::agents::sandbox::session::ShellSession;
-use crate::telemetry::buffer_metric;
+use ::server_lib::telemetry::buffer_metric;
 use crate::pricing::calculator::calculate_compute_cost;
 use crate::pricing::calculator::CostConfig;
 use sqlx::PgPool;

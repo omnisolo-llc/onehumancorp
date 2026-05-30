@@ -6060,6 +6060,131 @@ mod stream_tests {
         assert_eq!(result2.unwrap(), "Done after intervention");
     }
 
+
+    #[tokio::test]
+    async fn test_human_in_loop_spectrum_pause_resume() {
+        use std::sync::Arc;
+        use crate::checkpointer::CheckpointSaver;
+
+        struct MockCheckpointerResume {
+            checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>,
+        }
+
+        #[async_trait::async_trait]
+        impl CheckpointSaver for MockCheckpointerResume {
+            async fn put_checkpoint(&self, checkpoint: crate::checkpointer::Checkpoint) -> Result<(), String> {
+                self.checkpoints.lock().await.insert(checkpoint.checkpoint_id.clone(), serde_json::to_vec(&checkpoint.data).unwrap());
+                Ok(())
+            }
+            async fn get_checkpoint(&self, _thread_id: &str, cp_id: &str) -> Result<Option<crate::checkpointer::Checkpoint>, String> {
+                let map = self.checkpoints.lock().await;
+                if let Some(bytes) = map.get(cp_id) {
+                    Ok(Some(crate::checkpointer::Checkpoint {
+                        thread_id: _thread_id.to_string(),
+                        checkpoint_id: cp_id.to_string(),
+                        parent_id: None,
+                        data: serde_json::from_slice(bytes).unwrap(),
+                        metadata: serde_json::Value::Null,
+                        created_at: chrono::Utc::now(),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            async fn list_checkpoints(&self, _thread_id: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> { Ok(vec![]) }
+            async fn restore_checkpoint(&self, _cp_id: &str) -> Result<(), String> { Ok(()) }
+        }
+
+        struct HilMockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for HilMockLlm {
+            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    // Turn 1: Try to call the user fixable tool
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message {
+                            role: crate::types::Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![crate::types::ToolCall {
+                                id: "hil_tool_1".to_string(),
+                                name: "hil_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            }],
+                            tool_results: vec![],
+                            response_id: Some("id1".to_string()),
+                            previous_response_id: None,
+                        },
+                        usage: crate::types::Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("id1".to_string()),
+                    })
+                } else {
+                    // Turn 2: It resumed and got the manual result
+                    let last_msg = req.messages.last().unwrap();
+                    assert!(last_msg.tool_results.iter().any(|tr| tr.content == "Manual approval given"), "Should receive the manual intervention");
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Done after intervention"),
+                        usage: crate::types::Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("id2".to_string()),
+                    })
+                }
+            }
+        }
+
+        struct HilTool;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for HilTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Waiting for human".to_string()))
+            }
+        }
+
+        let cp_saver = Arc::new(MockCheckpointerResume { checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()) });
+        let llm = Arc::new(HilMockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let mut agent = Agent::new(llm.clone(), vec![]);
+        agent.checkpointer = Some(cp_saver.clone());
+
+        agent.add_tool(crate::tools::Tool {
+            name: "hil_tool".to_string(),
+            description: "a".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(HilTool),
+        });
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.allowed_tools = Some(vec!["hil_tool".to_string()]);
+        cfg.thread_id = Some("hil_thread".to_string());
+        cfg.approved_tool_calls.push("hil_tool_1".to_string()); // Make sure it passes gating approval if applicable
+
+        let mut on_event = |_| {};
+
+        // Run 1: Should pause
+        let result = agent.run(&cfg, "Start", &mut on_event).await;
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("USER_FIXABLE_CHECKPOINT:pause_user_fixable_hil_thread_"), "Error should bubble up the checkpoint");
+
+        let parts: Vec<&str> = err_str.split(':').collect();
+        let cp_id = parts[1];
+
+        // Ensure checkpoint was actually saved
+        assert!(cp_saver.checkpoints.lock().await.contains_key(cp_id), "Checkpoint must be saved in storage");
+
+        // Run 2: Resume with intervention
+        let result2 = agent.resume_from_checkpoint(&cfg, cp_id, "Manual approval given", &mut on_event).await;
+        assert!(result2.is_ok());
+        assert_eq!(result2.unwrap(), "Done after intervention");
+    }
+
+    #[tokio::test]
     async fn test_resume_from_checkpoint() {
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
         struct MockCheckpointerResume {

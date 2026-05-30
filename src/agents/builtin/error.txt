@@ -65,51 +65,51 @@ error[E0432]: unresolved import `crate::verification_loops`
    |            ^^^^^^^^^^^^^^^^^^ could not find `verification_loops` in the crate root
 
 error[E0432]: unresolved import `ohc_builtin_agent_tools`
-    --> agent.rs:6347:13
+    --> agent.rs:6472:13
      |
-6347 |         use ohc_builtin_agent_tools::ToolExecutor;
+6472 |         use ohc_builtin_agent_tools::ToolExecutor;
      |             ^^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_tools`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_tools`
 
 error[E0432]: unresolved import `crate::types`
-    --> agent.rs:6348:20
+    --> agent.rs:6473:20
      |
-6348 | ...   use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ...
+6473 | ...   use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ...
      |                  ^^^^^ could not find `types` in the crate root
 
 error[E0432]: unresolved import `crate::types`
-    --> agent.rs:6622:20
+    --> agent.rs:6747:20
      |
-6622 | ...   use crate::types::{ChatRequest, ChatResponse, Message, Role, Too...
+6747 | ...   use crate::types::{ChatRequest, ChatResponse, Message, Role, Too...
      |                  ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_core`
-    --> agent.rs:6721:13
+    --> agent.rs:6846:13
      |
-6721 |         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, C...
+6846 |         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, C...
      |             ^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_core`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_core`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_core`
-    --> agent.rs:6722:13
+    --> agent.rs:6847:13
      |
-6722 |         use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse,...
+6847 |         use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse,...
      |             ^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_core`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_core`
 
 error[E0432]: unresolved import `crate::types`
-    --> agent.rs:6648:16
+    --> agent.rs:6773:16
      |
-6648 |     use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolC...
+6773 |     use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolC...
      |                ^^^^^ could not find `types` in the crate root
 
 error[E0432]: unresolved import `crate::types`
-    --> agent.rs:6841:20
+    --> agent.rs:6966:20
      |
-6841 |         use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+6966 |         use crate::types::{ChatRequest, ChatResponse, Usage, Message};
      |                    ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
@@ -443,189 +443,189 @@ error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ser
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6345:7
+    --> agent.rs:6470:7
      |
-6345 |     #[tokio::test]
+6470 |     #[tokio::test]
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6354:11
+    --> agent.rs:6479:11
      |
-6354 |         #[async_trait::async_trait]
+6479 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6370:44
+    --> agent.rs:6495:44
      |
-6370 | ...                   arguments: serde_json::json!({}),
+6495 | ...                   arguments: serde_json::json!({}),
      |                                  ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6399:11
+    --> agent.rs:6524:11
      |
-6399 |         #[async_trait::async_trait]
+6524 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6411:25
+    --> agent.rs:6536:25
      |
-6411 |             parameters: serde_json::json!({}),
+6536 |             parameters: serde_json::json!({}),
      |                         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6431:7
+    --> agent.rs:6556:7
      |
-6431 |     #[tokio::test]
+6556 |     #[tokio::test]
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6437:11
+    --> agent.rs:6562:11
      |
-6437 |         #[async_trait::async_trait]
+6562 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6480:11
+    --> agent.rs:6605:11
      |
-6480 |         #[async_trait::async_trait]
+6605 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6493:29
+    --> agent.rs:6618:29
      |
-6493 |                 parameters: serde_json::json!({}),
+6618 |                 parameters: serde_json::json!({}),
      |                             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6500:29
+    --> agent.rs:6625:29
      |
-6500 |                 parameters: serde_json::json!({}),
+6625 |                 parameters: serde_json::json!({}),
      |                             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6507:29
+    --> agent.rs:6632:29
      |
-6507 |                 parameters: serde_json::json!({}),
+6632 |                 parameters: serde_json::json!({}),
      |                             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6514:29
+    --> agent.rs:6639:29
      |
-6514 |                 parameters: serde_json::json!({}),
+6639 |                 parameters: serde_json::json!({}),
      |                             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6585:7
+    --> agent.rs:6710:7
      |
-6585 |     #[async_trait::async_trait]
+6710 |     #[async_trait::async_trait]
      |       ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6607:36
+    --> agent.rs:6732:36
      |
-6607 |                         arguments: serde_json::json!({}),
+6732 |                         arguments: serde_json::json!({}),
      |                                    ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6620:7
+    --> agent.rs:6745:7
      |
-6620 |     #[tokio::test]
+6745 |     #[tokio::test]
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6628:25
+    --> agent.rs:6753:25
      |
-6628 |             parameters: serde_json::json!({"type": "object", "properti...
+6753 |             parameters: serde_json::json!({"type": "object", "properti...
      |                         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6646:3
+    --> agent.rs:6771:3
      |
-6646 | #[tokio::test]
+6771 | #[tokio::test]
      |   ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6651:7
+    --> agent.rs:6776:7
      |
-6651 |     #[async_trait::async_trait]
+6776 |     #[async_trait::async_trait]
      |       ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6662:7
+    --> agent.rs:6787:7
      |
-6662 |     #[async_trait::async_trait]
+6787 |     #[async_trait::async_trait]
      |       ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6676:36
+    --> agent.rs:6801:36
      |
-6676 |                         arguments: serde_json::json!({}),
+6801 |                         arguments: serde_json::json!({}),
      |                                    ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6695:25
+    --> agent.rs:6820:25
      |
-6695 |             parameters: serde_json::json!({}),
+6820 |             parameters: serde_json::json!({}),
      |                         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6719:7
+    --> agent.rs:6844:7
      |
-6719 |     #[tokio::test]
+6844 |     #[tokio::test]
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6725:11
+    --> agent.rs:6850:11
      |
-6725 |         #[async_trait::async_trait]
+6850 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6734:11
+    --> agent.rs:6859:11
      |
-6734 |         #[async_trait::async_trait]
+6859 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6747:11
+    --> agent.rs:6872:11
      |
-6747 |         #[async_trait::async_trait]
+6872 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6762:44
+    --> agent.rs:6887:44
      |
-6762 | ...                   arguments: serde_json::json!({}),
+6887 | ...                   arguments: serde_json::json!({}),
      |                                  ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6781:44
+    --> agent.rs:6906:44
      |
-6781 | ...                   arguments: serde_json::json!({}),
+6906 | ...                   arguments: serde_json::json!({}),
      |                                  ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6813:25
+    --> agent.rs:6938:25
      |
-6813 |             parameters: serde_json::json!({}),
+6938 |             parameters: serde_json::json!({}),
      |                         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6821:25
+    --> agent.rs:6946:25
      |
-6821 |             parameters: serde_json::json!({}),
+6946 |             parameters: serde_json::json!({}),
      |                         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6839:7
+    --> agent.rs:6964:7
      |
-6839 |     #[tokio::test]
+6964 |     #[tokio::test]
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `async_trait`
-    --> agent.rs:6845:11
+    --> agent.rs:6970:11
      |
-6845 |         #[async_trait::async_trait]
+6970 |         #[async_trait::async_trait]
      |           ^^^^^^^^^^^ use of unresolved module or unlinked crate `async_trait`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_core`
@@ -1651,269 +1651,269 @@ error[E0433]: failed to resolve: could not find `tool_executor_engine` in the cr
      |                ^^^^^^^^^^^^^^^^^^^^ could not find `tool_executor_engine` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6356:70
+    --> agent.rs:6481:70
      |
-6356 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
+6481 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6363:31
+    --> agent.rs:6488:31
      |
-6363 |                     Ok(crate::types::ChatResponse {
+6488 |                     Ok(crate::types::ChatResponse {
      |                               ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6364:41
+    --> agent.rs:6489:41
      |
-6364 |                         message: crate::types::Message {
+6489 |                         message: crate::types::Message {
      |                                         ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6365:42
+    --> agent.rs:6490:42
      |
-6365 | ...                   role: crate::types::Role::Assistant,
+6490 | ...                   role: crate::types::Role::Assistant,
      |                                    ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6381:31
+    --> agent.rs:6506:31
      |
-6381 |                     Ok(crate::types::ChatResponse {
+6506 |                     Ok(crate::types::ChatResponse {
      |                               ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6382:41
+    --> agent.rs:6507:41
      |
-6382 |                         message: crate::types::Message {
+6507 |                         message: crate::types::Message {
      |                                         ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6383:42
+    --> agent.rs:6508:42
      |
-6383 | ...                   role: crate::types::Role::Assistant,
+6508 | ...                   role: crate::types::Role::Assistant,
      |                                    ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6434:54
+    --> agent.rs:6559:54
      |
-6434 | ...ec<crate::types::ChatResponse>>,
+6559 | ...ec<crate::types::ChatResponse>>,
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6439:70
+    --> agent.rs:6564:70
      |
-6439 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
+6564 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6444:31
+    --> agent.rs:6569:31
      |
-6444 |                     Ok(crate::types::ChatResponse {
+6569 |                     Ok(crate::types::ChatResponse {
      |                               ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6445:41
+    --> agent.rs:6570:41
      |
-6445 | ...e: crate::types::Message::assistant("done"),
+6570 | ...e: crate::types::Message::assistant("done"),
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_core`
-    --> agent.rs:6446:32
+    --> agent.rs:6571:32
      |
-6446 | ...          usage: ohc_builtin_agent_core::types::Usage::default(),
+6571 | ...          usage: ohc_builtin_agent_core::types::Usage::default(),
      |                     ^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_core`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_core`
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6455:60
+    --> agent.rs:6580:60
      |
-6455 | ...c![crate::types::ChatResponse {
+6580 | ...c![crate::types::ChatResponse {
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6456:33
+    --> agent.rs:6581:33
      |
-6456 |                 message: crate::types::Message {
+6581 |                 message: crate::types::Message {
      |                                 ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6457:34
+    --> agent.rs:6582:34
      |
-6457 |                     role: crate::types::Role::Assistant,
+6582 |                     role: crate::types::Role::Assistant,
      |                                  ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6460:101
+    --> agent.rs:6585:101
      |
-6460 | ...o_string(), arguments: serde_json::Value::Null },
+6585 | ...o_string(), arguments: serde_json::Value::Null },
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6461:101
+    --> agent.rs:6586:101
      |
-6461 | ...o_string(), arguments: serde_json::Value::Null },
+6586 | ...o_string(), arguments: serde_json::Value::Null },
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6462:105
+    --> agent.rs:6587:105
      |
-6462 | ...o_string(), arguments: serde_json::Value::Null },
+6587 | ...o_string(), arguments: serde_json::Value::Null },
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6463:105
+    --> agent.rs:6588:105
      |
-6463 | ...o_string(), arguments: serde_json::Value::Null },
+6588 | ...o_string(), arguments: serde_json::Value::Null },
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_core`
-    --> agent.rs:6469:24
+    --> agent.rs:6594:24
      |
-6469 |                 usage: ohc_builtin_agent_core::types::Usage::default(),
+6594 |                 usage: ohc_builtin_agent_core::types::Usage::default(),
      |                        ^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_core`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_core`
 
 error[E0433]: failed to resolve: could not find `tools` in the crate root
-    --> agent.rs:6481:21
+    --> agent.rs:6606:21
      |
-6481 |         impl crate::tools::ToolExecutor for MockTool {
+6606 |         impl crate::tools::ToolExecutor for MockTool {
      |                     ^^^^^ could not find `tools` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6482:88
+    --> agent.rs:6607:88
      |
-6482 | ...g, crate::types::ToolError> {
+6607 | ...g, crate::types::ToolError> {
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6483:17
+    --> agent.rs:6608:17
      |
-6483 | ...   tokio::time::sleep(std::time::Duration::from_millis(self.sleep_m...
+6608 | ...   tokio::time::sleep(std::time::Duration::from_millis(self.sleep_m...
      |       ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
 
 error[E0433]: failed to resolve: could not find `tools` in the crate root
-    --> agent.rs:6489:20
+    --> agent.rs:6614:20
      |
-6489 |             crate::tools::Tool {
+6614 |             crate::tools::Tool {
      |                    ^^^^^ could not find `tools` in the crate root
 
 error[E0433]: failed to resolve: could not find `tools` in the crate root
-    --> agent.rs:6496:20
+    --> agent.rs:6621:20
      |
-6496 |             crate::tools::Tool {
+6621 |             crate::tools::Tool {
      |                    ^^^^^ could not find `tools` in the crate root
 
 error[E0433]: failed to resolve: could not find `tools` in the crate root
-    --> agent.rs:6503:20
+    --> agent.rs:6628:20
      |
-6503 |             crate::tools::Tool {
+6628 |             crate::tools::Tool {
      |                    ^^^^^ could not find `tools` in the crate root
 
 error[E0433]: failed to resolve: could not find `tools` in the crate root
-    --> agent.rs:6510:20
+    --> agent.rs:6635:20
      |
-6510 |             crate::tools::Tool {
+6635 |             crate::tools::Tool {
      |                    ^^^^^ could not find `tools` in the crate root
 
 error[E0433]: failed to resolve: could not find `llm` in the crate root
-    --> agent.rs:6586:17
+    --> agent.rs:6711:17
      |
-6586 |     impl crate::llm::LlmClient for NudgeMockLlmClient {
+6711 |     impl crate::llm::LlmClient for NudgeMockLlmClient {
      |                 ^^^ could not find `llm` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6587:42
+    --> agent.rs:6712:42
      |
-6587 | ...q: crate::types::ChatRequest) -> Result<crate::types::ChatResponse,...
+6712 | ...q: crate::types::ChatRequest) -> Result<crate::types::ChatResponse,...
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6587:79
+    --> agent.rs:6712:79
      |
-6587 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
+6712 | ...lt<crate::types::ChatResponse, Box<dyn std::error::Error + Send + S...
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6592:34
+    --> agent.rs:6717:34
      |
-6592 |                 return Ok(crate::types::ChatResponse {
+6717 |                 return Ok(crate::types::ChatResponse {
      |                                  ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6593:37
+    --> agent.rs:6718:37
      |
-6593 | ...e: crate::types::Message::assistant("I see the nudge"),
+6718 | ...e: crate::types::Message::assistant("I see the nudge"),
      |              ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6594:35
+    --> agent.rs:6719:35
      |
-6594 |                     usage: crate::types::Usage::default(),
+6719 |                     usage: crate::types::Usage::default(),
      |                                   ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6600:23
+    --> agent.rs:6725:23
      |
-6600 |             Ok(crate::types::ChatResponse {
+6725 |             Ok(crate::types::ChatResponse {
      |                       ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6601:33
+    --> agent.rs:6726:33
      |
-6601 |                 message: crate::types::Message {
+6726 |                 message: crate::types::Message {
      |                                 ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6602:34
+    --> agent.rs:6727:34
      |
-6602 |                     role: crate::types::Role::Assistant,
+6727 |                     role: crate::types::Role::Assistant,
      |                                  ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6604:45
+    --> agent.rs:6729:45
      |
-6604 |                     tool_calls: vec![crate::types::ToolCall {
+6729 |                     tool_calls: vec![crate::types::ToolCall {
      |                                             ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6613:31
+    --> agent.rs:6738:31
      |
-6613 |                 usage: crate::types::Usage::default(),
+6738 |                 usage: crate::types::Usage::default(),
      |                               ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `agent` in the crate root
-    --> agent.rs:6629:38
+    --> agent.rs:6754:38
      |
-6629 |             execute: Arc::new(crate::agent::tests::MockToolExecutor),
+6754 |             execute: Arc::new(crate::agent::tests::MockToolExecutor),
      |                                      ^^^^^ could not find `agent` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6669:23
+    --> agent.rs:6794:23
      |
-6669 |             Ok(crate::types::ChatResponse {
+6794 |             Ok(crate::types::ChatResponse {
      |                       ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6670:33
+    --> agent.rs:6795:33
      |
-6670 |                 message: crate::types::Message {
+6795 |                 message: crate::types::Message {
      |                                 ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: could not find `types` in the crate root
-    --> agent.rs:6671:34
+    --> agent.rs:6796:34
      |
-6671 |                     role: crate::types::Role::Assistant,
+6796 |                     role: crate::types::Role::Assistant,
      |                                  ^^^^^ could not find `types` in the crate root
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
@@ -2023,9 +2023,9 @@ help: if you import `fs`, refer to it directly
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6351:25
+    --> agent.rs:6476:25
      |
-6351 |             call_count: tokio::sync::Mutex<i32>,
+6476 |             call_count: tokio::sync::Mutex<i32>,
      |                         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2035,14 +2035,14 @@ help: consider importing this module
      |
 help: if you import `sync`, refer to it directly
      |
-6351 -             call_count: tokio::sync::Mutex<i32>,
-6351 +             call_count: sync::Mutex<i32>,
+6476 -             call_count: tokio::sync::Mutex<i32>,
+6476 +             call_count: sync::Mutex<i32>,
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6406:73
+    --> agent.rs:6531:73
      |
-6406 | ...unt: tokio::sync::Mutex::new(0) });
+6531 | ...unt: tokio::sync::Mutex::new(0) });
      |         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2054,14 +2054,14 @@ help: consider importing one of these structs
      |
 help: if you import `Mutex`, refer to it directly
      |
-6406 -         let llm = Arc::new(MockLlmClientLightweightRewind { call_count: tokio::sync::Mutex::new(0) });
-6406 +         let llm = Arc::new(MockLlmClientLightweightRewind { call_count: Mutex::new(0) });
+6531 -         let llm = Arc::new(MockLlmClientLightweightRewind { call_count: tokio::sync::Mutex::new(0) });
+6531 +         let llm = Arc::new(MockLlmClientLightweightRewind { call_count: Mutex::new(0) });
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6434:24
+    --> agent.rs:6559:24
      |
-6434 | ...ses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+6559 | ...ses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
      |         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2071,14 +2071,14 @@ help: consider importing this module
      |
 help: if you import `sync`, refer to it directly
      |
-6434 -             responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
-6434 +             responses: sync::Mutex<Vec<crate::types::ChatResponse>>,
+6559 -             responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+6559 +             responses: sync::Mutex<Vec<crate::types::ChatResponse>>,
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6455:24
+    --> agent.rs:6580:24
      |
-6455 | ...ses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
+6580 | ...ses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
      |         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2090,14 +2090,14 @@ help: consider importing one of these structs
      |
 help: if you import `Mutex`, refer to it directly
      |
-6455 -             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-6455 +             responses: Mutex::new(vec![crate::types::ChatResponse {
+6580 -             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
+6580 +             responses: Mutex::new(vec![crate::types::ChatResponse {
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6582:21
+    --> agent.rs:6707:21
      |
-6582 |         call_count: tokio::sync::Mutex<usize>,
+6707 |         call_count: tokio::sync::Mutex<usize>,
      |                     ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2107,14 +2107,14 @@ help: consider importing this module
      |
 help: if you import `sync`, refer to it directly
      |
-6582 -         call_count: tokio::sync::Mutex<usize>,
-6582 +         call_count: sync::Mutex<usize>,
+6707 -         call_count: tokio::sync::Mutex<usize>,
+6707 +         call_count: sync::Mutex<usize>,
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6623:75
+    --> agent.rs:6748:75
      |
-6623 | ...unt: tokio::sync::Mutex::new(0) });
+6748 | ...unt: tokio::sync::Mutex::new(0) });
      |         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2126,14 +2126,14 @@ help: consider importing one of these structs
      |
 help: if you import `Mutex`, refer to it directly
      |
-6623 -         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
-6623 +         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: Mutex::new(0) });
+6748 -         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
+6748 +         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: Mutex::new(0) });
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6659:21
+    --> agent.rs:6784:21
      |
-6659 |         call_count: tokio::sync::Mutex<usize>,
+6784 |         call_count: tokio::sync::Mutex<usize>,
      |                     ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2143,14 +2143,14 @@ help: consider importing this module
      |
 help: if you import `sync`, refer to it directly
      |
-6659 -         call_count: tokio::sync::Mutex<usize>,
-6659 +         call_count: sync::Mutex<usize>,
+6784 -         call_count: tokio::sync::Mutex<usize>,
+6784 +         call_count: sync::Mutex<usize>,
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tokio`
-    --> agent.rs:6689:57
+    --> agent.rs:6814:57
      |
-6689 | ...unt: tokio::sync::Mutex::new(0) });
+6814 | ...unt: tokio::sync::Mutex::new(0) });
      |         ^^^^^ use of unresolved module or unlinked crate `tokio`
      |
      = help: you might be missing a crate named `tokio`
@@ -2162,8 +2162,8 @@ help: consider importing one of these structs
      |
 help: if you import `Mutex`, refer to it directly
      |
-6689 -     let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
-6689 +     let client = Arc::new(RetryMockClient { call_count: Mutex::new(0) });
+6814 -     let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
+6814 +     let client = Arc::new(RetryMockClient { call_count: Mutex::new(0) });
      |
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `dashmap`
@@ -2439,65 +2439,65 @@ error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ser
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6401:44
+    --> agent.rs:6526:44
      |
-6401 | ... execute(&self, _args: serde_json::Value) -> Result<String, ToolErr...
+6526 | ... execute(&self, _args: serde_json::Value) -> Result<String, ToolErr...
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6482:44
+    --> agent.rs:6607:44
      |
-6482 | ... execute(&self, _args: serde_json::Value) -> Result<String, crate::...
+6607 | ... execute(&self, _args: serde_json::Value) -> Result<String, crate::...
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_tools`
-    --> agent.rs:6652:10
+    --> agent.rs:6777:10
      |
-6652 |     impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
+6777 |     impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
      |          ^^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_tools`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_tools`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6653:40
+    --> agent.rs:6778:40
      |
-6653 | ... execute(&self, _args: serde_json::Value) -> Result<String, ToolErr...
+6778 | ... execute(&self, _args: serde_json::Value) -> Result<String, ToolErr...
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ohc_builtin_agent_tools`
-    --> agent.rs:6691:9
+    --> agent.rs:6816:9
      |
-6691 |         ohc_builtin_agent_tools::Tool {
+6816 |         ohc_builtin_agent_tools::Tool {
      |         ^^^^^^^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `ohc_builtin_agent_tools`
      |
      = help: you might be missing a crate named `ohc_builtin_agent_tools`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6727:87
+    --> agent.rs:6852:87
      |
-6727 | ...ionEnvironment, _args: serde_json::Value) -> Result<String, String> {
+6852 | ...ionEnvironment, _args: serde_json::Value) -> Result<String, String> {
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `serde_json`
-    --> agent.rs:6736:87
+    --> agent.rs:6861:87
      |
-6736 | ...ionEnvironment, _args: serde_json::Value) -> Result<String, String> {
+6861 | ...ionEnvironment, _args: serde_json::Value) -> Result<String, String> {
      |                           ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
      |
      = help: you might be missing a crate named `serde_json`
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `tempfile`
-    --> agent.rs:6858:24
+    --> agent.rs:6983:24
      |
-6858 |         let temp_dir = tempfile::tempdir().unwrap();
+6983 |         let temp_dir = tempfile::tempdir().unwrap();
      |                        ^^^^^^^^ use of unresolved module or unlinked crate `tempfile`
      |
      = help: you might be missing a crate named `tempfile`

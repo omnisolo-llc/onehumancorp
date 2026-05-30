@@ -42,7 +42,7 @@ impl HybridContextTool {
         let value = arguments.get("value").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
         let labels = arguments.get("labels").cloned().unwrap_or(json!({}));
 
-        crate::telemetry::buffer_metric(&self.pool, metric_name, metric_type, value, labels)
+        ::server_lib::telemetry::buffer_metric(&self.pool, metric_name, metric_type, value, labels)
             .await
             .map_err(|e| e.to_string())?;
 
