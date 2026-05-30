@@ -18,6 +18,11 @@ test.describe('Success Milestones Notifications', () => {
     for (let i = 0; i < 3; i++) {
         await markReadyBtn.click();
         await page.waitForTimeout(100);
+        // The first click triggers First Sale! Dismiss it to avoid intercepting clicks.
+        if (i === 0) {
+           const dismiss = page.getByRole('button', { name: 'Dismiss' });
+           if (await dismiss.isVisible()) await dismiss.click();
+        }
     }
 
     // 4. Assert the milestone UI appears
@@ -62,6 +67,8 @@ test.describe('Success Milestones Notifications', () => {
     for (let i = 0; i < 10; i++) {
         await markReadyBtn.click();
         await page.waitForTimeout(50);
+        const dismiss = page.getByRole('button', { name: 'Dismiss' });
+        if (await dismiss.isVisible()) await dismiss.click();
     }
 
     // Might appear later
@@ -94,6 +101,8 @@ test.describe('Success Milestones Notifications', () => {
     for (let i = 0; i < 100; i++) {
         await markReadyBtn.click();
         await page.waitForTimeout(10);
+        const dismiss = page.getByRole('button', { name: 'Dismiss' });
+        if (await dismiss.isVisible()) await dismiss.click();
     }
 
     await expect(page.getByText('🎉 100th Order!')).toBeVisible({ timeout: 10000 });
