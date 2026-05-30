@@ -600,7 +600,7 @@ async fn http_login_handler(
         }
     };
 
-    let claims = ::server_common::Claims {
+    let _claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -861,10 +861,23 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let tenant_id_clone = tenant_id.clone();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let hub_clone = self.hub.clone();
+
+        let (costs_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || {
+                let llm = auditor.get_total_cost();
+                let rev = auditor.get_total_revenue();
+                (llm, rev)
+            }),
+            async move {
+                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
+            }
+        );
+
+        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2041,6 +2054,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(ops_agent).await;
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
+
+    let tm_mesh = handoff_mesh.clone();
+    hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
+        let payload = match serde_json::to_string(&task) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::error!("Failed to serialize task: {}", e);
+                return;
+            }
+        };
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: event_type,
+            status: "ok".to_string(),
+            payload: payload.into_bytes(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        let tm_mesh_clone = tm_mesh.clone();
+        tokio::spawn(async move {
+            let _ = tm_mesh_clone.publish("tasks", msg.payload).await;
+        });
+    }));
 
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
@@ -3234,7 +3269,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-left-color: var(--primary) !important;
                             color: var(--text) !important;
                         }
-                        #manychat-integration {
+                        #ayrshare-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -3588,13 +3623,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('ayrshare-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="manychat-integration" class="card glass" style="display: none;">
-                            <h3>💬 Manychat</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
-                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
+                        <div id="ayrshare-integration" class="card glass" style="display: none;">
+                            <h3>📱 Ayrshare</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified API for posting and retrieving messages across social networks.</p>
+                            <button onclick="alert('Configure Ayrshare'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -4202,14 +4237,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- ManyChat Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
