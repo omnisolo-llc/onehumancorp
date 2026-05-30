@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -96,12 +96,12 @@ export default function Dashboard() {
       } else {
         // Fallback to local storage tenant if API fails or no auth
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(`ohc://join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(`ohc://join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
       setShowReferralModal(true);
