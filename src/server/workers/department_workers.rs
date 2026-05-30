@@ -1009,6 +1009,15 @@ impl PromoterWorker {
     }
 }
 
+<<<<<<< HEAD
+pub struct AdvisorWorker {
+    pub db: Arc<DB>,
+}
+
+impl AdvisorWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self { db }
+=======
 pub struct YieldAgentWorker {
     pub db: Arc<DB>,
     pub poll_interval: std::time::Duration,
@@ -1023,10 +1032,77 @@ impl YieldAgentWorker {
             poll_interval: std::time::Duration::from_secs(60), // Poll every minute
             ledger,
         }
+>>>>>>> feb20506 (feat: Autonomous Dynamic Pricing & Yield Management Engine)
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
+<<<<<<< HEAD
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
+            loop {
+                interval.tick().await;
+                let mut transaction = match db.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => continue,
+                };
+                // Grab pending reports with SKIP LOCKED
+                let reports: Vec<(String, String)> = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED")
+                            .fetch_all(&mut *transaction)
+                            .await
+                            .unwrap_or_default()
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING'")
+                            .fetch_all(&mut *transaction)
+                            .await
+                            .unwrap_or_default()
+                    }
+                };
+
+                for (report_id, tenant_id) in reports {
+                    let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
+                    let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();
+
+                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                            prompt,
+                            from_agent_id: "The Advisor".into(),
+                        };
+                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                            drafted_msg = res.into_inner().content;
+                        }
+                    }
+
+                    let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                        "summary": drafted_msg,
+                        "actionable_suggestion": "Consider adding a new vegan option."
+                    }));
+
+                    match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            let _ = sqlx::query("UPDATE advisory_reports SET status = 'COMPLETED', payload = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                                .bind(parsed)
+                                .bind(&report_id)
+                                .execute(&mut *transaction)
+                                .await;
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                             let _ = sqlx::query("UPDATE advisory_reports SET status = 'COMPLETED', payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                .bind(parsed.to_string())
+                                .bind(&report_id)
+                                .execute(&mut *transaction)
+                                .await;
+                        }
+                    }
+                }
+                let _ = transaction.commit().await;
+            }
+        });
+    }
+=======
         let ledger = self.ledger.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
@@ -1197,4 +1273,5 @@ impl YieldAgentWorker {
 
         Ok(())
     }
+>>>>>>> feb20506 (feat: Autonomous Dynamic Pricing & Yield Management Engine)
 }
