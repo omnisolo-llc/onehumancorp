@@ -110,7 +110,7 @@ else
   done
 fi
 
-for support_file in fixtures.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
+for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
   if [[ -f "$workspace_root/src/e2e/$support_file" ]]; then
     cp "$workspace_root/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   elif [[ -f "$RUNFILES_ROOT/src/e2e/$support_file" ]]; then
