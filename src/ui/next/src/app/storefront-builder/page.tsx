@@ -318,7 +318,8 @@ export default function StorefrontBuilderPage() {
               <SmartBlock {...b} />
             </DraggableBlock>
           ))}
-          <SmartBlock type="PoweredBy" props={{ tenantId }} />
+          {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
+          <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
