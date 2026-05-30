@@ -850,10 +850,22 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let hub_clone = self.hub.clone();
+        let tenant_id_clone = tenant_id.to_string();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let auditor_future = tokio::task::spawn_blocking(move || {
+            (auditor.get_total_cost(), auditor.get_total_revenue())
+        });
+
+        let storage_future = tokio::task::spawn(async move {
+            hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+        });
+
+        let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
+
+        let storage_bytes = storage_res.unwrap_or(0);
+        let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
+
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 

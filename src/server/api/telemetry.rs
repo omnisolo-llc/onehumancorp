@@ -146,8 +146,14 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
             _ => {
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
-                    let pool = crate::db::get_pool();
-                    let _ = crate::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                    let metric_name = item.metric_name.clone();
+                    let metric_type = item.metric_type.clone();
+                    let value = item.value;
+                    let labels = item.labels.clone();
+                    tokio::spawn(async move {
+                        let pool = crate::db::get_pool();
+                        let _ = crate::telemetry::buffer_metric(&pool, &metric_name, &metric_type, value, labels).await;
+                    });
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(
