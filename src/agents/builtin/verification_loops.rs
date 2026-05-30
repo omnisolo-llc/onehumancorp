@@ -1,3 +1,5 @@
+/// Master Catalog B.10: Verification Loops (Quality x3)
+
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use crate::llm::LlmClient;
 use std::sync::Arc;
