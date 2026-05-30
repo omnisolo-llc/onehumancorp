@@ -8,6 +8,7 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
+    { id: "scout_custom", name: "Custom Tool", category: "operations", status: "disconnected", icon: "🛠️", description: "Use our Scout Agent to build a custom tool integration." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
@@ -27,7 +28,15 @@ export default function Integrations() {
     sms: true,
   });
 
+  const [showScoutModal, setShowScoutModal] = useState(false);
+  const [scoutForm, setScoutForm] = useState({ tool_name: "", description: "", api_url: "" });
+  const [scoutLoading, setScoutLoading] = useState(false);
+
   const handleConnect = (id: string) => {
+    if (id === 'scout_custom') {
+      setShowScoutModal(true);
+      return;
+    }
     if (id === 'calendly') {
       alert("Connecting Calendly via OAuth...");
       setIntegrations(prev => prev.map(integration =>
@@ -53,6 +62,29 @@ export default function Integrations() {
     }
   };
 
+  const handleScoutSubmit = async () => {
+    setScoutLoading(true);
+    try {
+      const res = await fetch('/api/v1/agents/scout/tool_request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scoutForm)
+      });
+      if (res.ok) {
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === 'scout_custom' ? { ...integration, status: "connected" } : integration
+        ));
+        setShowScoutModal(false);
+      } else {
+        alert("Failed to submit tool request");
+      }
+    } catch (e) {
+      alert("Error: " + e);
+    } finally {
+      setScoutLoading(false);
+    }
+  };
+
   const saveTwilioIntegration = () => {
     setIntegrations(prev => prev.map(integration =>
       integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
@@ -63,6 +95,71 @@ export default function Integrations() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+
+      {/* Scout Tool Request Modal */}
+      {showScoutModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-blue-600 border border-blue-100">
+                🛠️
+              </div>
+              <button
+                onClick={() => setShowScoutModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Request Custom Integration</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Our Scout Agent will analyze the API documentation and build a custom integration for you.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Tool Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Custom API"
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={scoutForm.tool_name}
+                  onChange={e => setScoutForm(prev => ({ ...prev, tool_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Description (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="What does this tool do?"
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={scoutForm.description}
+                  onChange={e => setScoutForm(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">API URL (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="https://api.example.com"
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={scoutForm.api_url}
+                  onChange={e => setScoutForm(prev => ({ ...prev, api_url: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleScoutSubmit}
+              disabled={!scoutForm.tool_name || scoutLoading}
+              className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors disabled:opacity-50"
+            >
+              {scoutLoading ? "Requesting..." : "Submit Request"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Twilio Conversations Connect Modal */}
       {showTwilioModal && (

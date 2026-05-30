@@ -10,6 +10,7 @@ exports_files(
         "mod.rs",
         "settings.rs",
         "webhook.rs",
+        "scout.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -26,6 +27,7 @@ rust_library(
         "mod.rs",
         "settings.rs",
         "webhook.rs",
+        "scout.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -37,6 +39,7 @@ rust_library(
         "//src/server:server_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/scout:scout_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",

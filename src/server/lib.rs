@@ -2673,6 +2673,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/v1/agents/scout", api::agents::scout::router())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(

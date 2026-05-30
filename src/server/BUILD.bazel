@@ -52,6 +52,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:mod.rs",
     "//src/server/api/agents:settings.rs",
     "//src/server/api/agents:webhook.rs",
+    "//src/server/api/agents:scout.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream:store.rs",
@@ -257,6 +258,7 @@ rust_library(
     deps = [
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/scout:scout_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
