@@ -564,9 +564,9 @@ impl DepartmentOrchestrator {
         let now = Utc::now();
 
         let mut error_response = None;
-        let opt_department = match &self.db.store {
+        let opt_dept_payload = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -576,7 +576,15 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let dep = r.get::<String, _>("department");
+                        let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
+                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
+                        Some((dep, payload_val))
                     }
                     Ok(None) => {
                         error_response = Some("Unauthorized".to_string());
@@ -589,7 +597,7 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -599,7 +607,10 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let dep = r.get::<String, _>("department");
+                        let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
+                        let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        Some((dep, payload_val))
                     }
                     Ok(None) => {
                         error_response = Some("Unauthorized".to_string());
@@ -618,7 +629,7 @@ impl DepartmentOrchestrator {
             return Err(err);
         }
 
-        if let Some(dep) = &opt_department {
+        if let Some((dep, original_payload)) = opt_dept_payload {
             let decision_str = if approved { "approved" } else { "rejected" };
             self.approval_counter.add(1, &[
                 KeyValue::new("tenant_id", tenant_id.to_string()),
@@ -629,7 +640,8 @@ impl DepartmentOrchestrator {
             if approved {
                 let payload = serde_json::json!({
                     "request_id": request_id,
-                    "tenant_id": tenant_id
+                    "tenant_id": tenant_id,
+                    "original_payload": original_payload,
                 });
                 let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
                 let topic = format!("agent:{}:approved", dep);
