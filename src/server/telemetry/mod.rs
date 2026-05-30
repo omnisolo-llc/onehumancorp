@@ -940,16 +940,6 @@ pub async fn record_rag_escalation(
     .await
 }
 
-pub async fn buffer_metric_i64(
-    pool: &PgPool,
-    metric_name: &str,
-    metric_type: &str,
-    value: i64,
-    labels: Value,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, metric_name, metric_type, value as f32, labels).await
-}
-
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

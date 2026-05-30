@@ -36,8 +36,7 @@ async fn execute_publish_site_job(
 
     let pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let minimax = crate::minimax::MinimaxClient::new(api_key);
+    let _api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
 
     for page in &pages {
         let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
