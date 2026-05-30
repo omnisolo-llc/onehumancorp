@@ -1,30 +1,17 @@
 import { NextResponse } from 'next/server';
 
-function safeTenant(value: string | null): string {
-  const normalized = (value || 'my-store').trim().slice(0, 80);
-  return encodeURIComponent(normalized || 'my-store');
-}
-
-function safeHost(value: string | null): string {
-  const host = (value || 'ohc.app').trim().toLowerCase();
-  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'ohc.app';
-}
-
-function safeProtocol(value: string | null): 'http' | 'https' {
-  return value === 'http' ? 'http' : 'https';
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const tenant = safeTenant(searchParams.get('tenant'));
+  const tenantRaw = searchParams.get('tenant') || 'my-store';
+  const tenant = encodeURIComponent(tenantRaw);
   const theme = searchParams.get('theme') || 'light';
 
-  const host = safeHost(request.headers.get('host'));
-  const protocol = safeProtocol(request.headers.get('x-forwarded-proto'));
-  const baseUrl = `${protocol}://${host}`;
-
   const isDark = theme === 'dark';
-  const checkoutUrl = `${baseUrl}/checkout?tenant=${tenant}`;
+  const bgClass = isDark ? 'bg-gray-900' : 'bg-white';
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const descClass = isDark ? 'text-gray-300' : 'text-gray-600';
+  const borderClass = isDark ? 'border-gray-700' : 'border-gray-200';
+  const footerClass = isDark ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500';
 
   const html = `
     <!DOCTYPE html>
@@ -149,7 +136,6 @@ export async function GET(request: Request) {
         }
         .footer a:hover { color: #2563eb; text-decoration: underline; }
       </style>
-      <meta property="og:image" content="${baseUrl}/api/v1/growth/storefront/og-card?tenant=${tenant}&amp;product_name=Premium%20Collection" />
     </head>
     <body>
       <div class="card">
@@ -169,7 +155,7 @@ export async function GET(request: Request) {
                <span class="stock-badge">In Stock</span>
             </div>
 
-            <a href="${checkoutUrl}" class="btn" target="_blank" rel="noopener noreferrer">
+            <a href="#" class="btn">
                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                Buy Now
             </a>
@@ -177,7 +163,7 @@ export async function GET(request: Request) {
             <!-- Viral Growth Loop Footer -->
             <div class="footer">
                <span>⚡ Powered by</span>
-               <a href="https://ohc.store/join?ref=${tenant}" target="_blank" rel="noopener noreferrer">OHC</a>
+               <a href="ohc://join?ref=${tenant}" target="_blank">OHC</a>
             </div>
         </div>
       </div>
@@ -188,10 +174,7 @@ export async function GET(request: Request) {
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=60, s-maxage=60',
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'",
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'X-Content-Type-Options': 'nosniff'
+      'Cache-Control': 'public, max-age=60, s-maxage=60'
     }
   });
 }

@@ -6,3 +6,5 @@ pub use ::server_lib::*;
 pub mod __bazel_package;
 
 pub use __bazel_package::*;
+
+pub mod loyalty_repo;
