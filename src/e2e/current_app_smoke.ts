@@ -20,6 +20,10 @@ export function currentAppSmoke(label: string) {
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible();
 
+    await page.goto('/public-profile/demo-tenant');
+    await expect(page.getByText('Powered by').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Shop Our Store' }).first()).toBeVisible();
+
     await page.goto('/storefront-builder');
     await expect(page.locator('.builder-block').first()).toBeVisible();
 
