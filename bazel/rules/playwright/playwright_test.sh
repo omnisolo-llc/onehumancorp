@@ -202,6 +202,10 @@ for j in $(seq 1 10); do
   if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then break; fi
   sleep 2
 done
+for j in $(seq 1 10); do
+  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then break; fi
+  sleep 2
+done
 docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
 docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
