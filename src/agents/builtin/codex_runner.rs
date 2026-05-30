@@ -282,7 +282,7 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
+        let cfg = AgentRunConfig::default();
         let mut rx = runner.run_streamed("test");
 
         let mut events = vec![];
