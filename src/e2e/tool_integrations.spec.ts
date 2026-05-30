@@ -5,6 +5,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     // Dismiss the upgrade modal if it appears
     page.on('dialog', dialog => dialog.accept());
     await page.goto('/');
+    await page.waitForTimeout(2000);
     await page.getByText('Connect Tools').click();
     await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
   });

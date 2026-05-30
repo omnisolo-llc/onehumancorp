@@ -791,4 +791,231 @@ mod tests {
         assert_eq!(msg.content, "Hello World");
 
     }
+    #[tokio::test]
+    async fn test_meta_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "meta".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("meta", "https://graph.facebook.com", creds).unwrap();
+        let msg = registry.send_chat_message("meta", "whatsapp", "agent1", "Hello Meta", "thread1").unwrap();
+        assert_eq!(msg.content, "Hello Meta");
+    }
+
+    #[tokio::test]
+    async fn test_mercadopago_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "mercadopago".to_string(),
+            base_url: "https://api.mercadopago.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("mercadopago", "https://api.mercadopago.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_shippo_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "shippo".to_string(),
+            base_url: "https://api.goshippo.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("shippo", "https://api.goshippo.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_google_calendar_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "google_calendar".to_string(),
+            base_url: "https://www.googleapis.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("google_calendar", "https://www.googleapis.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_alipay_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "alipay".to_string(),
+            base_url: "https://openapi.alipay.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("alipay", "https://openapi.alipay.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_razorpay_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "razorpay".to_string(),
+            base_url: "https://api.razorpay.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("razorpay", "https://api.razorpay.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_zoom_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "zoom".to_string(),
+            base_url: "https://api.zoom.us".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("zoom", "https://api.zoom.us", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_sendgrid_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "sendgrid".to_string(),
+            base_url: "https://api.sendgrid.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("sendgrid", "https://api.sendgrid.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_mailchimp_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "mailchimp".to_string(),
+            base_url: "https://api.mailchimp.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("mailchimp", "https://api.mailchimp.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_calendly_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "calendly".to_string(),
+            base_url: "https://api.calendly.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("calendly", "https://api.calendly.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_cal_com_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "cal_com".to_string(),
+            base_url: "https://api.cal.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("cal_com", "https://api.cal.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_ayrshare_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "ayrshare".to_string(),
+            base_url: "https://api.ayrshare.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("ayrshare", "https://api.ayrshare.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_listmonk_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "listmonk".to_string(),
+            base_url: "http://localhost:9000".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("listmonk", "http://localhost:9000", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_easypost_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "easypost".to_string(),
+            base_url: "https://api.easypost.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("easypost", "https://api.easypost.com", creds).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_manychat_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "manychat".to_string(),
+            base_url: "https://api.manychat.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("manychat", "https://api.manychat.com", creds).unwrap();
+    }
+
 }
