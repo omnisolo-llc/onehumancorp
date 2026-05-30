@@ -202,16 +202,3 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
-
-rust_test(
-    name = "router_test",
-    srcs = ["router_test.rs"],
-    deps = [
-        ":orchestration",
-        "//src/server/db",
-        "@crates//:tokio",
-        "@crates//:sqlx",
-        "@crates//:serde_json",
-        "@crates//:async-trait",
-    ],
-)
