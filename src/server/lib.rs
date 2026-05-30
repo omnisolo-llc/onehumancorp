@@ -849,10 +849,20 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let tracker = self.hub.tracker();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let auditor_future = tokio::task::spawn_blocking(move || {
+            (auditor.get_total_cost(), auditor.get_total_revenue())
+        });
+
+        // Use the original tenant_id in a direct await, and join! it with auditor_future.
+        // We don't need to spawn a new async task for tracker.get_tenant_storage_used.
+        let storage_future = tracker.get_tenant_storage_used(tenant_id);
+
+        let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
+
+        let storage_bytes = storage_res.unwrap_or(0);
+        let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
