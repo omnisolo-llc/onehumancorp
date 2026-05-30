@@ -2314,7 +2314,14 @@ impl Agent {
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
-                                return (tc_clone, Err(ToolError::Transient(msg)));
+                                if retry_count < max_retries {
+                                    retry_count += 1;
+                                    let backoff = std::time::Duration::from_millis(500);
+                                    tokio::time::sleep(backoff).await;
+                                    continue;
+                                } else {
+                                    return (tc_clone, Err(ToolError::Transient(msg)));
+                                }
                             }
                             Err(e) => {
                                 return (tc_clone, Err(e));
