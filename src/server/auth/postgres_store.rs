@@ -302,7 +302,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
@@ -316,6 +316,9 @@ mod security_tests {
         let is_multitenant = true;
         let org_id = "system";
         let should_bypass = !is_multitenant && org_id == "system";
+        // In local mode, we shouldn't allow bypassing via direct org_id = "system" if we want to ensure robust data protection.
+        // If we really need system access, it should be done through a different mechanism (e.g. set_system_context).
+        // Here, we strictly prohibit "system" org_id entirely to prevent local data exposure and multi-tenant IDOR.
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
@@ -335,7 +338,7 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();

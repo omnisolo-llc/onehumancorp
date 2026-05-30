@@ -480,8 +480,8 @@ impl Store {
                     if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                    if claims.organization_id.as_deref() == Some("system") {
+                        return Err("Invalid token: 'system' organization cannot be used".to_string());
                     }
                     if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
@@ -506,8 +506,8 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() == Some("system") {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                    if data.claims.organization_id.as_deref() == Some("system") {
+                        return Err("Invalid token: 'system' organization cannot be used".to_string());
                     }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
@@ -530,8 +530,8 @@ impl Store {
                         if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                             return Err("Invalid token: organization_id is required in cloud mode".to_string());
                         }
-                        if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
-                            return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                        if claims.organization_id.as_deref() == Some("system") {
+                            return Err("Invalid token: 'system' organization cannot be used".to_string());
                         }
                         if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
                             return Err("token revoked".to_string());

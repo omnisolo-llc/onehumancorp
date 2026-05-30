@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use sqlx::{postgres::PgPoolOptions, Row};
+    use sqlx::{postgres::PgPoolOptions, Row, Executor};
     use std::env;
     use crate::domain::repository::models::{Business, AgentMemory, Tenant};
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
@@ -26,7 +26,7 @@ mod tests {
             Ok(mut tx) => {
                 use sqlx::Executor;
                 // Set the session context inside the transaction block to system to allow inserts
-                tx.execute("SET LOCAL app.current_tenant = 'system'").await.expect("Failed to set system context");
+                ::server_common::auth_utils::set_system_context(&mut *tx).await.expect("Failed to set system context");
 
                 // Ensure the tenant exists
                 let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Test Business') ON CONFLICT DO NOTHING")
