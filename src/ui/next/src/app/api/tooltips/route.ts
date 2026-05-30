@@ -7,7 +7,7 @@ export async function GET() {
     "launch-btn-tooltip": "Make your store live on the internet so customers can visit.",
     "team-activity-tooltip": "See exactly what your AI helpers are doing right now.",
     "referral-tooltip": "Share this link with friends. You earn credits if they sign up!",
-    "swarm-online-tooltip": "Your AI helpers are working hard on your tasks right now.",
+    "swarm-online-tooltip": "Your AI workforce is active and ready to help.",
     "department-card-tooltip": "Click here to see tasks that need your approval.",
     "nav-dashboard-tooltip": "Check your sales, recent orders, and how your store is doing.",
     "nav-agents-tooltip": "See your AI team, give them tasks, or hire new helpers.",
@@ -19,6 +19,15 @@ export async function GET() {
     "checkout-pay-now-tooltip": "Click here to securely finish your purchase and process your payment.",
     "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
     "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
-    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan."
+    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
+    "ai-departments-nav-link-tooltip": "View and manage your AI departments.",
+    "pricing-tier-tooltip": "Select the plan that best fits your business needs.",
+    "inbox-nav-tooltip": "View and reply to messages from your customers.",
+    "calendar-nav-tooltip": "Manage your bookings and delivery schedule.",
+    "review-campaigns-nav-tooltip": "Launch campaigns to collect 5-star reviews from customers.",
+    "share-cards-nav-tooltip": "Create and share beautiful social media posts.",
+    "seasonal-promo-nav-tooltip": "Run flash sales and holiday promotions automatically.",
+    "scribe-mission-track-nav-tooltip": "Track your progress on scribe missions.",
+    "plan-nav-tooltip": "Manage your subscription and view your current plan features."
   });
 }
