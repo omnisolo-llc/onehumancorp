@@ -211,25 +211,24 @@ jobs:
             exit 1
           fi
 
-          normalize_tauri_signing_key() {
+          decode_key_if_needed() {
             local value="$1"
             if [[ "$value" == *"untrusted comment:"* ]]; then
-              printf '%s' "$value" | base64 | tr -d '\r\n'
+              printf '%s' "$value"
               return
             fi
 
             local decoded
             decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
             if [[ "$decoded" == *"untrusted comment:"* ]]; then
-              printf '%s' "$decoded" | base64 | tr -d '\r\n'
+              printf '%s' "$decoded"
             else
               printf '%s' "$value"
             fi
           }
 
-          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
-          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
-          echo "::add-mask::$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(decode_key_if_needed "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
 
           export VERSION
           node <<'NODE'
@@ -250,10 +249,11 @@ jobs:
           fs.writeFileSync(cargoPath, cargo);
           NODE
 
-          private_key_path="$RUNNER_TEMP/tauri-updater-signing.key"
-          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_SECRET" > "$private_key_path"
-          chmod 600 "$private_key_path" 2>/dev/null || true
-          echo "TAURI_SIGNING_PRIVATE_KEY=$private_key_path" >> "$GITHUB_ENV"
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_SIGNING_PRIVATE_KEY__"
+            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+            echo "__TAURI_SIGNING_PRIVATE_KEY__"
+          } >> "$GITHUB_ENV"
 
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
@@ -327,9 +327,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
 
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
@@ -356,9 +356,9 @@ jobs:
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
           if [[ ! -d "$BUNDLE_ROOT" ]]; then
-            BUNDLE_ROOT="target/release/bundle"
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
           fi
           APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
           DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
@@ -385,13 +385,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           $versionTag = $env:GITHUB_REF_NAME
 
-          $bundleRoots = @(
-            'target/release/bundle',
-            'target/x86_64-pc-windows-msvc/release/bundle'
-          ) | Where-Object { Test-Path $_ }
-          $msi = $bundleRoots | ForEach-Object {
-            Get-ChildItem -Path $_ -Recurse -Include *.msi -ErrorAction SilentlyContinue
-          } | Select-Object -First 1
+          $msi = Get-ChildItem -Path 'src/ui/tauri/target/release/bundle' -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
@@ -404,8 +398,8 @@ jobs:
           }
 
           $exeCandidates = @(
-            'target/release/app.exe',
-            'target/x86_64-pc-windows-msvc/release/app.exe'
+            'src/ui/tauri/target/release/app.exe',
+            'src/ui/tauri/target/x86_64-pc-windows-msvc/release/app.exe'
           )
           $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if ($null -eq $exe) {
@@ -426,7 +420,7 @@ jobs:
           mkdir -p dist
           VERSION_TAG="$GITHUB_REF_NAME"
           ARCH="${{ matrix.arch }}"
-          BUNDLE_ROOT="target/release/bundle"
+          BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
 
           APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
           DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
