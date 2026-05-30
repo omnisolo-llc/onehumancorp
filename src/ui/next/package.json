@@ -9,11 +9,13 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@scarf/scarf": "^1.4.0",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.5",
     "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "swagger-ui-dist": "^5.32.6",
     "swagger-ui-react": "^5.32.6",
     "zustand": "^5.0.14"
   },
