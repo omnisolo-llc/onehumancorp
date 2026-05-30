@@ -19,14 +19,18 @@ pub struct TaskDecompositionService {
     db: Arc<DB>,
     sqlite_mu: tokio::sync::Mutex<()>,
     mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
+    pub state_machine: Arc<crate::orchestration::statemachine_v2::StateMachine>,
 }
 
 impl TaskDecompositionService {
     pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        let lock = Arc::new(crate::orchestration::locks::StandaloneLock::new());
+        let state_machine = Arc::new(crate::orchestration::statemachine_v2::StateMachine::new(db.clone(), mesh.clone(), lock));
         Self {
             db,
             sqlite_mu: tokio::sync::Mutex::new(()),
             mesh,
+            state_machine,
         }
     }
 
@@ -147,7 +151,16 @@ impl TaskDecompositionService {
             let now = Utc::now();
             let claim_future = self.claim_task_inner(agent_id, now);
             match tokio::time::timeout(timeout, claim_future).await {
-                Ok(res) => return res,
+                Ok(Ok(Some(task))) => return Ok(Some(task)),
+                Ok(Ok(None)) => return Ok(None),
+                Ok(Err(e)) => {
+                    if e.contains("invalid transition") && attempt < max_attempts {
+                        // Another agent may have picked it up, loop and try again
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        continue;
+                    }
+                    return Err(e);
+                }
                 Err(_) => {
                     if start_time.elapsed() > std::time::Duration::from_millis(100) {
                         ::server_telemetry::record_task_claim_contention(
@@ -176,7 +189,7 @@ impl TaskDecompositionService {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                // Use FOR UPDATE SKIP LOCKED
+                // Use FOR UPDATE SKIP LOCKED to find an available task without blocking
                 let row_opt = sqlx::query(
                     r#"
                     SELECT st.id FROM shared_tasks_decomposition st
@@ -205,40 +218,13 @@ impl TaskDecompositionService {
 
                 let id: String = row.get("id");
 
-                // Transition state
-                sqlx::query(
-                    r#"
-                    UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
-                    WHERE id = $3
-                    "#,
-                )
-                .bind(agent_id)
-                .bind(now)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                // Record transition
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'EXECUTING', $3, $4)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(&id)
-                .bind(agent_id)
-                .bind(now)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let task = self.get_task_pg(&mut tx, &id).await?;
-
+                // Commit to release the skip lock
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                // Rely entirely on state machine transition
+                self.state_machine.transition(&id, "EXECUTING", agent_id, None).await?;
+
+                let task = self.get_task(&id).await?;
 
                 let now_ms = now.timestamp_millis();
                 let created_ms = task.created_at.timestamp_millis();
@@ -282,24 +268,17 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
-                    WHERE id = (
-                        SELECT st.id FROM shared_tasks_decomposition st
-                        WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
-                        AND NOT EXISTS (
-                            SELECT 1
-                            FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                            WHERE parent.status != 'COMPLETED'
-                        )
-                        LIMIT 1
+                    SELECT st.id FROM shared_tasks_decomposition st
+                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_each(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                        WHERE parent.status != 'COMPLETED'
                     )
-                    RETURNING id
+                    LIMIT 1
                     "#,
                 )
-                .bind(agent_id)
-                .bind(now.to_rfc3339())
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -313,25 +292,11 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
-
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'EXECUTING', ?, ?)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(&id)
-                .bind(agent_id)
-                .bind(now)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let task = self.get_task_sqlite(&mut tx, &id).await?;
-
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                self.state_machine.transition(&id, "EXECUTING", agent_id, None).await?;
+
+                let task = self.get_task(&id).await?;
 
                 let now_ms = now.timestamp_millis();
                 let created_ms = task.created_at.timestamp_millis();
@@ -599,107 +564,13 @@ impl TaskDecompositionService {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
-                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
-                )
-                .bind(task_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let old_status = match old_status {
-                    Some(s) => s,
-                    None => {
-                        tx.commit().await.map_err(|e| e.to_string())?;
-                        return Err("Task not found".to_string());
-                    }
-                };
-
-                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
-                    .unwrap_or_else(|_| "{}".to_string());
-
-                sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
-                )
-                .bind(payload_update)
-                .bind(now)
-                .bind(task_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(task_id)
-                .bind(old_status)
-                .bind("FAILED")
-                .bind(agent_id)
-                .bind(now)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                tx.commit().await.map_err(|e| e.to_string())?;
+                let payload_update = serde_json::json!({"error": reason});
+                self.state_machine.transition(task_id, "FAILED", agent_id, Some(payload_update)).await?;
                 Ok(())
             }
-            DbStore::Sqlite(pool) => {
-                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
-                )
-                .bind(task_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let old_status = match old_status {
-                    Some(s) => s,
-                    None => {
-                        tx.commit().await.map_err(|e| e.to_string())?;
-                        return Err("Task not found".to_string());
-                    }
-                };
-
-                // SQLite json patching
-                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
-                    .unwrap_or_else(|_| "{}".to_string());
-                sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"
-                )
-                .bind(payload_update)
-                .bind(now.to_rfc3339())
-                .bind(task_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(task_id)
-                .bind(old_status)
-                .bind("FAILED")
-                .bind(agent_id)
-                .bind(now.to_rfc3339())
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                tx.commit().await.map_err(|e| e.to_string())?;
+            DbStore::Sqlite(_pool) => {
+                let payload_update = serde_json::json!({"error": reason});
+                self.state_machine.transition(task_id, "FAILED", agent_id, Some(payload_update)).await?;
                 Ok(())
             }
         }
@@ -726,52 +597,7 @@ impl TaskDecompositionService {
         }
         match &self.db.store {
             DbStore::Postgres => {
-                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
-                )
-                .bind(id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let old_status = match old_status {
-                    Some(s) => s,
-                    None => {
-                        tx.commit().await.map_err(|e| e.to_string())?;
-                        return Err("Task not found".to_string());
-                    }
-                };
-
-                sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = $1, updated_at = $2 WHERE id = $3"
-                )
-                .bind(new_status)
-                .bind(now)
-                .bind(id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(id)
-                .bind(old_status)
-                .bind(new_status)
-                .bind(agent_id)
-                .bind(now)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                tx.commit().await.map_err(|e| e.to_string())?;
+                self.state_machine.transition(id, new_status, agent_id, None).await?;
 
                 if new_status == "COMPLETED" {
                     let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
@@ -779,52 +605,7 @@ impl TaskDecompositionService {
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
-                )
-                .bind(id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let old_status = match old_status {
-                    Some(s) => s,
-                    None => {
-                        tx.commit().await.map_err(|e| e.to_string())?;
-                        return Err("Task not found".to_string());
-                    }
-                };
-
-                sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = ?, updated_at = ? WHERE id = ?",
-                )
-                .bind(new_status)
-                .bind(now)
-                .bind(id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                let trans_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query(
-                    r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    "#
-                )
-                .bind(trans_id)
-                .bind(id)
-                .bind(old_status)
-                .bind(new_status)
-                .bind(agent_id)
-                .bind(now)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-                tx.commit().await.map_err(|e| e.to_string())?;
+                self.state_machine.transition(id, new_status, agent_id, None).await?;
 
                 if new_status == "COMPLETED" {
                     let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
