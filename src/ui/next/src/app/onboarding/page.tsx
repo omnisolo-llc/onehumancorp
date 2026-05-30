@@ -52,6 +52,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -77,6 +78,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -94,7 +96,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
