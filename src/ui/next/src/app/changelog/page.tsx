@@ -23,7 +23,7 @@ export default function ChangelogPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit">Release Notes & Changelog</h1>
         <div className="space-y-8">
           {sections.map((section, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-2xl shadow-lg border border-white/50 relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5">
               <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">{section.version}</h2>
               <div className="space-y-2">
                 {section.contentLines.map((line, lidx) => {
