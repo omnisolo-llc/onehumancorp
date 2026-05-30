@@ -7,14 +7,14 @@ use tokio::fs;
 
 /// Subagent Orchestration: Claude Code Execution Models
 /// 1) Fork (byte-identical copy of parent context)
-/// 2) Teammate (parallel worker via queue)
+/// 2) Teammate (separate terminal pane communicating via file-based mailboxes)
 /// 3) Worktree (spawns its own git worktree with an isolated branch)
 ///
 /// Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
 #[derive(Debug, Clone)]
 pub enum ClaudeSubagentMode {
     Fork,
-    Teammate { task_id: String },
+    Teammate { mailbox_dir: PathBuf },
     Worktree { base_repo_path: PathBuf, branch_name: String },
 }
 
@@ -47,43 +47,29 @@ impl ClaudeSubagentSpawner {
                 sub_config.injected_context = Some(parent_context.to_vec());
                 self.execute_and_summarize(task, &sub_config).await
             }
-            ClaudeSubagentMode::Teammate { task_id } => {
-                // Teammate: Enqueues a job using the sub_agent_jobs database queue.
-                // We use the REST API as the transport since we might run externally
-
-                let client = reqwest::Client::new();
-                let addr = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "http://localhost:3000".to_string());
-                let url = format!("{}/api/mesh/v2/broadcast", addr);
-
-                use base64::Engine;
-                let payload = serde_json::json!({
-                    "topic": "subagent_jobs",
-                    "message": {
-                        "agent_id": "system",
-                        "action": "enqueue",
-                        "status": "QUEUED",
-                        "payload": base64::engine::general_purpose::STANDARD.encode(
-                            serde_json::to_vec(&serde_json::json!({
-                                "job_id": task_id,
-                                "task": task,
-                                "role": "teammate_subagent"
-                            })).unwrap()
-                        ),
-                        "msg_id": task_id.clone()
-                    }
-                });
-
-                match client.post(&url).json(&payload).send().await {
-                    Ok(res) if res.status().is_success() => {
-                        Ok(format!("Teammate subagent spawned. Job ID: {}", task_id))
-                    }
-                    Ok(res) => {
-                        Err(format!("Failed to enqueue teammate task. Status: {}", res.status()).into())
-                    }
-                    Err(e) => {
-                        Err(format!("Failed to enqueue teammate task: {}", e).into())
-                    }
+            ClaudeSubagentMode::Teammate { mailbox_dir } => {
+                // Teammate: communicates via file-based mailboxes
+                if !mailbox_dir.exists() {
+                    fs::create_dir_all(mailbox_dir).await?;
                 }
+                let in_mbox = mailbox_dir.join("inbox.txt");
+                let out_mbox = mailbox_dir.join("outbox.txt");
+
+                fs::write(&in_mbox, task).await?;
+
+                // Inject mailbox instruction
+                let mut mailbox_instructions = config.developer_instructions.clone();
+                mailbox_instructions.push_str(&format!(
+                    "\n[Teammate Mode] You have an inbox at {} and outbox at {}. Read inbox for task details and write final results to outbox.",
+                    in_mbox.display(), out_mbox.display()
+                ));
+                sub_config.developer_instructions = mailbox_instructions;
+
+                let result = self.execute_and_summarize(task, &sub_config).await?;
+
+                // Save result to outbox
+                fs::write(&out_mbox, &result).await?;
+                Ok(result)
             }
             ClaudeSubagentMode::Worktree { base_repo_path, branch_name } => {
                 // Worktree: spawns its own git worktree with an isolated branch
@@ -213,48 +199,40 @@ impl ClaudeSubagentSpawner {
         assert_eq!(result, "Condensed summary of fork");
     }
 
-    #[test]
-    fn test_claude_subagent_teammate() {
-        // Mock server to test success path
-        let mock_server = httpmock::MockServer::start();
-        let mock = mock_server.mock(|when, then| {
-            when.method(httpmock::Method::POST)
-                .path("/api/mesh/v2/broadcast");
-            then.status(200);
+    #[tokio::test]
+    async fn test_claude_subagent_teammate() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "Condensed summary of teammate".to_string()
+            ]),
         });
+        let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
-        temp_env::with_vars(vec![("OHC_AGENT_ADDRESS", Some(mock_server.base_url()))], || {
-            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-                let parent_client = Arc::new(MockLlmClient {
-                    responses: std::sync::Mutex::new(vec![
-                        "Condensed summary of teammate".to_string()
-                    ]),
-                });
-                let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
-
-                let sub_client = Arc::new(MockLlmClient {
-                    responses: std::sync::Mutex::new(vec![
-                        "Long raw output from teammate...".to_string()
-                    ]),
-                });
-                let subagent = Arc::new(Agent::new(sub_client, vec![]));
-
-                let spawner = ClaudeSubagentSpawner::new(
-                    parent_agent,
-                    subagent,
-                    ClaudeSubagentMode::Teammate { task_id: "test-id".to_string() },
-                );
-
-                let config = AgentRunConfig::default();
-                let result = spawner.run_subagent("Do task", &[], &config).await;
-
-                assert!(result.is_ok());
-                let msg = result.unwrap();
-                assert!(msg.contains("Teammate subagent spawned. Job ID: test-id"));
-            });
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "Long raw output from teammate...".to_string()
+            ]),
         });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
-        mock.assert();
+        let dir = tempdir().unwrap();
+        let mailbox_dir = dir.path().join("mailboxes");
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_agent,
+            subagent,
+            ClaudeSubagentMode::Teammate { mailbox_dir: mailbox_dir.clone() },
+        );
+
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
+
+        assert_eq!(result, "Condensed summary of teammate");
+        assert!(mailbox_dir.join("inbox.txt").exists());
+        assert!(mailbox_dir.join("outbox.txt").exists());
+
+        let out_content = fs::read_to_string(mailbox_dir.join("outbox.txt")).await.unwrap();
+        assert_eq!(out_content, "Condensed summary of teammate");
     }
 
     #[tokio::test]
