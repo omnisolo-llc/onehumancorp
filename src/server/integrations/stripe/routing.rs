@@ -15,14 +15,25 @@ impl PaymentRouter {
     pub const ACH_FEE_CAP: f64 = 5.0;
     pub const ACH_MIN_AMOUNT: f64 = 50.0;
 
+    fn get_ach_min_amount() -> f64 {
+        std::env::var("ACH_MIN_AMOUNT")
+            .unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string())
+            .parse::<f64>()
+            .unwrap_or(Self::ACH_MIN_AMOUNT)
+    }
+
     /// Returns the optimal payment method based on the transaction amount.
     /// Stripe Credit Card fee: 2.9% + $0.30
     /// Stripe ACH fee: 0.8%, capped at $5.00
     pub fn optimize_payment_method(amount_usd: f64) -> PaymentMethod {
-        Self::optimize_payment_method_with_currency(amount_usd, "USD")
+        Self::optimize_payment_method_with_currency_and_threshold(amount_usd, "USD", Self::get_ach_min_amount())
     }
 
     pub fn optimize_payment_method_with_currency(amount: f64, currency: &str) -> PaymentMethod {
+        Self::optimize_payment_method_with_currency_and_threshold(amount, currency, Self::get_ach_min_amount())
+    }
+
+    pub fn optimize_payment_method_with_currency_and_threshold(amount: f64, currency: &str, ach_min: f64) -> PaymentMethod {
         if currency.eq_ignore_ascii_case("INR") {
             return PaymentMethod::Razorpay;
         }
@@ -34,7 +45,7 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -47,7 +58,8 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = Self::get_ach_min_amount();
+        if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
@@ -162,5 +174,15 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
+    }
+}
+
+#[cfg(test)]
+mod test_threshold {
+    use super::*;
+    #[test]
+    fn test_optimize_payment_method_custom_threshold() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency_and_threshold(500.0, "USD", 1000.0), PaymentMethod::CreditCard);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency_and_threshold(1500.0, "USD", 1000.0), PaymentMethod::Ach);
     }
 }
