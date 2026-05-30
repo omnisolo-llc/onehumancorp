@@ -422,6 +422,50 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "voice_call" && (
+                    <div className="mb-6 p-4 rounded-xl bg-sky-50 border border-sky-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-sky-800 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        Missed Call Handled
+                      </div>
+                      <div className="text-xs text-sky-700 font-medium">
+                        {req.payload.caller || "Unknown Caller"} called.
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-sky-100 relative">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
+                          AI Transcript
+                        </div>
+                        <p className="text-xs text-gray-700 italic mt-4">
+                          "{req.payload.transcription || "..."}"
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-sky-100 relative mt-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
+                          AI Response
+                        </div>
+                        <p className="text-xs text-gray-700 italic mt-4">
+                          "{req.payload.generated_response || "..."}"
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-1 rounded font-medium">
+                          Follow-up SMS Sent
+                        </span>
+                        {req.payload.audio_url && (
+                          <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium flex items-center gap-1 cursor-pointer">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                            Play Audio
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "abandoned_cart" && (
                     <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
