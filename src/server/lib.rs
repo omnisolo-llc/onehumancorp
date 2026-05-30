@@ -2030,6 +2030,28 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
 
+    let tm_mesh = handoff_mesh.clone();
+    hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
+        let payload = match serde_json::to_string(&task) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::error!("Failed to serialize task: {}", e);
+                return;
+            }
+        };
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: event_type,
+            status: "ok".to_string(),
+            payload: payload.into_bytes(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        let tm_mesh_clone = tm_mesh.clone();
+        tokio::spawn(async move {
+            let _ = tm_mesh_clone.publish("tasks", msg.payload).await;
+        });
+    }));
+
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
