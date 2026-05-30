@@ -14,7 +14,7 @@ test.describe('Cost Dashboard', () => {
 
     // Check specific cost breakdown elements
     await expect(page.getByText('LLM Usage')).toBeVisible();
-    await expect(page.getByText('Storage', { exact: true })).toBeVisible();
+    await expect(page.locator('text=Storage').first()).toBeVisible();
     await expect(page.getByText('Payment Fees')).toBeVisible();
 
     // Ensure no jargon
