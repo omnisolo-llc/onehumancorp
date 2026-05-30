@@ -501,21 +501,21 @@ async fn handle_get_milestone_card(
 }
 
 #[derive(Debug, Serialize)]
-pub struct MilestoneShareResponse {
+pub struct MilestoneShareCardResponse {
     pub share_message: String,
     pub referral_link: String,
 }
 
 async fn handle_get_milestone_share_info(
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>
-) -> impl IntoResponse {
+) -> axum::Json<MilestoneShareCardResponse> {
     let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
 
     let referral_link = format!("https://ohc.store/join?ref={}", tenant_id);
 
     let share_message = format!("I just reached a new milestone on my store! Start your own business today with One Human Corp: {}", referral_link);
 
-    Json(MilestoneShareResponse {
+    Json(MilestoneShareCardResponse {
         share_message,
         referral_link,
     })

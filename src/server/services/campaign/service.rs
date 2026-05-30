@@ -111,7 +111,7 @@ impl CampaignService for MyCampaignService {
     ) -> Result<Response<LaunchCampaignResponse>, Status> {
         let req = request.into_inner();
 
-        let campaign = self.repo
+        let _campaign = self.repo
             .get_campaign(&req.tenant_id, &req.campaign_id)
             .await
             .map_err(|e| Status::not_found(format!("Campaign not found: {}", e)))?;
