@@ -134,6 +134,8 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
+      setStep(1);
+      setChatStep(3);
     } finally {
       setIsLoading(false);
     }
