@@ -832,4 +832,25 @@ mod tests {
         assert_eq!(msg.content, "Hello World");
 
     }
+
+    #[tokio::test]
+    async fn test_meta_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "meta".to_string(),
+            base_url: "https://graph.facebook.com".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "whatsapp:12345".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("meta", "https://graph.facebook.com", creds).unwrap();
+
+        let msg = registry.send_chat_message("meta", "whatsapp:09876", "agent1", "Hello World", "thread1").unwrap();
+        assert_eq!(msg.content, "Hello World");
+
+        let clients = registry.meta_clients.read().unwrap();
+        assert!(clients.contains_key("meta"));
+    }
 }
