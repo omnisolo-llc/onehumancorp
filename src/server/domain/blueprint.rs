@@ -108,13 +108,16 @@ impl SkillBlueprint {
     }
 
     pub fn namespace_roles(&mut self, namespace: &str) {
-        let prefix = format!("{}/", namespace);
-        for role in &mut self.roles {
-            role.id = format!("{}{}", prefix, role.id);
-            if !role.reports_to.is_empty() {
-                role.reports_to = format!("{}{}", prefix, role.reports_to);
-            }
+        if namespace.is_empty() {
+            return;
         }
+        let prefix = format!("{}/", namespace);
+        self.roles.iter_mut().for_each(|role| {
+            role.id.insert_str(0, &prefix);
+            if !role.reports_to.is_empty() {
+                role.reports_to.insert_str(0, &prefix);
+            }
+        });
     }
 }
 
@@ -275,5 +278,20 @@ roles:
         assert_eq!(bp.roles[0].id, "test_v1/a");
         assert_eq!(bp.roles[1].id, "test_v1/b");
         assert_eq!(bp.roles[1].reports_to, "test_v1/a");
+    }
+
+    #[test]
+    fn test_namespace_roles_empty() {
+        let mut bp = SkillBlueprint {
+            domain: "Test".to_string(),
+            roles: vec![
+                RoleDefinition { id: "a".to_string(), title: "".to_string(), context: "context".to_string(), tools: vec![], reports_to: "".to_string() },
+            ],
+        };
+
+        bp.namespace_roles("");
+
+        assert_eq!(bp.roles[0].id, "a");
+        assert_eq!(bp.roles[0].reports_to, "");
     }
 }
