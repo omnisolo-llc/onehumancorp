@@ -122,8 +122,8 @@ impl SharedTaskOrchestrator {
                         JOIN shared_tasks_v4 parent ON parent.id = dep_id
                         WHERE parent.status != 'COMPLETED'
                     )
-                    FOR UPDATE SKIP LOCKED
                     LIMIT 1
+                    FOR UPDATE SKIP LOCKED
                     "#
                 )
                 .bind(organization_id)
@@ -269,6 +269,179 @@ impl SharedTaskOrchestrator {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Ok(None)
                 }
+            }
+        }
+    }
+
+    pub async fn update_task_status(&self, id: &str, new_status: &str, agent_id: Option<&str>) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let current_status: String = sqlx::query("SELECT status FROM shared_tasks_v4 WHERE id = $1")
+                    .bind(id)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map(|row| row.get("status"))
+                    .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_v4
+                    SET status = $1, updated_at = $2
+                    WHERE id = $3
+                    "#
+                )
+                .bind(new_status)
+                .bind(Utc::now())
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(id)
+                .bind(current_status)
+                .bind(new_status)
+                .bind(agent_id)
+                .bind(Utc::now())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let current_status: String = sqlx::query("SELECT status FROM shared_tasks_v4 WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map(|row| row.get("status"))
+                    .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_v4
+                    SET status = ?, updated_at = ?
+                    WHERE id = ?
+                    "#
+                )
+                .bind(new_status)
+                .bind(Utc::now().to_rfc3339())
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let trans_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query(
+                    r#"
+                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    "#
+                )
+                .bind(trans_id)
+                .bind(id)
+                .bind(current_status)
+                .bind(new_status)
+                .bind(agent_id)
+                .bind(Utc::now().to_rfc3339())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn complete_task(&self, id: &str, agent_id: Option<&str>) -> Result<(), String> {
+        self.update_task_status(id, "COMPLETED", agent_id).await
+    }
+
+    pub async fn list_tasks(&self, organization_id: &str) -> Result<Vec<SharedTaskV4>, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rows = sqlx::query("SELECT * FROM shared_tasks_v4 WHERE organization_id = $1 ORDER BY created_at DESC")
+                    .bind(organization_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let tasks = rows.into_iter().map(|row| {
+                    SharedTaskV4 {
+                        id: row.get("id"),
+                        organization_id: row.get("organization_id"),
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        status: row.get("status"),
+                        agent_id: row.get("agent_id"),
+                        priority: row.get("priority"),
+                        payload: row.get("payload"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: row.get("dependencies"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log: row.get("deliberation_log"),
+                        depth: row.get("depth"),
+                    }
+                }).collect();
+
+                Ok(tasks)
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query("SELECT * FROM shared_tasks_v4 WHERE organization_id = ? ORDER BY created_at DESC")
+                    .bind(organization_id)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let tasks = rows.into_iter().map(|row| {
+                    let created_str: String = row.get("created_at");
+                    let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                    let updated_str: String = row.get("updated_at");
+                    let dt_updated = chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&chrono::Utc)))
+                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                    SharedTaskV4 {
+                        id: row.get("id"),
+                        organization_id: row.get("organization_id"),
+                        title: row.get("title"),
+                        description: row.get("description"),
+                        status: row.get("status"),
+                        agent_id: row.get("agent_id"),
+                        priority: row.get("priority"),
+                        payload: row.get("payload"),
+                        parent_plan_id: row.get("parent_plan_id"),
+                        dependencies: row.get("dependencies"),
+                        created_at: dt_created,
+                        updated_at: dt_updated,
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log: row.get("deliberation_log"),
+                        depth: row.get("depth"),
+                    }
+                }).collect();
+
+                Ok(tasks)
             }
         }
     }

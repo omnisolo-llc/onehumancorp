@@ -523,12 +523,12 @@ export default function BuilderPage() {
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+  <a href="ohc://join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
 </div>`}
                 </pre>
                 <button
                     onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                        const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="ohc://join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
                         navigator.clipboard.writeText(code);
                         alert("Copied embed code to clipboard!");
                     }}
