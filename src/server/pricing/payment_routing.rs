@@ -20,6 +20,7 @@ mod tests {
 
     #[test]
     fn test_route_payment() {
+        assert_eq!(route_payment(0), "CreditCard");
         assert_eq!(route_payment(100), "CreditCard");
         assert_eq!(route_payment(4999), "CreditCard");
         assert_eq!(route_payment(5000), "ACH");
