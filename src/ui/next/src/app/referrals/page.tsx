@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
-  const referralLink = "ohc://join?ref=e2e-tenant";
+  const referralLink = "ohc://join?ref=DEFAULT";
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
 
   return (
