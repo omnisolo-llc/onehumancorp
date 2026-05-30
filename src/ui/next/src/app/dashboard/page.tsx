@@ -1155,6 +1155,26 @@ export default function Dashboard() {
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
                 </div>
             </div>
+
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mt-8" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Create a Viral Badge</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Show off that your store is "Powered by OHC" anywhere on the web. Create an embeddable floating badge and earn credits for every referral!</p>
+                    <button
+                        onClick={() => router.push('/viral-badge')}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                        Configure Viral Badge
+                    </button>
+                </div>
+                <div className="w-full md:w-1/3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-indigo-100 min-h-[160px] relative overflow-hidden">
+                    <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-purple-200 rounded-full blur-xl opacity-50"></div>
+                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full font-inter text-xs font-semibold shadow-lg bg-white/40 text-gray-900 border border-white/60 backdrop-blur-[20px] saturate-200 shadow-[0_8px_32px_rgba(0,0,0,0.1)] relative z-10">
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                         Powered by OHC
+                    </div>
+                </div>
+            </div>
          </section>
 
 
