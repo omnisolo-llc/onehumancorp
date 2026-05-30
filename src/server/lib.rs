@@ -633,6 +633,7 @@ async fn http_login_handler(
 pub async fn advisory_insights_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
+    hub: std::sync::Arc<crate::hub::Hub>,
     headers: axum::http::HeaderMap,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -697,10 +698,21 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+    match client.reason(&compressed_prompt).await {
+        Ok(output) => {
+            hub.get_cost_auditor().record_event(crate::services::billing::auditor::AuditEvent {
+                agent_id: "advisory_insights".to_string(),
+                tenant_id,
+                input_tokens: (compressed_prompt.chars().count() / 4) as i64,
+                output_tokens: (output.chars().count() / 4) as i64,
+                cached_input_tokens: 0,
+                local_embedding_tokens: 0,
+            });
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        },
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
@@ -2583,7 +2595,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::routing::get({
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+                let hub = hub.clone();
+                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, hub, headers).await }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
