@@ -114,9 +114,10 @@ mod tests {
             }
         }
 
+
         // Add a memory record
         let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
-            id: Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             agent_id: "customer_success_agent".to_string(),
             content: "We make excellent vegan cakes for special occasions.".to_string(),
@@ -130,6 +131,20 @@ mod tests {
             metadata: None,
         };
         orchestrator.write_long_term_memory(record).await.unwrap();
+
+        // Let's seed the customer_timeline instead because customer_success reads from it now
+        let timeline_event = crate::orchestration::departments::types::TimelineEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            customer_id: "unknown_customer".to_string(),
+            event_type: "memory".to_string(),
+            source: "system".to_string(),
+            content: "We make excellent vegan cakes for special occasions.".to_string(),
+            metadata: None,
+            created_at: None,
+        };
+        orchestrator.append_to_timeline(timeline_event).await.unwrap();
+
 
         // 1. Test Draft Mode (auto_approve_limits = 0.0)
         {

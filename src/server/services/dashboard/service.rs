@@ -730,6 +730,18 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
+        let org = org.map(|mut o| {
+            if req.mobile_optimized {
+                o.domain = String::new();
+                o.ceo_id = String::new();
+                o.created_at_unix = 0;
+                o.members = vec![];
+                o.name = String::new();
+                o.tier = String::new();
+            }
+            o
+        });
+
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
@@ -880,6 +892,8 @@ impl DashboardService for MyDashboardService {
                 o.role_profiles = vec![];
                 o.ceo_id = String::new();
                 o.created_at_unix = 0;
+                o.name = String::new();
+                o.tier = String::new();
                 o
             })
         } else {
