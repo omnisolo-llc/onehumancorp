@@ -25,10 +25,11 @@ jobs:
   check-changes:
     name: Check what files changed
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
@@ -59,14 +60,6 @@ jobs:
             echo "Non-markdown files changed: $non_md_files"
           fi
 
-  repo-hygiene:
-    name: Repo hygiene
-    needs: check-changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-
       - name: Check tracked artifacts
         run: .github/scripts/check_repo_hygiene.sh
 
@@ -74,7 +67,6 @@ jobs:
     name: Bazel build (${{ matrix.name }})
     needs:
       - check-changes
-      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -101,7 +93,7 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Free runner disk space
         if: startsWith(matrix.runner, 'ubuntu')
@@ -243,12 +235,11 @@ jobs:
     name: Bazel test
     needs:
       - check-changes
-      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Free runner disk space
         run: |
@@ -303,12 +294,11 @@ jobs:
     name: Bazel Playwright E2E
     needs:
       - check-changes
-      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Free runner disk space
         run: |
@@ -364,7 +354,6 @@ jobs:
     name: Kind E2E
     needs:
       - check-changes
-      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -379,7 +368,7 @@ jobs:
       HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Free runner disk space
         run: |
