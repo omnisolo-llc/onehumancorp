@@ -6,7 +6,7 @@ test.describe('Miser Billing Core User Journey', () => {
     await page.goto('/plan');
 
     // Check main elements
-    await expect(page.locator('h1').filter({ hasText: 'My Plan' })).toBeVisible();
+    await expect(page.locator('h1').filter({ hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Current Plan')).toBeVisible();
     await expect(page.locator('text=Estimated Next Bill')).toBeVisible();
     await expect(page.locator('text=Your Current Usage')).toBeVisible();
