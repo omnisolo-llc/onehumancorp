@@ -3895,7 +3895,8 @@ mod tests {
         }
     }
 
-    pub struct MockToolExecutor;
+    #[allow(dead_code)]
+        pub struct MockToolExecutor;
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
@@ -4036,6 +4037,7 @@ mod tests {
             ]),
         });
 
+        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -6335,6 +6337,7 @@ mod hierarchical_prompt_tests {
 }
 
 
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }
