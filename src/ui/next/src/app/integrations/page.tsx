@@ -8,7 +8,7 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
@@ -35,8 +35,8 @@ export default function Integrations() {
       ));
       router.push("/dashboard");
     }
-    if (id === 'ayrshare') {
-      alert("Connecting Ayrshare via OAuth...");
+    if (id === 'manychat') {
+      alert("Connecting Manychat via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));

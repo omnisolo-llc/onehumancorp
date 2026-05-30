@@ -79,12 +79,9 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
-        .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
-        .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
-        .route("/milestone/share", post(handle_milestone_share))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/milestone-share", post(handle_milestone_share))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
@@ -119,44 +116,11 @@ pub struct GenerateReviewResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateCustomerReferralRequest {
-    pub store_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateCustomerReferralResponse {
-    pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateCartRequest {
-    pub customer_name: Option<String>,
-    pub cart_value: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateCartResponse {
-    pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
     pub id: String,
 }
 
 
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MilestoneShareRequest {
-    pub tenant_id: String,
-    pub milestone_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MilestoneShareResponse {
-    pub reward_unlocked: bool,
-    pub reward_type: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
@@ -217,35 +181,6 @@ async fn handle_generate_review(
     );
 
     Json(GenerateReviewResponse {
-        message: generated,
-    })
-}
-
-async fn handle_generate_customer_referral(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateCustomerReferralRequest>,
-) -> impl IntoResponse {
-    let store = req.store_name.unwrap_or_else(|| "our store".to_string());
-    let generated = format!(
-        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
-        store, store
-    );
-    Json(GenerateCustomerReferralResponse {
-        message: generated,
-    })
-}
-
-async fn handle_generate_cart(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateCartRequest>,
-) -> impl IntoResponse {
-    let name = req.customer_name.unwrap_or_else(|| "there".to_string());
-    let value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
-    let generated = format!(
-        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
-        name, value
-    );
-    Json(GenerateCartResponse {
         message: generated,
     })
 }
@@ -567,26 +502,6 @@ async fn handle_generate_discount_share(
     Ok(Json(DiscountShareResponse { share_url }))
 }
 
-
-async fn handle_milestone_share(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<MilestoneShareRequest>,
-) -> Result<Json<MilestoneShareResponse>, StatusCode> {
-    if let Ok(event) = serde_json::to_string(&serde_json::json!({ "tenant_id": req.tenant_id, "milestone_id": req.milestone_id })) {
-        let msg = crate::hub::HubEvent {
-            r#type: "growth.milestone_shared".to_string(),
-            payload: event,
-            occurred_at: chrono::Utc::now(),
-        };
-        state.hub.append_recent_event(msg);
-    }
-
-    Ok(Json(MilestoneShareResponse {
-        reward_unlocked: true,
-        reward_type: "pro_trial_extension".to_string(),
-    }))
-}
-
 async fn handle_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
@@ -846,35 +761,6 @@ mod tests {
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
     }
 
-
-    #[tokio::test]
-    async fn test_handle_milestone_share() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
-            return;
-        }
-
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = MilestoneShareRequest {
-            tenant_id: "test-tenant-123".to_string(),
-            milestone_id: "milestone_first_order".to_string(),
-        };
-
-        let res = handle_milestone_share(Extension(state.clone()), Json(req)).await;
-        assert!(res.is_ok());
-
-        let res_json = res.unwrap().0;
-        assert!(res_json.reward_unlocked);
-        assert_eq!(res_json.reward_type, "pro_trial_extension");
-
-        let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.milestone_shared"));
-    }
-
     #[tokio::test]
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
@@ -994,40 +880,6 @@ mod tests {
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
-    }
-
-    #[tokio::test]
-    async fn test_generate_customer_referral() {
-        let pool = setup_db().await;
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
-        let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
-
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GenerateCustomerReferralResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert!(res_json.message.contains("Maya Cakes"));
-        assert!(res_json.message.contains("VIP Referral Program"));
-    }
-
-    #[tokio::test]
-    async fn test_generate_cart() {
-        let pool = setup_db().await;
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = GenerateCartRequest { customer_name: Some("Bob".to_string()), cart_value: Some("$100.00".to_string()) };
-        let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
-
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GenerateCartResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert!(res_json.message.contains("Hi Bob"));
-        assert!(res_json.message.contains("totaling $100.00"));
     }
 
     #[tokio::test]
