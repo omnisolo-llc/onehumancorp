@@ -215,7 +215,7 @@ export function HelpWidget() {
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-md text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all"
             aria-label="Help"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -227,7 +227,7 @@ export function HelpWidget() {
 
       {open && (
         <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md">
+          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[20px] saturate-200">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
@@ -333,7 +333,7 @@ export function HelpWidget() {
                   {videos.map((v) => (
                     <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 bg-white/90 backdrop-blur-[20px] saturate-200 rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                       </div>
                       <div className="absolute bottom-2 left-2 right-2 z-10">
@@ -371,11 +371,11 @@ export function HelpWidget() {
       {/* Video Player Modal */}
       {activeVideo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-[20px] saturate-200 p-4">
-          <div className="bg-black/90 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
+          <div className="bg-black/90 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start">
               <h3 className="text-white font-bold text-sm line-clamp-2 drop-shadow-md">{activeVideo.title}</h3>
-              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 backdrop-blur-md border border-white/10 rounded-full p-1.5 transition-colors">
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 backdrop-blur-[20px] saturate-200 border border-white/10 rounded-full p-1.5 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -395,7 +395,7 @@ export function HelpWidget() {
                 <button className="text-white/80 hover:text-white transition-colors">
                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                 </button>
-                <div className="h-1.5 flex-1 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden cursor-pointer relative group">
+                <div className="h-1.5 flex-1 bg-white/20 backdrop-blur-[20px] saturate-200 rounded-full overflow-hidden cursor-pointer relative group">
                   <div className="h-full bg-blue-500 w-1/3 relative shadow-[0_0_10px_rgba(59,130,246,0.8)]">
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full scale-0 group-hover:scale-100 transition-transform shadow-md"></div>
                   </div>

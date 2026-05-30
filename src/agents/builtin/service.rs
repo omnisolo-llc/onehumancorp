@@ -664,7 +664,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
+        tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
