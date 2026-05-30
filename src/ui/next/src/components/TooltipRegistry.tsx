@@ -21,7 +21,13 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {});
+    fetch("/api/tooltips")
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to fetch tooltips: ${r.statusText}`);
+        return r.json();
+      })
+      .then(data => setTooltips(data))
+      .catch((err) => console.error("TooltipRegistry:", err));
   }, []);
 
   return (
