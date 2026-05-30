@@ -11,6 +11,9 @@ export default function WebsiteBuilderPage() {
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
+  const [setupStep, setSetupStep] = useState(1);
+
+
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
@@ -181,63 +184,93 @@ export default function WebsiteBuilderPage() {
     }
   };
 
+
   if (status === "idle") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
-
-          <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
-            <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1>
-              <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                Review and add any extra details to help our AI generate the perfect store.
-              </p>
-
-              <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
-              <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-                <textarea
-                  id="bio-input"
-                  enterKeyHint="done"
-                  autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
-                  style={{ borderRadius: '8px' }}
-                  value={bio}
-                  onChange={(e) => updateBio(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      if (bio.trim().length > 5) {
-                        handleGenerate();
-                      }
-                    }
-                  }}
-                  placeholder="e.g. I run a mobile dog grooming service in Portland"
-                  rows={6}
-                />
-              </WithTooltip>
-
-              <div className="flex gap-4">
-                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+    if (setupStep === 1) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+          <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+            <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
+                  Zero tech skills needed. We do the heavy lifting.
+                </p>
+                <div className="flex gap-4">
                   <button
-                    id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
-                      bio.trim().length > 5
-                        ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
-                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
-                    onClick={handleGenerate}
-                    disabled={bio.trim().length <= 5}
+                    className="w-full p-4 font-bold font-outfit text-lg transition-all text-white shadow-md active:scale-[0.98] bg-[#0071E3]"
+                    style={{ borderRadius: '8px' }}
+                    onClick={() => setSetupStep(2)}
                   >
-                    Build My Storefront
+                    🚀 Start My Business Next
                   </button>
-                </WithTooltip>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
+
+    if (setupStep === 2) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+          <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+            <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <button onClick={() => setSetupStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  Back
+                </button>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
+                  Describe what you sell, your target audience, and the vibe of your brand.
+                </p>
+
+                <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                  <textarea
+                    id="bio-input"
+                    enterKeyHint="done"
+                    autoCapitalize="sentences"
+                    className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
+                    style={{ borderRadius: '8px' }}
+                    value={bio}
+                    onChange={(e) => updateBio(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (bio.trim().length > 5) {
+                          handleGenerate();
+                        }
+                      }
+                    }}
+                    placeholder="e.g. I run a mobile dog grooming service in Portland"
+                    rows={6}
+                  />
+                </WithTooltip>
+
+                <div className="flex gap-4">
+                  <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                    <button
+                      id="generate-btn"
+                      className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                        bio.trim().length > 5
+                          ? "text-white shadow-md active:scale-[0.98]"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      }`}
+                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                      onClick={handleGenerate}
+                      disabled={bio.trim().length <= 5}
+                    >
+                      Build My Storefront
+                    </button>
+                  </WithTooltip>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   if (status === "generating") {

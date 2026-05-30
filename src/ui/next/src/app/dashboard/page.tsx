@@ -39,6 +39,11 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
 
+  const [showManageAI, setShowManageAI] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(false);
+
+
   // Growth Loop: Post-Purchase Social Share State
   const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
   const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
@@ -484,6 +489,36 @@ export default function Dashboard() {
              </div>
            </section>
          )}
+
+
+            <section className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Quick Actions</h2>
+                    <button className="text-sm font-medium" style={{ color: '#0066FF' }}>View All</button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button
+                      className="w-full flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 active:scale-[0.98] transition-all group"
+                      onClick={() => setShowManageAI(true)} aria-label="Manage AI Assistants"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        🤖
+                      </div>
+
+
+                    </button>
+                    <button
+                      className="w-full flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 active:scale-[0.98] transition-all group"
+                      onClick={() => setShowSettingsModal(true)} aria-label="Settings"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors">
+                        ⚙️
+                      </div>
+
+
+                    </button>
+                </div>
+            </section>
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
@@ -2049,6 +2084,57 @@ export default function Dashboard() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free
             </button>
+          </div>
+        </div>
+      )}
+
+
+      {/* Manage AI Modal */}
+      {showManageAI && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white/80 backdrop-blur-xl w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/50">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900">Agents</h2>
+              <button onClick={() => setShowManageAI(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-white/60 border border-gray-100 shadow-sm flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Marketing Pro</h3>
+                  <p className="text-xs text-gray-500">Auto-posts to social media</p>
+                </div>
+                <div className="w-10 h-6 bg-green-500 rounded-full relative">
+                   <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white/80 backdrop-blur-xl w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/50">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900">Settings</h2>
+              <button onClick={() => setShowSettingsModal(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 p-4 rounded-xl bg-white/60 border border-gray-100 shadow-sm cursor-pointer hover:bg-white/80">
+                <input
+                  type="checkbox"
+                  checked={emailNotifications}
+                  onChange={(e) => setEmailNotifications(e.target.checked)}
+                  className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="font-semibold text-gray-900">Enable Email Notifications</span>
+              </label>
+            </div>
           </div>
         </div>
       )}
