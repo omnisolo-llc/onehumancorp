@@ -78,6 +78,13 @@ impl AuthConfig {
     }
 
     fn check_spiffe(&self, req: &Request<()>, allowed_id: Option<&str>) -> Result<(), Status> {
+        if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+            let certs = req.peer_certs().map(|c| c.iter().map(|cert| cert.as_ref().to_vec()).collect::<Vec<Vec<u8>>>());
+            let validator = crate::spiffe::SpiffeValidator::new();
+            use crate::spiffe::IdentityValidator;
+            validator.validate_svid(certs)?;
+        }
+
         let md = req.metadata();
         let spiffe_id = md.get("x-spiffe-id")
             .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
@@ -139,8 +146,8 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let domain = parts[0];
     
     match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
-        _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
+        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
+        _ if domain.ends_with(".ohc.global") => {}
         _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
     }
     

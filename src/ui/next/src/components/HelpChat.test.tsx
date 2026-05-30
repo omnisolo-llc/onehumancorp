@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HelpChat } from './HelpChat';
@@ -8,6 +9,7 @@ global.fetch = vi.fn() as any;
 
 describe('HelpChat Component', () => {
   beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
     vi.clearAllMocks();
   });
 
@@ -27,13 +29,13 @@ describe('HelpChat Component', () => {
   });
 
   it('sends a message and displays user and agent reply', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
       ok: true,
       json: async () => ({
         reply: "Here is your mocked response",
         link: null
       })
-    });
+    }));
 
     render(<HelpChat />);
 
@@ -62,7 +64,7 @@ describe('HelpChat Component', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as any).mockImplementationOnce(() => Promise.reject(new Error('Network error')));
 
     render(<HelpChat />);
 
