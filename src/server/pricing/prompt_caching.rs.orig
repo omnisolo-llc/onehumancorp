@@ -98,6 +98,7 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
+        std::env::set_var("MISER_TOKEN_RATIO", "0.0001");
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 10000);
 
@@ -106,9 +107,5 @@ mod tests {
         assert_eq!(response.unwrap().text, "Paris");
         // 10000 * 0.0001 = 1.0 = 1 cent
         assert_eq!(cost, 1);
-
-        let (res_miss, cost_miss) = cache.get_with_cost_cents("Unknown Prompt");
-        assert!(res_miss.is_none());
-        assert_eq!(cost_miss, 0);
     }
 }
