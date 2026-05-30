@@ -1923,7 +1923,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!("Failed to dispatch critical SMS to [REDACTED]: {}. Expected if Twilio is not configured.", e);
+            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
         }
     }
     Ok(())
@@ -2095,7 +2095,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
     let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
     department_service.start().await.expect("Failed to start DepartmentService");
-
 
     let tm_mesh = handoff_mesh.clone();
     hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
@@ -2347,7 +2346,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
                 if let Err(e) = res {
-                    tracing::warn!("Failed to send SMS to [REDACTED]: {}. This is expected if Twilio is not configured.", e);
+                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
                 }
             });
 
