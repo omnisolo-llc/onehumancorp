@@ -350,7 +350,7 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 sticky top-0 z-50">
          <div className="flex justify-between items-center w-full">
           <div className="flex justify-between items-center w-full">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
@@ -661,17 +661,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
@@ -1290,22 +1290,22 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
                 </div>
@@ -1322,7 +1322,7 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div id="agent-activity-feed" className="ohc-hybrid-panel shadow-sm overflow-hidden">
+            <div id="agent-activity-feed" className="ohc-hybrid-panel bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg shadow-sm overflow-hidden">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
