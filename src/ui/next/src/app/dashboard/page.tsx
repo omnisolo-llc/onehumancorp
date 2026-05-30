@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
+  const [showQRModal, setShowQRModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
@@ -1127,6 +1129,34 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Offline to Online QR Code */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Storefront QR Code</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100">
+                        <span className="text-xs font-medium text-indigo-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Bridge the gap between your physical presence and online store. Generate a beautiful QR code to print on your business cards, menus, or flyers. Every scan is a potential new customer!</p>
+                    <button
+                        onClick={() => setShowQRModal(true)}
+                        className="px-6 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-inter text-sm"
+                    >
+                        Generate QR Code
+                    </button>
+                </div>
+                <div className="hidden md:flex flex-col items-center justify-center p-4">
+                    <div className="w-24 h-24 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -2023,6 +2053,87 @@ export default function Dashboard() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 flex flex-col items-center text-center">
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-50 to-white -z-10"></div>
+
+            <div className="flex w-full justify-between items-start mb-6">
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-xl shadow-sm text-indigo-600">
+                📱
+              </div>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Your Storefront QR</h2>
+            <p className="text-gray-500 mb-8 text-sm leading-relaxed">
+              Customers can scan this to open your store instantly on their phone.
+            </p>
+
+            <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100 mb-8 inline-block">
+              <QRCodeSVG
+                id="storefront-qr-code"
+                value={`https://${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}.ohc.store/?ref=qr`}
+                size={200}
+                level="H"
+                includeMargin={true}
+                fgColor="#1D1D1F"
+                imageSettings={{
+                  src: "/favicon.ico",
+                  x: undefined,
+                  y: undefined,
+                  height: 40,
+                  width: 40,
+                  excavate: true,
+                }}
+              />
+            </div>
+
+            <p className="text-xs text-gray-400 mb-6 font-medium">⚡ Powered by OHC</p>
+
+            <div className="w-full space-y-3">
+              <button
+                onClick={() => {
+                  const svg = document.getElementById('storefront-qr-code');
+                  if (svg) {
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    const img = new Image();
+                    img.onload = () => {
+                      canvas.width = img.width;
+                      canvas.height = img.height;
+                      ctx?.drawImage(img, 0, 0);
+                      const pngFile = canvas.toDataURL("image/png");
+                      const downloadLink = document.createElement("a");
+                      downloadLink.download = "Storefront-QR.png";
+                      downloadLink.href = `${pngFile}`;
+                      downloadLink.click();
+                    };
+                    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                  }
+                }}
+                className="w-full py-3.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-md transition-all active:scale-95"
+              >
+                Download PNG
+              </button>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-all active:scale-95"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
