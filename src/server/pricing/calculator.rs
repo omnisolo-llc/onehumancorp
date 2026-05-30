@@ -80,6 +80,11 @@ pub struct CostConfig {
     pub cost_per_network_gb: f64,
 }
 
+pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_cost_with_config(input_tokens, output_tokens, cached_input_tokens, local_embedding_tokens, config);
+    (cost * 100.0).round() as i64
+}
+
 pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
     let input_cost = input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;
@@ -87,6 +92,11 @@ pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_
     let embedding_cost = local_embedding_tokens as f64 * config.cost_per_local_embedding;
     let total = (input_cost + output_cost + cached_cost + embedding_cost) * (1.0 - config.discount_factor);
     (total * 10000.0).round() / 10000.0
+}
+
+pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_storage_savings(original_bytes, compressed_bytes, config);
+    (cost * 100.0).round() as i64
 }
 
 pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
@@ -97,9 +107,19 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     (savings * 10000.0).round() / 10000.0
 }
 
+pub fn calculate_compute_cost_cents(hours: f64, config: &CostConfig) -> i64 {
+    let cost = calculate_compute_cost(hours, config);
+    (cost * 100.0).round() as i64
+}
+
 pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
     let cost = hours * config.cost_per_compute_hour;
     (cost * 10000.0).round() / 10000.0
+}
+
+pub fn calculate_network_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_network_cost(bytes, config);
+    (cost * 100.0).round() as i64
 }
 
 pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
