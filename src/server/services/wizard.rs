@@ -102,7 +102,7 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = crate::config::get().is_standalone();
 
         
         let mut health_checks = Vec::new();

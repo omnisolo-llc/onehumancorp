@@ -43,7 +43,15 @@ pub struct AppConfig {
     pub s3_bucket_blobs: String,
 }
 
+
+impl AppConfig {
+    pub fn is_standalone(&self) -> bool {
+        self.standalone
+    }
+}
+
 static INSTANCE: OnceLock<AppConfig> = OnceLock::new();
+
 
 pub fn get() -> &'static AppConfig {
     INSTANCE.get_or_init(|| {

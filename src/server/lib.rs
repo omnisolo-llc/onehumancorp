@@ -1949,7 +1949,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Ensure local database permissions are secure in standalone mode
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if crate::config::get().is_standalone() {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -2015,7 +2015,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+    let is_cloud = !crate::config::get().is_standalone();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
@@ -2213,7 +2213,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let is_standalone = crate::config::get().is_standalone();
     let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {

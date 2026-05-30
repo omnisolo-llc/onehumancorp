@@ -77,7 +77,7 @@ impl KvMcpServer {
     }
 
     fn is_standalone(&self) -> bool {
-        std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true" || self.redis_client.is_none()
+        crate::config::get().is_standalone() || self.redis_client.is_none()
     }
 
     pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {

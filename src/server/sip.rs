@@ -159,7 +159,7 @@ impl SipDB {
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = crate::config::get().is_standalone();
 
         let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
             let _permit = if is_standalone {
@@ -188,7 +188,7 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = crate::config::get().is_standalone();
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
