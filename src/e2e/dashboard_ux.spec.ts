@@ -171,16 +171,16 @@ test.describe('Dashboard Flow Completeness UX', () => {
 import { Client } from 'pg';
 
 test.describe('Dashboard Approvals', () => {
-  test('should display Action Required, allow toggling advanced settings, and processing approvals with state verified', async ({ page }) => {
+  test('should display Agent Updates, allow toggling advanced settings, and processing approvals with state verified', async ({ page }) => {
     // 1. Sign in
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
     await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
-    // 2. Wait for dashboard and verify "Action Required"
+    // 2. Wait for dashboard and verify "Agent Updates"
     await page.waitForURL('**/*');
-    await expect(page.locator('h2:has-text("Action Required")').first()).toBeVisible();
+    await expect(page.locator('h2:has-text("Agent Updates")').first()).toBeVisible();
 
     // 3. Toggle Advanced Settings to see the technical payload
     const advancedSettingsBtn = page.locator('button').filter({ has: page.locator('span.absolute') }).first();

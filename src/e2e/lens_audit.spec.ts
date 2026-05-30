@@ -16,7 +16,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify CustomerSuccess displays without typo', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
     await expect(page.getByText("Customer Success Department")).not.toBeVisible();
   });
@@ -129,7 +129,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
       // E2E seed data has 1 pending approval: 'Draft email for review' in customer_success
       // The dashboard page will render it natively if the UI is wired correctly
-      await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
       await expect(page.getByText("Draft email for review")).toBeVisible();
       await expect(page.getByRole('button', { name: 'Approve' })).toBeVisible();
   });
@@ -183,25 +183,25 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify the real seeded DB approvals persist on reload without mock state reset', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
     // First load confirms real data is populated.
     await expect(page.getByText("Draft email for review")).toBeVisible();
 
     // Reload page, it should fetch from the DB again and display the identical data without relying on hardcoded arrays.
     await page.reload();
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("Draft email for review")).toBeVisible();
   });
 
-  test('verify CustomerSuccess Department renders properly inside Action Required block', async ({ page }) => {
+  test('verify CustomerSuccess Department renders properly inside Agent Updates block', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
   });
 
   test('verify Approve button works and removes item from UI', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
 
     // We expect the seeded 'Draft email for review' to be present initially
     const approvalText = page.getByText("Draft email for review");
@@ -216,7 +216,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify Reject button works and removes item from UI', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
 
     const approvalText = page.getByText("Abandoned cart recovery");
     await expect(approvalText).toBeVisible();
@@ -228,10 +228,10 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(approvalText).not.toBeVisible();
   });
 
-  test('verify Business Snapshot remains visible when Action Required is populated', async ({ page }) => {
+  test('verify Business Snapshot remains visible when Agent Updates is populated', async ({ page }) => {
     await page.goto('/dashboard');
-    // We know Action Required is populated from the seed data
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    // We know Agent Updates is populated from the seed data
+    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
 
     // Verify Business Snapshot is also visible, ensuring it's not hidden
     await expect(page.getByText("Business Snapshot")).toBeVisible();
