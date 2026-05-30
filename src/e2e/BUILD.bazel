@@ -22,11 +22,11 @@ sh_binary(
 # Per-spec Playwright test targets plus the all-spec shard targets used by
 # `bazel test //...`. A generated coverage check also runs in `bazel test //...`
 # and fails if any `*.spec.ts` file is missing from the shard suite.
-# Run suite: bazel test //src/e2e:playwright --local_test_jobs="$(nproc)"
-# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_16
+# Run suite: bazel test //src/e2e:playwright
+# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_8
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-    ci_shard_count = 16,
+    ci_shard_count = 8,
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]),
 )
