@@ -17,7 +17,7 @@ impl MySyncService {
 impl SyncService for MySyncService {
     async fn hybrid_sync_missions(
         &self,
-        request: Request<HybridSyncMissionsRequest>,
+        request: Request<::server_ohc::orchestration::HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
         let md = request.metadata().clone();
         let req = request.into_inner();
@@ -68,7 +68,7 @@ impl SyncService for MySyncService {
 
     async fn vector_sync(
         &self,
-        _request: Request<VectorSyncRequest>,
+        _request: Request<::server_ohc::orchestration::VectorSyncRequest>,
     ) -> Result<Response<VectorSyncResponse>, Status> {
         Ok(Response::new(VectorSyncResponse {
             status: "success".to_string(),
@@ -78,7 +78,7 @@ impl SyncService for MySyncService {
 
     async fn power_sync_push(
         &self,
-        request: Request<PowerSyncPushRequest>,
+        request: Request<::server_ohc::orchestration::PowerSyncPushRequest>,
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
         let md = request.metadata().clone();
         let req = request.into_inner();
@@ -155,7 +155,7 @@ impl SyncService for MySyncService {
 
     async fn power_sync_pull(
         &self,
-        request: Request<PowerSyncPullRequest>,
+        request: Request<::server_ohc::orchestration::PowerSyncPullRequest>,
     ) -> Result<Response<PowerSyncPullResponse>, Status> {
         use sqlx::Row;
         tracing::debug!("PowerSync received pull request");
@@ -227,7 +227,7 @@ impl SyncService for MySyncService {
 
     async fn sync_mcp_deltas(
         &self,
-        request: Request<SyncMcpDeltasRequest>,
+        request: Request<::server_ohc::orchestration::SyncMcpDeltasRequest>,
     ) -> Result<Response<SyncMcpDeltasResponse>, Status> {
         let md = request.metadata().clone();
         let req = request.into_inner();
@@ -294,7 +294,7 @@ impl SyncService for MySyncService {
 
     async fn sync_escalation(
         &self,
-        request: Request<SyncEscalationRequest>,
+        request: Request<::server_ohc::orchestration::SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");

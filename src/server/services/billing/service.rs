@@ -18,7 +18,7 @@ impl MyBillingService {
 impl BillingService for MyBillingService {
     async fn track_token_usage(
         &self,
-        request: Request<TokenUsage>,
+        request: Request<::server_ohc::billing::TokenUsage>,
     ) -> Result<Response<TokenUsage>, Status> {
         let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
 
@@ -45,7 +45,7 @@ impl BillingService for MyBillingService {
 
     async fn get_cost_summary(
         &self,
-        request: Request<TokenUsage>,
+        request: Request<::server_ohc::billing::TokenUsage>,
     ) -> Result<Response<CostSummary>, Status> {
         let req = request.into_inner();
         let org_id = req.organization_id;
