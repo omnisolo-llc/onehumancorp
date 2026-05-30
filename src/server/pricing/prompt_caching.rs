@@ -96,6 +96,17 @@ mod tests {
         assert!(cache.cache.is_empty());
     }
 
+    #[test]
+    fn test_prompt_cache_get_with_cost_cents() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("What is the capital of France?", "Paris", 10000);
+
+        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
+        assert!(response.is_some());
+        assert_eq!(response.unwrap().text, "Paris");
+        // 10000 * 0.0001 = 1.0 = 1 cent
+        assert_eq!(cost, 1);
+    }
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
