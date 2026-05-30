@@ -63,6 +63,7 @@ export default function ApprovalInbox({
           <button
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            aria-label="Back to Team"
           >
             <svg
               className="w-5 h-5"
@@ -123,7 +124,7 @@ export default function ApprovalInbox({
                 </svg>
               </div>
               <h3 className="font-outfit font-bold text-gray-900 text-lg mb-2">
-                All Caught Up!
+                Inbox Zero
               </h3>
               <p className="text-sm text-gray-500">
                 There are no pending actions requiring your review.

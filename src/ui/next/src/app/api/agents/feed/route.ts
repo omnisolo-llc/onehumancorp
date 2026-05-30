@@ -1,10 +1,33 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-let feed = [
-  { id: '1', department: 'The Ambassador', description: 'Replied to 3 Instagram DMs overnight', timestamp: '2h ago' },
-  { id: '2', department: 'The Promoter', description: 'Scheduled weekend promo post', timestamp: '4h ago' },
-];
+export async function GET(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const tenantId = request.headers.get('x-tenant-id') || 'default';
+  const userId = request.headers.get('x-user-id') || 'default';
 
-export async function GET() {
-  return NextResponse.json({ feed });
+  const authHeader = request.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'x-tenant-id': tenantId,
+    'x-user-id': userId
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
+
+  try {
+    const res = await fetch(`${backendUrl}/api/agents/approvals/activity`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      const formattedFeed = (data.pending_approvals || []).map((item: any) => ({
+         id: item.id,
+         department: item.department,
+         description: item.description || "Performed an action.",
+         timestamp: 'Just now' // In a real app we'd parse this from a created_at field
+      }));
+      return NextResponse.json({ feed: formattedFeed });
+    }
+    return NextResponse.json({ feed: [] }, { status: res.status });
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }

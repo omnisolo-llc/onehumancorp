@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
+import DailyBrief from './components/DailyBrief';
 import ApprovalInbox from './components/ApprovalInbox';
 
 export type ApprovalRequest = {
@@ -132,6 +133,8 @@ export default function TeamPage() {
               );
             })
           )}
+
+          <DailyBrief />
         </div>
       </div>
 
