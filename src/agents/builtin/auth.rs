@@ -76,10 +76,11 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), String> {
     let domain = parts[0];
     match domain {
         "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
-        _ if domain.ends_with(".ohc.global") => {}
-        _ => return Err(format!("untrusted SPIFFE domain {:?} in {}", domain, id)),
+        d if d.ends_with(".ohc.global") => {}
+        _ => {
+            return Err(format!("untrusted SPIFFE domain {:?} in {}", domain, id));
+        }
     }
-
     Ok(())
 }
 
