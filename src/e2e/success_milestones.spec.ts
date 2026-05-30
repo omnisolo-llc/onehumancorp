@@ -6,12 +6,12 @@ test.describe('Success Milestones Notifications', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/*');
 
     // 2. Wait for the dashboard to load and show the "Mark Order Ready" button
     // The seeded order state exercises the milestone threshold.
-    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    const markReadyBtn = page.getByRole('button', { name: 'Mark Order Ready' });
     await expect(markReadyBtn).toBeVisible({ timeout: 10000 });
 
     // 3. Click the button 3 times to trigger the milestone
@@ -21,12 +21,12 @@ test.describe('Success Milestones Notifications', () => {
     }
 
     // 4. Assert the milestone UI appears
-    const milestoneTitle = page.locator('text=🎉 3rd Order!');
+    const milestoneTitle = page.getByText('🎉 3rd Order!');
     await expect(milestoneTitle).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=You completed 3 orders!')).toBeVisible();
+    await expect(page.getByText('You completed 3 orders!')).toBeVisible();
 
     // 5. Dismiss the milestone
-    const dismissBtn = page.locator('button:has-text("Dismiss")');
+    const dismissBtn = page.getByRole('button', { name: 'Dismiss' });
     await expect(dismissBtn).toBeVisible();
     await dismissBtn.click();
 
@@ -38,24 +38,24 @@ test.describe('Success Milestones Notifications', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    const markReadyBtn = page.getByRole('button', { name: 'Mark Order Ready' });
     await expect(markReadyBtn).toBeVisible();
     await markReadyBtn.click();
 
-    await expect(page.locator('text=First Sale!')).toBeVisible();
+    await expect(page.getByText('First Sale!')).toBeVisible();
   });
 
   test('should verify 10th order milestone and viral share buttons', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    const markReadyBtn = page.getByRole('button', { name: 'Mark Order Ready' });
     await expect(markReadyBtn).toBeVisible();
 
     // Exercise the real button path until the 10th-order milestone appears.
@@ -65,11 +65,11 @@ test.describe('Success Milestones Notifications', () => {
     }
 
     // Might appear later
-    const milestoneTitle = page.locator('text=🎉 10th Order!');
+    const milestoneTitle = page.getByText('🎉 10th Order!');
     await expect(milestoneTitle).toBeVisible({ timeout: 10000 });
 
     // Check for viral sharing options
-    await expect(page.locator('text=Share Your Success')).toBeVisible();
+    await expect(page.getByText('Share Your Success')).toBeVisible();
 
     const whatsappShare = page.locator('a:has-text("Share to WhatsApp")');
     await expect(whatsappShare).toBeVisible();
@@ -84,10 +84,10 @@ test.describe('Success Milestones Notifications', () => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    const markReadyBtn = page.getByRole('button', { name: 'Mark Order Ready' });
     await expect(markReadyBtn).toBeVisible();
 
     // Exercise the real button path until the 100th-order milestone appears.
@@ -96,52 +96,52 @@ test.describe('Success Milestones Notifications', () => {
         await page.waitForTimeout(10);
     }
 
-    await expect(page.locator('text=🎉 100th Order!')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('🎉 100th Order!')).toBeVisible({ timeout: 10000 });
   });
 
   test('should verify 100 visitors milestone', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
     // Our test framework has a single-shot timer for 5s that triggers 100 visitors milestone
-    await expect(page.locator('text=🚀 100 Visitors Today!')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('🚀 100 Visitors Today!')).toBeVisible({ timeout: 10000 });
   });
 
   test('should verify milestone dismissal', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    const markReadyBtn = page.getByRole('button', { name: 'Mark Order Ready' });
     await expect(markReadyBtn).toBeVisible();
     await markReadyBtn.click();
 
-    await expect(page.locator('text=First Sale!')).toBeVisible();
+    await expect(page.getByText('First Sale!')).toBeVisible();
 
-    const dismissBtn = page.locator('button:has-text("Dismiss")');
+    const dismissBtn = page.getByRole('button', { name: 'Dismiss' });
     await expect(dismissBtn).toBeVisible();
     await dismissBtn.click();
 
-    await expect(page.locator('text=First Sale!')).toBeHidden();
+    await expect(page.getByText('First Sale!')).toBeHidden();
   });
 
   test('should verify 5-Star Review milestone and share loop', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
-    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
     await page.waitForURL('**/dashboard');
 
-    const simulateReviewBtn = page.locator('button:has-text("Simulate 5-Star Review")');
+    const simulateReviewBtn = page.getByRole('button', { name: 'Simulate 5-Star Review' });
     await expect(simulateReviewBtn).toBeVisible();
     await simulateReviewBtn.click();
 
-    await expect(page.locator('text=🎉 5-Star Review!')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('🎉 5-Star Review!')).toBeVisible({ timeout: 10000 });
 
     const whatsappShare = page.locator('a:has-text("Share to WhatsApp")').first();
     await expect(whatsappShare).toBeVisible();
