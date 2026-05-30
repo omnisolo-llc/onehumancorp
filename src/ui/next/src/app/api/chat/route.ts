@@ -1,23 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  let body;
-  try {
-    body = await req.json();
-  } catch (e) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { message } = body;
-
-  if (!message || typeof message !== 'string' || message.trim() === '') {
-    return NextResponse.json({ error: 'message is required' }, { status: 400 });
-  }
-
-  if (message.length > 1000) {
-    return NextResponse.json({ error: 'message too long' }, { status: 413 });
-  }
-
+  const { message } = await req.json();
   const msg = message.toLowerCase();
 
   let reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business.";
