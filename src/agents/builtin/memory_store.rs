@@ -419,7 +419,11 @@ impl VectorRepository {
                 (b, a)
             }
         } else {
-            (a, b) // Fallback, just pick 'a'
+            if a.id < b.id {
+                (a, b)
+            } else {
+                (b, a)
+            }
         }
     }
 
