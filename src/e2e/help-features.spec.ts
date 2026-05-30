@@ -34,4 +34,52 @@ test.describe('Help Features', () => {
     await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
   });
 
+  test('User can use AI Help Chat', async ({ page }) => {
+    await page.route('**/api/chat', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ reply: "This is a mocked success reply." })
+      });
+    });
+
+    await page.goto('/help');
+
+    // Open chat
+    const openChatBtn = page.getByLabel('Open help chat');
+    await expect(openChatBtn).toBeVisible();
+    await openChatBtn.click();
+
+    // Verify initial message is present
+    await expect(page.locator('text=Need help setting up your store')).toBeVisible();
+
+    // Send a message
+    const input = page.getByPlaceholder('Ask me anything...');
+    await input.fill('How do I add a product?');
+    await page.getByLabel('Send message').click();
+
+    // Verify user message appears
+    await expect(page.locator('text=How do I add a product?')).toBeVisible();
+
+    // Check if bot replies with the success message
+    await expect(page.locator('text=This is a mocked success reply.')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('User can view contextual tooltips on hover', async ({ page }) => {
+    // team-activity-tooltip is present on dashboard
+    await page.goto('/'); // assuming dashboard is at /
+
+    // Dashboard has <h2 ...>Team Activity</h2> wrapped in <WithTooltip id="team-activity-tooltip" ...>
+    const trigger = page.locator('text=Team Activity');
+
+    // Sometimes tests run too fast for the page to fully load elements, wait for it
+    await expect(trigger).toBeVisible();
+
+    // Hover to trigger tooltip
+    await trigger.hover();
+
+    // The tooltip renders as a fixed div with the text
+    const tooltipText = page.locator('text=Monitor the real-time actions and tasks being performed by your AI workforce.');
+    await expect(tooltipText).toBeVisible();
+  });
 });

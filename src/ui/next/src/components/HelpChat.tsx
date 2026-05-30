@@ -89,10 +89,6 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
-    return null; // Disable in E2E
-  }
-
   return (
     <div className="help-chat-wrapper">
       {/* Floating Button */}
