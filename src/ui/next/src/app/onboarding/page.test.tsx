@@ -39,7 +39,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
@@ -71,22 +71,8 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I bake custom vegan cakes for weddings and parties. My business is called Maya's Custom Cakes and I am located in Portland, OR./i);
+    await user.type(descInput, 'Maya Bakery');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -133,22 +119,8 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I bake custom vegan cakes for weddings and parties. My business is called Maya's Custom Cakes and I am located in Portland, OR./i);
+    await user.type(descInput, 'Maya Bakery');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
@@ -157,7 +129,7 @@ describe('OnboardingWizard', () => {
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     });
   });
 
