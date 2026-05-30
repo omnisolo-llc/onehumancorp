@@ -40,9 +40,12 @@ test('builder flow completes successfully', async ({ page }) => {
   await expect(page.getByText(/Pick your draft/i)).toBeVisible({ timeout: 5000 });
   await page.getByRole('button', { name: /Customize Selected Draft/i }).click();
 
-  await expect(page.getByText(/1-Tap Launch/i)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/Publish Changes/i)).toBeVisible({ timeout: 5000 });
 
-  await page.getByRole('button', { name: /1-Tap Launch/i }).click();
+  await page.getByRole('button', { name: /Publish Changes/i }).click();
+  await page.getByRole('button', { name: /Free OHC Subdomain/i }).click();
+  await page.getByPlaceholder('mybusiness').fill('myawesomestore');
+  await page.getByRole('button', { name: 'Publish' }).click();
 
   await expect(page.getByText(/You're Live/i)).toBeVisible({ timeout: 5000 });
 });

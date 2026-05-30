@@ -9,7 +9,7 @@ interface BuilderState {
   wizardStep: number;
   blocks: any[];
   drafts: any[][];
-  status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "live";
+  status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "publishing" | "live";
   businessGoal: "products" | "services" | "work" | null;
   liveUrl: string;
 
@@ -20,7 +20,7 @@ interface BuilderState {
   setWizardStep: (step: number) => void;
   setBlocks: (blocks: any[]) => void;
   setDrafts: (drafts: any[][]) => void;
-  setStatus: (status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "live") => void;
+  setStatus: (status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "publishing" | "live") => void;
   setBusinessGoal: (goal: "products" | "services" | "work" | null) => void;
   setLiveUrl: (url: string) => void;
 }
