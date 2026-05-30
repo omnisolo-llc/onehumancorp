@@ -3464,6 +3464,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
+                        <a onclick="showScreen('link-in-bio-screen')" id="nav-link-in-bio">Link in Bio Generator</a>
                         <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
                     </nav>
 
@@ -4268,6 +4269,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2>Product Data Access</h2>
                             <p>Read Product List</p>
                             <p>Manage your custom software connections here.</p>
+                        </div>
+                    </div>
+
+                    <!-- Link in Bio Screen -->
+                    <div id="link-in-bio-screen" class="screen">
+                        <h1>Link in Bio Generator</h1>
+                        <div class="card glass">
+                            <h2>Profile Settings</h2>
+                            <label for="bio-profile-name">Profile Name</label>
+                            <input type="text" id="bio-profile-name" value="My Profile" oninput="document.getElementById('bio-preview-name').innerText = this.value" />
+                            <label for="bio-profile-text">Bio</label>
+                            <textarea id="bio-profile-text" rows="2" oninput="document.getElementById('bio-preview-text').innerText = this.value">Welcome to my world.</textarea>
+                            <button onclick="alert('Copied Link!')">Copy Link-in-Bio URL</button>
+                        </div>
+                        <div class="card glass">
+                            <h1 id="bio-preview-name" style="text-align: center;">My Profile</h1>
+                            <p id="bio-preview-text" style="text-align: center;">Welcome to my world.</p>
                         </div>
                     </div>
 
@@ -5413,7 +5431,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1',
                             'cost-dashboard-screen': '/cost-dashboard',
-                            'advisory-dashboard-screen': '/advisory-dashboard'
+                            'advisory-dashboard-screen': '/advisory-dashboard',
+                            'link-in-bio-screen': '/link-in-bio'
                         };
 
                         async function handleLogin(btn) {
@@ -6022,7 +6041,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen' || id === 'link-in-bio-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
