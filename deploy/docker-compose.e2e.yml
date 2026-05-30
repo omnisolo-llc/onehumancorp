@@ -1,38 +1,4 @@
-# docker-compose.e2e.yml — Lean E2E infrastructure stack.
-#
-# Starts ONLY the shared infrastructure services (postgres and redis).
-# The OHC server binary is intentionally NOT run as a
-# container here: it is started directly by run-playwright.mjs from the
-# Bazel-built binary so that no Docker image rebuild is required.
-#
-# Usage (managed automatically by run-playwright.mjs):
-#   docker compose -f deploy/docker-compose.e2e.yml up -d
-
 services:
-  # ─── Infrastructure ───────────────────────────────────────────────────────
-  postgres:
-    image: postgres:16
-    command: ["postgres", "-c", "wal_level=logical"]
-    environment:
-      POSTGRES_USER: ohc
-      POSTGRES_PASSWORD: ohc
-      POSTGRES_DB: ohc
-      POSTGRES_MULTIPLE_DATABASES: ohc,chatwoot
-    volumes:
-      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ohc"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-    ports:
-      - "5432:5432"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-
   redis:
     image: redis:7
     healthcheck:
@@ -42,8 +8,3 @@ services:
       retries: 30
     ports:
       - "6379:6379"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 64M

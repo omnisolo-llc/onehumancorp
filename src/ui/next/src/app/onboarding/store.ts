@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
-  chatStep: number;
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
@@ -20,7 +19,6 @@ interface OnboardingState {
   error: string;
   startResult: any;
   setStep: (step: number) => void;
-  setChatStep: (step: number) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;
@@ -42,7 +40,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-      chatStep: 1,
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
@@ -59,7 +56,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       error: '',
       startResult: null,
       setStep: (step) => set({ step }),
-      setChatStep: (chatStep) => set({ chatStep }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
