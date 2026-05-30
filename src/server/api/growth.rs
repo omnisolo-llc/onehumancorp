@@ -156,6 +156,8 @@ pub struct MilestoneShareRequest {
 pub struct MilestoneShareResponse {
     pub reward_unlocked: bool,
     pub reward_type: String,
+    pub share_message: String,
+    pub referral_link: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -500,11 +502,6 @@ async fn handle_get_milestone_card(
     )
 }
 
-#[derive(Debug, Serialize)]
-pub struct MilestoneShareResponse {
-    pub share_message: String,
-    pub referral_link: String,
-}
 
 async fn handle_get_milestone_share_info(
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>
@@ -516,6 +513,8 @@ async fn handle_get_milestone_share_info(
     let share_message = format!("I just reached a new milestone on my store! Start your own business today with One Human Corp: {}", referral_link);
 
     Json(MilestoneShareResponse {
+        reward_unlocked: false,
+        reward_type: "".to_string(),
         share_message,
         referral_link,
     })
@@ -577,6 +576,8 @@ async fn handle_milestone_share(
     }
 
     Ok(Json(MilestoneShareResponse {
+        share_message: "".to_string(),
+        referral_link: "".to_string(),
         reward_unlocked: true,
         reward_type: "pro_trial_extension".to_string(),
     }))
