@@ -1923,7 +1923,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+            tracing::warn!("Failed to dispatch critical SMS to [REDACTED]: {}. Expected if Twilio is not configured.", e);
         }
     }
     Ok(())
@@ -2333,7 +2333,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
                 if let Err(e) = res {
-                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                    tracing::warn!("Failed to send SMS to [REDACTED]: {}. This is expected if Twilio is not configured.", e);
                 }
             });
 
@@ -2647,8 +2647,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(api::offline_sync::offline_sync_handler))
-
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
