@@ -12,7 +12,8 @@ test.describe('Onboarding Wizard', () => {
     await page.waitForTimeout(1000);
 
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Tell us about your business")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
 
     // Fill in the description (incorporating Maya to trigger mock)
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
@@ -65,7 +66,8 @@ test.describe('Onboarding Wizard', () => {
     await page.waitForTimeout(1000);
 
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Tell us about your business")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
 
     // Fill in the description (incorporating Carlos to trigger mock)
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");

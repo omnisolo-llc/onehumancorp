@@ -133,7 +133,7 @@ describe('OnboardingWizard', () => {
 
     (global.fetch as any).mockImplementation((url, options) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ message: "Failed" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -182,7 +182,7 @@ describe('OnboardingWizard', () => {
 
     (global.fetch as any).mockImplementation((url, options) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ message: "Failed" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
