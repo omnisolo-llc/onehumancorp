@@ -72,6 +72,7 @@ describe('OnboardingWizard', () => {
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    expect(nameInput).toHaveFocus();
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
@@ -79,6 +80,7 @@ describe('OnboardingWizard', () => {
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    expect(sellInput).toHaveFocus();
     await user.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
@@ -86,13 +88,14 @@ describe('OnboardingWizard', () => {
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    expect(locInput).toHaveFocus();
     await user.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
-    await user.click(button);
+    // Step 1: Intake (Pressing Enter)
+    await user.type(locInput, '{Enter}');
 
     // Verify it transitions to Step 2: Review Details
     await waitFor(() => {
@@ -188,6 +191,24 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
+  });
+
+  it('Step 2: Contains native decimal keyboard for price', async () => {
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Maya Bakery',
+        businessType: 'Bakery',
+        categories: ['food'],
+        firstProductName: 'Cake',
+        firstProductPrice: '20'
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const priceInput = screen.getByDisplayValue('20');
+    expect(priceInput).toHaveAttribute('inputMode', 'decimal');
   });
 
   it('Step 2: Displays validation error when business name is too short', async () => {

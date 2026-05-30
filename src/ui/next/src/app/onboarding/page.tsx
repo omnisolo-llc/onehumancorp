@@ -228,6 +228,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -267,6 +268,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-4 flex-1">
                     <div>
                       <textarea
+                        autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         onKeyDown={(e) => {
@@ -307,6 +309,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
