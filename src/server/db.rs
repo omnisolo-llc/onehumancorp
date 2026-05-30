@@ -522,6 +522,27 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS dynamic_pricing_config (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        product_id TEXT,
+
+                        service_id TEXT,
+
+                        enabled BOOLEAN DEFAULT FALSE,
+
+                        min_price_cents INTEGER,
+
+                        max_price_cents INTEGER,
+
+                        strategies TEXT DEFAULT '[]',
+
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                    );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

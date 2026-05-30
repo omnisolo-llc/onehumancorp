@@ -2588,6 +2588,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
+
+
+
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))

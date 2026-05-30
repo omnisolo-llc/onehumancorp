@@ -147,7 +147,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
                     let pool = crate::db::get_pool();
-                    let _ = crate::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                    let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(
