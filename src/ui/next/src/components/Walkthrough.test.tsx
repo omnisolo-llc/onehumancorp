@@ -31,12 +31,97 @@ describe('Walkthrough Component', () => {
   it('renders nothing when not open', () => {
     const { container } = render(
       <InteractiveWalkthrough
-        steps={[{ targetId: 'test', title: 'Test', content: 'test content' }]}
+        steps={[{ targetId: 'test-target', title: 'Test Title', content: 'test content' }]}
         isOpen={false}
         onClose={() => {}}
       />
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it('renders step when open', async () => {
+    render(
+      <div>
+        <div id="test-target">Target</div>
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'test-target', title: 'Test Title', content: 'test content' }]}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      </div>
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByText('Test Title')).toBeInTheDocument();
+    expect(screen.getByText('test content')).toBeInTheDocument();
+  });
+
+  it('handles next step and close', async () => {
+    const onClose = vi.fn();
+    const onComplete = vi.fn();
+
+    render(
+      <div>
+        <div id="test-target">Target 1</div>
+        <div id="test-target-2">Target 2</div>
+        <InteractiveWalkthrough
+          steps={[
+            { targetId: 'test-target', title: 'Step 1', content: 'Content 1' },
+            { targetId: 'test-target-2', title: 'Step 2', content: 'Content 2' }
+          ]}
+          isOpen={true}
+          onClose={onClose}
+          onComplete={onComplete}
+        />
+      </div>
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByText('Step 1')).toBeInTheDocument();
+
+    const nextBtn = screen.getByText('Next');
+    fireEvent.click(nextBtn);
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByText('Step 2')).toBeInTheDocument();
+
+    const finishBtn = screen.getByText('Finish');
+    fireEvent.click(finishBtn);
+
+    expect(onComplete).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('handles skip', async () => {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <div id="test-target">Target</div>
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'test-target', title: 'Step 1', content: 'Content 1' }]}
+          isOpen={true}
+          onClose={onClose}
+        />
+      </div>
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    const button = document.querySelector('button.text-gray-500');
+    fireEvent.click(button!);
+
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('renders nothing when there are no steps', () => {
