@@ -846,11 +846,11 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let mut _retry_count = 0;
+                            let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
                             loop {
@@ -944,7 +944,7 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        let _final_res: Result<String, crate::types::ToolError> = Err(e);
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
@@ -970,7 +970,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -984,8 +984,8 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let mut _retry_count = 0;
+                        let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
                         loop {
@@ -1321,7 +1321,7 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
+                let mut _retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
@@ -1429,7 +1429,7 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
+            let mut _retry_count = 0;
             let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
@@ -2307,8 +2307,8 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let mut _retry_count = 0;
+                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
@@ -2507,7 +2507,7 @@ impl Agent {
                     }
                 }
 
-                let mut retry_count = 0;
+                let mut _retry_count = 0;
                 let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
@@ -3232,8 +3232,6 @@ mod tests {
 
         let agent = Agent::new(client.clone(), vec![]);
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_harness_thickness_optimization = true;
         cfg.enable_llmcompiler_plan_and_execute = true;
@@ -3433,8 +3431,6 @@ mod tests {
         });
 
         let agent = Agent::new(client.clone(), vec![mock_tool]);
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
@@ -3559,8 +3555,6 @@ mod tests {
             },
         ];
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
         // Disable other mechanics to isolate the test
@@ -3670,8 +3664,6 @@ mod tests {
             }
         ]);
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_lazy_tool_loading = true; // THIS IS THE KEY MECHANIC
 
@@ -3709,8 +3701,6 @@ mod tests {
         }
 
         let agent = Agent::new(client, tools);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_single_agent_maximization = true;
@@ -3780,8 +3770,6 @@ mod tests {
         let agent = Agent::new(client.clone(), tools.clone());
 
         // Test 1: Untrusted project rejects mutating tools
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = false;
 
@@ -3824,8 +3812,6 @@ mod tests {
         ]);
 
         // Test 2: Permission check blocks unallowed tools
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
@@ -3868,8 +3854,6 @@ mod tests {
                 execute: Arc::new(crate::agent::tests::MockToolExecutor),
             },
         ]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
@@ -3972,8 +3956,6 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_observation_masking = true;
 
@@ -4072,8 +4054,6 @@ mod tests {
                 execute: Arc::new(crate::agent::tests::MockToolExecutor),
             }
         ];
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_context_compaction = true;
@@ -4516,8 +4496,6 @@ mod tests {
 
         let agent = Agent::new(client, tools);
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.guardrails = Some(crate::guardrails::GuardrailRegistry {
             input_guardrails: vec![std::sync::Arc::new(crate::guardrails::KeywordGuardrail::new(vec!["banned".to_string(), "password".to_string(), "secret".to_string()]))],
@@ -4595,8 +4573,6 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_with_tools() {
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
@@ -4620,8 +4596,6 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt() {
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "Developer Instructions".to_string();
@@ -4637,8 +4611,6 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_missing_sections() {
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "Server System Message".to_string();
         cfg.developer_instructions = "".to_string();
@@ -4664,8 +4636,6 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe() {
-
-
         let mut _cfg = AgentRunConfig::default();
         // A single emoji is 4 bytes.
         let emoji = "🚀"; // 4 bytes
@@ -4683,8 +4653,6 @@ mod tests {
 
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe_boundary() {
-
-
         let mut _cfg = AgentRunConfig::default();
         // Construct a string where the 32768th byte is in the middle of a multibyte character.
         // Let's use 1-byte chars until 32766, then a 3-byte char.
@@ -4738,8 +4706,6 @@ mod tests {
         };
 
         let agent = Agent::new(client, vec![tool]);
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
 
@@ -4781,8 +4747,6 @@ mod tests {
             ]),
         });
         let agent = Agent::new(client, vec![]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
@@ -4845,8 +4809,6 @@ mod tests {
 
         let client = Arc::new(MockLlmClientGuides { call_count: tokio::sync::Mutex::new(0) });
         let agent = Agent::new(client, vec![]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_computational_guides = true;
@@ -4934,7 +4896,6 @@ mod tests {
         }
         let client = Arc::new(MockLlmClientJudge { call_count: tokio::sync::Mutex::new(0) });
         let agent = Agent::new(client, vec![]);
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_llm_judge = true;
         cfg.max_iterations = 5;
@@ -4960,8 +4921,6 @@ mod tests {
         });
 
         let agent = Agent::new(client, vec![]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         // Specifically setting a model that triggers cost estimation logic
@@ -5035,8 +4994,6 @@ mod tests {
         ];
 
         let agent = Agent::new(client, tools);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.model = "gpt-4o".to_string();
@@ -5130,8 +5087,6 @@ mod tests {
         });
 
         let agent1 = Agent::new(client1, vec![mutating_tool.clone()]).with_checkpointer(checkpointer.clone());
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.model = "test-model".to_string();
         cfg.thread_id = Some("test_thread".to_string());
@@ -5235,8 +5190,6 @@ mod tests {
         let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
         agent.checkpointer = Some(Arc::new(cp));
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
@@ -5301,8 +5254,6 @@ mod tests {
         let agent = Agent::new(client, vec![mutating_tool]);
 
         let scratchpad_path = format!(".test_checkpoint_{}.json", uuid::Uuid::new_v4());
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_state_checkpointing = true;
         cfg.state_scratchpad_path = Some(scratchpad_path.clone());
@@ -5357,8 +5308,6 @@ mod tests {
 
         // Create an agent and we will inject some state so messages.len() > 3
         let agent = Agent::new(client.clone(), vec![]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_lost_in_the_middle_prevention = true;
@@ -5425,8 +5374,6 @@ mod tests {
         });
 
         let agent = Agent::new(client, vec![]);
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.max_task_tokens = 150; // set budget lower than output tokens so it stops
 
@@ -5479,8 +5426,6 @@ mod tests {
         };
 
         let agent = Agent::new(client, vec![tool]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
@@ -5557,8 +5502,6 @@ mod tests {
         });
 
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.thread_id = Some("git-thread-123".to_string());
@@ -5637,8 +5580,6 @@ mod tests {
                 }
             ]),
         });
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_langgraph_mechanic = true;
@@ -5812,8 +5753,6 @@ mod tests {
             ]),
         });
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
@@ -5887,8 +5826,6 @@ mod tests {
 
         let cp = crate::checkpointer::GitCheckpointer::new(temp_dir.clone());
         let agent = Agent::new(client, vec![mutating_tool]).with_checkpointer(std::sync::Arc::new(cp));
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.workspace_path = Some(temp_dir.to_str().unwrap().to_string());
@@ -6005,8 +5942,6 @@ mod stream_tests {
         let llm = Arc::new(ResumeMockLlm { call_count: tokio::sync::Mutex::new(0) });
         let mut agent = Agent::new(llm, vec![]);
         agent.checkpointer = Some(cp_saver.clone());
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.thread_id = Some("test-thread".to_string());
@@ -6148,8 +6083,6 @@ mod stream_tests {
         let checkpointer = Arc::new(MockCheckpointerRewind { checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()) });
 
         let agent = Agent::new(llm, tools).with_checkpointer(checkpointer);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_time_travel_rewind = true;
@@ -6321,8 +6254,6 @@ mod stream_tests {
         // Intentionally NOT passing a checkpointer to test the lightweight chaining fallback
         let agent = Agent::new(llm, tools);
 
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_time_travel_rewind = true;
         cfg.thread_id = Some("lightweight-rewind-thread".to_string());
@@ -6425,8 +6356,6 @@ mod stream_tests {
         ];
 
         let agent = Agent::new(client, tools);
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.max_iterations = 5;
 
@@ -6455,8 +6384,6 @@ mod hierarchical_prompt_tests {
 
     #[test]
     fn test_lost_in_the_middle_prevention() {
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
         cfg.developer_instructions = "Use standard libraries.".to_string();
@@ -6474,8 +6401,6 @@ mod hierarchical_prompt_tests {
 
     #[test]
     fn test_lost_in_the_middle_prevention_disabled() {
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.server_system_message = "CRITICAL: Never delete the database.".to_string();
         cfg.developer_instructions = "Use standard libraries.".to_string();
@@ -6544,8 +6469,6 @@ mod hierarchical_prompt_tests {
         };
 
         let agent = Agent::new(client.clone(), vec![tool]);
-
-
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_agent_curated_memory = true;
         cfg.curated_memory_nudge_threshold = 2; // Nudge after 2 iterations
@@ -6614,9 +6537,7 @@ async fn test_stripe_retry_limit() {
     ];
 
     let agent = Agent::new(client.clone(), tools);
-
-
-        let mut _cfg = AgentRunConfig::default();
+    let mut _cfg = AgentRunConfig::default();
     cfg.max_retries = 5; // Configure to 5, but our code should clamp to 2
     cfg.max_iterations = 20;
 
@@ -6780,8 +6701,6 @@ async fn test_stripe_retry_limit() {
 
         let client = Arc::new(SpyLlmClient { system_prompt: std::sync::Mutex::new(String::new()) });
         let agent = Agent::new(client.clone(), vec![]);
-
-
 
         let mut _cfg = AgentRunConfig::default();
         cfg.enable_progressive_skills = true;

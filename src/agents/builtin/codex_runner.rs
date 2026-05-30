@@ -110,8 +110,7 @@ impl AppServer {
 
         if req.method == "run_agent" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-        let _cfg = AgentRunConfig::default();
+            let _cfg = AgentRunConfig::default();
             match self.runner.run_async(&initial_message).await {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
@@ -150,8 +149,7 @@ impl AppServer {
             #[async_trait::async_trait]
             impl crate::scalable_multi_agent::AgentNode for AgentNodeAdapter {
                 async fn execute(&self, chunk: crate::scalable_multi_agent::TaskChunk) -> Result<crate::scalable_multi_agent::TaskResult, String> {
-
-        let _cfg = AgentRunConfig::default();
+                    let _cfg = AgentRunConfig::default();
                     match self.runner.run_async(&chunk.payload).await {
                         Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
                             chunk_id: chunk.id,
@@ -250,7 +248,6 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-
         let _cfg = AgentRunConfig::default();
         let result = runner.run_async("test").await.unwrap();
         assert_eq!(result, "async success");
@@ -268,7 +265,6 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-
         let _cfg = AgentRunConfig::default();
         let result = runner.run_sync_blocking("test").unwrap();
         assert_eq!(result, "sync success");
@@ -286,7 +282,6 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-
         let _cfg = AgentRunConfig::default();
         let mut rx = runner.run_streamed("test");
 
