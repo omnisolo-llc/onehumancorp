@@ -636,3 +636,21 @@ fn test_record_llm_network_latency() {
     // This test verifies that the metric recording logic for llm network latency runs without panicking.
     ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
 }
+
+#[test]
+fn test_harness_tagged_metrics() {
+    // This test ensures the metric recording logic for the newly tagged metrics runs without panicking.
+    ::server_telemetry::record_mcp_tool_call("test_tool", "success");
+    ::server_telemetry::record_bubblewrap_spawn("test_agent", "test_task");
+    ::server_telemetry::record_bubblewrap_execution_latency("test_agent", "test_task", 150.0);
+}
+
+#[tokio::test]
+async fn test_harness_tagged_async_metrics() {
+    // This test verifies that the async metric recording logic runs without panicking.
+    // We use a mock db url or dummy pool if possible, but since we just want to ensure it doesn't panic on signature mismatch:
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+    if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
+        let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, "spiffe://test", 1.0).await;
+    }
+}

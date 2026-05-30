@@ -319,11 +319,13 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
 
 pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
     let counter = get_mcp_tool_calls_counter();
+    let deployment_mode = get_deployment_mode();
     counter.add(
         1,
         &[
             opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
             opentelemetry::KeyValue::new("status", status.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ]
     );
 }
@@ -866,12 +868,13 @@ pub async fn record_mcp_proxy_connections_active(
     spiffe_id: &str,
     delta: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let deployment_mode = get_deployment_mode();
     buffer_metric(
         pool,
         "ohc_mcp_proxy_connections_active",
         "gauge",
         delta,
-        serde_json::json!({ "spiffe_id": spiffe_id }),
+        serde_json::json!({ "spiffe_id": spiffe_id, "deployment_mode": deployment_mode }),
     )
     .await
 }
@@ -1175,22 +1178,26 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
 
 pub fn record_bubblewrap_spawn(agent_id: &str, task_id: &str) {
     let gauge = get_bubblewrap_spawn_total();
+    let deployment_mode = get_deployment_mode();
     gauge.add(
         1,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
 }
 
 pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latency_ms: f64) {
     let histogram = get_bubblewrap_execution_latency();
+    let deployment_mode = get_deployment_mode();
     histogram.record(
         latency_ms,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
 }
