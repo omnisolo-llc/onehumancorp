@@ -127,9 +127,8 @@ pub async fn cost_dashboard_handler(
 
     // Proper concurrent execution combining spawn_blocking for CPU/sync methods
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
-    let tenant_id_clone_for_auditor = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
-        (auditor.get_tenant_cost(&tenant_id_clone_for_auditor), auditor.get_tenant_revenue(&tenant_id_clone_for_auditor))
+        (auditor.get_total_cost(), auditor.get_total_revenue())
     });
 
     let storage_future = tokio::task::spawn(async move {

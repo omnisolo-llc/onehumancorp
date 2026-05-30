@@ -15,8 +15,8 @@ async fn test_shared_task_orchestrator() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -106,7 +106,7 @@ async fn test_shared_task_orchestrator_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
         .unwrap();
 
@@ -242,6 +242,103 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
 }
 
 #[tokio::test]
+async fn test_shared_task_orchestrator_update_and_list_sqlite() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            transitioned_at TEXT
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+
+    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let task1 = SharedTaskV4 {
+        id: "task_list_1".to_string(),
+        organization_id: "org_list".to_string(),
+        title: "Test Task List 1".to_string(),
+        description: Some("Description".to_string()),
+        status: "PENDING".to_string(),
+        agent_id: None,
+        priority: "P1".to_string(),
+        payload: Some("{}".to_string()),
+        parent_plan_id: None,
+        dependencies: "[]".to_string(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
+    };
+    orchestrator.create_task(task1).await.unwrap();
+
+    let task2 = SharedTaskV4 {
+        id: "task_list_2".to_string(),
+        organization_id: "org_list".to_string(),
+        title: "Test Task List 2".to_string(),
+        description: Some("Description".to_string()),
+        status: "PENDING".to_string(),
+        agent_id: None,
+        priority: "P1".to_string(),
+        payload: Some("{}".to_string()),
+        parent_plan_id: None,
+        dependencies: "[]".to_string(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
+    };
+    orchestrator.create_task(task2).await.unwrap();
+
+    let tasks = orchestrator.list_tasks("org_list").await.unwrap();
+    assert_eq!(tasks.len(), 2);
+
+    orchestrator.update_task_status("task_list_1", "IN_PROGRESS", Some("agent_list")).await.unwrap();
+    let updated_task = orchestrator.get_task("task_list_1").await.unwrap();
+    assert_eq!(updated_task.status, "IN_PROGRESS");
+
+    orchestrator.complete_task("task_list_2", Some("agent_list")).await.unwrap();
+    let completed_task = orchestrator.get_task("task_list_2").await.unwrap();
+    assert_eq!(completed_task.status, "COMPLETED");
+}
+
+#[tokio::test]
 async fn test_shared_task_orchestrator_dependencies() {
     if std::env::var("DATABASE_URL").is_err() {
         return;
@@ -252,8 +349,8 @@ async fn test_shared_task_orchestrator_dependencies() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -316,4 +413,72 @@ async fn test_shared_task_orchestrator_dependencies() {
         let claimed_none = orchestrator.claim_task("org_123_pg", "agent_2_pg").await.unwrap();
         assert!(claimed_none.is_none());
     }
+}
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_claim_task_not_found_sqlite() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
+        .unwrap();
+
+    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let claimed_task = orchestrator.claim_task("org_123", "agent_123").await.unwrap();
+    assert!(claimed_task.is_none());
+}
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_claim_task_not_found_pg() {
+    if std::env::var("DATABASE_URL").is_err() {
+        return;
+    }
+
+    let db_url = std::env::var("DATABASE_URL").unwrap();
+    if !db_url.contains("test") {
+        return;
+    }
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+
+        .connect_lazy(&db_url)
+        .unwrap();
+
+    let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let claimed_task = orchestrator.claim_task("nonexistent_org", "agent_123").await.unwrap();
+    assert!(claimed_task.is_none());
 }

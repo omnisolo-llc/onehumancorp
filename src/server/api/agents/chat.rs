@@ -23,13 +23,19 @@ pub struct ChatResponse {
     pub department_assigned: Option<String>,
 }
 
-pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
+#[derive(Clone)]
+pub struct ChatState {
+    pub orchestrator: Arc<DepartmentOrchestrator>,
+    pub queue: Arc<dyn crate::queue::TaskQueue>,
+}
+
+pub fn router<S>(state: ChatState) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/", post(handle_chat))
-        .with_state(orchestrator)
+        .with_state(state)
 }
 
 pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Value) {
@@ -62,7 +68,7 @@ pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Valu
 }
 
 async fn handle_chat(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    State(state): State<ChatState>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChatRequest>,
 ) -> impl IntoResponse {
@@ -73,16 +79,31 @@ async fn handle_chat(
 
     let (dept, description, payload_json) = determine_routing(&payload.message);
 
-    match orchestrator.execute_action(
-        dept.clone(),
-        description,
-        tenant_id,
-        ActionRisk::DraftForReview,
-        payload_json,
-    ).await {
-        Ok(_) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
-    }
+    let job_payload = serde_json::json!({
+        "type": "chat_action",
+        "department": dept.to_string(),
+        "description": description,
+        "payload": payload_json
+    });
+
+    let job = crate::queue::Job {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        parent_task_id: "".to_string(),
+        agent_role: "chat_agent".to_string(),
+        payload: serde_json::to_string(&job_payload).unwrap_or_default(),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: chrono::Utc::now(),
+        locked_until: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+
+    let _ = state.queue.enqueue(job).await;
+
+    (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response()
 }
 
 #[cfg(test)]
