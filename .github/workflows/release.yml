@@ -63,7 +63,7 @@ jobs:
           #   artifact_name: ohc-x86_64-apple-darwin.tar.gz
           #   install_linux_deps: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
@@ -77,6 +77,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-release-artifacts-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -91,7 +95,7 @@ jobs:
         run: bazelisk build //release:release_archive --config=${{ matrix.bazel_config }}
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: release-${{ matrix.name }}
           path: bazel-bin/release/${{ matrix.artifact_name }}
@@ -138,7 +142,7 @@ jobs:
             tauri_cli_bazel_flags: --config=linux_arm64
             install_linux_deps: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -161,9 +165,32 @@ jobs:
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
+      - name: Cache Cargo and Tauri build outputs
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+            target/*/release/.fingerprint
+            target/*/release/build
+            target/*/release/deps
+          key: ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'src/ui/tauri/Cargo.toml', 'src/ui/tauri/tauri.conf.json') }}
+          restore-keys: |
+            ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-
+            ${{ runner.os }}-desktop-cargo-tauri-
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-desktop-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -459,7 +486,7 @@ jobs:
           cat checksums-desktop-${{ matrix.name }}.txt
 
       - name: Upload desktop installer artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: desktop-${{ matrix.name }}
           path: dist/
@@ -494,7 +521,7 @@ jobs:
           #   targets: "//src/ui/tauri:tauri_ios_ipa"
           #   patterns: "*.ipa"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
@@ -536,6 +563,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-mobile-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -577,7 +608,7 @@ jobs:
           cat checksums-mobile-${{ matrix.name }}.txt
 
       - name: Upload mobile artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: mobile-${{ matrix.name }}
           path: dist/
@@ -588,7 +619,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install Linux build dependencies
         run: |
@@ -601,6 +632,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-server-web-image
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
@@ -632,7 +667,7 @@ jobs:
           cat checksums-server-web-image.txt
 
       - name: Upload server web image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: server-web-image
           path: dist/
@@ -649,7 +684,7 @@ jobs:
       - build-server-web-image
     timeout-minutes: 15
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8.0.1
         with:
           path: dist/
 
@@ -670,7 +705,7 @@ jobs:
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.0
         with:
           files: |
             dist/*.tar.gz
@@ -798,17 +833,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -816,6 +851,10 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-push-docker
+          repository-cache: true
+          external-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
