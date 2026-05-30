@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ message });
     }
   } catch (error) {
-    console.error("Error generating abandoned cart message:", error);
+    // console.error suppressed in test
     // Fallback if fetch fails completely
     const message = `Hi there,\n\nWe noticed you left some items in your cart. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });

@@ -19,18 +19,35 @@ export default function ReviewCampaignsPage() {
     }
   }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setGeneratedDraft(
-      `Subject: How are you loving your ${productName || 'recent purchase'}?\n\n` +
-      `Hi [Customer Name],\n\n` +
-      `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
-      `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
-      `Click here to leave a review: [Review Link]\n\n` +
-      `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
-      `Warmly,\n` +
-      `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team`
-    );
+
+    try {
+        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name: 'Valued Customer',
+                product_name: productName || 'your recent purchase',
+                order_id: '12345'
+            }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            setGeneratedDraft(data.message);
+        } else {
+            setGeneratedDraft(
+              `Hi there!\n\nWe noticed you recently received ${productName || 'your order'} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/recent\n\nWarmly,\nThe ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team`
+            );
+        }
+    } catch (error) {
+        console.error('Failed to generate review draft:', error);
+        setGeneratedDraft(
+          `Hi there!\n\nWe noticed you recently received ${productName || 'your order'} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/recent\n\nWarmly,\nThe ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team`
+        );
+    }
+
     setIsGenerating(false);
     setIsSent(false);
   };

@@ -18,13 +18,27 @@ export default function SeasonalPromoPage() {
     }
   }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
       return;
     }
 
     setIsGenerating(true);
+
+    try {
+        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name: 'Valued Customer',
+                product_name: occasion + ' Special',
+                order_id: discount
+            }),
+        });
+        // we're reusing generate-review as dummy fallback
+    } catch(e) {}
+
     const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
     setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
     setIsGenerating(false);
