@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -96,12 +96,12 @@ export default function Dashboard() {
       } else {
         // Fallback to local storage tenant if API fails or no auth
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(`ohc://join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(`ohc://join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
       setShowReferralModal(true);
@@ -365,6 +365,9 @@ export default function Dashboard() {
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
+             </Link>
+             <Link href="/orders" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
+               Orders 📦
              </Link>
              <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
                Inbox
