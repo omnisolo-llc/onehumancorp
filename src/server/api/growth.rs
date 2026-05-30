@@ -84,7 +84,6 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
-        .route("/milestone/share", post(handle_milestone_share))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
@@ -144,18 +143,6 @@ pub struct InviteIdRequest {
 }
 
 
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MilestoneShareRequest {
-    pub tenant_id: String,
-    pub milestone_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MilestoneShareResponse {
-    pub reward_unlocked: bool,
-    pub reward_type: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
@@ -540,26 +527,6 @@ async fn handle_generate_discount_share(
     Ok(Json(DiscountShareResponse { share_url }))
 }
 
-
-async fn handle_milestone_share(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<MilestoneShareRequest>,
-) -> Result<Json<MilestoneShareResponse>, StatusCode> {
-    if let Ok(event) = serde_json::to_string(&serde_json::json!({ "tenant_id": req.tenant_id, "milestone_id": req.milestone_id })) {
-        let msg = crate::hub::HubEvent {
-            r#type: "growth.milestone_shared".to_string(),
-            payload: event,
-            occurred_at: chrono::Utc::now(),
-        };
-        state.hub.append_recent_event(msg);
-    }
-
-    Ok(Json(MilestoneShareResponse {
-        reward_unlocked: true,
-        reward_type: "pro_trial_extension".to_string(),
-    }))
-}
-
 async fn handle_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
@@ -817,35 +784,6 @@ mod tests {
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
-    }
-
-
-    #[tokio::test]
-    async fn test_handle_milestone_share() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
-            return;
-        }
-
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = MilestoneShareRequest {
-            tenant_id: "test-tenant-123".to_string(),
-            milestone_id: "milestone_first_order".to_string(),
-        };
-
-        let res = handle_milestone_share(Extension(state.clone()), Json(req)).await;
-        assert!(res.is_ok());
-
-        let res_json = res.unwrap().0;
-        assert!(res_json.reward_unlocked);
-        assert_eq!(res_json.reward_type, "pro_trial_extension");
-
-        let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.milestone_shared"));
     }
 
     #[tokio::test]
