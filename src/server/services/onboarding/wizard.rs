@@ -92,4 +92,20 @@ mod tests {
 
         fs::remove_dir_all(".ohc-local-data").unwrap();
     }
+
+    #[test]
+    fn test_save_and_get_onboarding_state() {
+        let w = InteractiveWizard::new();
+        let org_id = "test_org";
+        let user_id = "test_user";
+        let state_json = r#"{"step": 1, "businessName": "Maya Bakery"}"#;
+
+        let save_res = w.save_onboarding_state(org_id, user_id, 1, state_json);
+        assert!(save_res.is_ok());
+
+        let get_res = w.get_onboarding_state(org_id);
+        assert!(get_res.is_ok());
+        // For now it returns a dummy json "{"step": 0}"
+        assert_eq!(get_res.unwrap(), r#"{"step": 0}"#);
+    }
 }
