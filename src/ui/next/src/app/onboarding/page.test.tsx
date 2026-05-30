@@ -21,7 +21,10 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockReturnValue(Promise.resolve({
+      ok: true,
+      json: async () => ({ wizardState: null })
+    }));
   });
 
   afterEach(() => {
@@ -39,22 +42,22 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ wizardState: null }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          business_type: 'Bakery',
+          business_name: 'Maya Bakery',
+          categories: ['food'],
+          initial_products: [{ name: 'Cake', price: '20' }]
+        })
       })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ wizardState: null }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success!" })
+      });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -116,10 +119,11 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ wizardState: null }) })
+      .mockResolvedValueOnce({
+        ok: false
+      });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -161,9 +165,9 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
+    global.fetch = vi.fn().mockReturnValueOnce(Promise.resolve({ok: true, json: async () => ({ wizardState: null })})).mockReturnValueOnce(Promise.resolve({
       ok: false
-    });
+    }));
 
     act(() => { render(<OnboardingWizard />); });
 
