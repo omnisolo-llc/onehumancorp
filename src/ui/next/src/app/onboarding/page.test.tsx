@@ -2,9 +2,15 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
-import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
+import { beforeEach, describe, it, expect, vi, afterEach, beforeAll, afterAll } from 'vitest';
 
 describe('OnboardingWizard', () => {
+  beforeAll(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
@@ -21,7 +27,9 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url) => {
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
   });
 
   afterEach(() => {
@@ -40,20 +48,25 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -117,8 +130,11 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -158,11 +174,14 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
+    useOnboardingStore.setState({ step: 3, chatStep: 4, error: "", businessName: 'Bakery', businessType: 'Food', categories: ['food'], firstProductName: 'Cake', firstProductPrice: '20' });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/start' || url.includes('/api/onboarding/start')) {
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -204,7 +223,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 3: Can select AI agents and toggle auto-respond', async () => {
-    useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
+    useOnboardingStore.setState({ step: 3, chatStep: 4, aiAgents: [], aiAutoRespond: true });
 
     act(() => { render(<OnboardingWizard />); });
 
