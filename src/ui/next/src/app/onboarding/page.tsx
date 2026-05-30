@@ -518,7 +518,7 @@ export default function OnboardingWizard() {
                   Go to Dashboard
                 </a>
                 <a
-                  href="/builder"
+                  href="/storefront-builder"
                   className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront

@@ -260,7 +260,9 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+      const previewLink = screen.getByRole('link', { name: /Preview Storefront/i });
+      expect(previewLink).toBeInTheDocument();
+      expect(previewLink).toHaveAttribute('href', '/storefront-builder');
     });
   });
 });
