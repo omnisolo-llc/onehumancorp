@@ -159,11 +159,11 @@ async fn regenerate_cache(
     html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
 
     html.push_str(r#"
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: #1D1D1F; display: flex; flex-direction: column; align-items: center; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; }
+        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(210%); -webkit-backdrop-filter: blur(40px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1), 0 10px 15px -5px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; }
         @media (prefers-color-scheme: dark) { body { background: #000; color: #F5F5F7; } .glass-container { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); } }
         .block { padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); }
         .block:last-child { border-bottom: none; }
@@ -171,18 +171,24 @@ async fn regenerate_cache(
         .hero-subtitle { font-size: 16px; color: #666; margin: 0; }
         @media (prefers-color-scheme: dark) { .hero-subtitle { color: #aaa; } }
         .product-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
-        @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); } }
+        .product-card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); } }
         .product-name { font-weight: 600; font-size: 16px; margin: 0; }
         .product-price { font-weight: 700; color: #0071E3; font-size: 16px; }
         .product-desc { font-size: 14px; color: #555; margin-top: 4px; }
         @media (prefers-color-scheme: dark) { .product-desc { color: #999; } }
-        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-        .btn:active { transform: scale(0.96); }
+        .btn { background: linear-gradient(180deg, #007aff 0%, #0056b3 100%); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.2s; width: 100%; box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3); }
+        .btn:active { transform: scale(0.96); box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3); }
+        .service-block { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 20px; text-align: center; }
+        @media (prefers-color-scheme: dark) { .service-block { background: rgba(50, 50, 55, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); } }
         .service-block h3 { margin: 0 0 16px 0; }
-        .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
+        .testimonial-card { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+        @media (prefers-color-scheme: dark) { .testimonial-card { background: rgba(50, 50, 55, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); } }
+        .testimonial { font-style: italic; color: #555; margin-bottom: 8px; margin-top: 0; }
         @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
-        .author { font-weight: 600; font-size: 14px; }
+        .author { font-weight: 600; font-size: 14px; margin: 0; }
+        .form-input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: rgba(255,255,255,0.7); box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        @media (prefers-color-scheme: dark) { .form-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; } }
     </style>
     </head>
     <body>
@@ -195,12 +201,16 @@ async fn regenerate_cache(
             "HeroBlock" | "Hero" => {
                 let title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome");
                 let subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
-                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(title)));
-                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(subtitle)));
+                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>
+", escape_html(title)));
+                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>
+", escape_html(subtitle)));
             }
             "ProductGridBlock" | "Catalog" => {
-                html.push_str("<h2 class=\"font-outfit\">Our Products</h2>\n");
-                html.push_str("<div class=\"product-grid\">\n");
+                html.push_str("<h2 class=\"font-outfit\">Our Products</h2>
+");
+                html.push_str("<div class=\"product-grid\">
+");
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
@@ -210,34 +220,74 @@ async fn regenerate_cache(
                             tags.push(format!("entity:product:{}", pid));
                         }
                         html.push_str(&format!(
-                            "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
+                            "<div class=\"product-card\">
+<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>
+</div>
+",
                             escape_html(name), escape_html(desc), escape_html(price)
                         ));
                     }
                 }
-                html.push_str("</div>\n");
+                html.push_str("</div>
+");
             }
             "ServiceBookingBlock" | "Booking" => {
                 let title = block.content.get("title").and_then(|v| v.as_str()).unwrap_or("Book a Service");
                 let avail = block.content.get("availability").and_then(|v| v.as_str()).unwrap_or("Available now");
-                html.push_str("<div class=\"service-block\">\n");
-                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>\n", escape_html(title)));
-                html.push_str(&format!("<p>{}</p>\n", escape_html(avail)));
-                html.push_str("<button class=\"btn\">Book Now</button>\n");
-                html.push_str("</div>\n");
+                html.push_str("<div class=\"service-block\">
+");
+                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>
+", escape_html(title)));
+                html.push_str(&format!("<p>{}</p>
+", escape_html(avail)));
+                html.push_str("<button class=\"btn\">Book Now</button>
+");
+                html.push_str("</div>
+");
+            }
+            "BookingCalendarBlock" | "BookingCalendar" => {
+                let title = block.content.get("title").and_then(|v| v.as_str()).unwrap_or("Schedule an Appointment");
+                html.push_str("<div class=\"service-block\">
+");
+                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>
+", escape_html(title)));
+                html.push_str("<div style=\"background: rgba(0,0,0,0.05); border-radius: 8px; padding: 16px; margin-bottom: 16px;\"><p style=\"color: #666; font-size: 14px;\">Calendar Widget</p></div>
+");
+                html.push_str("<button class=\"btn\">Confirm Booking</button>
+");
+                html.push_str("</div>
+");
             }
             "TestimonialBlock" | "Testimonials" => {
-                html.push_str("<h2 class=\"font-outfit\">What People Say</h2>\n");
+                html.push_str("<h2 class=\"font-outfit\">What People Say</h2>
+");
                 if let Some(quotes) = block.content.get("quotes").and_then(|v| v.as_array()) {
                     for quote in quotes {
                         let text = quote.get("text").and_then(|v| v.as_str()).unwrap_or("");
                         let author = quote.get("author").and_then(|v| v.as_str()).unwrap_or("");
                         html.push_str(&format!(
-                            "<div><p class=\"testimonial\">\"{}\"</p><p class=\"author\">- {}</p></div>\n",
+                            "<div class=\"testimonial-card\"><p class=\"testimonial\">\"{}\"</p><p class=\"author\">- {}</p></div>
+",
                             escape_html(text), escape_html(author)
                         ));
                     }
                 }
+            }
+            "ContactFormBlock" | "ContactForm" => {
+                html.push_str("<div class=\"service-block\">
+");
+                html.push_str("<h2 class=\"font-outfit\" style=\"margin-bottom: 16px;\">Contact Us</h2>
+");
+                html.push_str("<input class=\"form-input\" placeholder=\"Your Name\" />
+");
+                html.push_str("<input class=\"form-input\" placeholder=\"Your Email\" />
+");
+                html.push_str("<textarea class=\"form-input\" placeholder=\"Message\" rows=\"3\"></textarea>
+");
+                html.push_str("<button class=\"btn\" style=\"background: #111; color: #fff;\">Send Message</button>
+");
+                html.push_str("</div>
+");
             }
             _ => {
                 if let Some(text) = block.content.get("text").and_then(|v| v.as_str()) {
