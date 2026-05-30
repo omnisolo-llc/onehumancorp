@@ -10,10 +10,12 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [tenantId, setTenantId] = useState('my-store');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
+        setTenantId(localStorage.getItem('tenant') || 'my-store');
     }
   }, []);
 
@@ -79,7 +81,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`https://ohc.store/join?ref=${tenantId}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -95,12 +97,12 @@ export default function Dashboard() {
         }
       } else {
         // Fallback to local storage tenant if API fails or no auth
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const tenant = tenantId;
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const tenant = tenantId;
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
@@ -961,7 +963,7 @@ export default function Dashboard() {
                             setShowPromoModal(true);
                             setIsGeneratingPromo(true);
                             try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                const tenant = tenantId;
                                 const response = await fetch("/api/v1/growth/promotions/generate", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -1058,7 +1060,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${tenantId} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1078,7 +1080,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${tenantId} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
@@ -1123,6 +1125,43 @@ export default function Dashboard() {
               </div>
            </section>
          )}
+
+
+         {/* Growth Loop: Embeddable Wall of Love Widget */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Wall of Love</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Showcase Your Reviews</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your best customer testimonials on external sites. This widget drives traffic back to your store with a "Powered by OHC" footer.</p>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                        <div className="flex gap-2 items-center">
+                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/wall-of-love/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<iframe src="https://ohc.app/api/v1/growth/wall-of-love/embed?tenant=${tenantId}" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>\n<!-- ⚡ Powered by OHC -->`);
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                }}
+                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                {copied ? 'Copied!' : 'Copy Code'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="hidden md:flex w-64 h-48 bg-gray-50 border border-gray-100 rounded-xl items-center justify-center relative overflow-hidden flex-shrink-0">
+                    <iframe src={`/api/v1/growth/wall-of-love/embed?tenant=${tenantId}`} width="320" height="400" frameBorder="0" style={{ transform: 'scale(0.6)', transformOrigin: 'top center', height: '800px', width: '500px' }} />
+                </div>
+            </div>
+         </section>
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
@@ -1813,7 +1852,7 @@ export default function Dashboard() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    const tenant = tenantId;
                                     await fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -2053,13 +2092,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}

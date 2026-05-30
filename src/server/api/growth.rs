@@ -71,6 +71,59 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+
+
+
+
+
+pub async fn handle_wall_of_love_embed(axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>) -> impl IntoResponse {
+    let tenant = params.get("tenant").cloned().unwrap_or_else(|| "my-store".to_string());
+    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wall of Love</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {{ font-family: 'Outfit', sans-serif; background: transparent; margin: 0; padding: 16px; }}
+    .widget {{ background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.4); border-radius: 16px; padding: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }}
+    .title {{ font-size: 1.25rem; font-weight: 700; color: #111827; margin-top: 0; margin-bottom: 16px; text-align: center; }}
+    .review {{ background: rgba(255,255,255,0.8); border-radius: 12px; padding: 16px; margin-bottom: 12px; font-size: 0.875rem; color: #4b5563; border: 1px solid rgba(255,255,255,0.5); }}
+    .stars {{ color: #fbbf24; font-size: 1.1rem; margin-bottom: 8px; }}
+    .author {{ font-weight: 700; color: #111827; margin-top: 8px; font-size: 0.8rem; }}
+    .footer {{ margin-top: 16px; text-align: center; font-size: 0.75rem; color: #6b7280; }}
+    .footer a {{ color: #3b82f6; font-weight: 700; text-decoration: none; }}
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <h3 class="title">What our customers say</h3>
+    <div class="review">
+      <div class="stars">★★★★★</div>
+      "Absolutely amazing service! My business has grown 3x since using them."
+      <div class="author">— Sarah Jenkins</div>
+    </div>
+    <div class="review">
+      <div class="stars">★★★★★</div>
+      "The best decision I ever made. Highly recommended!"
+      <div class="author">— Mark T.</div>
+    </div>
+    <div class="footer">
+      <a href="https://ohc.store/join?ref={}" target="_blank">⚡ Powered by OHC</a>
+    </div>
+  </div>
+</body>
+</html>"#,
+        safe_tenant
+    );
+    (axum::http::StatusCode::OK, [(axum::http::header::CONTENT_TYPE, "text/html")], html)
+}
+
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -81,6 +134,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/wall-of-love/embed", get(handle_wall_of_love_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))

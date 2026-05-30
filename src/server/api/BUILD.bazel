@@ -71,6 +71,7 @@ rust_library(
         "//src/server/config:server_config",
         "//src/server/harness:server_harness",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",
+        "@crates//:urlencoding",
         "//src/server/integrations/cal_com:server_integrations_cal_com",
         "//src/server/integrations/calendly:server_integrations_calendly",
         "//src/server/integrations/chromadb:server_integrations_chromadb",
