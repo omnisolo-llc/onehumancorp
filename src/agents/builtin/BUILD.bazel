@@ -74,6 +74,7 @@ rust_library(
         "plane.rs",
         "plugins.rs",
         "progressive_skills.rs",
+        "prompt_construction.rs",
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",
@@ -222,6 +223,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "gpt_researcher",
     "local_provider",
     "sona_patterns",
+    "prompt_construction",
 ]
 
 rust_test(

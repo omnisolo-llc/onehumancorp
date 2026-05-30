@@ -34,6 +34,7 @@ pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
 pub mod json_store;
+pub mod prompt_construction;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
 pub mod ralph_loop;
