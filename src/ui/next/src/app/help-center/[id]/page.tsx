@@ -150,7 +150,7 @@ export default function HelpArticlePage() {
   return (
     <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
-        <button onClick={() => router.push('/help')} className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
+        <button onClick={() => router.push('/help-center')} className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
           &larr; Back to Help Center
         </button>
         <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
