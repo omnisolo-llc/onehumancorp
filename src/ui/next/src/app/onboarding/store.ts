@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
+  buildMode: 'guided' | 'instant';
+  instantBio: string;
   step: number;
   chatStep: number;
   businessDescription: string;
@@ -36,11 +38,15 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
+  setBuildMode: (mode: 'guided' | 'instant') => void;
+  setInstantBio: (bio: string) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
+      buildMode: 'guided',
+      instantBio: '',
       step: 1,
       chatStep: 1,
       businessDescription: '',
@@ -75,9 +81,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
+      setBuildMode: (buildMode) => set({ buildMode }),
+      setInstantBio: (instantBio) => set({ instantBio }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4', // Changed name to avoid cache collision with new structure
     }
   )
 );

@@ -35,6 +35,61 @@ describe('OnboardingWizard', () => {
     vi.clearAllMocks();
   });
 
+  it('switches to instant build mode and submits bio', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Click instant build mode
+    const instantBtn = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantBtn);
+
+    // Verify it switches to instant mode
+    expect(screen.getByText("Instant Setup")).toBeInTheDocument();
+
+    const bioInput = screen.getByPlaceholderText(/I run a local bakery/i);
+    await user.type(bioInput, 'maya custom cakes');
+
+    const generateBtn = screen.getByRole('button', { name: /Generate Storefront/i });
+    await user.click(generateBtn);
+
+    // Verify it jumps to step 6 (Draft Summary)
+    await waitFor(() => {
+      expect(screen.getByText("Draft Summary")).toBeInTheDocument();
+      expect(screen.getByText("Maya Bakery")).toBeInTheDocument();
+    });
+
+    const launchBtn = screen.getByRole('button', { name: /Launch Store/i });
+    await user.click(launchBtn);
+
+    // Verify it ends up on step 5 (You're Live!)
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+    });
+  });
+
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 

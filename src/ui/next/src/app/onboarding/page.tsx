@@ -5,6 +5,8 @@ import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
   const {
+    buildMode, setBuildMode,
+    instantBio, setInstantBio,
     step, setStep,
     chatStep, setChatStep,
     businessDescription, setBusinessDescription,
@@ -64,7 +66,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && chatStep === 1 && !businessName) return;
+    if (step === 1 && chatStep === 1 && !businessName && !instantBio) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -142,6 +144,51 @@ export default function OnboardingWizard() {
     }
   };
 
+  const handleInstantIntake = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const intakeRes = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: instantBio })
+      });
+
+      if (!intakeRes.ok) {
+        throw new Error('Failed to process business details');
+      }
+
+      const intakeData = await intakeRes.json();
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setBusinessDescription(instantBio);
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+
+      // Pre-fill defaults
+      setWebsiteTemplate('Modern');
+      setAiAgents(['Sales Agent', 'Support Agent', 'Marketing Agent']);
+      setAiAutoRespond(true);
+
+      setStep(6); // Go to instant preview step
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred processing details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
@@ -207,17 +254,68 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="flex bg-white/50 dark:bg-black/30 p-1 rounded-[12px] mb-6">
+                <button
+                  onClick={() => setBuildMode('guided')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-[10px] transition-all ${buildMode === 'guided' ? 'bg-white dark:bg-white/10 shadow-sm text-[#1D1D1F] dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                  Guided Build
+                </button>
+                <button
+                  onClick={() => setBuildMode('instant')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-[10px] transition-all ${buildMode === 'instant' ? 'bg-white dark:bg-white/10 shadow-sm text-[#1D1D1F] dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                  Instant Build
+                </button>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
 
-              {chatStep === 1 && (
+              {buildMode === 'instant' ? (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Instant Setup</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Write a paragraph about your business. We'll generate everything else instantly.
+                  </p>
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <textarea
+                        value={instantBio}
+                        onChange={(e) => setInstantBio(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && instantBio.trim() && !isLoading) {
+                            e.preventDefault();
+                            handleInstantIntake();
+                          }
+                        }}
+                        placeholder="e.g. I run a local bakery called Maya's Cakes in Portland. I bake custom vegan cakes for weddings and parties. My best seller is the Custom Vegan Cake for $45."
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-48 resize-none transition-all shadow-inner text-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={handleInstantIntake}
+                      disabled={!instantBio.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Generating Storefront...' : 'Generate Storefront'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                    <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                  </p>
+
+                  {chatStep === 1 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
@@ -332,6 +430,56 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
               )}
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="flex flex-col flex-1 animate-fade-in">
+              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Draft Summary</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Here's a preview of the storefront we're about to launch.
+              </p>
+
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                <div className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[12px] border border-white/50 dark:border-white/10">
+                  <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">{businessName}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{businessType} • {categories.join(', ')}</p>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <span className="text-gray-500 dark:text-gray-400">First Product</span>
+                      <span className="font-semibold text-[#1D1D1F] dark:text-white">{firstProductName}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Price</span>
+                      <span className="font-semibold text-[#1D1D1F] dark:text-white">${firstProductPrice}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <span className="text-gray-500 dark:text-gray-400">Style Template</span>
+                      <span className="font-semibold text-[#1D1D1F] dark:text-white">{websiteTemplate}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">AI Agents</span>
+                      <span className="font-semibold text-[#1D1D1F] dark:text-white">{aiAgents.length} Assigned</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6">
+                <button
+                  onClick={handleStartOnboarding}
+                  disabled={isLoading}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Launching...' : 'Launch Store'}
+                </button>
+              </div>
             </div>
           )}
 

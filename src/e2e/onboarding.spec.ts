@@ -11,6 +11,8 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
+    await page.getByRole('button', { name: 'Guided Build' }).click();
+
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
 
@@ -64,6 +66,8 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
+    await page.getByRole('button', { name: 'Guided Build' }).click();
+
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
 
@@ -111,6 +115,8 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
+    await page.getByRole('button', { name: 'Guided Build' }).click();
+
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
 
@@ -147,9 +153,33 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
   });
 
+  test('completes instant build flow', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.waitForTimeout(1000);
+
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Instant Setup' })).toBeVisible({ timeout: 15000 });
+
+    await page.getByPlaceholder(/e\.g\. I run a local bakery/i).fill('maya runs a custom cake shop');
+
+    await page.getByRole('button', { name: /Generate Storefront/i }).click();
+
+    await expect(page.getByRole('heading', { name: 'Draft Summary' })).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+  });
+
   test('Leo (Music Tutor) onboarding flow', async ({ page }) => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
+
+    await page.getByRole('button', { name: 'Guided Build' }).click();
 
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Leo Music");
@@ -178,6 +208,8 @@ test.describe('Onboarding Wizard', () => {
   test('Fatima (Food Cart) onboarding flow', async ({ page }) => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
+
+    await page.getByRole('button', { name: 'Guided Build' }).click();
 
     await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Fatima Halal Food");

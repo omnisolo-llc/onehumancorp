@@ -74,24 +74,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }
-    } else if (desc.includes('priya')) {
-      return NextResponse.json({
-        business_name: "Priya Boutique",
-        business_type: "Retail",
-        categories: ["clothing", "retail"],
-        initial_products: [{ name: "Summer Dress", price: "120.00" }]
-      });
-    } else if (desc.includes('leo')) {
-      return NextResponse.json({
-        business_name: "Leo Music",
-        business_type: "Service",
-        categories: ["education", "music"],
-        initial_products: [{ name: "Guitar Lesson", price: "60.00" }]
-      });
-    } else if (desc.includes('fatima')) {
-      return NextResponse.json({
-        business_name: "Fatima Halal Food",
-        business_type: "Food",
-        categories: ["food", "restaurant"],
-        initial_products: [{ name: "Chicken Over Rice", price: "12.00" }]
-      });
