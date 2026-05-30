@@ -43,7 +43,6 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
     });
 
     it('returns fallback message on fetch error', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
         const req = new Request('http://localhost/api/v1/growth/campaign/generate-cart', {
@@ -56,7 +55,5 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
 
         expect(res.status).toBe(200);
         expect(data.message).toContain('Hi there');
-
-        consoleErrorSpy.mockRestore();
     });
 });
