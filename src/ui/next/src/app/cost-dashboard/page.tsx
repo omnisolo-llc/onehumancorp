@@ -100,7 +100,7 @@ export default function CostDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-                <div className="p-4 rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(20px) saturate(200%)' }}>
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
@@ -112,7 +112,7 @@ export default function CostDashboardPage() {
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(20px) saturate(200%)' }}>
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
                         <span className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
@@ -120,7 +120,7 @@ export default function CostDashboardPage() {
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-4 rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(20px) saturate(200%)' }}>
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
@@ -128,7 +128,7 @@ export default function CostDashboardPage() {
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-4 rounded-xl border border-gray-100 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(20px) saturate(200%)' }}>
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
                         <span className="font-medium text-gray-900">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
