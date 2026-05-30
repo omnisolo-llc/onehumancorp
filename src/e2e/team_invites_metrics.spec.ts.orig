@@ -14,19 +14,19 @@ test.describe('Growth Loop: Team Invites Metrics Component', () => {
 
   test('TC2: Should display "Team Invites Sent" card', async ({ page }) => {
     // We are already on the dashboard
-    await expect(page.locator('div', { hasText: 'Team Invites Sent' }).first()).toBeVisible();
+    await expect(page.getByText('Team Invites Sent')).toBeVisible();
   });
 
   test('TC3: Should display active referrals and rewards metrics', async ({ page }) => {
     // We are already on the dashboard
-    await expect(page.locator('div', { hasText: 'Active Referrals' }).first()).toBeVisible();
-    await expect(page.locator('div', { hasText: 'Revenue from Referrals' }).first()).toBeVisible();
-    await expect(page.locator('div', { hasText: 'Pending Rewards' }).first()).toBeVisible();
+    await expect(page.getByText('Active Referrals')).toBeVisible();
+    await expect(page.getByText('Revenue from Referrals')).toBeVisible();
+    await expect(page.getByText('Pending Rewards')).toBeVisible();
   });
 
   test('TC4: Should be able to open referral modal from dashboard', async ({ page }) => {
     // We are already on the dashboard
-    await page.locator('button:has-text("Invite a Business")').first().click();
+    await page.getByRole('button', { name: 'Invite a Business' }).click();
     await expect(page.getByText('Help a Business Grow!')).toBeVisible();
     await expect(page.getByText('Your Unique Link')).toBeVisible();
   });
