@@ -100,6 +100,22 @@ impl GitCheckpointer {
     fn progress_file_path(&self, thread_id: &str) -> PathBuf {
         self.repo_path.join(format!(".agent_progress_{}.json", thread_id))
     }
+
+    pub async fn read_scratchpad(&self, thread_id: &str) -> Result<ProgressFile, String> {
+        let scratchpad_path = self.scratchpad_file_path(thread_id);
+        if !scratchpad_path.exists() {
+            return Ok(ProgressFile::default());
+        }
+        let content = tokio::fs::read_to_string(&scratchpad_path).await.map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).map_err(|e| e.to_string())
+    }
+
+    pub async fn write_scratchpad(&self, thread_id: &str, scratchpad: &ProgressFile) -> Result<(), String> {
+        let scratchpad_path = self.scratchpad_file_path(thread_id);
+        let json_data = serde_json::to_string_pretty(scratchpad).map_err(|e| e.to_string())?;
+        tokio::fs::write(&scratchpad_path, json_data).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -130,11 +146,10 @@ impl CheckpointSaver for GitCheckpointer {
         let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
         tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
 
-        // Structured scratchpad
-        let mut scratchpad = ProgressFile::default();
+        // Read existing scratchpad if any, otherwise default
+        let mut scratchpad = self.read_scratchpad(&checkpoint.thread_id).await.unwrap_or_default();
         scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-        let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
-        tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
+        self.write_scratchpad(&checkpoint.thread_id, &scratchpad).await?;
 
         // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
         let add_out = Command::new("git")
@@ -581,5 +596,54 @@ mod tests {
         let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-restore"));
         let content = std::fs::read_to_string(&progress_path).unwrap();
         assert!(content.contains(r#""state": "1""#));
+    }
+    #[tokio::test]
+    async fn test_git_checkpointer_scratchpad() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        // Should return default scratchpad initially
+        let scratchpad1 = saver.read_scratchpad("thread-scratch").await.unwrap();
+        assert_eq!(scratchpad1.status, "pending");
+
+        // Initialize git first so that put_checkpoint (which runs `git commit`) doesn't fail
+        std::process::Command::new("git")
+            .arg("init")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(&["config", "user.name", "Agent"])
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(&["config", "user.email", "agent@ohc.local"])
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        // Put a checkpoint, which should update the scratchpad
+        let cp = Checkpoint {
+            thread_id: "thread-scratch".to_string(),
+            checkpoint_id: "cp-scratch-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "init"}),
+            metadata: serde_json::json!({"agent": "git-bot"}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp).await.unwrap();
+
+        let scratchpad2 = saver.read_scratchpad("thread-scratch").await.unwrap();
+        assert_eq!(scratchpad2.current_objective, "Checkpoint cp-scratch-1");
+
+        // Manual scratchpad write
+        let mut custom_pad = ProgressFile::default();
+        custom_pad.current_objective = "Custom objective".to_string();
+        saver.write_scratchpad("thread-scratch", &custom_pad).await.unwrap();
+
+        let scratchpad3 = saver.read_scratchpad("thread-scratch").await.unwrap();
+        assert_eq!(scratchpad3.current_objective, "Custom objective");
     }
 }
