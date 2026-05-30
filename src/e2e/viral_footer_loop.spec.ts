@@ -42,7 +42,7 @@ test.describe('Public Profile Link-in-Bio', () => {
     const bioText = page.getByText('Providing exceptional services and products.');
     await expect(bioText).toBeVisible();
 
-    const initials = page.getByText('OH');
+    const initials = page.getByText('OH', { exact: true });
     await expect(initials).toBeVisible();
   });
 
