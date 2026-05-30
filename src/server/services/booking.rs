@@ -3,6 +3,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
 use sqlx::Row;
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+use std::sync::Arc;
+use crate::hub::Hub;
+
+static SERVICES_CACHE: OnceLock<HybridCache<Vec<Service>>> = OnceLock::new();
+static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<BookingRecord>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -107,6 +114,20 @@ impl BookingService {
     }
 
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
+        let cache_key = format!("booking_services:{}", tenant_id);
+
+        let cache = SERVICES_CACHE.get_or_init(|| {
+            let redis_client = match std::env::var("REDIS_URL") {
+                Ok(url) => redis::Client::open(url).ok(),
+                Err(_) => None,
+            };
+            HybridCache::new(redis_client)
+        });
+
+        if let Some(cached_services) = cache.get(&cache_key).await {
+            return Ok(cached_services);
+        }
+
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
@@ -118,7 +139,7 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let services = rows.into_iter().map(|row| Service {
+        let services: Vec<Service> = rows.into_iter().map(|row| Service {
             id: row.get("id"),
             tenant_id: row.get("tenant_id"),
             title: row.get("title"),
@@ -126,10 +147,14 @@ impl BookingService {
             price_cents: row.get("price_cents"),
         }).collect();
 
+        cache.set(&cache_key, services.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(services)
     }
 
     pub async fn upsert_service(service: Service) -> Result<(), String> {
+        let cache_key = format!("booking_services:{}", service.tenant_id);
+
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
@@ -173,6 +198,12 @@ impl BookingService {
         .await;
 
         tx.commit().await.map_err(|e| e.to_string())?;
+
+        // Invalidate cache
+        if let Some(cache) = SERVICES_CACHE.get() {
+            cache.invalidate(&cache_key).await;
+        }
+
         Ok(())
     }
 
@@ -188,7 +219,7 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let bookings = rows.into_iter().map(|row| BookingRecord {
+        let bookings: Vec<BookingRecord> = rows.into_iter().map(|row| BookingRecord {
             id: row.get("id"),
             tenant_id: row.get("tenant_id"),
             customer_id: row.get("customer_id"),
@@ -245,6 +276,7 @@ impl BookingService {
         .await;
 
         tx.commit().await.map_err(|e| e.to_string())?;
+
         Ok(())
     }
 }
