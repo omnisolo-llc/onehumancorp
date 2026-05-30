@@ -229,6 +229,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -281,6 +282,16 @@ where
 }
 
 fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let certs = req.peer_certs().map(|c| c.iter().map(|cert| cert.as_ref().to_vec()).collect::<Vec<Vec<u8>>>());
+        let validator = ::server_auth::spiffe::SpiffeValidator::new();
+        use ::server_auth::spiffe::IdentityValidator;
+        match validator.validate_svid(certs) {
+            Ok(svid) => tracing::info!("mTLS successful, verified SVID: {}", svid),
+            Err(e) => return Err(e),
+        }
+    }
+
     let spiffe_id = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
 
@@ -440,7 +451,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
+    let res = tokio::try_join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -461,9 +472,10 @@ async fn http_metrics_handler(
         }
     );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(0.0);
+    let (active_customers_res, pending_orders_res, sales_res) = res.unwrap_or((0, 0, 0.0));
+    let active_customers = active_customers_res;
+    let pending_orders = pending_orders_res;
+    let total_sales = sales_res;
 
     (
         StatusCode::OK,
@@ -671,7 +683,7 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
+    let res: Result<(Option<(String, String)>, i64), sqlx::Error> = tokio::try_join!(
         async {
             sqlx::query_as::<_, (String, String)>(
                 "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -690,11 +702,8 @@ pub async fn advisory_insights_handler(
         }
     );
 
-    let (business_name, industry) = org_res
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-    let active_orders = active_orders_res.unwrap_or(0);
+    let (org_res, active_orders) = res.unwrap_or((None, 0));
+    let (business_name, industry) = org_res.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
@@ -753,14 +762,14 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
+    let res_org: Option<(String, String)> = sqlx::query_as(
         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
     )
     .bind(&tenant_id)
     .fetch_optional(&db.pool)
     .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    .unwrap_or(None);
+    let (business_name, industry) = res_org.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
@@ -849,23 +858,10 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let tenant_id_clone = tenant_id.clone();
+        let llm_cost_f64 = auditor.get_total_cost();
+        let total_revenue_f64 = auditor.get_total_revenue();
 
-        let hub_clone = self.hub.clone();
-
-        let (costs_res, storage_bytes_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
-            }),
-            async move {
-                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
-            }
-        );
-
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
-        let storage_bytes = storage_bytes_res.unwrap_or(0);
+        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2634,6 +2630,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/supply", api::supply::router(db.clone()))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -2816,11 +2813,33 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
+    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
+    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
-    Server::builder()
+    let mut builder = Server::builder();
+
+    if std::env::var("OHC_REQUIRE_SPIFFE").is_ok() {
+        let cert_pem = std::env::var("OHC_TLS_CERT").unwrap_or_default();
+        let key_pem = std::env::var("OHC_TLS_KEY").unwrap_or_default();
+        let ca_pem = std::env::var("OHC_TLS_CA").unwrap_or_default();
+
+        if !cert_pem.is_empty() && !key_pem.is_empty() && !ca_pem.is_empty() {
+            let key = tonic::transport::Identity::from_pem(&cert_pem, &key_pem);
+            let ca = tonic::transport::Certificate::from_pem(&ca_pem);
+
+            let tls = tonic::transport::ServerTlsConfig::new()
+                .identity(key)
+                .client_ca_root(ca);
+
+            builder = builder.tls_config(tls)?;
+        }
+    }
+
+    builder
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -3688,6 +3707,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                            <button class="nav-item" onclick="showScreen('supply-chain-screen')">Supply</button>
+                        </div>
+                    </div>
+
+                    <!-- Supply Chain Screen -->
+                    <div id="supply-chain-screen" class="screen glass" style="margin-bottom: 80px; display: none;">
+                        <h1>Supply Chain & Vendors 📦</h1>
+                        <p>Manage your autonomous supply chain, raw materials, and suppliers.</p>
+
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px; overflow-x: auto;">
+                            <button onclick="fetchSupplyData()">Refresh Data</button>
+                        </div>
+
+                        <div class="grid">
+                            <div class="card glass">
+                                <h3>Vendors</h3>
+                                <div id="vendor-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-vendor-name" placeholder="Vendor Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-vendor-contact" placeholder="Contact Info" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createVendor()">Add Vendor</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Raw Materials</h3>
+                                <div id="raw-material-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-rm-name" placeholder="Material Name" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-qty" placeholder="Current Qty" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-rm-thresh" placeholder="Reorder Threshold" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createRawMaterial()">Add Material</button>
+                            </div>
+
+                            <div class="card glass">
+                                <h3>Bill of Materials (BOM)</h3>
+                                <div id="bom-list" style="margin-bottom: 16px;"></div>
+                                <input type="text" id="new-bom-fg" placeholder="Finished Good ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="text" id="new-bom-rm" placeholder="Raw Material ID" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <input type="number" id="new-bom-qty" placeholder="Qty Required" style="width:100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);">
+                                <button onclick="createBomItem()">Link BOM</button>
+                            </div>
                         </div>
                     </div>
 
@@ -4145,6 +4203,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } catch (e) {
                                 console.error('Error fetching activity feed:', e);
                             }
+                        }
+
+                        async function fetchSupplyData() {
+                            const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') };
+                            try {
+                                const [vRes, rmRes, bomRes] = await Promise.all([
+                                    fetch('/api/supply/vendors', { headers }),
+                                    fetch('/api/supply/raw_materials', { headers }),
+                                    fetch('/api/supply/bom_items', { headers })
+                                ]);
+
+                                if (vRes.ok) {
+                                    const vendors = await vRes.json();
+                                    document.getElementById('vendor-list').innerHTML = vendors.map(v => `<div style="font-size: 13px; margin-bottom: 4px;">🏷️ ${v.name} (${v.id})</div>`).join('');
+                                }
+                                if (rmRes.ok) {
+                                    const rms = await rmRes.json();
+                                    document.getElementById('raw-material-list').innerHTML = rms.map(rm => {
+                                        const color = rm.current_quantity <= rm.reorder_threshold ? 'var(--accent-red)' : 'var(--text-primary)';
+                                        return `<div style="font-size: 13px; margin-bottom: 4px; color: ${color}">📦 ${rm.name}: ${rm.current_quantity} (Thresh: ${rm.reorder_threshold}) <br><span style="font-size: 10px; color: #888;">ID: ${rm.id}</span></div>`;
+                                    }).join('');
+                                }
+                                if (bomRes.ok) {
+                                    const boms = await bomRes.json();
+                                    document.getElementById('bom-list').innerHTML = boms.map(b => `<div style="font-size: 13px; margin-bottom: 4px;">🔗 Product ${b.finished_good_id.substring(0,8)}... needs ${b.quantity_required}x RM ${b.raw_material_id.substring(0,8)}...</div>`).join('');
+                                }
+                            } catch (e) {
+                                console.error('Error fetching supply data:', e);
+                            }
+                        }
+
+                        async function createVendor() {
+                            const name = document.getElementById('new-vendor-name').value;
+                            const contact = document.getElementById('new-vendor-contact').value;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/vendors', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, contact_info: contact })
+                            });
+                            document.getElementById('new-vendor-name').value = '';
+                            document.getElementById('new-vendor-contact').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createRawMaterial() {
+                            const name = document.getElementById('new-rm-name').value;
+                            const qty = parseInt(document.getElementById('new-rm-qty').value) || 0;
+                            const thresh = parseInt(document.getElementById('new-rm-thresh').value) || 0;
+                            if (!name) return alert('Name required');
+                            await fetch('/api/supply/raw_materials', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", name, current_quantity: qty, reorder_threshold: thresh })
+                            });
+                            document.getElementById('new-rm-name').value = '';
+                            document.getElementById('new-rm-qty').value = '';
+                            document.getElementById('new-rm-thresh').value = '';
+                            fetchSupplyData();
+                        }
+
+                        async function createBomItem() {
+                            const fg = document.getElementById('new-bom-fg').value;
+                            const rm = document.getElementById('new-bom-rm').value;
+                            const qty = parseInt(document.getElementById('new-bom-qty').value) || 1;
+                            if (!fg || !rm) return alert('Finished Good ID and Raw Material ID required');
+                            await fetch('/api/supply/bom_items', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                body: JSON.stringify({ id: "", finished_good_id: fg, raw_material_id: rm, quantity_required: qty })
+                            });
+                            document.getElementById('new-bom-fg').value = '';
+                            document.getElementById('new-bom-rm').value = '';
+                            document.getElementById('new-bom-qty').value = '';
+                            fetchSupplyData();
                         }
 
                         async function fetchApprovals() {
