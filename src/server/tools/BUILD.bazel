@@ -4,6 +4,7 @@ exports_files(
     [
         "ingest_arch.rs",
         "mod.rs",
+        "//src/server/tools/local_log_analyzer:mod.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +15,7 @@ rust_library(
         "bazel_lib.rs",
         "ingest_arch.rs",
         "mod.rs",
+        "//src/server/tools/local_log_analyzer:mod.rs",
         "//src/server/tools/config_sync:mod.rs",
         "//src/server/tools/config_sync:server.rs",
         "//src/server/tools/config_sync:tests.rs",

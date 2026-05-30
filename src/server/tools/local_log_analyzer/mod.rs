@@ -70,4 +70,14 @@ impl LogAnalyzerTool {
 
         Ok(result)
     }
+
+    pub fn get_tool_definition() -> crate::ohc::orchestration::McpToolProto {
+        crate::ohc::orchestration::McpToolProto {
+            id: "local_log_analyzer".to_string(),
+            name: "local_log_analyzer".to_string(),
+            description: "Parses local log files and returns structured summaries".to_string(),
+            category: "log".to_string(),
+            status: "active".to_string(),
+        }
+    }
 }
