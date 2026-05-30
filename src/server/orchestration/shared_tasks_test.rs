@@ -317,3 +317,110 @@ async fn test_shared_task_orchestrator_dependencies() {
         assert!(claimed_none.is_none());
     }
 }
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_get_task_sqlite() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+
+    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let task = SharedTaskV4 {
+        id: "task_get".to_string(),
+        organization_id: "org_123".to_string(),
+        title: "Test Get Task".to_string(),
+        description: Some("Desc".to_string()),
+        status: "PENDING".to_string(),
+        agent_id: None,
+        priority: "P1".to_string(),
+        payload: Some("{}".to_string()),
+        parent_plan_id: None,
+        dependencies: "[]".to_string(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        ultraplan_phase: Some("PHASE1".to_string()),
+        deliberation_log: Some("[]".to_string()),
+        depth: Some(1),
+    };
+
+    let created_task = orchestrator.create_task(task).await.unwrap();
+
+    let fetched = orchestrator.get_task(&created_task.id).await.unwrap();
+    assert_eq!(fetched.id, "task_get");
+    assert_eq!(fetched.title, "Test Get Task");
+    assert_eq!(fetched.ultraplan_phase.unwrap(), "PHASE1");
+    assert_eq!(fetched.depth.unwrap(), 1);
+}
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_get_task_not_found() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+
+    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let result = orchestrator.get_task("non_existent_task").await;
+    assert!(result.is_err());
+}

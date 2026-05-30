@@ -330,7 +330,7 @@ pub mod proto {
 use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
 use crate::ohc::billing::billing_service_server::BillingServiceServer;
-use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::*; use hub_proto::ohc::orchestration::{PublishMessageResponse, EventStreamRequest, TeammateMeshEvent, PublishTeammateMeshEventRequest, InviteRequest, InviteResponse, AcceptInviteRequest, AcceptInviteResponse, EmptyRequest, GetMeetingsResponse, StartOnboardingRequest, StartOnboardingResponse, TriggerCustomOrderRequest, TriggerCustomOrderResponse, DecomposeTaskRequest, DecomposeTaskResponse, StreamMessagesRequest, ReasonRequest, ReasonResponse, SubTask, DelegateTaskResponse, AgentCapabilities, Query, MeshEvent, GetPendingApprovalsResponse, Agent, DiagnosticsResponse, EnvConfig, GetWizardProfileRequest, GetWizardProfileResponse, CreateTaskRequest, PollTasksRequest, UpdateTaskStatusRequest, UpdateTaskStatusResponse, ApproveTaskRequest, ApproveTaskResponse, GetPendingApprovalsRequest, PublishMeshEventRequest, Message}; use crate::tasks::SharedTask;;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
