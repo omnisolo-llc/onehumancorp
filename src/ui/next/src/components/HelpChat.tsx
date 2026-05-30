@@ -46,7 +46,9 @@ export function HelpChat() {
   const nextMessageId = (suffix: string) => `${Date.now()}-${nextIdRef.current++}-${suffix}`;
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
