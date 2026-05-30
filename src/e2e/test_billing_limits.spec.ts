@@ -24,6 +24,20 @@ test.describe('Navigation', () => {
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
+  test('should navigate to My Plan page', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('nav a:has-text("My Plan")').click();
+    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
+    await expect(page.getByText('10 / 100')).toBeVisible(); // Mocked API response data
+  });
+
+  test('should navigate to Cost Dashboard page', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('nav a:has-text("Cost Dashboard")').click();
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
+    await expect(page.getByText('$20.00')).toBeVisible(); // Mocked API response data
+  });
+
   test('should display login page', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
