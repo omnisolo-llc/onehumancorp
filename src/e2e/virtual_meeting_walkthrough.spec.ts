@@ -31,9 +31,9 @@ test.describe('Virtual Meeting Room & UltraPlan Walkthrough', () => {
     await expect(bubbleText2).toBeVisible();
 
     // Finish walkthrough
-    const finishButton = page.locator('button:has-text("Finish")');
-    await expect(finishButton).toBeVisible();
-    await finishButton.click();
+    const gotItButton = page.locator('button:has-text("Got it")');
+    await expect(gotItButton).toBeVisible();
+    await gotItButton.click();
 
     // Verify walkthrough is closed
     await expect(bubbleText2).not.toBeVisible();
