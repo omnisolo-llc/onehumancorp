@@ -94,9 +94,35 @@ mod tests {
 
                 let result = sqlx::query("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
                 assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+
+                // Verify INSERT violates RLS policy if tenant_id doesn't match active tenant_1
+                let insert_result = sqlx::query("INSERT INTO customers (id, tenant_id, email) VALUES ($1, $2, 'hack@example.com')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_2)
+                    .execute(&mut *tx).await;
+                assert!(insert_result.is_err(), "INSERT for another tenant should be denied by RLS");
+
+                let insert_result2 = sqlx::query("INSERT INTO products (id, tenant_id, type) VALUES ($1, $2, 'digital')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_2)
+                    .execute(&mut *tx).await;
+                assert!(insert_result2.is_err(), "INSERT for another tenant should be denied by RLS");
+
+                // Verify UPDATE violates RLS policy if tenant_id doesn't match active tenant_1
+                let update_result = sqlx::query("UPDATE customers SET email = 'hack@example.com' WHERE tenant_id = $1")
+                    .bind(tenant_2)
+                    .execute(&mut *tx).await;
+                assert_eq!(update_result.unwrap().rows_affected(), 0, "UPDATE for another tenant should affect 0 rows due to RLS");
+
+                // Verify DELETE violates RLS policy if tenant_id doesn't match active tenant_1
+                let delete_result = sqlx::query("DELETE FROM orders WHERE tenant_id = $1")
+                    .bind(tenant_2)
+                    .execute(&mut *tx).await;
+                assert_eq!(delete_result.unwrap().rows_affected(), 0, "DELETE for another tenant should affect 0 rows due to RLS");
             },
-            Err(_) => {
-                // Ignore errors if test db is not running
+            Err(e) => {
+                // Fail the test if test db is not running. It's critical to assert RLS.
+                panic!("Fatal: Test database not running, cannot skip RLS assertion block. Error: {}", e);
             }
         }
     }
