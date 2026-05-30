@@ -295,6 +295,7 @@ impl CheckpointSaver for PgCheckpointer {
         Ok(())
     }
 
+
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let rows = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 ORDER BY created_at DESC"
