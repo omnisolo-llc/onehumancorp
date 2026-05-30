@@ -27,8 +27,8 @@ export default function HelpArticlePage() {
   return (
     <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{articleData.title}</h1>
-        <div className="prose prose-blue max-w-none text-gray-700">
+        <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">{articleData.title}</h1>
+        <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed">
           {articleData.content}
         </div>
       </div>
