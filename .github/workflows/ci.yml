@@ -71,7 +71,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - name: linux-x86_64
@@ -157,6 +157,8 @@ jobs:
           ' > build-targets.txt
           xargs -r bazelisk build \
             --config=${{ matrix.bazel_config }} \
+            --nokeep_going \
+            --verbose_failures \
             --skip_incompatible_explicit_targets \
             --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
             < build-targets.txt
@@ -180,12 +182,18 @@ jobs:
           bazelisk build \
             //src/ui/tauri:app \
             --config=linux_x86_64 \
+            --nokeep_going \
+            --verbose_failures \
             --//src/ui/tauri:build_tauri=true
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
+          bazelisk build //deploy:server_web_image_tar \
+            --config=linux_x86_64 \
+            --nokeep_going \
+            --verbose_failures \
+            --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
@@ -193,7 +201,9 @@ jobs:
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64
+            --config=linux_x86_64 \
+            --nokeep_going \
+            --verbose_failures
 
       - name: Install iOS signing assets
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -225,11 +235,11 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nokeep_going --verbose_failures
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild --nokeep_going --verbose_failures
 
   bazel-test:
     name: Bazel test
@@ -286,6 +296,10 @@ jobs:
       - name: Test fast targets
         run: |
           bazelisk test \
+            --nokeep_going \
+            --verbose_failures \
+            --test_output=errors \
+            --test_summary=detailed \
             --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             //...
@@ -348,7 +362,12 @@ jobs:
           docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright E2E target
-        run: bazelisk test //src/e2e:playwright
+        run: |
+          bazelisk test //src/e2e:playwright \
+            --nokeep_going \
+            --verbose_failures \
+            --test_output=errors \
+            --test_summary=detailed
 
   kind-e2e:
     name: Kind E2E
@@ -459,4 +478,8 @@ jobs:
           fi
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
+            --nokeep_going \
+            --verbose_failures \
+            --test_output=errors \
+            --test_summary=detailed \
             --nocache_test_results
