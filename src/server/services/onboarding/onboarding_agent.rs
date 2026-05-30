@@ -371,7 +371,7 @@ impl OnboardingAgent {
     }
 
     async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
-                let products = match business_type {
+                        let products = match business_type {
             "Online Store" => vec![
                 ("Standard Product", "A great product for your store", 1999, "physical"),
                 ("Premium Product", "A premium offering", 4999, "physical"),

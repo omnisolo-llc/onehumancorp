@@ -34,6 +34,7 @@ define_playwright_tests(
         "telemetry_sync.spec.ts",
         "viral_embed.spec.ts",
         "onboarding_personas.spec.ts",
+        "onboarding_personas.spec.ts",
     ],
     specs = glob(["*.spec.ts"]),
     server = "//src/server:server",
