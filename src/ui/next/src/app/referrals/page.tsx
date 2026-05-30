@@ -1,10 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
-  const referralLink = "ohc://join?ref=DEFAULT";
+  const [referralLink, setReferralLink] = useState("ohc://join?ref=DEFAULT");
+
+  useEffect(() => {
+    const fetchReferralLink = async () => {
+      try {
+        const response = await fetch("/api/v1/growth/referrals/generate", {
+          method: "POST"
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.referral_link) {
+            setReferralLink(data.referral_link);
+          }
+        } else {
+          const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+          setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        }
+      } catch (e) {
+        console.error("Failed to generate dynamic referral link", e);
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      }
+    };
+    fetchReferralLink();
+  }, []);
+
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
 
   return (
