@@ -600,7 +600,7 @@ async fn http_login_handler(
         }
     };
 
-    let _claims = ::server_common::Claims {
+    let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -849,23 +849,10 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let tenant_id_clone = tenant_id.clone();
+        let llm_cost_f64 = auditor.get_total_cost();
+        let total_revenue_f64 = auditor.get_total_revenue();
 
-        let hub_clone = self.hub.clone();
-
-        let (costs_res, storage_bytes_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
-            }),
-            async move {
-                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
-            }
-        );
-
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
-        let storage_bytes = storage_bytes_res.unwrap_or(0);
+        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2043,28 +2030,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
 
-    let tm_mesh = handoff_mesh.clone();
-    hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
-        let payload = match serde_json::to_string(&task) {
-            Ok(p) => p,
-            Err(e) => {
-                tracing::error!("Failed to serialize task: {}", e);
-                return;
-            }
-        };
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: event_type,
-            status: "ok".to_string(),
-            payload: payload.into_bytes(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-        let tm_mesh_clone = tm_mesh.clone();
-        tokio::spawn(async move {
-            let _ = tm_mesh_clone.publish("tasks", msg.payload).await;
-        });
-    }));
-
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),
@@ -2919,16 +2884,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         .animated-dropdown {
@@ -2958,8 +2923,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -3003,7 +2968,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -3013,8 +2978,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -3024,8 +2989,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body.dark-theme .card {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -3108,8 +3073,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -3188,8 +3153,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -3256,7 +3221,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-left-color: var(--primary) !important;
                             color: var(--text) !important;
                         }
-                        #ayrshare-integration {
+                        #manychat-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -3333,8 +3298,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 375px;
@@ -3345,8 +3310,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -3379,8 +3344,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
                     background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(20px) saturate(200%) !important;
-                    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+                    backdrop-filter: blur(30px) saturate(210%) !important;
+                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
@@ -3523,49 +3488,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
-                    <!-- Add Item Screen -->
-                    <div id="add-item-screen" class="screen glass" style="display: none;">
-                        <h1>Add to Catalog</h1>
-                        <p style="color: #666; margin-bottom: 20px;">Add a product or service to your store.</p>
-
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
-                            </label>
-                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
-                            </label>
-                        </div>
-
-                        <input type="text" id="item-name" placeholder="Name (e.g. Guitar Lesson)" style="border-radius: 8px;" />
-                        <input type="text" id="item-price" inputmode="decimal" placeholder="Price (e.g. 50.00)" style="border-radius: 8px;" />
-
-                        <div id="service-fields" style="display: none; margin-bottom: 16px;">
-                            <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
-                        </div>
-
-                        <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
-
-                        <button onclick="saveCatalogItem()" style="border-radius: 8px; width: 100%;">Save Item</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
-
-                        <script>
-                            function saveCatalogItem() {
-                                const name = document.getElementById('item-name').value;
-                                if (!name) {
-                                    alert('Please enter a name.');
-                                    return;
-                                }
-                                alert('Saved ' + name + ' successfully!');
-                                document.getElementById('item-name').value = '';
-                                document.getElementById('item-price').value = '';
-                                document.getElementById('item-duration').value = '';
-                                document.getElementById('item-desc').value = '';
-                                showScreen('dashboard-screen');
-                            }
-                        </script>
-                    </div>
-
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -3653,13 +3575,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('ayrshare-integration').style.display='block';">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="ayrshare-integration" class="card glass" style="display: none;">
-                            <h3>📱 Ayrshare</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified API for posting and retrieving messages across social networks.</p>
-                            <button onclick="alert('Configure Ayrshare'); showScreen('inbox-screen')">Configure</button>
+                        <div id="manychat-integration" class="card glass" style="display: none;">
+                            <h3>💬 Manychat</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
+                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -4267,14 +4189,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4645,7 +4567,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -4733,7 +4655,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>

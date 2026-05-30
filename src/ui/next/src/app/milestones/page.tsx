@@ -135,7 +135,7 @@ export default function MilestonesPage() {
                                         fetch("/api/v1/growth/milestone-share", {
                                             method: "POST",
                                             headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ milestone_id: activeM.id })
+                                            body: JSON.stringify({ milestone_id: activeM.id, platform: "twitter" })
                                         }).catch(console.error).finally(() => {
                                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, "_blank");
                                         });
