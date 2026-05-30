@@ -11,9 +11,18 @@ pub fn gzip_compress(data: &[u8]) -> std::io::Result<Vec<u8>> {
 
 /// should_compress checks headers to decide if response should be compressed.
 pub fn should_compress(headers: &std::collections::HashMap<String, String>) -> bool {
-    let accept_encoding = headers.get("Accept-Encoding").map(|s| s.as_str()).unwrap_or("");
-    let upgrade = headers.get("Upgrade").map(|s| s.as_str()).unwrap_or("");
-    let accept = headers.get("Accept").map(|s| s.as_str()).unwrap_or("");
+    let accept_encoding = headers.get("Accept-Encoding")
+        .or_else(|| headers.get("accept-encoding"))
+        .map(|s| s.as_str())
+        .unwrap_or("");
+    let upgrade = headers.get("Upgrade")
+        .or_else(|| headers.get("upgrade"))
+        .map(|s| s.as_str())
+        .unwrap_or("");
+    let accept = headers.get("Accept")
+        .or_else(|| headers.get("accept"))
+        .map(|s| s.as_str())
+        .unwrap_or("");
 
     if !accept_encoding.contains("gzip") {
         return false;
@@ -66,5 +75,9 @@ mod tests {
         headers.insert("Accept-Encoding".to_string(), "gzip".to_string());
         headers.insert("Accept".to_string(), "text/event-stream".to_string());
         assert!(!should_compress(&headers));
+
+        headers.clear();
+        headers.insert("accept-encoding".to_string(), "gzip".to_string());
+        assert!(should_compress(&headers));
     }
 }
