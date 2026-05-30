@@ -6,7 +6,7 @@ test.describe('Customer Inbox', () => {
 
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
-    await page.getByRole('button', { name: /AI Draft/ }).first().click();
+    await page.getByRole('button', { name: /✨ AI Draft/ }).first().click();
     await expect(page.locator('#reply-input')).not.toHaveValue('');
     const draft = await page.locator('#reply-input').inputValue();
     await judgeGeneratedOutput(testInfo, {
@@ -20,7 +20,7 @@ test.describe('Customer Inbox', () => {
   test('returns to dashboard on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/inbox');
-    await page.getByRole('button', { name: '< Back' }).click();
+    await page.getByRole('link', { name: '< Back' }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });

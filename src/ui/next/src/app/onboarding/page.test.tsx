@@ -105,7 +105,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Launch/i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -175,7 +175,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Launch/i });
 
     await user.click(launchButton);
 

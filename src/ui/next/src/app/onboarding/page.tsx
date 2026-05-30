@@ -48,6 +48,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
@@ -77,6 +78,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -94,7 +96,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -106,7 +108,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = `${businessName}. ${whatYouSell}. Location: ${location}.`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -125,7 +127,7 @@ export default function OnboardingWizard() {
       const intakeData = await intakeRes.json();
 
       setBusinessType(intakeData.business_type || 'Online Store');
-      setBusinessName(intakeData.business_name || 'My Business');
+      setBusinessName(intakeData.business_name || businessName || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
@@ -156,19 +158,19 @@ export default function OnboardingWizard() {
           'X-User-ID': userId,
         },
         body: JSON.stringify({
-          business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
-          selling_categories: categories,
-          payment_pref: 'online',
-          admin_email: 'admin@ohc.app',
+          company_type: businessType,
+          admin_email: 'admin@example.com',
           admin_name: 'Admin',
           admin_password: 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
-          price_type: 'fixed'
+          price_type: 'fixed',
+          ai_agents: aiAgents,
+          ai_auto_respond: aiAutoRespond,
+          products: [{ name: firstProductName, price: firstProductPrice }]
         })
       });
 
@@ -178,7 +180,9 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json();
       setStartResult(result);
-      localStorage.setItem('has_onboarded', 'true');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_onboarded', 'true');
+      }
       setStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
@@ -211,7 +215,7 @@ export default function OnboardingWizard() {
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                Our Invisible AI Storefront Generator will set up your store automatically based on 3 simple questions.
               </p>
 
               {chatStep === 1 && (
@@ -321,55 +325,55 @@ export default function OnboardingWizard() {
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Here's what our AI figured out. Feel free to tweak these.
+                We've auto-generated these details based on your input. Make any adjustments below.
               </p>
 
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
                     value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    onChange={e => setBusinessName(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 focus:border-[#0066FF] outline-none text-sm text-[#1D1D1F] dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
+                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
+                   <select
+                     value={businessType}
+                     onChange={e => setBusinessType(e.target.value)}
+                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 focus:border-[#0066FF] outline-none text-sm text-[#1D1D1F] dark:text-white appearance-none"
+                   >
+                     <option value="Online Store">Online Store (Physical Products)</option>
+                     <option value="Service">Service Business (Bookings)</option>
+                     <option value="Digital">Digital Products</option>
+                     <option value="Bakery">Bakery / Food Pre-order</option>
+                     <option value="Retail">Retail</option>
+                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
-                        type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                   <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-white mb-3">Your First Product</h3>
+                   <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                         <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Name</label>
+                         <input
+                           type="text"
+                           value={firstProductName}
+                           onChange={e => setFirstProductName(e.target.value)}
+                           className="w-full p-2.5 rounded-[6px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 focus:border-[#0066FF] outline-none text-sm text-[#1D1D1F] dark:text-white"
+                         />
+                      </div>
+                      <div>
+                         <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Price ($)</label>
+                         <input
+                           type="number"
+                           step="0.01"
+                           value={firstProductPrice}
+                           onChange={e => setFirstProductPrice(e.target.value)}
+                           className="w-full p-2.5 rounded-[6px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 focus:border-[#0066FF] outline-none text-sm text-[#1D1D1F] dark:text-white"
+                         />
+                      </div>
                    </div>
                 </div>
               </div>
@@ -469,7 +473,7 @@ export default function OnboardingWizard() {
                   disabled={isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Launch Store
+                  Approve & Launch
                 </button>
               </div>
             </div>

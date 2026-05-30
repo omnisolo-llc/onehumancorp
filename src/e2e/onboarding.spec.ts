@@ -16,12 +16,12 @@ test.describe('Onboarding Wizard', () => {
 
     // Fill in the description (incorporating Maya to trigger mock)
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 1 - Chat 2
     await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('maya bakes custom cakes');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 1 - Chat 3
     await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
@@ -36,7 +36,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Step 3 - Style
     await expect(page.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: /Launch Store/i }).click();
+    await page.getByRole('button', { name: /Approve & Launch/i }).click();
 
     // Simplified Mobile First Onboarding - wait for it to generate
     // Step 2 is automatic, so wait for Step 3 directly
@@ -69,12 +69,12 @@ test.describe('Onboarding Wizard', () => {
 
     // Fill in the description (incorporating Carlos to trigger mock)
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 1 - Chat 2
     await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('carlos does handyman services');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 1 - Chat 3
     await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
@@ -89,7 +89,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Step 3 - Style
     await expect(page.getByRole('heading', { name: "Style & Team", exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: /Launch Store/i }).click();
+    await page.getByRole('button', { name: /Approve & Launch/i }).click();
 
     // Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
