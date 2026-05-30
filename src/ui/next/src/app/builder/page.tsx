@@ -182,7 +182,7 @@ export default function BuilderPage() {
 
   if (status === "selection") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter overflow-hidden">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
@@ -230,7 +230,7 @@ export default function BuilderPage() {
 
   if (status === "onboarding") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter overflow-hidden">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
@@ -271,7 +271,7 @@ export default function BuilderPage() {
 
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
 
           <div className="px-8 pt-12 pb-4">
@@ -433,7 +433,7 @@ export default function BuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
@@ -453,7 +453,7 @@ export default function BuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] mac-glass-container shadow-2xl px-6 pt-12 pb-8">
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
@@ -494,7 +494,7 @@ export default function BuilderPage() {
             </div>
           </div>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full bg-[#F5F5F7] dark:bg-[#16161a] p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
@@ -577,7 +577,7 @@ export default function BuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
+    <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] dark:bg-[#000] font-inter">
       <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
 
         {/* Draft Preview Header */}
