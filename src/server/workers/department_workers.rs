@@ -571,14 +571,14 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT description, status FROM agent_approvals WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             if let Some(row) = row {
-                let title: String = row.get("title");
-                let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item:"));
-                assert_eq!(approval_status, "PENDING");
+                let description: String = row.get("description");
+                let status: String = row.get("status");
+                assert!(description.contains("Restock Item:"));
+                assert_eq!(status, "PENDING_APPROVAL");
             }
         }
     }
@@ -607,16 +607,16 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT description, payload, status FROM agent_approvals WHERE tenant_id = 'tenant1'")
                 .fetch_one(pool).await.unwrap();
-            let title: String = row.get("title");
-            let content: String = row.get("proposed_content");
-            let approval_status: String = row.get("approval_status");
+            let description: String = row.get("description");
+            let payload: String = row.get("payload");
+            let status: String = row.get("status");
 
-            assert_eq!(title, "Draft Reply");
+            assert!(description.contains("Draft Reply"));
             // Either the dynamic LLM response or fallback string should be here
-            assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
-            assert_eq!(approval_status, "PENDING");
+            assert!(payload.contains("Hello, do you have vegan cakes?") || payload.len() > 0);
+            assert_eq!(status, "PENDING_APPROVAL");
         }
     }
 }
@@ -758,7 +758,7 @@ impl CustomerSuccessWorker {
             };
 
             // Draft confirmation message
-            let (title, mut drafted_msg) = if event_type == "OrderProcessed" {
+            let (_title, mut drafted_msg) = if event_type == "OrderProcessed" {
                 ("Draft Confirmation".to_string(), format!("Hi! Your order from {} has been processed and is being prepared for shipment. Thank you!", tenant_name))
             } else {
                 ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
@@ -931,7 +931,7 @@ impl PromoterWorker {
                             }
 
                             let task_id = Uuid::new_v4().to_string();
-                            let title = format!("7-Day Social Calendar: {}", product_name);
+                            let _title = format!("7-Day Social Calendar: {}", product_name);
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
