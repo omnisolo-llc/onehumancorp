@@ -272,7 +272,7 @@ mod parity_tests {
         let pg_db = setup_postgres_db().await;
 
         let task_id = uuid::Uuid::new_v4().to_string();
-        let org_id = "test_org_parity_fields";
+        let _org_id = "test_org_parity_fields";
         let now = chrono::Utc::now();
         let payload = "{\"key\": \"value\"}";
 

@@ -960,12 +960,13 @@ impl PromoterWorker {
                                         let _ = sqlx::query(
                                             r#"
                                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'HIGH', 'PENDING', $5)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(org_id)
                                         .bind(&title)
+                                        .bind("The Promoter drafted a 7-day social media calendar for your review.")
                                         .bind(&drafted_post)
                                         .execute(&mut *tx)
                                         .await;

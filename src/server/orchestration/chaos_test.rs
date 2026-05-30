@@ -402,7 +402,7 @@ mod chaos_tests {
             async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
                  self.inner.release_lock(resource, owner).await
             }
-            async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
             async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
         }
 
