@@ -1,0 +1,11 @@
+--- src/ui/next/src/app/onboarding/page.test.tsx
++++ src/ui/next/src/app/onboarding/page.test.tsx
+@@ -175,7 +175,7 @@
+     const aiToggle = screen.getByLabelText(/Allow AI to Auto-Respond/i);
+     await user.click(aiToggle);
+
+-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
++    const launchButton = screen.getByRole('button', { name: /Approve & Launch/i });
+     await user.click(launchButton);
+
+     // Stays on Step 3 and shows error

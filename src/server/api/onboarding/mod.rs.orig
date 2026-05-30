@@ -26,7 +26,8 @@ pub struct IntakeRequest {
     pub description: String,
 }
 
-async fn process_intake_handler(
+async fn process_intake_handler))
+        .route("/zero-click", post(process_zero_click_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {

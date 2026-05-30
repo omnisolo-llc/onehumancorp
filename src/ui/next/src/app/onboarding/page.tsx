@@ -98,6 +98,86 @@ export default function OnboardingWizard() {
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
+  const handleZeroClickIntake = async () => {
+    setIsLoading(true);
+    setError('');
+    setStep(4);
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const combinedDescription = `What we sell: ${whatYouSell}`;
+
+      const intakeRes = await fetch('/api/onboarding/zero-click', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: combinedDescription })
+      });
+
+      if (!intakeRes.ok) {
+        throw new Error('Failed to process business details');
+      }
+
+      const intakeData = await intakeRes.json();
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+      if (intakeData.location) {
+        setLocation(intakeData.location);
+      }
+
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: combinedDescription,
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: 'online',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
+          website_template: websiteTemplate,
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: domainChoice || 'subdomain',
+          price_type: 'fixed'
+        })
+      });
+
+      if (!startRes.ok) {
+        throw new Error('Failed to start onboarding');
+      }
+
+      const result = await startRes.json();
+      result.message = intakeData.setup_summary || "We generated your storefront and set up default products.";
+      setStartResult(result);
+      localStorage.setItem('has_onboarded', 'true');
+      setStep(5);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during onboarding');
+      setStep(1);
+      setChatStep(2);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleIntake = async () => {
     setIsLoading(true);
     setError('');
@@ -140,6 +220,164 @@ export default function OnboardingWizard() {
   };
 
   const handleStartOnboarding = async () => {
+  const handleZeroClickIntake = async () => {
+
+    setIsLoading(true);
+
+    setError("");
+
+    setStep(4);
+
+
+
+    try {
+
+      const tenantId = typeof localStorage !== "undefined" ? localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront" : "storefront";
+
+      const userId = typeof localStorage !== "undefined" ? localStorage.getItem("user_id") || "test-user" : "test-user";
+
+
+
+      const combinedDescription = `What we sell: ${whatYouSell}`;
+
+
+
+      const intakeRes = await fetch("/api/onboarding/zero-click", {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+          "X-Tenant-ID": tenantId,
+
+          "X-User-ID": userId,
+
+        },
+
+        body: JSON.stringify({ description: combinedDescription })
+
+      });
+
+
+
+      if (!intakeRes.ok) {
+
+        throw new Error("Failed to process business details");
+
+      }
+
+
+
+      const intakeData = await intakeRes.json();
+
+
+
+      setBusinessType(intakeData.business_type || "Online Store");
+
+      setBusinessName(intakeData.business_name || "My Business");
+
+      setFirstProductName(intakeData.initial_products?.[0]?.name || "First Product");
+
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || "10.00");
+
+      setCategories(intakeData.categories || ["physical"]);
+
+      if (intakeData.location) {
+
+        setLocation(intakeData.location);
+
+      }
+
+
+
+      const startRes = await fetch("/api/onboarding/start", {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+          "X-Tenant-ID": tenantId,
+
+          "X-User-ID": userId,
+
+        },
+
+        body: JSON.stringify({
+
+          business_type: intakeData.business_type || "Online Store",
+
+          company_name: intakeData.business_name || "My Business",
+
+          company_description: combinedDescription,
+
+          selling_categories: intakeData.categories || ["physical"],
+
+          payment_pref: "online",
+
+          admin_email: "admin@ohc.app",
+
+          admin_name: "Admin",
+
+          admin_password: "password123",
+
+          website_template: websiteTemplate,
+
+          first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
+
+          first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+
+          domain_choice: domainChoice || "subdomain",
+
+          price_type: "fixed"
+
+        })
+
+      });
+
+
+
+      if (!startRes.ok) {
+
+        throw new Error("Failed to start onboarding");
+
+      }
+
+
+
+      const result = await startRes.json();
+
+      result.message = intakeData.setup_summary || "We generated your storefront and set up default products.";
+
+      setStartResult(result);
+
+      localStorage.setItem("has_onboarded", "true");
+
+      setStep(5);
+
+
+
+    } catch (err: any) {
+
+      console.error(err);
+
+      setError(err.message || "An error occurred during onboarding");
+
+      setStep(1);
+
+      setChatStep(2);
+
+    } finally {
+
+      setIsLoading(false);
+
+    }
+
+  };
+
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
@@ -266,14 +504,24 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6">
+                  <div className="mt-auto pt-6 flex flex-col gap-3">
+                    <button
+                      onClick={handleZeroClickIntake}
+                      disabled={!whatYouSell.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? "Generating Store..." : "Build Store Instantly"}
+                    </button>
+                    <div className="text-center text-xs text-gray-500 uppercase tracking-widest font-bold my-1">OR</div>
+                  <div className="mt-auto pt-2">
                     <button
                       onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-white/20 border border-[#0066FF] text-[#0066FF] p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0066FF]/10 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      Configure Manually (Step 2 of 3)
                     </button>
+                  </div>
                   </div>
                 </div>
               )}

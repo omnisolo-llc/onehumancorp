@@ -7,8 +7,6 @@ use crate::minimax::MinimaxClient;
 pub struct IntakeData {
     pub business_name: String,
     pub business_type: String,
-    pub location: Option<String>,
-    pub setup_summary: Option<String>,
     pub categories: Vec<String>,
     pub initial_products: Vec<IntakeProduct>,
 }
@@ -39,7 +37,7 @@ impl OnboardingAgent {
 
         let prompt = format!(
             "Extract structured business information from the following user description.
-            Return ONLY a valid JSON object with fields: business_name, business_type, location (string, if mentioned), categories (array of strings), initial_products (array of objects with 'name' and 'price' as string), and setup_summary (a short sentence summarizing what was set up, e.g. 'We set up local delivery in Seattle and added 2 sample cakes.').
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
 
             Description: \"{}\"
 
@@ -47,13 +45,11 @@ impl OnboardingAgent {
             {{
               \"business_name\": \"Maya's Cakes\",
               \"business_type\": \"Bakery\",
-              \"location\": \"Seattle\",
               \"categories\": [\"food\", \"physical\"],
               \"initial_products\": [
                 {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\"}},
                 {{\"name\": \"Vanilla Cupcake\", \"price\": \"3.50\"}}
-              ],
-              \"setup_summary\": \"We set up local delivery in Seattle and added 2 sample cakes.\"
+              ]
             }}",
             input
         );
