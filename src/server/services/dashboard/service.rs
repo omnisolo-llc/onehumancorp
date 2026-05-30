@@ -464,8 +464,10 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-            final_meetings = out_meetings;
+
         }
+
+        final_meetings = out_meetings;
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {
