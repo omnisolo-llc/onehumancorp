@@ -95,4 +95,20 @@ mod tests {
 
         assert!(cache.cache.is_empty());
     }
+
+    #[test]
+    fn test_prompt_cache_get_with_cost_cents() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("Test Prompt", "Response", 10000); // 10k tokens
+
+        let (res, cost) = cache.get_with_cost_cents("Test Prompt");
+        assert!(res.is_some());
+
+        // At ratio 0.0001, 10000 tokens * 0.0001 = 1.0, which means 1 cent roughly
+        assert_eq!(cost, 1);
+
+        let (res_miss, cost_miss) = cache.get_with_cost_cents("Unknown Prompt");
+        assert!(res_miss.is_none());
+        assert_eq!(cost_miss, 0);
+    }
 }

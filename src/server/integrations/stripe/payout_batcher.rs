@@ -110,4 +110,38 @@ mod tests {
             assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
         }
     }
+
+    #[tokio::test]
+    async fn test_force_payout_no_redis() {
+        let batcher = PayoutBatcher::new(None, 10000);
+        // Fallback for tests / memory mode
+        let result = batcher.force_payout("acct_1").await.unwrap();
+        assert_eq!(result, None);
+        let result = batcher.get_pending_balance("acct_1").await.unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_force_payout_with_redis() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            let batcher = PayoutBatcher::new(Some(redis_url), 10000); // $100 threshold
+
+            // clear state
+            let _ = batcher.force_payout("acct_3").await;
+
+            // record partial
+            batcher.record_payout("acct_3", 3000).await.unwrap();
+
+            // force payout before threshold
+            let payout = batcher.force_payout("acct_3").await.unwrap();
+            assert_eq!(payout, Some(3000));
+
+            // verify cleared
+            assert_eq!(batcher.get_pending_balance("acct_3").await.unwrap(), 0);
+
+            // force payout when 0
+            let payout_zero = batcher.force_payout("acct_3").await.unwrap();
+            assert_eq!(payout_zero, None);
+        }
+    }
 }

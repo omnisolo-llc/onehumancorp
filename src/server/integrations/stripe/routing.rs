@@ -164,3 +164,8 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
     }
 }
+
+// This is a test file inclusion just for the coverage.
+#[cfg(test)]
+#[path = "routing_extra_test.rs"]
+mod routing_extra_test;
