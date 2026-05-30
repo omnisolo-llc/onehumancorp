@@ -25,7 +25,8 @@ describe('OnboardingWizard', () => {
 
 
     global.fetch = vi.fn().mockImplementation((url) => {
-        return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+        if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+        return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
   });
