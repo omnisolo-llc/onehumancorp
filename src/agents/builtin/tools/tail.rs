@@ -1,36 +1,44 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-use super::{Tool, ToolExecutor};
+use super::{pydantic::{PydanticAdapter, PydanticToolExecutor}, Tool};
+
+#[derive(Deserialize)]
+struct TailArgs {
+    path: String,
+    #[serde(default)]
+    lines: Option<usize>,
+}
 
 struct TailExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TailExecutor {
-    async fn execute(
+impl PydanticToolExecutor<TailArgs> for TailExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: TailArgs,
     ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("tail: path is required".to_string()))?;
+        let path = args.path;
 
         // Basic path sanitization: disallow relative path traversal
         if path.contains("..") {
             return Err(ToolError::LlmRecoverable("tail: path traversal via '..' is not allowed".to_string()));
         }
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
 
         let mut file = File::open(&actual_path)
             .await
             .map_err(|e| format!("tail: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+        let lines_to_read = args.lines.unwrap_or(10);
         if lines_to_read == 0 {
             return Ok(String::new());
         }
@@ -107,13 +115,14 @@ pub fn tail_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(TailExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(TailExecutor { working_dir })),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::ToolExecutor;
     use tempfile::tempdir;
     use tokio::fs;
 
@@ -123,7 +132,7 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "line1\nline2\nline3\nline4\n").await.unwrap();
 
-        let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let executor = PydanticAdapter::new(TailExecutor { working_dir: Some(dir.path().to_path_buf()) });
 
         let args = json!({ "path": "test.txt", "lines": 2 });
         let result = executor.execute(args).await.unwrap();
@@ -137,7 +146,7 @@ mod tests {
         let content = (1..=15).map(|i| format!("line{}", i)).collect::<Vec<_>>().join("\n");
         fs::write(&file_path, content).await.unwrap();
 
-        let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let executor = PydanticAdapter::new(TailExecutor { working_dir: Some(dir.path().to_path_buf()) });
 
         let args = json!({ "path": "test.txt" });
         let result = executor.execute(args).await.unwrap();
@@ -149,7 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tail_path_traversal() {
-        let executor = TailExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(TailExecutor { working_dir: None });
         let args = json!({ "path": "../../../etc/passwd" });
         let result = executor.execute(args).await;
         assert!(result.is_err());
@@ -171,7 +180,7 @@ mod tests {
         }
         fs::write(&file_path, content).await.unwrap();
 
-        let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let executor = PydanticAdapter::new(TailExecutor { working_dir: Some(dir.path().to_path_buf()) });
         let args = json!({ "path": "large_test.txt", "lines": 3 });
         let result = executor.execute(args).await.unwrap();
         let expected = "This is line number 9998\nThis is line number 9999\nThis is line number 10000";

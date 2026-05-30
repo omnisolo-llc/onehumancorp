@@ -1,9 +1,17 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Tool, ToolExecutor};
+use super::{pydantic::{PydanticAdapter, PydanticToolExecutor}, Tool};
+
+#[derive(Deserialize)]
+struct BashArgs {
+    command: String,
+    #[serde(default)]
+    timeout: Option<f64>,
+}
 
 struct BashExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -11,16 +19,13 @@ struct BashExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for BashExecutor {
-    async fn execute(
+impl PydanticToolExecutor<BashArgs> for BashExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: BashArgs,
     ) -> Result<String, ToolError> {
-        let command = args["command"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
-            .to_string();
-        let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
+        let command = args.command;
+        let timeout_secs = args.timeout.unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
         let wd_ref = self.working_dir.as_deref();
@@ -77,6 +82,6 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(BashExecutor { working_dir, runner }),
+        execute: Arc::new(PydanticAdapter::new(BashExecutor { working_dir, runner })),
     }
 }
