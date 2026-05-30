@@ -589,10 +589,23 @@ export default function Dashboard() {
                          </div>
                      </div>
                      <button
-                         onClick={() => {
+                         onClick={async () => {
+                             const shareWindow = window.open('about:blank', '_blank');
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
-                             window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                             try {
+                                 const res = await fetch(`/api/v1/growth/milestone/share?tenant=${tenant}`);
+                                 const data = await res.json();
+                                 if (data && data.share_message && shareWindow) {
+                                     const finalMessage = data.share_message.replace("a new milestone", `${activeCustomers} customers`);
+                                     shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
+                                 } else {
+                                     const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                     if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                                 }
+                             } catch (e) {
+                                 const fallbackText = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                 if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                             }
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
                              setBannerDismissed(true);
@@ -1168,11 +1181,23 @@ export default function Dashboard() {
                       </div>
                       <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
                       <button
-                          onClick={() => {
+                          onClick={async () => {
+                              const shareWindow = window.open('about:blank', '_blank');
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `ohc://join?ref=${tenant}`;
-                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
-                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              try {
+                                  const res = await fetch(`/api/v1/growth/milestone/share?tenant=${tenant}`);
+                                  const data = await res.json();
+                                  if (data && data.share_message && shareWindow) {
+                                      const finalMessage = data.share_message.replace("a new milestone", `100 customers`);
+                                      shareWindow.location.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalMessage)}`;
+                                  } else {
+                                      const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                      if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                                  }
+                              } catch (e) {
+                                  const fallbackText = encodeURIComponent(`I just reached 100 customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                                  if(shareWindow) shareWindow.location.href = `https://twitter.com/intent/tweet?text=${fallbackText}`;
+                              }
                               setShowMilestoneBanner(false);
                           }}
                           className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
@@ -1188,6 +1213,35 @@ export default function Dashboard() {
               </div>
            </section>
          )}
+
+         {/* Growth Loop: Link-in-Bio Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Social Growth</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Centralize Your Links</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Create a beautiful, mobile-friendly landing page for your social media bios. Add your storefront, booking links, and custom pages in one place.</p>
+                    <Link
+                        href="/link-in-bio-generator"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-semibold hover:bg-pink-700 transition-colors shadow-sm"
+                    >
+                        <span>Create Link-in-Bio Page</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </Link>
+                </div>
+                <div className="hidden md:flex w-48 h-32 bg-gray-50 rounded-xl border border-gray-200 items-center justify-center flex-shrink-0 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-100/50 to-purple-100/50"></div>
+                    <div className="text-4xl relative z-10">🔗</div>
+                </div>
+            </div>
+         </section>
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
