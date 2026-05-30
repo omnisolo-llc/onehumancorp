@@ -177,6 +177,3 @@ build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
-
-# Exclude xds downloading temporarily
-build --deleted_packages=com_github_cncf_xds_go
