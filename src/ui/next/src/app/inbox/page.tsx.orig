@@ -61,7 +61,7 @@ export default function InboxPage() {
     sms: true,
   });
 
-  const sendReply = async (msgId?: number) => {
+  const sendReply = (msgId?: number) => {
     let contentToSend = replyInput;
     if (msgId) {
        const msg = messages.find(m => m.id === msgId);
@@ -73,15 +73,6 @@ export default function InboxPage() {
 
     if (msgId) {
       setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
-    }
-    try {
-      await fetch('/api/integrations/manychat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriber_id: msgId || 'unknown', message: contentToSend }),
-      });
-    } catch (e) {
-      console.error('Failed to send reply to Manychat', e);
     }
     setReplyInput('');
     setEditingId(null);
