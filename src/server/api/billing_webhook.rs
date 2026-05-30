@@ -15,6 +15,7 @@ pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub hub: std::sync::Arc<crate::hub::Hub>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +36,47 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
+        "payment_intent.succeeded" | "charge.succeeded" => {
+            let obj = &payload.data.object;
+
+            // Extract necessary fields for receipt generation
+            let order_id = obj.get("id").and_then(|id| id.as_str()).unwrap_or("unknown_order");
+            let tenant_id = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str())
+                .unwrap_or("test-tenant-id");
+            let customer_email = obj.get("receipt_email")
+                .and_then(|e| e.as_str())
+                .unwrap_or("customer@example.com");
+            let customer_name = obj.get("billing_details")
+                .and_then(|bd| bd.get("name"))
+                .and_then(|n| n.as_str())
+                .unwrap_or("Valued Customer");
+            let amount = obj.get("amount").and_then(|a| a.as_f64()).unwrap_or(0.0) / 100.0;
+            let currency = obj.get("currency").and_then(|c| c.as_str()).unwrap_or("usd");
+
+            // Send the VIP Receipt using our growth API (simulated network call, but real struct generation)
+            let receipt_req = crate::api::growth::GenerateReceiptRequest {
+                order_id: order_id.to_string(),
+                customer_name: customer_name.to_string(),
+                customer_email: customer_email.to_string(),
+                amount,
+                currency: currency.to_string(),
+                tenant_id: tenant_id.to_string(),
+            };
+
+            // Emit an event to the hub so the email worker picks it up
+            if let Ok(payload_str) = serde_json::to_string(&receipt_req) {
+                let event = crate::hub::HubEvent {
+                    r#type: "growth.receipt.dispatch".to_string(),
+                    payload: payload_str,
+                    occurred_at: chrono::Utc::now(),
+                };
+                webhook_state.hub.append_recent_event(event);
+            }
+
+            StatusCode::OK.into_response()
+        },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
@@ -224,6 +266,12 @@ pub struct RazorpayEntity {
     pub id: String,
     pub status: String,
     pub order_id: String,
+    #[serde(default)]
+    pub email: String,
+    #[serde(default)]
+    pub amount: i64,
+    #[serde(default)]
+    pub currency: String,
 }
 
 
@@ -251,6 +299,31 @@ pub async fn razorpay_webhook_handler(
     match payload.event.as_str() {
         "payment.captured" => {
             let order_id = &payload.payload.payment.entity.order_id;
+            let tenant_id = "test-tenant-id"; // Placeholder or extracted from payload if available
+            let customer_email = payload.payload.payment.entity.email.clone();
+            let customer_name = "Valued Customer".to_string();
+            let amount = payload.payload.payment.entity.amount as f64 / 100.0;
+            let currency = payload.payload.payment.entity.currency.clone();
+
+            // Send the VIP Receipt using our growth API (simulated network call, but real struct generation)
+            let receipt_req = crate::api::growth::GenerateReceiptRequest {
+                order_id: order_id.to_string(),
+                customer_name,
+                customer_email,
+                amount,
+                currency,
+                tenant_id: tenant_id.to_string(),
+            };
+
+            // Emit an event to the hub so the email worker picks it up
+            if let Ok(payload_str) = serde_json::to_string(&receipt_req) {
+                let event = crate::hub::HubEvent {
+                    r#type: "growth.receipt.dispatch".to_string(),
+                    payload: payload_str,
+                    occurred_at: chrono::Utc::now(),
+                };
+                webhook_state.hub.append_recent_event(event);
+            }
 
             // In a real app, transition OHC orders from "Pending" to "Paid"
             let res = match &webhook_state.db.store {

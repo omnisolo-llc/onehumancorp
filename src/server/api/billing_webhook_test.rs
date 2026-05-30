@@ -28,10 +28,14 @@ async fn test_stripe_webhook_handler_completed() {
         Err(_) => return,
     };
 
+    let (event_tx, _) = tokio::sync::mpsc::channel(1);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(event_tx, db.pool.clone()));
+
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        hub: hub.clone(),
     };
 
     // Seed the database with a test tenant
@@ -100,10 +104,14 @@ async fn test_stripe_webhook_handler_deleted() {
         Err(_) => return,
     };
 
+    let (event_tx, _) = tokio::sync::mpsc::channel(1);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(event_tx, db.pool.clone()));
+
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        hub: hub.clone(),
     };
 
     // Seed the database with a test tenant
@@ -176,10 +184,14 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         Err(_) => return,
     };
 
+    let (event_tx, _) = tokio::sync::mpsc::channel(1);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(event_tx, db.pool.clone()));
+
     let state = WebhookState {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: Arc::new(db),
+        hub: hub.clone(),
     };
 
     let event = MercadoPagoEvent {
