@@ -225,6 +225,43 @@ mod tests {
         assert!(result.is_ok(), "Should receive successful response");
         assert_eq!(result.unwrap(), serde_json::json!({"success": true}));
     }
+
+    #[tokio::test]
+    async fn test_harness_mcp_server_list_tools() {
+        let server = HarnessMcpServer::new();
+        let req_str = r#"{"jsonrpc": "2.0", "id": 1, "method": "listTools"}"#;
+        let res = server.serve(req_str).await.unwrap();
+        let resp: JsonRpcResponse = serde_json::from_str(&res).unwrap();
+        assert!(resp.result.is_some());
+        assert!(resp.error.is_none());
+        assert_eq!(resp.id, 1);
+        let result = resp.result.unwrap();
+        assert!(result.get("tools").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_harness_mcp_server_unknown_method() {
+        let server = HarnessMcpServer::new();
+        let req_str = r#"{"jsonrpc": "2.0", "id": 2, "method": "unknownMethod"}"#;
+        let res = server.serve(req_str).await.unwrap();
+        let resp: JsonRpcResponse = serde_json::from_str(&res).unwrap();
+        assert!(resp.result.is_none());
+        assert!(resp.error.is_some());
+        assert_eq!(resp.id, 2);
+    }
+
+    #[tokio::test]
+    async fn test_harness_mcp_server_call_tool_success() {
+        let server = HarnessMcpServer::new();
+        let req_str = r#"{"jsonrpc": "2.0", "id": 3, "method": "callTool", "params": {"name": "harness_action", "arguments": {"command": "echo 'hello'"}}}"#;
+        let res = server.serve(req_str).await.unwrap();
+        let resp: JsonRpcResponse = serde_json::from_str(&res).unwrap();
+        assert!(resp.result.is_some());
+        assert!(resp.error.is_none());
+        assert_eq!(resp.id, 3);
+        let result = resp.result.unwrap();
+        assert_eq!(result.get("success").unwrap().as_bool().unwrap(), true);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -247,41 +284,6 @@ impl HarnessMcpServer {
 
     pub async fn serve(&self, req_str: &str) -> Result<String, String> {
         let req: ServeMcpRequest = serde_json::from_str(req_str).map_err(|e| e.to_string())?;
-
-        if req.method == "callTool" {
-            let tool_name = req.params.as_ref().and_then(|p| p.get("name")).and_then(|n| n.as_str()).unwrap_or("");
-            if tool_name == "harness_action" {
-                let arguments = req.params.as_ref().and_then(|p| p.get("arguments")).cloned().unwrap_or(serde_json::json!({}));
-                let command = arguments.get("command").and_then(|c| c.as_str()).unwrap_or("echo 'No command provided'");
-
-                let output = std::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(command)
-                    .output();
-
-                let resp = JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    id: req.id,
-                    result: Some(match output {
-                        Ok(out) => serde_json::json!({
-                            "success": out.status.success(),
-                            "output": String::from_utf8_lossy(&out.stdout).to_string()
-                        }),
-                        Err(err) => serde_json::json!({"success": false, "error": err.to_string()}),
-                    }),
-                    error: None,
-                };
-                return serde_json::to_string(&resp).map_err(|e| e.to_string());
-            } else {
-                let err_resp = JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    id: req.id,
-                    result: None,
-                    error: Some(serde_json::json!({"code": -32601, "message": "Tool not found"})),
-                };
-                return serde_json::to_string(&err_resp).map_err(|e| e.to_string());
-            }
-        }
 
         if req.method == "callTool" {
             let tool_name = req.params.as_ref().and_then(|p| p.get("name")).and_then(|n| n.as_str()).unwrap_or("");
@@ -343,23 +345,5 @@ impl HarnessMcpServer {
             error: Some(serde_json::json!({"code": -32601, "message": "Method not found"})),
         };
         serde_json::to_string(&err_resp).map_err(|e| e.to_string())
-    }
-}
-
-#[cfg(test)]
-mod additional_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_harness_mcp_server_call_tool_success() {
-        let server = HarnessMcpServer::new();
-        let req_str = r#"{"jsonrpc": "2.0", "id": 3, "method": "callTool", "params": {"name": "harness_action", "arguments": {"command": "echo 'hello'"}}}"#;
-        let res = server.serve(req_str).await.unwrap();
-        let resp: JsonRpcResponse = serde_json::from_str(&res).unwrap();
-        assert!(resp.result.is_some());
-        assert!(resp.error.is_none());
-        assert_eq!(resp.id, 3);
-        let result = resp.result.unwrap();
-        assert_eq!(result.get("success").unwrap().as_bool().unwrap(), true);
     }
 }
