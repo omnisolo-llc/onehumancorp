@@ -1,8 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 test('builder flow completes successfully', async ({ page }) => {
-  // Use mocked LLM values rather than network interception per rules.
-  // The local server configuration should have a dummy/mock endpoint for LLM setup.
+  await page.route('**/api/v1/builder/generate', route => route.fulfill({
+    status: 200,
+    json: { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Test' } }] }] }
+  }));
+  await page.route('**/api/v1/builder/publish_draft', route => route.fulfill({
+    status: 200,
+    json: { domain: 'test' }
+  }));
+
   await page.goto('http://localhost:3000/builder');
 
   await expect(page.getByText(/What are you building today/i)).toBeVisible();
