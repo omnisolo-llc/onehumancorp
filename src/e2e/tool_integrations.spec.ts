@@ -1,9 +1,15 @@
 import { test, expect } from './fixtures';
 
-test.describe('Tool Integrations UI Premium Dashbaord', () => {
+test.describe('Tool Integrations UI Premium Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     // Dismiss the upgrade modal if it appears
-    page.on('dialog', dialog => dialog.accept());
+    page.on('dialog', dialog => {
+      const msg = dialog.message();
+      if (msg.includes('Shippo')) expect(msg).toContain('Connecting to Shippo...');
+      if (msg.includes('Twilio')) expect(msg).toContain('Connecting to Twilio...');
+      if (msg.includes('Zoom')) expect(msg).toContain('Connecting to Zoom...');
+      dialog.accept();
+    });
     await page.goto('/');
     await page.getByText('Connect Tools').click();
     await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
@@ -47,7 +53,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('can connect Social Media Accounts', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to ManyChat...');
+      expect(dialog.message()).toContain('Connecting to Manychat...');
       dialog.accept();
     });
     await connectButton.click();
@@ -56,7 +62,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('can enable Autonomous Booking Agent', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Enabling Autonomous Booking...');
+      expect(dialog.message()).toContain('Connecting to Cal.com...');
       dialog.accept();
     });
     await connectButton.click();
@@ -64,16 +70,28 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('can connect Customer Emails and Local Payments', async ({ page }) => {
     const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Customer Emails' }).getByRole('button', { name: 'Start sending emails' });
-    page.once('dialog', dialog => dialog.accept());
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Setting up Resend...');
+      dialog.accept();
+    });
     await emailBtn.click();
 
     const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
-    page.once('dialog', dialog => dialog.accept());
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Connecting to Mercado Pago...');
+      dialog.accept();
+    });
     await paymentBtn.click();
   });
 
   test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
+    page.on('dialog', dialog => {
+      const msg = dialog.message();
+      if (msg.includes('Shippo')) expect(msg).toContain('Connecting to Shippo...');
+      if (msg.includes('Twilio')) expect(msg).toContain('Connecting to Twilio...');
+      if (msg.includes('Zoom')) expect(msg).toContain('Connecting to Zoom...');
+      dialog.accept();
+    });
     const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
     await shippingBtn.click();
     const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });

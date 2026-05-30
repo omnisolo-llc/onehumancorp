@@ -3864,7 +3864,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Autonomous Booking Agent</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Enable your AI agent to auto-schedule appointments from the unified inbox without any third-party tools.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Connecting to Cal.com...')">Enable Booking Agent</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -4196,7 +4196,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Manychat...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4206,7 +4206,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Enable Booking Agent</button>
                             </div>
 
                             <!-- MailerLite Integration -->
@@ -4216,7 +4216,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Resend...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -4226,7 +4226,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get paid easily using local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mercado Pago...')">Accept local payments</button>
                             </div>
 
                             <!-- Shippo Integration -->
@@ -4236,7 +4236,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Shippo...')">Set up shipping</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -4256,7 +4256,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Zoom...')">Create my meeting room</button>
                             </div>
                         </div>
 
