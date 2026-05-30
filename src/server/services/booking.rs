@@ -5,8 +5,6 @@ use crate::db::get_pool;
 use sqlx::Row;
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
-use std::sync::Arc;
-use crate::hub::Hub;
 
 static SERVICES_CACHE: OnceLock<HybridCache<Vec<Service>>> = OnceLock::new();
 
