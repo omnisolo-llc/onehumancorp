@@ -11,6 +11,7 @@ export default function OnboardingWizard() {
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
     location, setLocation,
+    targetAudience, setTargetAudience,
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
@@ -75,6 +76,7 @@ export default function OnboardingWizard() {
       whatYouSell,
       location,
       businessType,
+      targetAudience,
       categories,
       websiteTemplate,
       firstProductName,
@@ -94,7 +96,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, targetAudience,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -106,7 +108,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = `Business Name: ${businessName}\nBusiness Type: ${businessType}\nTarget Audience: ${targetAudience}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -210,107 +212,135 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-4">
+                Describe what you do. Our AI will set up your store automatically.
               </p>
 
-              {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                    Our AI will instantly generate your storefront, products, and back-office agents.
-                  </p>
+              {/* Chat Interface */}
+              <div className="flex flex-col flex-1 pb-4">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-4 mb-4" id="chat-history">
+                  {/* Step 1 Question */}
+                  <div className="flex flex-col gap-2">
+                    <div className="self-start bg-[#eef2ff] dark:bg-[#0066FF]/20 text-[#1D1D1F] dark:text-[#F5F5F7] p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-sm border border-[#0066FF]/10">
+                      Hi! What's the name of your business?
+                      <br/>
+                      <span className="text-xs text-gray-500 mt-1 block">Our AI will instantly generate your storefront.</span>
+                    </div>
+                  </div>
 
-                  <div className="space-y-4 flex-1">
-                    <div>
+                  {/* Step 1 Answer */}
+                  {chatStep > 1 && (
+                    <div className="flex flex-col gap-2 animate-fade-in">
+                      <div className="self-end bg-[#0066FF] text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-md">
+                        {businessName}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2 Question */}
+                  {chatStep > 1 && (
+                    <div className="flex flex-col gap-2 animate-fade-in">
+                      <div className="self-start bg-[#eef2ff] dark:bg-[#0066FF]/20 text-[#1D1D1F] dark:text-[#F5F5F7] p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-sm border border-[#0066FF]/10">
+                        What is your business type?
+                        <br/>
+                        <span className="text-xs text-gray-500 mt-1 block">e.g. Handyman, Bakery, Clothing Boutique</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2 Answer */}
+                  {chatStep > 2 && (
+                    <div className="flex flex-col gap-2 animate-fade-in">
+                      <div className="self-end bg-[#0066FF] text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-md">
+                        {businessType}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3 Question */}
+                  {chatStep > 2 && (
+                    <div className="flex flex-col gap-2 animate-fade-in">
+                      <div className="self-start bg-[#eef2ff] dark:bg-[#0066FF]/20 text-[#1D1D1F] dark:text-[#F5F5F7] p-3 rounded-2xl rounded-tl-sm max-w-[85%] text-sm border border-[#0066FF]/10">
+                        Who is your target audience?
+                        <br/>
+                        <span className="text-xs text-gray-500 mt-1 block">e.g. Local customers in Miami, FL</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input Area */}
+                <div className="mt-auto mac-glass-container rounded-xl p-3 shadow-sm border border-white/40 dark:border-white/10 flex flex-col gap-3 relative z-10 shrink-0">
+                  {chatStep === 1 && (
+                    <div className="flex flex-col gap-2">
                       <input
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full bg-transparent outline-none text-[#1D1D1F] dark:text-[#F5F5F7] px-2 text-base"
+                        onKeyDown={(e) => { if (e.key === 'Enter' && businessName.trim()) setChatStep(2); }}
+                        autoFocus
                       />
+                      <button
+                        onClick={() => setChatStep(2)}
+                        disabled={!businessName.trim()}
+                        className="self-end bg-[#0066FF] text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#0052cc] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        Next
+                      </button>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                    Tell us a bit about your products or services.
-                  </p>
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <textarea
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                    This helps us set up your shipping and tax settings.
-                  </p>
-
-                  <div className="space-y-4 flex-1">
-                    <div>
+                  {chatStep === 2 && (
+                    <div className="flex flex-col gap-2">
                       <input
                         type="text"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        value={businessType}
+                        onChange={(e) => setBusinessType(e.target.value)}
+                        placeholder="e.g. Custom vegan cakes"
+                        className="w-full bg-transparent outline-none text-[#1D1D1F] dark:text-[#F5F5F7] px-2 text-base"
+                        onKeyDown={(e) => { if (e.key === 'Enter' && businessType.trim()) setChatStep(3); }}
+                        autoFocus
                       />
+                      <div className="flex justify-between items-center w-full mt-2">
+                        <button onClick={() => setChatStep(1)} className="text-xs text-gray-500 hover:text-[#0066FF] px-2 py-1">Back</button>
+                        <button
+                          onClick={() => setChatStep(3)}
+                          disabled={!businessType.trim()}
+                          className="bg-[#0066FF] text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#0052cc] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          Next
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
-                    </button>
-                  </div>
+                  {chatStep === 3 && (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={targetAudience}
+                        onChange={(e) => setTargetAudience(e.target.value)}
+                        placeholder="e.g. Wedding planners in Portland"
+                        className="w-full bg-transparent outline-none text-[#1D1D1F] dark:text-[#F5F5F7] px-2 text-base"
+                        onKeyDown={(e) => { if (e.key === 'Enter' && targetAudience.trim() && !isLoading) handleIntake(); }}
+                        autoFocus
+                      />
+                      <div className="flex justify-between items-center w-full mt-2">
+                        <button onClick={() => setChatStep(2)} className="text-xs text-gray-500 hover:text-[#0066FF] px-2 py-1">Back</button>
+                        <button
+                          onClick={handleIntake}
+                          disabled={!targetAudience.trim() || isLoading}
+                          className="bg-[#0066FF] text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#0052cc] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          {isLoading ? 'Generating...' : 'Finish'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
