@@ -30,7 +30,7 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
-static ADVISORY_CACHE: std::sync::OnceLock<crate::utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static ADVISORY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -702,7 +702,7 @@ pub async fn advisory_insights_handler(
     let cache = ADVISORY_CACHE.get_or_init(|| {
         let redis_url = std::env::var("REDIS_URL").ok();
         let redis_client = redis_url.and_then(|url| redis::Client::open(url).ok());
-        crate::utils::cache::HybridCache::new(redis_client)
+        ::server_utils::cache::HybridCache::new(redis_client)
     });
 
     // Include active_orders in the cache key so it reflects dynamic changes
