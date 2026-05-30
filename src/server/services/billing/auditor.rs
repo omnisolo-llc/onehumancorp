@@ -112,6 +112,10 @@ impl CostAuditor {
             let _ = tx.send(event.clone());
         }
 
+        if event.cached_input_tokens > 0 {
+            self.record_cache_hit(event.clone());
+        }
+
         cost
     }
 
