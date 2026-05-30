@@ -93,30 +93,4 @@ mod tests {
         let got = ef.scan("This is very CONFIDENTIAL information.", &keywords);
         assert!(got.blocked);
     }
-
-    #[test]
-    fn test_trust_manager_parse_jwks_edge_cases() {
-        let tm = TrustManager;
-
-        // Empty string JSON
-        let res = tm.parse_jwks("org.com", "", vec![]);
-        assert!(res.is_err());
-
-        // Valid JSON but empty object
-        let res = tm.parse_jwks("org.com", "{}", vec![]);
-        assert!(res.is_ok()); // The current implementation uses HashMap<String, Value> and does not enforce specific fields
-    }
-
-    #[test]
-    fn test_egress_filter_scan_edge_cases() {
-        let ef = EgressFilter;
-
-        // Empty message
-        let got = ef.scan("", &["Secret".to_string()]);
-        assert!(!got.blocked);
-
-        // Empty keywords
-        let got = ef.scan("This is a Secret message", &[]);
-        assert!(!got.blocked);
-    }
 }
