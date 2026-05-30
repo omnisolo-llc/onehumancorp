@@ -1321,16 +1321,24 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
+                let mut retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            break Ok(format!("Error executing planned step: Transient error: {}", msg));
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
+                            }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            if llm_recovery_attempts < cfg.max_retries {
+                            if llm_recovery_attempts < max_retries {
                                 llm_recovery_attempts += 1;
 
                                 // Error Handling (Compounding Error Prevention): LLM-recoverable
@@ -1421,16 +1429,25 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
+            let mut retry_count = 0;
+            let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
-                        break format!("Error executing planned step: Transient error: {}", msg);
+                        if retry_count < max_retries {
+                            retry_count += 1;
+                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                            tokio::time::sleep(backoff).await;
+                            continue;
+                        } else {
+                            break format!("Error executing planned step: Transient error after retries: {}", msg);
+                        }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        if llm_recovery_attempts < cfg.max_retries {
+                        if llm_recovery_attempts < max_retries {
                             llm_recovery_attempts += 1;
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
@@ -2289,15 +2306,19 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
-                        Ok(r) => {
-                            return (tc_clone, Ok(r));
-                        }
-                        Err(ToolError::Transient(msg)) => {
-                            return (tc_clone, Err(ToolError::Transient(msg)));
-                        }
-                        Err(e) => {
-                            return (tc_clone, Err(e));
+                    let mut retry_count = 0;
+                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    loop {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                            Ok(r) => {
+                                return (tc_clone, Ok(r));
+                            }
+                            Err(ToolError::Transient(msg)) => {
+                                return (tc_clone, Err(ToolError::Transient(msg)));
+                            }
+                            Err(e) => {
+                                return (tc_clone, Err(e));
+                            }
                         }
                     }
                 }.instrument(tool_span));

@@ -393,6 +393,34 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
         }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.get_free_busy(time_min, time_max).await;
+        }
+
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn generate_meeting_for_booking(&self, integration_id: &str, booking_id: &str, topic: &str) -> Result<String, String> {
+        let client_zoom = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_zoom {
+            return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
         Err("integration not found or not supported".to_string())
     }
 
@@ -691,6 +719,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.create_event(summary, start_time, end_time).await;
         }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.create_event(summary, start_time, end_time).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
