@@ -68,7 +68,7 @@ pub async fn run_health_monitor(
                 for agent_id in to_fire {
                     let count = pending_fires.entry(agent_id.clone()).or_insert(0);
                     *count += 1;
-                    let threshold = if is_cloud { 3 } else { 1 };
+                    let threshold = if is_cloud { 2 } else { 1 };
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
                     } else {
@@ -197,7 +197,12 @@ mod tests {
             run_health_monitor(monitor_mesh, monitor_hub, true, std::time::Duration::from_millis(10)).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+        // The health monitor uses a 10ms tick. In cloud mode, threshold is 2 missed pings.
+        // Sometimes the tick takes a bit longer than 10ms to register.
+        // Wait long enough for definitely 2 ticks, but less than 150ms.
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+
+        // Check that agent is fired
         assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }

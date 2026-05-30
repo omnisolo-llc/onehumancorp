@@ -483,7 +483,6 @@ impl TaskManager {
 mod tests {
     use super::*;
     #[test]
-    #[test]
     fn test_task_manager_mesh_broadcast() {
         let tm = TaskManager::new();
         let broadcast_called = std::sync::Arc::new(std::sync::Mutex::new(false));
@@ -510,6 +509,7 @@ mod tests {
         assert!(!payload_captured.lock().unwrap().is_empty(), "Payload should not be empty");
     }
 
+    #[test]
     fn test_create_and_get_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
