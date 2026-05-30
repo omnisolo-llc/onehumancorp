@@ -11,6 +11,7 @@ export default function Integrations() {
     { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
+    { id: "stripe", name: "Stripe", category: "finance", status: "disconnected", icon: "💳", description: "Accept payments globally with credit cards." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
@@ -28,15 +29,39 @@ export default function Integrations() {
   });
 
   const handleConnect = (id: string) => {
+    if (id === 'cal_com') {
+      // Call backend API to initiate Cal.com OAuth flow
+      fetch("/api/integrations/cal_com/connect", { method: "POST" });
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push("/calendar");
+    }
+    if (id === 'stripe') {
+      // Call backend API to initiate Stripe OAuth flow
+      fetch("/api/integrations/stripe/connect", { method: "POST" });
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+    }
+    if (id === 'shippo') {
+      // Call backend API to initiate Shippo setup
+      fetch("/api/integrations/shippo/connect", { method: "POST" });
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+    }
     if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
+      // Call backend API to initiate Calendly OAuth flow
+      fetch("/api/integrations/calendly/connect", { method: "POST" });
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push("/dashboard");
     }
     if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
+      // Call backend API to initiate Manychat OAuth flow
+      fetch("/api/integrations/manychat/connect", { method: "POST" });
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));

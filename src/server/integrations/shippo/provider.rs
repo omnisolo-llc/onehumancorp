@@ -67,4 +67,8 @@ impl ShippoProvider {
         // Mock emailing tracking numbers to the customer
         Ok(label_url)
     }
+
+    pub async fn process_label_request(&self, rate_id: &str) -> Result<String, String> {
+        self.purchase_label(rate_id).await
+    }
 }

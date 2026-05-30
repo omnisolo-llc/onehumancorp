@@ -35,6 +35,7 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    stripe_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::stripe::provider::StripeProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -75,6 +76,7 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            stripe_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -790,5 +792,22 @@ mod tests {
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+    }
+}
+
+impl IntegrationsRegistry {
+    pub async fn stripe_create_checkout_session(&self, integration_id: &str, price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        let client = {
+            if integration_id == "stripe" {
+                let clients = self.stripe_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_checkout_session(price_id, customer_id, amount_usd).await;
+        }
+        Err("integration not found or not supported".to_string())
     }
 }
