@@ -6,6 +6,9 @@ test.describe('Phygital Mesh (Smart Labels) E2E', () => {
     // 1. Navigate to builder
     await page.goto('/builder');
 
+    // 1.5 Click Next in builder until we reach Smart Labels
+    await page.getByText('Next', { exact: true }).click();
+
     // 2. Open Smart Labels section
     await page.getByText('Smart Labels (QR)', { exact: true }).click();
 
