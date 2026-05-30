@@ -45,7 +45,12 @@ pub fn auth_mode_from_env() -> AuthMode {
 /// Compute HMAC-SHA256 of the token using the application key.
 fn hmac_token(token: &str) -> Vec<u8> {
     let key = std::env::var("OHC_AGENT_AUTH_KEY")
-        .unwrap_or_else(|_| "default_auth_key_change_me".to_string());
+        .unwrap_or_else(|_| {
+            if ::server_config::get().multitenant {
+                panic!("OHC_AGENT_AUTH_KEY must be set in Cloud/Multitenant Mode to prevent default key vulnerabilities.");
+            }
+            "default_auth_key_change_me".to_string()
+        });
     let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(token.as_bytes());
     mac.finalize().into_bytes().to_vec()
@@ -125,7 +130,13 @@ pub struct Store {
 impl Store {
     pub fn new() -> Self {
         let secret = std::env::var("JWT_SECRET")
-            .map(|s| s.into_bytes())
+            .map(|s| {
+                let bytes = s.into_bytes();
+                if ::server_config::get().multitenant && bytes.len() < 32 {
+                    panic!("JWT_SECRET must be at least 32 bytes long in Cloud/Multitenant Mode to ensure secure access token management.");
+                }
+                bytes
+            })
             .unwrap_or_else(|_| {
                 if ::server_config::get().multitenant {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
