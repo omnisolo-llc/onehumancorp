@@ -6,11 +6,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 global.fetch = vi.fn().mockImplementation(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ 'test-tooltip': 'Fetched tooltip text' }) })) as any;
 
 describe('TooltipRegistry', () => {
-  beforeEach(() => {
-    (global.fetch as any).mockResolvedValue({
-      json: async () => ({ "test-id": "Fetched tooltip text" })
-    });
-  });
 
   it.skip('renders default text on hover', async () => {
     // wait for useEffect to finish
@@ -24,6 +19,11 @@ describe('TooltipRegistry', () => {
     );
 
     const button = screen.getByText('Hover me');
+
+    // Wait for context to be populated via fetch call in TooltipProvider
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled();
+    })
 
     // Create a mock getBoundingClientRect
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
