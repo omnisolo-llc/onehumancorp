@@ -147,4 +147,34 @@ test.describe('Success Milestones Notifications', () => {
     await expect(whatsappShare).toBeVisible();
     await expect(whatsappShare).toHaveAttribute('href', /wa\.me.*5-star/i);
   });
+
+  test('should call milestone share endpoint when clicking share and claim reward', async ({ page, context }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.waitForURL('**/dashboard');
+
+    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    await expect(markReadyBtn).toBeVisible({ timeout: 10000 });
+
+    // Click the button 3 times to trigger the milestone
+    for (let i = 0; i < 3; i++) {
+        await markReadyBtn.click();
+        await page.waitForTimeout(100);
+    }
+
+    const shareBtn = page.locator('button:has-text("Share & Claim Reward")').first();
+    await expect(shareBtn).toBeVisible({ timeout: 10000 });
+
+    const [response] = await Promise.all([
+      page.waitForResponse(res => res.url().includes('/api/v1/growth/milestone/share') && res.status() === 200),
+      shareBtn.click(),
+    ]);
+
+    const responseBody = await response.json();
+    expect(responseBody.share_message).toBeDefined();
+    expect(responseBody.referral_link).toBeDefined();
+    expect(responseBody.share_message).toContain('Start your own business today with One Human Corp:');
+  });
 });
