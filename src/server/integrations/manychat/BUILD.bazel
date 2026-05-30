@@ -18,7 +18,4 @@ rust_test(
     size = "small",
     crate = ":server_integrations_manychat",
     edition = "2024",
-    deps = [
-        "@crates//:tokio",
-    ],
 )
