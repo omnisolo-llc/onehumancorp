@@ -98,6 +98,53 @@ impl ToolExecutor for SubagentExecutor {
                     Err(ToolError::LlmRecoverable(format!("Failed to enqueue teammate task: {}", e)))
                 }
             }
+        } else if mode == "worktree" {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let worktree_dir = format!("/tmp/ohc-subagent-{}", task_id);
+            let branch_name = format!("subagent-{}", task_id);
+
+            // 1. Create Git Worktree
+            let git_wt_out = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
+            match git_wt_out {
+                Ok(out) if out.status.success() => {},
+                Ok(out) => return Err(ToolError::LlmRecoverable(format!("Failed to create worktree: {}", String::from_utf8_lossy(&out.stderr)))),
+                Err(e) => return Err(ToolError::LlmRecoverable(format!("Runner failed to create worktree: {}", e))),
+            }
+
+            // 2. Execute Subagent in the new worktree
+            let mut envs = vec![];
+            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
+                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
+            }
+
+            let output = self.runner.run("ohc_builtin_agent", &["--task", &task], Some(std::path::PathBuf::from(&worktree_dir).as_ref()), envs).await;
+
+            // 3. Cleanup Git Worktree
+            let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_dir], None, vec![]).await;
+            let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
+
+            let res = match output {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                    if out.status.success() {
+                        Ok(stdout)
+                    } else {
+                        Err(format!("Process failed: {}", stderr))
+                    }
+                }
+                Err(e) => Err(format!("Runner failed: {}", e)),
+            };
+
+            match res {
+                Ok(mut summary) => {
+                    if summary.chars().count() > 8000 {
+                        summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
+                    }
+                    Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", raw_task, summary))
+                }
+                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent (Worktree) failed: {}", e))),
+            }
         } else {
             return Err(ToolError::LlmRecoverable(format!("Unknown mode: {}", mode)));
         }
@@ -220,5 +267,26 @@ mod tests {
         let msg = result.unwrap();
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");
         assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
+    }
+
+    #[tokio::test]
+    async fn test_subagent_worktree_mode() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // Mock responses for git worktree add, ohc_builtin_agent, git worktree remove, git branch -D
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "worktree added", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree agent summary", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "worktree removed", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "branch removed", "")));
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "Test worktree",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for worktree mode");
+        let msg = result.unwrap();
+        assert!(msg.contains("[Subagent (Worktree)] Completed task: Test worktree. Summary: Worktree agent summary"));
     }
 }
