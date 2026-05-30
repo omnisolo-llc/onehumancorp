@@ -229,7 +229,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     }
 
     return (
-      <div className="powered-by-footer py-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] mt-6 rounded-[16px] text-center w-full">
+      <div className="powered-by-footer py-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] mt-6 rounded-[16px]">
         <a
           href={`ohc://join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"

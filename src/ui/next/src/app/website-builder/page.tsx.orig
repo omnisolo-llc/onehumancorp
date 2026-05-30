@@ -19,7 +19,6 @@ export default function WebsiteBuilderPage() {
   // Wizard state bindings
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
-  const [businessCategory, setBusinessCategory] = useState("");
   const [hasPhysicalProducts, setHasPhysicalProducts] = useState(false);
   const [hasDigitalProducts, setHasDigitalProducts] = useState(false);
   const [productName, setProductName] = useState("");

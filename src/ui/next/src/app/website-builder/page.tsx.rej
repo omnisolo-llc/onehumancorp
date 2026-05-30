@@ -1,0 +1,10 @@
+--- page.tsx
++++ page.tsx
+@@ -193,6 +193,7 @@
+     return () => clearTimeout(timer);
+   }, []);
+
++  const [businessCategory, setBusinessCategory] = useState('');
+   if (!isLoaded) return null;
+
+   if (status === "idle") {
