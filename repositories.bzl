@@ -147,7 +147,7 @@ def go_repositories():
         build_file_generation = "on",
         importpath = "github.com/cncf/xds/go",
         sum = "h1:6xNmx7iTtyBRev0+D/Tv1FZd4SCg8axKApyNyRsAt/w=",
-        version = "v0.0.0-20251210132809-ee656c7534f5",
+        version = "v0.0.0-20240905190251-b4127c9b8d78",
     )
     go_repository(
         name = "com_github_coder_websocket",
