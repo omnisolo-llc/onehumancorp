@@ -441,7 +441,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
+    let res = tokio::try_join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -462,9 +462,10 @@ async fn http_metrics_handler(
         }
     );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(0.0);
+    let (active_customers_res, pending_orders_res, sales_res) = res.unwrap_or((0, 0, 0.0));
+    let active_customers = active_customers_res;
+    let pending_orders = pending_orders_res;
+    let total_sales = sales_res;
 
     (
         StatusCode::OK,
@@ -672,7 +673,7 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
+    let res: Result<(Option<(String, String)>, i64), sqlx::Error> = tokio::try_join!(
         async {
             sqlx::query_as::<_, (String, String)>(
                 "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -691,11 +692,8 @@ pub async fn advisory_insights_handler(
         }
     );
 
-    let (business_name, industry) = org_res
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-    let active_orders = active_orders_res.unwrap_or(0);
+    let (org_res, active_orders) = res.unwrap_or((None, 0));
+    let (business_name, industry) = org_res.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
@@ -754,14 +752,14 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
+    let res_org: Option<(String, String)> = sqlx::query_as(
         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
     )
     .bind(&tenant_id)
     .fetch_optional(&db.pool)
     .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    .unwrap_or(None);
+    let (business_name, industry) = res_org.unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
