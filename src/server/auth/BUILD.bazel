@@ -6,6 +6,7 @@ rust_library(
         "grpc.rs",
         "mod.rs",
         "orchestration.rs",
+        "spiffe.rs",
     ],
     edition = "2024",
     crate_root = "mod.rs",
