@@ -11,21 +11,11 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
-    // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+    // Wait for the Smart Builder welcome screen (Step 1 - Description)
+    await expect(page.getByRole('heading', { name: "Tell us about your business", exact: false })).toBeVisible({ timeout: 15000 });
 
     // Fill in the description (incorporating Maya to trigger mock)
-    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    // Step 1 - Chat 2
-    await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('maya bakes custom cakes');
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    // Step 1 - Chat 3
-    await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByPlaceholder('e.g. Portland, OR').fill('Portland, OR');
+    await page.getByPlaceholder("e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50.").fill("I am Maya. I bake custom cakes in Portland.");
 
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
@@ -64,21 +54,11 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
     await page.waitForTimeout(1000);
 
-    // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?", exact: false })).toBeVisible({ timeout: 15000 });
+    // Wait for the Smart Builder welcome screen (Step 1 - Description)
+    await expect(page.getByRole('heading', { name: "Tell us about your business", exact: false })).toBeVisible({ timeout: 15000 });
 
     // Fill in the description (incorporating Carlos to trigger mock)
-    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    // Step 1 - Chat 2
-    await expect(page.getByRole('heading', { name: 'What do you sell?', exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('carlos does handyman services');
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    // Step 1 - Chat 3
-    await expect(page.getByRole('heading', { name: 'Where are you located?', exact: false })).toBeVisible({ timeout: 15000 });
-    await page.getByPlaceholder('e.g. Portland, OR').fill('Miami, FL');
+    await page.getByPlaceholder("e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50.").fill("I am Carlos. I do plumbing in Miami.");
 
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();

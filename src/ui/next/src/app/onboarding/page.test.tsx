@@ -13,6 +13,9 @@ describe('OnboardingWizard', () => {
       businessName: '',
       whatYouSell: '',
       location: '',
+      businessType: '',
+      firstProductName: '',
+      firstProductPrice: '',
       businessDescription: '',
       aiAgents: [],
       aiAutoRespond: true,
@@ -21,7 +24,10 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
+        json: () => Promise.resolve({ wizardState: {} }),
+        ok: true
+    }));
   });
 
   afterEach(() => {
@@ -31,50 +37,39 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it('Handles single-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        json: async () => ({ wizardState: {} }),
+        ok: true
+      }) // initial sync state
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          business_type: 'Bakery',
+          business_name: 'Maya Bakery',
+          categories: ['food'],
+          initial_products: [{ name: 'Cake', price: '20' }]
+        })
       })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: "Success!" })
+      });
 
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await userEvent.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn1.click(); });
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn2.click(); });
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await userEvent.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I am Maya. I bake vegan cakes in Austin. Prices start at \$50./i);
+    await userEvent.type(descInput, 'I am Maya. I bake custom cakes in Portland.');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -117,29 +112,20 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        json: async () => ({ wizardState: {} }),
+        ok: true
+      }) // initial sync state
+      .mockResolvedValueOnce({
+        ok: false
+      });
 
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await userEvent.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn1.click(); });
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn2.click(); });
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await userEvent.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I am Maya. I bake vegan cakes in Austin. Prices start at \$50./i);
+    await userEvent.type(descInput, 'I am Maya. I bake custom cakes in Portland.');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
@@ -147,10 +133,10 @@ describe('OnboardingWizard', () => {
       button.click();
     });
 
-    // Verify error appears and step goes back to 1
+    // Verify error appears and step stays at 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     });
   });
 
@@ -161,9 +147,14 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    (global.fetch as any)
+      .mockResolvedValueOnce({
+        json: async () => ({ wizardState: {} }),
+        ok: true
+      }) // initial sync state
+      .mockResolvedValueOnce({
+        ok: false
+      });
 
     act(() => { render(<OnboardingWizard />); });
 
