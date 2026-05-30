@@ -223,7 +223,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
+        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md">
             {helpTabs.map((t) => (
               <button
@@ -367,7 +367,7 @@ export function HelpWidget() {
 
       {/* Video Player Modal */}
       {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-[20px] saturate-200 p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-[30px] saturate-[210%] p-4">
           <div className="bg-black/90 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start">
@@ -381,7 +381,7 @@ export function HelpWidget() {
             <div className="flex-1 flex items-center justify-center relative bg-gradient-to-br from-gray-800 to-black">
                {/* Simulating a video placeholder background */}
                <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full scale-150 mix-blend-screen pointer-events-none"></div>
-               <button className="w-16 h-16 bg-white/20 hover:bg-white/30 backdrop-blur-[20px] saturate-200 border border-white/30 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95 group z-20">
+               <button className="w-16 h-16 bg-white/20 hover:bg-white/30 backdrop-blur-[30px] saturate-[210%] border border-white/30 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95 group z-20">
                   <svg className="w-8 h-8 text-white ml-1 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                </button>
             </div>

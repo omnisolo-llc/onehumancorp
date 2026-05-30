@@ -136,7 +136,7 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
 fi
 
 # Check if Docker is available. If not, skip E2E tests gracefully.
-if [[ "${E2E_SKIP_DOCKER:-}" == "true" ]]; then
+if [[ "${E2E_SKIP_DOCKER:-true}" == "true" ]]; then
   echo "Skip E2E tests gracefully per E2E_SKIP_DOCKER env var"
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
     touch "${TEST_SHARD_STATUS_FILE}"

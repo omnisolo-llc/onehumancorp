@@ -111,7 +111,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat">
           {/* Header */}
           <div className="bg-gray-900/90 text-white p-4 flex justify-between items-center backdrop-blur-md">
             <div className="flex items-center gap-2">

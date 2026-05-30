@@ -1033,7 +1033,7 @@ export default function Dashboard() {
 
 
          {/* Milestone Viral Share Growth Loop Component */}
-         <div className="bg-white rounded-3xl p-8 mb-12 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-indigo-50 to-purple-50" style={{ backdropFilter: 'blur(20px) saturate(200%)' }}>
+         <div className="bg-white rounded-3xl p-8 mb-12 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 bg-gradient-to-br from-indigo-50 to-purple-50" style={{ backdropFilter: 'blur(30px) saturate(210%)' }}>
              <div className="flex-1">
                  <h3 className="text-xl font-bold text-gray-900 mb-2 font-outfit">🎉 You reached 10 Orders!</h3>
                  <p className="text-gray-600 mb-6 font-inter">Your business is growing fast. Share your milestone and unlock a <strong>7-day Pro Trial Extension</strong>.</p>
@@ -1084,7 +1084,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
