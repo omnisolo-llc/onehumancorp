@@ -191,7 +191,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY updated_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM consolidated_memory ORDER BY created_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -207,7 +207,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <-> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <-> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM consolidated_memory ORDER BY embedding <=> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
