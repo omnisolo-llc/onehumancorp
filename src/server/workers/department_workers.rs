@@ -128,6 +128,9 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
+                                let cache = crate::builder::edge::get_edge_cache();
+                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -158,6 +161,9 @@ impl OperationsWorker {
                                     .bind(&tenant_id)
                                     .execute(pool)
                                     .await;
+
+                                let cache = crate::builder::edge::get_edge_cache();
+                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
@@ -294,6 +300,203 @@ impl OperationsWorker {
                             }
                             }
                         }
+
+                        // Autonomous Supply Chain & Vendor Mesh Logic
+                        // Query BOM items for this product
+                        let bom_items: Vec<(String, i32, String)> = match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query("SELECT raw_material_id, quantity_required, rm.name FROM bom_items b JOIN raw_materials rm ON b.raw_material_id = rm.id WHERE b.finished_good_id = $1 AND b.tenant_id = $2")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_all(&db.pool)
+                                    .await
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .filter_map(|r| {
+                                        Some((
+                                            r.try_get::<String, _>("raw_material_id").ok()?,
+                                            r.try_get::<i32, _>("quantity_required").unwrap_or(1),
+                                            r.try_get::<String, _>("name").ok()?,
+                                        ))
+                                    })
+                                    .collect()
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query("SELECT raw_material_id, quantity_required, rm.name FROM bom_items b JOIN raw_materials rm ON b.raw_material_id = rm.id WHERE b.finished_good_id = ? AND b.tenant_id = ?")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_all(pool)
+                                    .await
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .filter_map(|r| {
+                                        Some((
+                                            r.try_get::<String, _>("raw_material_id").ok()?,
+                                            r.try_get::<i32, _>("quantity_required").unwrap_or(1),
+                                            r.try_get::<String, _>("name").ok()?,
+                                        ))
+                                    })
+                                    .collect()
+                            }
+                        };
+
+                        let order_quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+
+                        for (raw_mat_id, required_per_item, raw_mat_name) in bom_items {
+                            let depletion_amount = order_quantity * required_per_item;
+
+                            // Log depletion and update quantity
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query("INSERT INTO depletion_logs (id, tenant_id, raw_material_id, order_id, quantity) VALUES ($1, $2, $3, $4, $5)")
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .bind(&raw_mat_id)
+                                        .bind(&id)
+                                        .bind(depletion_amount)
+                                        .execute(&db.pool).await;
+
+                                    let _ = sqlx::query("UPDATE raw_materials SET current_quantity = current_quantity - $1 WHERE id = $2 AND tenant_id = $3")
+                                        .bind(depletion_amount)
+                                        .bind(&raw_mat_id)
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool).await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query("INSERT INTO depletion_logs (id, tenant_id, raw_material_id, order_id, quantity) VALUES (?, ?, ?, ?, ?)")
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .bind(&raw_mat_id)
+                                        .bind(&id)
+                                        .bind(depletion_amount)
+                                        .execute(pool).await;
+
+                                    let _ = sqlx::query("UPDATE raw_materials SET current_quantity = current_quantity - ? WHERE id = ? AND tenant_id = ?")
+                                        .bind(depletion_amount)
+                                        .bind(&raw_mat_id)
+                                        .bind(&tenant_id)
+                                        .execute(pool).await;
+                                }
+                            }
+
+                            // Check against threshold
+                            let (curr_qty, threshold) = match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query("SELECT current_quantity, reorder_threshold FROM raw_materials WHERE id = $1 AND tenant_id = $2")
+                                        .bind(&raw_mat_id)
+                                        .bind(&tenant_id)
+                                        .fetch_optional(&db.pool).await.unwrap_or_default()
+                                        .map(|r| (r.try_get::<i32, _>("current_quantity").unwrap_or(0), r.try_get::<i32, _>("reorder_threshold").unwrap_or(0)))
+                                        .unwrap_or((0, 0))
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query("SELECT current_quantity, reorder_threshold FROM raw_materials WHERE id = ? AND tenant_id = ?")
+                                        .bind(&raw_mat_id)
+                                        .bind(&tenant_id)
+                                        .fetch_optional(pool).await.unwrap_or_default()
+                                        .map(|r| (r.try_get::<i32, _>("current_quantity").unwrap_or(0), r.try_get::<i32, _>("reorder_threshold").unwrap_or(0)))
+                                        .unwrap_or((0, 0))
+                                }
+                            };
+
+                            if curr_qty < threshold {
+                                // Check if an existing draft/pending PO already exists for this raw material
+                                let existing_po_count: i64 = match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders po JOIN po_line_items pli ON po.id = pli.purchase_order_id WHERE pli.raw_material_id = $1 AND po.tenant_id = $2 AND po.status IN ('Draft', 'Sent')")
+                                            .bind(&raw_mat_id)
+                                            .bind(&tenant_id)
+                                            .fetch_one(&db.pool).await.unwrap_or(0)
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders po JOIN po_line_items pli ON po.id = pli.purchase_order_id WHERE pli.raw_material_id = ? AND po.tenant_id = ? AND po.status IN ('Draft', 'Sent')")
+                                            .bind(&raw_mat_id)
+                                            .bind(&tenant_id)
+                                            .fetch_one(pool).await.unwrap_or(0)
+                                    }
+                                };
+
+                                if existing_po_count == 0 {
+
+                                // Find associated vendor
+                                let vendor_info: Option<(String, String, String)> = match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        sqlx::query("SELECT v.id, v.name, v.contact_info FROM vendors v JOIN purchase_orders po ON v.id = po.vendor_id JOIN po_line_items pli ON po.id = pli.purchase_order_id WHERE pli.raw_material_id = $1 AND v.tenant_id = $2 LIMIT 1")
+                                            .bind(&raw_mat_id)
+                                            .bind(&tenant_id)
+                                            .fetch_optional(&db.pool).await.unwrap_or_default()
+                                            .map(|r| (r.get("id"), r.get("name"), r.get("contact_info")))
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        sqlx::query("SELECT v.id, v.name, v.contact_info FROM vendors v JOIN purchase_orders po ON v.id = po.vendor_id JOIN po_line_items pli ON po.id = pli.purchase_order_id WHERE pli.raw_material_id = ? AND v.tenant_id = ? LIMIT 1")
+                                            .bind(&raw_mat_id)
+                                            .bind(&tenant_id)
+                                            .fetch_optional(pool).await.unwrap_or_default()
+                                            .map(|r| (r.get("id"), r.get("name"), r.get("contact_info")))
+                                    }
+                                };
+
+                                let default_vendor_id = Uuid::new_v4().to_string();
+                                let (v_id, v_name, _v_contact) = vendor_info.unwrap_or_else(|| (default_vendor_id.clone(), "General Supplier".to_string(), "contact@example.com".to_string()));
+
+                                // Create Draft PO
+                                let po_id = Uuid::new_v4().to_string();
+                                let reorder_amount = std::cmp::max(threshold * 2, 50); // Arbitrary reorder logic
+                                let estimated_cost = (reorder_amount as f64) * 0.90; // $0.90 per unit dummy cost
+
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        // Ensure vendor exists if we generated a dummy one
+                                        if v_id == default_vendor_id {
+                                            let _ = sqlx::query("INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                                                .bind(&v_id).bind(&tenant_id).bind(&v_name).bind("").execute(&db.pool).await;
+                                        }
+
+                                        let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, 'Draft', $4)")
+                                            .bind(&po_id).bind(&tenant_id).bind(&v_id).bind(estimated_cost).execute(&db.pool).await;
+
+                                        let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                                            .bind(Uuid::new_v4().to_string()).bind(&tenant_id).bind(&po_id).bind(&raw_mat_id).bind(reorder_amount).bind(0.90).execute(&db.pool).await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        if v_id == default_vendor_id {
+                                            let _ = sqlx::query("INSERT OR IGNORE INTO vendors (id, tenant_id, name, contact_info) VALUES (?, ?, ?, ?)")
+                                                .bind(&v_id).bind(&tenant_id).bind(&v_name).bind("").execute(pool).await;
+                                        }
+
+                                        let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, 'Draft', ?)")
+                                            .bind(&po_id).bind(&tenant_id).bind(&v_id).bind(estimated_cost).execute(pool).await;
+
+                                        let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, price) VALUES (?, ?, ?, ?, ?, ?)")
+                                            .bind(Uuid::new_v4().to_string()).bind(&tenant_id).bind(&po_id).bind(&raw_mat_id).bind(reorder_amount).bind(0.90).execute(pool).await;
+                                    }
+                                }
+
+                                // Create agent approval task
+                                let approval_id = Uuid::new_v4().to_string();
+                                let description = format!("Based on your recent sales, you need more {} by next week.", raw_mat_name);
+                                let approval_payload = json!({
+                                    "purchase_order_id": po_id,
+                                    "vendor_name": v_name,
+                                    "quantity": reorder_amount,
+                                    "cost": estimated_cost,
+                                    "raw_material": raw_mat_name
+                                }).to_string();
+
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, 'Operations', $3, 'PENDING_APPROVAL', 'HIGH', $4)")
+                                            .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(&db.pool).await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES (?, ?, 'Operations', ?, 'PENDING_APPROVAL', 'HIGH', ?)")
+                                            .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(pool).await;
+                                    }
+                                }
+                                }
+                            }
+                        }
+
                     }
                 }
             }
@@ -476,6 +679,13 @@ mod tests {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS vendors (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, contact_info TEXT);
+            CREATE TABLE IF NOT EXISTS raw_materials (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, current_quantity INTEGER DEFAULT 0, reorder_threshold INTEGER DEFAULT 0);
+            CREATE TABLE IF NOT EXISTS bom_items (id TEXT PRIMARY KEY, tenant_id TEXT, finished_good_id TEXT, raw_material_id TEXT, quantity_required INTEGER DEFAULT 1);
+            CREATE TABLE IF NOT EXISTS purchase_orders (id TEXT PRIMARY KEY, tenant_id TEXT, vendor_id TEXT, status TEXT DEFAULT 'Draft', total_cost REAL DEFAULT 0, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE IF NOT EXISTS po_line_items (id TEXT PRIMARY KEY, tenant_id TEXT, purchase_order_id TEXT, raw_material_id TEXT, quantity INTEGER DEFAULT 1, price REAL DEFAULT 0);
+            CREATE TABLE IF NOT EXISTS depletion_logs (id TEXT PRIMARY KEY, tenant_id TEXT, raw_material_id TEXT, order_id TEXT, quantity INTEGER DEFAULT 1);
+            CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT);
         "#;
         sqlx::query(schema).execute(&sqlite_pool).await.unwrap();
 
@@ -524,6 +734,58 @@ mod tests {
                 assert!(title.starts_with("Restock Item: Low Stock Item"));
                 assert_eq!(approval_status, "PENDING");
             }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_operations_worker_vendor_mesh() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+
+            sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('cake1', 'tenant1', 'Vegan Cake', 10)")
+                .execute(pool).await.unwrap();
+
+            sqlx::query("INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES ('rm1', 'tenant1', 'Cocoa Powder', 5, 10)")
+                .execute(pool).await.unwrap();
+
+            sqlx::query("INSERT INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES ('bom1', 'tenant1', 'cake1', 'rm1', 2)")
+                .execute(pool).await.unwrap();
+
+            let task_payload = json!({
+                "items": [{"product_id": "cake1", "quantity": 1}]
+            });
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task2', 'tenant1', 'operations', 'OrderPlaced', ?, 'PENDING')")
+                .bind(task_payload.to_string())
+                .execute(pool).await.unwrap();
+        }
+
+        let processed = OperationsWorker::poll(&db).await.unwrap();
+        assert!(processed);
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            // Verify depletion log
+            let logs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM depletion_logs WHERE tenant_id = 'tenant1'")
+                .fetch_one(pool).await.unwrap_or(0);
+            assert_eq!(logs, 1);
+
+            // Verify quantity reduced (5 - 2 = 3)
+            let curr_qty: i32 = sqlx::query_scalar("SELECT current_quantity FROM raw_materials WHERE id = 'rm1'")
+                .fetch_one(pool).await.unwrap_or(0);
+            assert_eq!(curr_qty, 3);
+
+            // Verify PO draft
+            let pos: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders WHERE tenant_id = 'tenant1' AND status = 'Draft'")
+                .fetch_one(pool).await.unwrap_or(0);
+            assert_eq!(pos, 1);
+
+            // Verify approval request
+            let approvals: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_approvals WHERE tenant_id = 'tenant1'")
+                .fetch_one(pool).await.unwrap_or(0);
+            assert_eq!(approvals, 1);
         }
     }
 
