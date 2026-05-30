@@ -370,18 +370,39 @@ impl OnboardingAgent {
         Ok(())
     }
 
-        async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
-        let products = crate::services::onboarding::PRODUCT_TEMPLATES
-            .iter()
-            .find(|(bt, _)| *bt == business_type)
-            .map(|(_, p)| p.iter().map(|(n, d, p, s)| (n.to_string(), d.to_string(), *p, s.to_string())).collect::<Vec<_>>())
-            .unwrap_or_else(|| vec![
-                ("Default Item".to_string(), "Welcome to your new business".to_string(), 1000, "physical".to_string()),
-            ]);
+    async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
+                let products = match business_type {
+            "Online Store" => vec![
+                ("Standard Product", "A great product for your store", 1999, "physical"),
+                ("Premium Product", "A premium offering", 4999, "physical"),
+            ],
+            "Service Business" | "Handyman" | "Plumbing" => vec![
+                ("Standard Service", "Professional service visit", 7500, "booking"),
+                ("Premium Package", "Comprehensive service package", 19999, "booking"),
+            ],
+            "Bakery" | "Home Baker" => vec![
+                ("Custom Cake", "Delicious custom baked cake", 5000, "physical"),
+                ("Cupcake Set", "Box of 12 artisan cupcakes", 2400, "physical"),
+            ],
+            "Boutique" | "Clothing" => vec![
+                ("Seasonal Item", "Handpicked item from our collection", 3500, "physical"),
+                ("Accessory", "Perfect addition to any outfit", 1500, "physical"),
+            ],
+            "Tutor" | "Music Teacher" => vec![
+                ("Single Lesson", "1-hour personalized lesson", 4500, "booking"),
+                ("Lesson Package", "Bundle of 5 lessons", 20000, "booking"),
+            ],
+            "Food Cart" | "Restaurant / Food" => vec![
+                ("House Special", "Our most popular dish", 1500, "physical"),
+                ("Combo Meal", "Full meal with a drink", 2200, "physical"),
+            ],
+            _ => vec![
+                ("Default Item", "Welcome to your new business", 1000, "physical"),
+            ],
+        };
 
         let mut futures = vec![];
         for (name, desc, price, strategy) in products {
-
             let id = format!("prod-{}", uuid::Uuid::new_v4());
             let org_id = org_id.to_string();
             let name = name.to_string();

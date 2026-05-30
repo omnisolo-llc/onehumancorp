@@ -1,7 +1,7 @@
 use sqlx::Row;
 use std::collections::HashMap;
-use crate::services::onboarding::preflight;
-use crate::services::onboarding::provisioner;
+use super::preflight;
+use super::provisioner;
 
 pub struct InteractiveWizard { pub pool: Option<sqlx::PgPool> }
 
@@ -43,7 +43,7 @@ impl InteractiveWizard {
     }
 
 
-        pub async fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
+    pub async fn save_onboarding_state(&self, org_id: &str, user_id: &str, step: i32, state_json: &str) -> Result<(), String> {
         let pool = self.pool.as_ref().ok_or("Database pool not configured")?;
         let state_val: serde_json::Value = serde_json::from_str(state_json).map_err(|e| e.to_string())?;
 
@@ -66,7 +66,7 @@ impl InteractiveWizard {
         Ok(())
     }
 
-        pub async fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
+    pub async fn get_onboarding_state(&self, org_id: &str) -> Result<String, String> {
         let pool = self.pool.as_ref().ok_or("Database pool not configured")?;
 
         let row = sqlx::query(

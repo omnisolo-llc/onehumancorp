@@ -1,11 +1,8 @@
-pub mod validation;
-pub mod preflight;
-pub mod provisioner;
-pub mod audit;
-pub mod wizard;
-pub mod personas;
-pub mod onboarding_agent;
-pub mod dayone;
-pub mod cli;
-pub mod diagnostics;
-pub mod env_verifier;
+#![allow(unused_imports)]
+
+pub use ::server_lib::*;
+
+#[path = "mod.rs"]
+pub mod __bazel_package;
+
+pub use __bazel_package::*;
