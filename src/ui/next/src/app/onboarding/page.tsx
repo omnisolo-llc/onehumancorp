@@ -113,7 +113,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedDescription })
       });
 
-      if (!intakeRes.ok) {
+      if (!intakeRes || !intakeRes.ok) {
         throw new Error('Failed to process business details');
       }
 
@@ -167,7 +167,7 @@ export default function OnboardingWizard() {
         })
       });
 
-      if (!startRes.ok) {
+      if (!startRes || !startRes.ok) {
         throw new Error('Failed to start onboarding');
       }
 

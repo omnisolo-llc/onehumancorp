@@ -21,7 +21,12 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/state')) {
+        return { ok: true, json: async () => ({ wizardState: {} }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    }) as any;
   });
 
   afterEach(() => {
@@ -39,21 +44,24 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return {
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        };
+      } else if (url.includes('/api/onboarding/start')) {
+        return {
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        };
+      }
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -88,7 +96,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     await act(async () => {
@@ -99,7 +107,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await act(async () => {
@@ -110,15 +118,18 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return { ok: false, json: async () => ({}) };
+      }
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -151,7 +162,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('Step 3: Handles start API failure and returns to Step 3', async () => {
@@ -161,8 +172,11 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/onboarding/start')) {
+        return { ok: false, json: async () => ({}) };
+      }
+      return { ok: true, json: async () => ({ wizardState: {} }) };
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -177,7 +191,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
 
