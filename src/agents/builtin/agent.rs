@@ -1962,6 +1962,7 @@ impl Agent {
         }
 
         let mut turn_count = 0;
+        // Master Catalog B.1. The Orchestration Loop: Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle
         while turn_count < max_iterations {
             let iteration = turn_count;
             turn_count += 1;
@@ -2072,7 +2073,7 @@ impl Agent {
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {
                         malformed_retries += 1;
                         if malformed_retries >= max_malformed_retries {
-                             let err_msg = format!("Terminal condition reached: Malformed LLM response retries exhausted ({}).", max_malformed_retries);
+                             let err_msg = format!("Layered Termination Condition: guardrail tripwire fires (Malformed LLM response) retries exhausted ({}).", max_malformed_retries);
                              on_event(AgentEvent::TaskError { error: err_msg.clone() });
                              return Err(err_msg.into());
                         }
@@ -2106,7 +2107,7 @@ impl Agent {
 
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
-                let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
+                let msg = "Layered Termination Condition: token budget exhausted. I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                 on_event(AgentEvent::TextChunk { content: msg.clone() });
                 on_event(AgentEvent::TaskComplete { content: msg.clone() });
                 return Ok(msg);
@@ -2134,7 +2135,7 @@ impl Agent {
 
             // Layered Termination Condition: Safety Refusal
             if stop_reason == "content_filter" || stop_reason == "safety" {
-                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
+                let err_msg = "Layered Termination Condition: safety refusal. The model halted execution due to content safety policy.".to_string();
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -2156,7 +2157,7 @@ impl Agent {
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
+                    let msg = "Layered Termination Condition: token budget exhausted. I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                     on_event(AgentEvent::TextChunk { content: msg.clone() });
                     on_event(AgentEvent::TaskComplete { content: msg.clone() });
                     return Ok(msg);
@@ -2185,7 +2186,7 @@ impl Agent {
                 ]);
             }
 
-            // Terminal condition: no tool calls.
+            // Layered Termination Condition: model returns text with no tool calls.
             if tool_calls.is_empty() {
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
@@ -2800,7 +2801,7 @@ impl Agent {
         }
 
         // Hit max iterations.
-        let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
+        let err_msg = format!("Layered Termination Condition: max turn limit exceeded ({} iterations).", max_iterations);
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
         return Err(err_msg.into());
     }

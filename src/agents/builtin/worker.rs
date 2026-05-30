@@ -212,7 +212,7 @@ impl TaskWorker {
                     // ML-Resilience: token budgets must be enforced server-side
                     token_usage += event.content.len();
                     if token_usage > 100_000 {
-                         return Ok("I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string());
+                         return Ok("Layered Termination Condition: token budget exhausted. I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string());
                     }
                     if !event.content.is_empty() {
                         last_content = event.content;
