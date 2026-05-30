@@ -858,10 +858,23 @@ impl HubService for MyHubService {
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
         let auditor = self.hub.get_cost_auditor();
-        let llm_cost_f64 = auditor.get_total_cost();
-        let total_revenue_f64 = auditor.get_total_revenue();
+        let tenant_id_clone = tenant_id.clone();
 
-        let storage_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let hub_clone = self.hub.clone();
+
+        let (costs_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || {
+                let llm = auditor.get_total_cost();
+                let rev = auditor.get_total_revenue();
+                (llm, rev)
+            }),
+            async move {
+                hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
+            }
+        );
+
+        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -5268,7 +5281,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            const url = encodeURIComponent(`ohc://join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 

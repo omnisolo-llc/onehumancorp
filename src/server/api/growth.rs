@@ -96,6 +96,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/milestone/share", get(handle_get_milestone_share_info))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -345,7 +346,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -497,6 +498,27 @@ async fn handle_get_milestone_card(
         [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
         svg,
     )
+}
+
+#[derive(Debug, Serialize)]
+pub struct MilestoneShareResponse {
+    pub share_message: String,
+    pub referral_link: String,
+}
+
+async fn handle_get_milestone_share_info(
+    axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>
+) -> impl IntoResponse {
+    let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
+
+    let referral_link = format!("https://ohc.store/join?ref={}", tenant_id);
+
+    let share_message = format!("I just reached a new milestone on my store! Start your own business today with One Human Corp: {}", referral_link);
+
+    Json(MilestoneShareResponse {
+        share_message,
+        referral_link,
+    })
 }
 
 async fn handle_get_team_invites(
