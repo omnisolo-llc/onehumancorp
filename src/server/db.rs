@@ -977,6 +977,36 @@ impl DB {
         Ok(())
     }
 
+    pub async fn get_knowledge_embedding(&self, id: &str) -> Result<Option<(String, String)>, Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
+                    .bind(id)
+                    .fetch_optional(sqlite_pool)
+                    .await?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("id"), r.get("content"))))
+                } else {
+                    Ok(None)
+                }
+            }
+            DbStore::Postgres => {
+                let parsed_id = uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4());
+                let row = sqlx::query("SELECT id::text, content FROM knowledge_embeddings WHERE id = $1")
+                    .bind(parsed_id)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("id"), r.get("content"))))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
     pub async fn insert_knowledge_embedding(
         &self,
         id: &str,
