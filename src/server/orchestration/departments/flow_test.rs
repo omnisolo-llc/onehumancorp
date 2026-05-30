@@ -235,4 +235,62 @@ mod tests {
 
         assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
     }
+    #[tokio::test]
+    async fn test_marketing_job_completed_case_study() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::orchestration::departments::marketing_agent::MarketingAgent;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let marketing_agent = Arc::new(RwLock::new(MarketingAgent::new(orchestrator.clone())));
+        orchestrator.register_department(marketing_agent.clone()).await;
+
+        let tenant_id = "test-tenant-marketing-1".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.job.completed".to_string(),
+            payload: serde_json::json!({
+                "service_name": "Cedar Fence Install",
+                "media": ["https://example.com/finished-fence.jpg"]
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_case_study_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            if pending.iter().any(|req| req.description.contains("Draft portfolio case study for Cedar Fence Install")) {
+                has_case_study_draft = true;
+                break;
+            }
+        }
+
+        assert!(has_case_study_draft, "Marketing Agent should draft a case study when a job is completed with media.");
+    }
 }
