@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
-    orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    pub orchestrator: std::sync::Arc<DepartmentOrchestrator>,
     configs: HashMap<String, DepartmentConfig>,
 }
 
@@ -96,6 +96,49 @@ impl Department for CustomerSuccessAgent {
             ).await.map(|_| ())?;
 
             return Ok(());
+        }
+
+
+
+        if event.event_type == "tenant.order.fulfillment_ready" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+            // Accrue 1 point per $1 spent
+            let points_earned = amount.floor() as i32;
+
+            // Let's fetch the repository and accrue
+            let repo = crate::domain::repository::loyalty_repo::LoyaltyRepository::new(self.orchestrator.db.clone());
+
+            // Just for demonstration, if total points > 500 then tier is VIP
+            let current_ledger = repo.get_ledger(&event.tenant_id, customer_id).await.unwrap_or(None);
+            let mut total_points = points_earned;
+            if let Some(l) = &current_ledger {
+                total_points += l.points_balance.unwrap_or(0);
+            }
+
+            let new_tier = if total_points >= 500 { "VIP" } else { "Standard" };
+
+            let _ = repo.accrue_points(&event.tenant_id, customer_id, points_earned, new_tier).await;
+            let _ = repo.record_interaction(&event.tenant_id, customer_id, "Order Fulfilled", Some("Positive")).await;
+
+            if new_tier == "VIP" && current_ledger.map_or(true, |l| l.tier_name.unwrap_or("".to_string()) != "VIP") {
+                // Draft VIP reward message
+                let action_payload = serde_json::json!({
+                    "feature_type": "vip_reward_draft",
+                    "customer_id": customer_id,
+                    "message": "Thank you for being a VIP! Here is a 10% discount for your next order.",
+                });
+
+                self.orchestrator.execute_action(
+                    DepartmentType::CustomerSuccess,
+                    "Draft VIP Thank You Note & Discount".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    action_payload,
+                ).await.map(|_| ())?;
+                return Ok(());
+            }
         }
 
         self.orchestrator.execute_action(
