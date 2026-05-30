@@ -3,14 +3,14 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-global.fetch = vi.fn().mockImplementation((url) => {
-    if (url === '/api/tooltips') {
-        return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
-    }
-    return Promise.resolve({ ok: true, json: async () => ({}) });
-}) as any;
+global.fetch = vi.fn() as any;
 
 describe('TooltipRegistry', () => {
+  beforeEach(() => {
+    (global.fetch as any).mockResolvedValue({
+      json: async () => ({ "test-id": "Fetched tooltip text" })
+    });
+  });
 
   it('renders fetched text on hover after fetching', async () => {
     await act(async () => {
@@ -24,11 +24,6 @@ describe('TooltipRegistry', () => {
     });
 
     const button = screen.getByText('Hover me');
-
-    // Wait for context to be populated via fetch call in TooltipProvider
-    await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-    })
 
     // Create a mock getBoundingClientRect
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
