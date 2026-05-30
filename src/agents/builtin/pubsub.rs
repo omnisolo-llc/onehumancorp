@@ -100,12 +100,12 @@ impl SubagentRegistry {
     }
 
     pub fn register(&self, state: SubagentState) {
-        let mut tasks = self.tasks.write().expect("lock failed");
+        let mut tasks = self.tasks.write().unwrap();
         tasks.insert(state.task_id.clone(), state);
     }
 
     pub fn get(&self, task_id: &str) -> Option<SubagentState> {
-        let tasks = self.tasks.read().expect("lock failed");
+        let tasks = self.tasks.read().unwrap();
         tasks.get(task_id).map(|s| SubagentState {
             task_id: s.task_id.clone(),
             description: s.description.clone(),
@@ -122,7 +122,7 @@ impl SubagentRegistry {
     }
 
     pub fn kill(&self, task_id: &str) -> bool {
-        let mut tasks = self.tasks.write().expect("lock failed");
+        let mut tasks = self.tasks.write().unwrap();
         if let Some(s) = tasks.get_mut(task_id) {
             if s.status == "running" {
                 s.status = "killed".to_string();
@@ -134,7 +134,7 @@ impl SubagentRegistry {
     }
 
     pub fn all(&self) -> Vec<SubagentState> {
-        let tasks = self.tasks.read().expect("lock failed");
+        let tasks = self.tasks.read().unwrap();
         tasks
             .values()
             .map(|s| SubagentState {
@@ -199,7 +199,7 @@ mod tests {
             status: "running".to_string(),
             ..Default::default()
         });
-        let s = reg.get("t1").expect("lock failed");
+        let s = reg.get("t1").unwrap();
         assert_eq!(s.status, "running");
     }
 
@@ -212,7 +212,7 @@ mod tests {
             ..Default::default()
         });
         assert!(reg.kill("t2"));
-        let s = reg.get("t2").expect("lock failed");
+        let s = reg.get("t2").unwrap();
         assert_eq!(s.status, "killed");
         // Second kill should return false
         assert!(!reg.kill("t2"));
@@ -229,7 +229,7 @@ mod tests {
             timestamp_ms: 0,
             notification: None,
         });
-        let evt = rx.try_recv().expect("lock failed");
+        let evt = rx.try_recv().unwrap();
         assert_eq!(evt.task_id, "t3");
         assert_eq!(evt.event_type, SubagentEventType::Spawned);
     }

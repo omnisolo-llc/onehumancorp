@@ -4,9 +4,9 @@ import Link from 'next/link';
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState([
-    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true, link: "https://zoom.us/j/mock_meeting_123" },
-    { id: '2', customer: 'Carlos', service: 'Pipe Fixing', time: '2:00 PM', date: 'Tomorrow', status: 'pending', ai_scheduled: true, link: "" },
-    { id: '3', customer: 'Priya', service: 'Styling Session', time: '4:00 PM', date: 'Tomorrow', status: 'confirmed', ai_scheduled: false, link: "" },
+    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true },
+    { id: '2', customer: 'Carlos', service: 'Pipe Fixing', time: '2:00 PM', date: 'Tomorrow', status: 'pending', ai_scheduled: true },
+    { id: '3', customer: 'Priya', service: 'Styling Session', time: '4:00 PM', date: 'Tomorrow', status: 'confirmed', ai_scheduled: false },
   ]);
 
   const [aiActivity, setAiActivity] = useState([
@@ -53,15 +53,10 @@ export default function CalendarPage() {
                       <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
                     )}
                   </div>
-                  <div className="mt-2 sm:mt-0 flex items-center gap-3">
+                  <div className="mt-2 sm:mt-0">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                       {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                     </span>
-                    {apt.link && (
-                      <a href={apt.link} target="_blank" rel="noreferrer" className="px-3 py-1.5 text-xs font-bold rounded bg-blue-600 text-white hover:bg-blue-700 transition">
-                        Join Meeting
-                      </a>
-                    )}
                   </div>
                 </div>
               ))}

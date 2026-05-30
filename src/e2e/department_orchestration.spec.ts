@@ -94,7 +94,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
     await expect(page.getByText('Send personalized thank you & shipping ETA').first()).toBeVisible({ timeout: 10000 });
 
     // Click Approve on the new action
-    const approveButton = page.locator('button:has-text("Review & Send")').first();
+    const approveButton = page.locator('button:has-text("Approve")').first();
     await expect(approveButton).toBeVisible();
     await approveButton.click();
 
