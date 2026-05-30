@@ -6,11 +6,8 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
-    chatStep, setChatStep,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
-    whatYouSell, setWhatYouSell,
-    location, setLocation,
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
@@ -40,11 +37,8 @@ export default function OnboardingWizard() {
     .then(data => {
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
@@ -69,11 +63,8 @@ export default function OnboardingWizard() {
 
     const wizardState = {
       step,
-      chatStep,
       businessDescription,
       businessName,
-      whatYouSell,
-      location,
       businessType,
       categories,
       websiteTemplate,
@@ -93,8 +84,9 @@ export default function OnboardingWizard() {
 
     return () => clearTimeout(timer);
   }, [
-    step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    step,
+      businessDescription, businessName,
+      businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
