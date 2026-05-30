@@ -29,6 +29,35 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const handleGenerateInvite = async () => {
+    setIsGeneratingInvite(true);
+    try {
+      const response = await fetch('/api/v1/growth/team-invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.invite_link) {
+          setInviteLink(data.invite_link);
+        } else {
+          setInviteLink(`https://ohc.app/invite/team-default`);
+        }
+      } else {
+         setInviteLink(`https://ohc.app/invite/team-default`);
+      }
+    } catch (e) {
+      setInviteLink(`https://ohc.app/invite/team-default`);
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
 
   const fetchApprovals = async () => {
     try {
@@ -115,6 +144,22 @@ export default function TeamPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
+          {/* Sovereign-to-Cloud Invite Loop */}
+          <div className="mb-6 p-5 rounded-2xl border transition-all" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Grow Your Team</h2>
+            <p className="text-sm text-gray-600 mb-4">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
+            <button
+              onClick={() => {
+                setShowInviteModal(true);
+                handleGenerateInvite();
+              }}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-md transition-all text-sm flex justify-center items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+              Invite to Cloud Team
+            </button>
+          </div>
+
           {loading ? (
              <div className="flex justify-center py-10">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -134,6 +179,46 @@ export default function TeamPage() {
           )}
         </div>
       </div>
+
+      {showInviteModal && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative font-inter" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.95)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <button
+              onClick={() => setShowInviteModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Cloud Bridge Invite</h3>
+            <p className="text-sm text-gray-600 mb-4">Share this link to provision a temporary multi-tenant context for your collaborator, while you maintain local sovereignty.</p>
+
+            {isGeneratingInvite ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteLink}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    setInviteCopied(true);
+                    setTimeout(() => setInviteCopied(false), 2000);
+                  }}
+                  className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all ${inviteCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                >
+                  {inviteCopied ? 'Copied!' : 'Copy Link'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
