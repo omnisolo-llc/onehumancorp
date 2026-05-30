@@ -43,32 +43,33 @@ impl LocalTeammateMesh {
 
 #[async_trait]
 impl MeshTransport for LocalTeammateMesh {
+    #[tracing::instrument(skip(self, message), fields(topic = %topic, component="LocalTeammateMesh"))]
     async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
         let _ = self.hub.publish_teammate_event(topic.to_string(), message.clone());
         self.inner.publish(topic, message).await
     }
 
+    #[tracing::instrument(skip(self, handler), fields(topic = %topic, component="LocalTeammateMesh"))]
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        // Also subscribe to hub events? Wait, hub events are broadcasted to websocket clients.
-        // The transport is used for agent communication.
-        // LocalTeammateMesh is a transport for the agent to receive events, but it also broadcasts to the hub.
-        // But what about messages from the hub? Usually the hub doesn't receive teammate mesh events from websockets,
-        // it just broadcasts them. So we only need to subscribe to `inner`.
         self.inner.subscribe(topic, handler).await
     }
 
+    #[tracing::instrument(skip(self), fields(resource = %resource, owner = %owner, component="LocalTeammateMesh"))]
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
+    #[tracing::instrument(skip(self), fields(resource = %resource, owner = %owner, component="LocalTeammateMesh"))]
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.inner.release_lock(resource, owner).await
     }
 
+    #[tracing::instrument(skip(self), fields(agent_id = %agent_id, status = %status, component="LocalTeammateMesh"))]
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
         self.inner.register_presence(agent_id, status, ttl_seconds).await
     }
 
+    #[tracing::instrument(skip(self), fields(component="LocalTeammateMesh"))]
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
     }
