@@ -23,3 +23,4 @@ pub mod sandbox;
 pub mod sandbox_ask;
 pub mod local_sandbox;
 pub mod dynamic_workflows;
+pub mod router;

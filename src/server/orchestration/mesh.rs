@@ -24,6 +24,14 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_ultraplan(&self, payload: Vec<u8>) -> Result<(), String>;
+
+    async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn publish_ultraplan(&self, payload: Vec<u8>) -> Result<(), String>;
 }
 
 
@@ -101,7 +109,31 @@ impl TeammateMesh for CentrifugeNode {
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await
+
+    async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:tasks", payload).await
+    }
+
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:coordination", payload).await
+    }
+
+    async fn publish_ultraplan(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:ultraplan", payload).await
+    }
+
+    async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:tasks", payload).await
+    }
+
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:coordination", payload).await
+    }
+
+    async fn publish_ultraplan(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:ultraplan", payload).await
+    }
+}).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {

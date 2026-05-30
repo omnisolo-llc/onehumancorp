@@ -124,3 +124,15 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+rust_test(
+    name = "consolidator_test",
+    srcs = ["consolidator_test.rs"],
+    deps = [
+        ":autodream_pipeline",
+        "//src/server/db",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:async-trait",
+    ],
+)
