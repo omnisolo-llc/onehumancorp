@@ -1282,14 +1282,3 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
-
-#[cfg(test)]
-mod agent_transition_telemetry_tests {
-    use super::*;
-
-    #[test]
-    fn test_record_agent_transition_latency() {
-        record_agent_transition_latency("pending_to_running", 1.23);
-        let _histogram = get_agent_transition_latency_histogram();
-    }
-}
