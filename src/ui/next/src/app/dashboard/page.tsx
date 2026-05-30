@@ -444,6 +444,26 @@ export default function Dashboard() {
            </div>
          </section>
 
+
+         {/* Success Milestone Alert (Growth Loop) */}
+         <section className="mb-6 animate-fade-in">
+             <div className="p-4 sm:p-6 rounded-2xl border shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden" style={{ background: "rgba(255, 255, 255, 0.85)", backdropFilter: "blur(20px) saturate(200%)", borderColor: "rgba(99, 102, 241, 0.3)" }}>
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 blur-xl"></div>
+                 <div className="flex items-start gap-4 z-10">
+                     <div className="text-3xl sm:text-4xl mt-1">🎉</div>
+                     <div>
+                         <h2 className="text-lg sm:text-xl font-bold font-outfit text-gray-900 mb-1">10th Order Milestone!</h2>
+                         <p className="text-gray-600 text-sm sm:text-base font-inter max-w-md">
+                             Double digits! Your business is gaining serious momentum. Share this win to attract even more customers.
+                         </p>
+                     </div>
+                 </div>
+                 <Link href="/milestones" className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 active:scale-95 transition-all text-center whitespace-nowrap z-10">
+                     Share to Celebrate
+                 </Link>
+             </div>
+         </section>
+
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">

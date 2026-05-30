@@ -83,6 +83,7 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/milestone-share", post(handle_milestone_share))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
@@ -370,6 +371,32 @@ async fn handle_check_milestones(
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MilestoneShareRequest {
+    pub milestone_id: String,
+    pub platform: String,
+}
+
+async fn handle_milestone_share(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<MilestoneShareRequest>,
+) -> impl IntoResponse {
+    let mut metadata = std::collections::HashMap::new();
+    metadata.insert("milestone_id".to_string(), serde_json::Value::String(payload.milestone_id.clone()));
+    metadata.insert("platform".to_string(), serde_json::Value::String(payload.platform.clone()));
+
+    let event = crate::hub::HubEvent {
+        r#type: "growth.milestone_shared".to_string(),
+        payload: serde_json::to_string(&metadata).unwrap_or_default(),
+        occurred_at: chrono::Utc::now(),
+    };
+    state.hub.append_recent_event(event);
+
+    (StatusCode::OK, Json(serde_json::json!({ "status": "ok" })))
 }
 
 async fn handle_get_milestone_card(
@@ -911,6 +938,37 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_milestone_share() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let req = MilestoneShareRequest {
+            milestone_id: "first-order".to_string(),
+            platform: "twitter".to_string(),
+        };
+
+        let res = handle_milestone_share(Extension(state.clone()), axum::extract::Extension(auth_info), Json(req)).await;
+        let res = res.into_response();
+        assert_eq!(res.status(), axum::http::StatusCode::OK);
+
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.milestone_shared"));
     }
 }
 
