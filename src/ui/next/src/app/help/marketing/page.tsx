@@ -1,6 +1,6 @@
 export default function Marketing() {
   return (
-    <div className="max-w-3xl mx-auto p-6 mt-10 bg-white rounded-xl shadow-sm border border-gray-100 font-inter">
+    <div className="max-w-3xl mx-auto p-6 mt-10 bg-white/70 backdrop-blur-[20px] saturate-200 rounded-xl shadow-sm border border-white/50 font-inter">
       <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">Finding Customers</h1>
 
       <p className="text-gray-700 mb-4 leading-relaxed text-lg">
