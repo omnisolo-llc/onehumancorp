@@ -12,7 +12,6 @@ mod tenant_isolation_integration_tests {
 
     #[tokio::test]
     async fn test_rls_isolation_between_tenants() {
-        if env::var("DATABASE_URL").is_err() { return; }
         let pool = setup_test_db().await;
 
         // Ensure RLS is active on a representative table (e.g., customers)
@@ -70,7 +69,6 @@ mod tenant_isolation_integration_tests {
 
     #[tokio::test]
     async fn test_newly_hardened_tables_have_rls() {
-        if env::var("DATABASE_URL").is_err() { return; }
         let pool = setup_test_db().await;
 
         let tables = vec!["epics", "tasks", "business_milestones", "telemetry_buffer", "task_dependencies"];
@@ -86,7 +84,6 @@ mod tenant_isolation_integration_tests {
 
     #[tokio::test]
     async fn test_tables_have_tenant_id_column() {
-        if env::var("DATABASE_URL").is_err() { return; }
         let pool = setup_test_db().await;
 
         let tables = vec!["epics", "tasks", "telemetry_buffer", "task_dependencies"];

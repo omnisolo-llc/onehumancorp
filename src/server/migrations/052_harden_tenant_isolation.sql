@@ -1,4 +1,4 @@
--- Migration 051: Harden Tenant Isolation for missing tables
+-- Migration 052: Harden Tenant Isolation for missing tables
 
 -- 1. Epics and Tasks (from 021_epics_tasks.sql)
 ALTER TABLE epics ADD COLUMN IF NOT EXISTS tenant_id TEXT;
