@@ -1,3 +1,6 @@
+## v0.4.48 (Cloud) / v0.4.48+1 (Standalone)
+- Scaling (Cloud): Enhance Multi-Environment Promotion capabilities across Cloud staging and Local desktop beta builds for scaling and privacy improvements.
+
 ## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
 
 ### Cloud Scaling Improvements

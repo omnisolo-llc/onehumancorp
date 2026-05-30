@@ -152,7 +152,7 @@ pkg_deb(
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version = "0.4.45",
+    version = "0.4.48",
 )
 
 pkg_rpm(
@@ -168,7 +168,7 @@ pkg_rpm(
         ":linux_with_rpmbuild": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version = "0.4.45",
+    version = "0.4.48",
 )
 
 filegroup(
