@@ -15,6 +15,7 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
+      preferredLanguage: 'English',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -84,11 +85,18 @@ describe('OnboardingWizard', () => {
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-    expect(button).not.toBeDisabled();
+    const nextBtn3 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn3);
+
+    // Chat Step 4
+    const langOption = screen.getByText('Spanish');
+    await user.click(langOption);
+
+    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    expect(generateBtn).not.toBeDisabled();
 
     // Step 1: Intake
-    await user.click(button);
+    await user.click(generateBtn);
 
     // Verify it transitions to Step 2: Review Details
     await waitFor(() => {

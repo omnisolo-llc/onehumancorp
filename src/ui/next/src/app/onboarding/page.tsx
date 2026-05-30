@@ -12,6 +12,7 @@ export default function OnboardingWizard() {
     whatYouSell, setWhatYouSell,
     location, setLocation,
     businessType, setBusinessType,
+    preferredLanguage, setPreferredLanguage,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
     domainChoice, setDomainChoice,
@@ -46,6 +47,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
         if (data.wizardState.location) setLocation(data.wizardState.location);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.preferredLanguage) setPreferredLanguage(data.wizardState.preferredLanguage);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
@@ -76,6 +78,7 @@ export default function OnboardingWizard() {
       location,
       businessType,
       categories,
+      preferredLanguage,
       websiteTemplate,
       firstProductName,
       firstProductPrice,
@@ -95,6 +98,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    preferredLanguage,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -106,7 +110,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nPreferred Language: ${preferredLanguage}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -302,8 +306,44 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
+                      onClick={() => setChatStep(4)}
+                      disabled={!location.trim()}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                              </div>
+              )}
+
+              {chatStep === 4 && (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(3)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What language do you prefer?</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Choose the primary language for your store and agent interactions.
+                  </p>
+
+                  <div className="space-y-4 flex-1">
+                    <div className="grid grid-cols-2 gap-3">
+                      {['English', 'Spanish', 'French', 'Arabic'].map(lang => (
+                        <div
+                          key={lang}
+                          onClick={() => setPreferredLanguage(lang)}
+                          className={`p-3 rounded-[8px] border cursor-pointer transition-all ${preferredLanguage === lang ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        >
+                          <div className="font-semibold text-sm text-center">{lang}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button
                       onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
+                      disabled={!preferredLanguage.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
@@ -311,6 +351,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
               )}
+
             </div>
           )}
 
