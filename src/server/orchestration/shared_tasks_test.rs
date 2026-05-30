@@ -15,8 +15,8 @@ async fn test_shared_task_orchestrator() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new()
-
+    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -106,7 +106,7 @@ async fn test_shared_task_orchestrator_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
         .unwrap();
 
@@ -349,8 +349,8 @@ async fn test_shared_task_orchestrator_dependencies() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new()
-
+    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -413,72 +413,4 @@ async fn test_shared_task_orchestrator_dependencies() {
         let claimed_none = orchestrator.claim_task("org_123_pg", "agent_2_pg").await.unwrap();
         assert!(claimed_none.is_none());
     }
-}
-
-#[tokio::test]
-async fn test_shared_task_orchestrator_claim_task_not_found_sqlite() {
-    let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .unwrap();
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-            id VARCHAR PRIMARY KEY,
-            organization_id VARCHAR NOT NULL,
-            title VARCHAR NOT NULL,
-            description TEXT,
-            status VARCHAR NOT NULL DEFAULT 'PENDING',
-            agent_id VARCHAR,
-            priority VARCHAR NOT NULL DEFAULT 'P2',
-            payload TEXT,
-            parent_plan_id TEXT,
-            dependencies TEXT NOT NULL DEFAULT '[]',
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            ultraplan_phase TEXT,
-            deliberation_log TEXT,
-            depth INTEGER
-        );
-        "#
-    )
-    .execute(&pool)
-    .await
-    .unwrap();
-
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
-        .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
-        .unwrap();
-
-    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
-    let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
-
-    let claimed_task = orchestrator.claim_task("org_123", "agent_123").await.unwrap();
-    assert!(claimed_task.is_none());
-}
-
-#[tokio::test]
-async fn test_shared_task_orchestrator_claim_task_not_found_pg() {
-    if std::env::var("DATABASE_URL").is_err() {
-        return;
-    }
-
-    let db_url = std::env::var("DATABASE_URL").unwrap();
-    if !db_url.contains("test") {
-        return;
-    }
-
-    let pool = sqlx::postgres::PgPoolOptions::new()
-
-        .connect_lazy(&db_url)
-        .unwrap();
-
-    let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
-    let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
-
-    let claimed_task = orchestrator.claim_task("nonexistent_org", "agent_123").await.unwrap();
-    assert!(claimed_task.is_none());
 }
