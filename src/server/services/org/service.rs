@@ -81,14 +81,19 @@ impl OrgService for MyOrgService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
-        let (agents_res, meetings_res, summary_res) = tokio::join!(
+        let hub4 = self.hub.clone();
+        let org_id_clone = org_id.clone();
+
+        let (agents_res, meetings_res, summary_res, quota_res) = tokio::join!(
             tokio::spawn(async move { hub1.get_agents().await }),
             tokio::spawn(async move { hub2.get_meetings().await }),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
+            tokio::task::spawn_blocking(move || hub3.tracker().summary("system")),
+            tokio::spawn(async move { hub4.tracker().check_agent_quota(&org_id_clone).await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
+        let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?;
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
@@ -121,7 +126,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+        let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
             user_message: None,
