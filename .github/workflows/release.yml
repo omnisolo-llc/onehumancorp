@@ -103,6 +103,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    env:
+      MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_KEYCHAIN_PASSWORD != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -174,7 +176,14 @@ jobs:
         run: |
           bazelisk build @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }}
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
-          echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
+          cli_ext=""
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cli_ext=".exe"
+          fi
+          mkdir -p "$RUNNER_TEMP/tauri-cli-bin"
+          cp "$(pwd)/$tauri_cli" "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          chmod +x "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          echo "$RUNNER_TEMP/tauri-cli-bin" >> "$GITHUB_PATH"
 
       - name: Prepare release version and updater signing
         env:
@@ -244,7 +253,7 @@ jobs:
           echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install macOS signing assets
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -335,7 +344,7 @@ jobs:
           ls -lh dist/
 
       - name: Verify macOS signing and notarization
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
         run: |
           set -euo pipefail
           BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
