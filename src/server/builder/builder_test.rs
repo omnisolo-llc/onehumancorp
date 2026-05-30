@@ -270,3 +270,63 @@ async fn test_builder_generate_and_publish_draft() {
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
+
+#[tokio::test]
+async fn test_edge_renderer_sold_out() {
+    let (pool, tenant_id) = match setup_db().await {
+        Some(v) => v,
+        None => return,
+    };
+
+    // 1. Create a product with 0 inventory
+    let product_id = Uuid::new_v4().to_string();
+    let product_name = "Vegan Cake".to_string();
+
+    // We try to execute query, ignoring errors if table doesn't exist
+    let res = sqlx::query("INSERT INTO products (id, tenant_id, organization_id, name, inventory_count, price_cents) VALUES ($1, $2, $2, $3, 0, 1500)")
+        .bind(&product_id)
+        .bind(tenant_id.to_string())
+        .bind(&product_name)
+        .execute(&pool)
+        .await;
+
+    if res.is_err() {
+        return; // Schema might not be fully migrated in this unit test setup
+    }
+
+    // 2. Create Site and Page
+    let site = db::create_site(&pool, tenant_id, Some("test-sold-out.com".to_string())).await.expect("Failed to create site");
+    let page = db::create_page(&pool, tenant_id, site.id, "/home".to_string(), "Home".to_string()).await.expect("Failed to create page");
+
+    // 3. Create ProductGridBlock
+    let content = serde_json::json!({
+        "items": [{
+            "name": product_name,
+            "price": "$15.00",
+            "description": "Delicious"
+        }]
+    });
+    db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), content, 0).await.expect("Failed to create block");
+
+    // 4. Setup mock request
+    let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None));
+    let state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
+
+    let path = axum::extract::Path((tenant_id.to_string(), site.id.to_string()));
+    let ext = axum::extract::Extension(state);
+
+    // 5. Call edge request
+    use axum::response::IntoResponse;
+    let response = super::edge::handle_edge_request(ext, path).await.expect("Failed to render edge request").into_response();
+
+    // 6. Assert response HTML
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+    assert!(body_str.contains("Vegan Cake"));
+    assert!(body_str.contains("Sold Out"));
+
+    // Clean up
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM products WHERE id = $1").bind(&product_id).execute(&pool).await;
+}

@@ -178,6 +178,21 @@ impl OperationsWorker {
                             }
                         };
 
+                        if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&tenant_id) {
+                            let sites = sqlx::query_scalar::<_, uuid::Uuid>("SELECT id FROM builder_sites WHERE tenant_id = $1")
+                                .bind(tenant_uuid)
+                                .fetch_all(&db.pool)
+                                .await
+                                .unwrap_or_default();
+                            for site_id in sites {
+                                let cache_key = format!("edge_site_{}_{}", tenant_id, site_id);
+                                let _ = sqlx::query("SELECT pg_notify($1, $2)")
+                                    .bind("edge_cache_invalidation")
+                                    .bind(&cache_key)
+                                    .execute(&db.pool)
+                                    .await;
+                            }
+                        }
                         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
 
                         let recent_sales: i64 = match &db.store {

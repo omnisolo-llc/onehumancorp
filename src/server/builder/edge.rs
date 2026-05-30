@@ -22,6 +22,14 @@ fn escape_html(s: &str) -> String {
      .replace("'", "&#x27;")
 }
 
+#[derive(sqlx::FromRow)]
+struct ProductData {
+    name: String,
+    price: Option<f64>,
+    price_cents: Option<i64>,
+    inventory_count: Option<i32>,
+}
+
 pub async fn handle_edge_request(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
@@ -53,6 +61,17 @@ pub async fn handle_edge_request(
     }
 
     let page = &pages[0];
+
+    let products_data = sqlx::query_as::<_, ProductData>("SELECT name, price, price_cents, inventory_count FROM products WHERE tenant_id = $1::text OR organization_id = $1::text")
+        .bind(tenant_id)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+    let mut products_map = std::collections::HashMap::new();
+    for p in products_data {
+        products_map.insert(p.name.clone(), p);
+    }
 
     let blocks = super::db::list_blocks(&state.pool, tenant_id, page.id)
         .await
@@ -119,11 +138,21 @@ pub async fn handle_edge_request(
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
-                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
+                        let mut price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
+                        if let Some(prod) = products_map.get(name) {
+                            if let Some(cents) = prod.price_cents {
+                                price = format!("${:.2}", (cents as f64) / 100.0);
+                            } else if let Some(p) = prod.price {
+                                price = format!("${:.2}", p);
+                            }
+                            if prod.inventory_count.unwrap_or(10) <= 0 {
+                                price = "Sold Out".to_string();
+                            }
+                        }
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         html.push_str(&format!(
                             "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
-                            escape_html(name), escape_html(desc), escape_html(price)
+                            escape_html(name), escape_html(desc), escape_html(&price)
                         ));
                     }
                 }
