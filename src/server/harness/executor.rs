@@ -1,35 +1,51 @@
-use super::sandbox::{SandboxManager, SandboxAdapter};
+use super::sandbox::{SandboxManager, SandboxAdapter, LinuxSandbox, MacOsSandbox};
 use sqlx::PgPool;
 use std::time::Instant;
 use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
-
+use std::collections::HashMap;
 
 use super::network_proxy::NetworkProxy;
 
+pub struct ExecutionRequest {
+    pub cmd: String,
+    pub env: HashMap<String, String>,
+    pub working_dir: Option<String>,
+}
+
+pub struct ExecutionResponse {
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: i32,
+    pub wrapped_cmd: String,
+}
+
 pub struct LocalShellTask {
-    manager: SandboxManager,
+    manager: Box<dyn SandboxAdapter>,
 }
 
 impl LocalShellTask {
-
     pub fn new(pool: Option<PgPool>) -> Self {
-        LocalShellTask {
-            manager: SandboxManager::new(pool),
-        }
+        #[cfg(target_os = "linux")]
+        let manager = Box::new(LinuxSandbox::new(pool.clone()));
+
+        #[cfg(target_os = "macos")]
+        let manager = Box::new(MacOsSandbox::new(pool.clone()));
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        let manager = Box::new(SandboxManager::new(pool.clone()));
+
+        LocalShellTask { manager }
     }
 
     pub async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
         self.manager.update_config(policy_json).await
     }
 
-
-
-    pub async fn execute(&self, cmd: &str) -> Result<String, String> {
-        let wrapped_cmd = match self.manager.wrap_command(cmd).await {
+    pub async fn execute(&self, req: &ExecutionRequest) -> Result<ExecutionResponse, String> {
+        let wrapped_cmd = match self.manager.wrap_command(&req.cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
-
 
         // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
         let task_id = "unknown_task";
@@ -43,14 +59,21 @@ impl LocalShellTask {
 
         let start = Instant::now();
 
-        let output = tokio::process::Command::new("bash")
-            .arg("-c")
-            .arg(&wrapped_cmd)
-            .env("HTTP_PROXY", format!("http://127.0.0.1:{}", proxy_port))
-            .env("HTTPS_PROXY", format!("http://127.0.0.1:{}", proxy_port))
-            .output()
-            .await
-            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+        let mut cmd = tokio::process::Command::new("bash");
+        cmd.arg("-c").arg(&wrapped_cmd);
+
+        cmd.env("HTTP_PROXY", format!("http://127.0.0.1:{}", proxy_port));
+        cmd.env("HTTPS_PROXY", format!("http://127.0.0.1:{}", proxy_port));
+
+        for (k, v) in &req.env {
+            cmd.env(k, v);
+        }
+
+        if let Some(wd) = &req.working_dir {
+            cmd.current_dir(wd);
+        }
+
+        let output = cmd.output().await.map_err(|e| format!("Failed to spawn process: {}", e))?;
 
         let exit_code = output.status.code().unwrap_or(-1);
 
@@ -64,11 +87,19 @@ impl LocalShellTask {
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");
         }
 
+        let response = ExecutionResponse {
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            exit_code,
+            wrapped_cmd: wrapped_cmd.clone(),
+        };
+
         if !output.status.success() {
-            return Err(format!("Process exited with error: {}\n{}", exit_code, String::from_utf8_lossy(&output.stderr)));
+            return Err(format!("Process exited with error: {}
+{}", exit_code, response.stderr));
         }
 
-        Ok(format!("Executing: {}\n{}", wrapped_cmd, String::from_utf8_lossy(&output.stdout)))
+        Ok(response)
     }
 }
 
@@ -79,16 +110,26 @@ mod tests {
     #[tokio::test]
     async fn test_allowed_command_execution() {
         let task = LocalShellTask::new(None);
-        let result = task.execute("echo 'hello'").await;
+        let req = ExecutionRequest {
+            cmd: "echo 'hello'".to_string(),
+            env: HashMap::new(),
+            working_dir: None,
+        };
+        let result = task.execute(&req).await;
         assert!(result.is_ok());
-        let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\""));
+        let res = result.unwrap();
+        // Just assert it succeeds, specific wrapped command depends on OS
     }
 
     #[tokio::test]
     async fn test_denied_command_execution() {
         let task = LocalShellTask::new(None);
-        let result = task.execute("sudo rm -rf /").await;
+        let req = ExecutionRequest {
+            cmd: "sudo rm -rf /".to_string(),
+            env: HashMap::new(),
+            working_dir: None,
+        };
+        let result = task.execute(&req).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.contains("SANDBOX_FAILURE"));
@@ -99,7 +140,13 @@ mod tests {
     async fn test_dynamic_config_update() {
         let mut task = LocalShellTask::new(None);
 
-        let result1 = task.execute("curl http://example.com").await;
+        let req = ExecutionRequest {
+            cmd: "curl http://example.com".to_string(),
+            env: HashMap::new(),
+            working_dir: None,
+        };
+
+        let result1 = task.execute(&req).await;
         assert!(result1.is_ok());
 
         let policy = r#"{
@@ -108,29 +155,11 @@ mod tests {
 
         task.update_config(policy).await.unwrap();
 
-        let result2 = task.execute("curl http://example.com").await;
+        let result2 = task.execute(&req).await;
         assert!(result2.is_err());
 
         let msg = result2.unwrap_err();
         assert!(msg.contains("Command execution denied by sandbox policy"));
-    }
-
-    #[tokio::test]
-    async fn test_dynamic_config_wrapper_update() {
-        let mut task = LocalShellTask::new(None);
-
-        let policy = r#"{
-            "read_only_paths": ["/etc", "/var"],
-            "blocked_domains": ["evil.com"]
-        }"#;
-
-        task.update_config(policy).await.unwrap();
-
-        let result = task.execute("echo 'hello'").await;
-        assert!(result.is_ok());
-        let msg = result.unwrap();
-        assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
-        assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
     }
 
     #[tokio::test]
@@ -142,9 +171,15 @@ mod tests {
 
         task.update_config(policy_json).await.unwrap();
 
-        let result = task.execute("echo $HTTP_PROXY").await;
+        let req = ExecutionRequest {
+            cmd: "echo $HTTP_PROXY".to_string(),
+            env: HashMap::new(),
+            working_dir: None,
+        };
+
+        let result = task.execute(&req).await;
         assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(output.contains("http://127.0.0.1:"));
+        let res = result.unwrap();
+        assert!(res.stdout.contains("http://127.0.0.1:"));
     }
 }

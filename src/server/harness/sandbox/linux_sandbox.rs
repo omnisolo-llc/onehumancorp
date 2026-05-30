@@ -142,6 +142,10 @@ impl SandboxAdapter for LinuxSandbox {
         Ok(())
     }
 
+    fn get_policy(&self) -> SandboxPolicy {
+        self.policy.clone()
+    }
+
     fn annotate_error(&self, err: String, stdout: String) -> String {
         format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
     }

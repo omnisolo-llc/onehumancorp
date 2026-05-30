@@ -35,6 +35,9 @@ pub struct SandboxPolicy {
 pub trait SandboxAdapter: Send + Sync {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String>;
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String>;
+    fn get_policy(&self) -> SandboxPolicy;
+
+
     fn annotate_error(&self, err: String, stdout: String) -> String;
 }
 
@@ -46,9 +49,6 @@ pub struct SandboxManager {
 }
 
 impl SandboxManager {
-    pub fn get_policy(&self) -> SandboxPolicy {
-        self.policy.clone()
-    }
 
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
@@ -101,6 +101,11 @@ impl SandboxAdapter for SandboxManager {
         self.policy = policy;
 
         Ok(())
+    }
+
+
+    fn get_policy(&self) -> SandboxPolicy {
+        self.policy.clone()
     }
 
     fn annotate_error(&self, err: String, stdout: String) -> String {
