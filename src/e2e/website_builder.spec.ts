@@ -125,4 +125,46 @@ test.describe('Website Builder Full E2E', () => {
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=ohc.store')).toBeVisible();
   });
+
+  test('Grandmother UX flow for store setup and generation', async ({ page }) => {
+    // Step 1: Login
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'carlos@example.com');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button:has-text("Login Sign In")');
+
+    // Verify dashboard loaded
+    await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
+
+    // Step 2: Navigate to Setup Wizard for Storefront
+    await page.click('button:has-text("🚀 Start Business Setup")');
+    await expect(page.locator('#step-1')).toBeVisible();
+
+    // Click Instant Build (AI)
+    await page.click('button:has-text("⚡ Instant Build (AI) →")');
+    await expect(page.locator('#step-ai')).toBeVisible();
+
+    // Step 3: Enter Description and Generate
+    await page.fill('#step-ai-prompt', 'I am a handyman');
+    await page.click('button:has-text("Generate Storefront →")');
+
+    // Verify it shows generating screen then moves to storefront builder preview
+    await expect(page.locator('#storefront-builder-screen')).toBeVisible({ timeout: 45000 }); // Wait for real AI generation
+
+    // Verify blocks are rendered
+    const blocks = page.locator('.builder-block');
+    await expect(blocks).not.toHaveCount(0); // Ensure some blocks generated
+
+    // Step 4: Publish Site
+    await page.click('button:has-text("Publish Changes")');
+    await expect(page.locator('#domain-setup-sheet')).toHaveClass(/open/);
+
+    // Select Free Domain and publish
+    await page.click('button:has-text("🌐 Free OHC Subdomain")');
+    await page.fill('#free-domain-input', 'carlos');
+    await page.click('#domain-step-free button:has-text("Publish")');
+
+    // Verify successful publish returns to dashboard
+    await expect(page.locator('#dashboard-screen')).toBeVisible({ timeout: 10000 });
+  });
 });

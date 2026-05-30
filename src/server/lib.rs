@@ -3232,6 +3232,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .builder-container {
                             position: relative;
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
+                            padding: 16px;
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            .builder-container {
+                                background: rgba(22, 22, 26, 0.7);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                            }
                         }
                         .builder-preview {
                             display: grid;
@@ -3241,6 +3253,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 22px;
                             border-radius: 16px;
                             cursor: pointer;
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            .builder-block {
+                                background: rgba(22, 22, 26, 0.7);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                            }
                         }
                         .bottom-sheet {
                             position: fixed;

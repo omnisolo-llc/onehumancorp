@@ -405,6 +405,7 @@ async fn generate_storefront(
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
+    let resilient_client = crate::minimax::ResilientClient::new(minimax);
 
     // Step 1: The Advisor extracts metadata
     let advisor_prompt = format!(
@@ -420,7 +421,7 @@ Only return the JSON. No markdown formatting, no explanations."#,
         payload.description
     );
 
-    let advisor_response = minimax.reason(&advisor_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let advisor_response = resilient_client.reason(&advisor_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let cleaned_advisor = advisor_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
     let business_context: BusinessContext = serde_json::from_str(cleaned_advisor).map_err(|e| {
         tracing::error!("Failed to parse JSON from Advisor AI: {}", e);
@@ -486,7 +487,7 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         payload.description
     );
 
-    let promoter_response = minimax.reason(&promoter_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let promoter_response = resilient_client.reason(&promoter_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Clean up response if it contains markdown formatting
     let cleaned_response = promoter_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
