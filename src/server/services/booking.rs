@@ -9,7 +9,6 @@ use std::sync::Arc;
 use crate::hub::Hub;
 
 static SERVICES_CACHE: OnceLock<HybridCache<Vec<Service>>> = OnceLock::new();
-static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<BookingRecord>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
