@@ -488,6 +488,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_soft_limit_ai_action() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-soft-limit-ai-action";
+                let agent_id = "agent-1";
+
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+
+                let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
+                let _ : () = redis::AsyncCommands::del(&mut conn, &agent_key).await.unwrap_or(());
+
+                // Set tier to Free
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+
+                // Consume until right at limit for agent limit (20)
+                let _ : () = redis::AsyncCommands::set(&mut conn, &agent_key, 20).await.unwrap();
+
+                // Record an action that exceeds the limit
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+
+                // Should be allowed because soft limit
+                assert!(status.is_allowed);
+                assert!(status.soft_limit_reached);
+                assert!(status.user_message.unwrap().contains("hit its Free tier limit of 20"));
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_record_action_monthly_reset() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {

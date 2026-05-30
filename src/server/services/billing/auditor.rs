@@ -39,6 +39,9 @@ pub struct CostAuditor {
     llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<f64>,
     compute_cost_counter: Counter<u64>,
+    outbound_api_cost_counter: Counter<f64>,
+    storage_rw_cost_counter: Counter<f64>,
+    email_send_cost_counter: Counter<f64>,
 }
 
 impl CostAuditor {
@@ -47,6 +50,9 @@ impl CostAuditor {
         let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
         let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
+        let outbound_api_cost_counter = meter.f64_counter("ohc_outbound_api_cost_total").build();
+        let storage_rw_cost_counter = meter.f64_counter("ohc_storage_rw_cost_total").build();
+        let email_send_cost_counter = meter.f64_counter("ohc_email_send_cost_total").build();
 
         CostAuditor {
             config,
@@ -66,6 +72,9 @@ impl CostAuditor {
             llm_cost_counter,
             storage_savings_counter,
             compute_cost_counter,
+            outbound_api_cost_counter,
+            storage_rw_cost_counter,
+            email_send_cost_counter,
         }
     }
 
@@ -168,6 +177,36 @@ impl CostAuditor {
     pub fn get_total_cost(&self) -> f64 {
         let total_cost = self.total_cost.lock().unwrap();
         *total_cost
+    }
+
+    pub fn record_outbound_api_cost(&self, cost: f64, org_id: &str) {
+        let mut total_network = self.total_network_cost.lock().unwrap();
+        *total_network += cost;
+        self.outbound_api_cost_counter.add(cost, &[KeyValue::new("organization_id", org_id.to_string())]);
+    }
+
+    pub fn record_storage_rw_cost(&self, cost: f64, org_id: &str) {
+        // Assume this adds to the overall operational cost tracking if needed
+        self.storage_rw_cost_counter.add(cost, &[KeyValue::new("organization_id", org_id.to_string())]);
+    }
+
+    pub fn record_email_send_cost(&self, cost: f64, org_id: &str) {
+        let mut total_network = self.total_network_cost.lock().unwrap();
+        *total_network += cost;
+        self.email_send_cost_counter.add(cost, &[KeyValue::new("organization_id", org_id.to_string())]);
+    }
+
+    pub fn get_total_storage_cost(&self) -> f64 {
+        // Rough estimate to be replaced by actual logic where necessary
+        let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
+        let total_bytes: i64 = agent_storage_bytes.values().sum();
+        let storage_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        storage_gb * 0.10
+    }
+
+    pub fn get_total_network_cost(&self) -> f64 {
+        let total_network = self.total_network_cost.lock().unwrap();
+        *total_network
     }
 
     pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
@@ -358,6 +397,18 @@ mod tests {
         
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
+    }
+
+    #[test]
+    fn test_cost_auditor_new_metrics() {
+        let config = CostConfig::default();
+        let auditor = CostAuditor::new(config);
+
+        auditor.record_outbound_api_cost(0.50, "test_org");
+        auditor.record_storage_rw_cost(1.20, "test_org");
+        auditor.record_email_send_cost(0.05, "test_org");
+
+        assert_eq!(auditor.get_total_network_cost(), 0.55); // 0.50 + 0.05
     }
 
     #[test]

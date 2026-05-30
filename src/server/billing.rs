@@ -41,6 +41,13 @@ impl Tracker {
         self.auditor = Some(auditor);
     }
 
+    pub async fn track_storage_upload(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
+        if let Some(auditor) = &self.auditor {
+            auditor.record_storage_compression(original_bytes, compressed_bytes);
+        }
+        self.track_storage_usage(tenant_id, compressed_bytes, agent_id).await
+    }
+
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
         if let Some(auditor) = &self.auditor {
             if let Some(aid) = agent_id {
