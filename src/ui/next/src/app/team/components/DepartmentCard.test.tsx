@@ -11,7 +11,6 @@ describe('DepartmentCard', () => {
         <DepartmentCard name="" pendingCount={0} onClick={() => {}} />
       </TooltipProvider>
     );
-    // Check that it doesn't crash and renders the active status
     expect(screen.getByText('Active and running')).toBeInTheDocument();
   });
 });

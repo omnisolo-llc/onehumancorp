@@ -14,6 +14,7 @@ pub trait ObservabilityProvider: Send + Sync {
 }
 
 pub struct LangSmithProvider {
+    #[allow(dead_code)]
     api_key: String,
     project_name: String,
 }
@@ -49,6 +50,7 @@ impl ObservabilityProvider for LangSmithProvider {
 }
 
 pub struct LangfuseProvider {
+    #[allow(dead_code)]
     public_key: String,
     secret_key: String,
 }
