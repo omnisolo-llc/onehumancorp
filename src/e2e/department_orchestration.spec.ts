@@ -100,4 +100,49 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
 
     await page.waitForTimeout(500);
   });
+
+  test('Test 6: Review Draft Modal from Instagram DM', async ({ page, request }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
+    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
+    await page.locator('button:has-text("Login")').click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    const response = await request.post('/api/agents/webhook', {
+      data: {
+        source: 'instagram',
+        message: 'Do you have vegan options for birthday cakes?',
+        tenant_id: 'e2e-tenant'
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto('/team');
+    await expect(page.getByText('The Ambassador')).toBeVisible();
+    await page.getByText('The Ambassador').click();
+
+    // Verify the newly drafted action is visible
+    await expect(page.getByText('Incoming message from instagram: Do you have vegan options for birthday cakes?').first()).toBeVisible({ timeout: 10000 });
+
+    // Click Review on the new action
+    const reviewButton = page.locator('button:has-text("Review")').first();
+    await expect(reviewButton).toBeVisible();
+    await reviewButton.click();
+
+    // Verify modal is open and has context and draft
+    await expect(page.getByText('Review Draft')).toBeVisible();
+    await expect(page.getByText('Do you have vegan options for birthday cakes?').first()).toBeVisible();
+    await expect(page.getByText('Thank you for reaching out! We will get back to you shortly.').first()).toBeVisible();
+
+    // Click Discard
+    const discardButton = page.locator('button:has-text("Discard")').first();
+    await expect(discardButton).toBeVisible();
+    await discardButton.click();
+
+    await page.waitForTimeout(500);
+  });
+
 });

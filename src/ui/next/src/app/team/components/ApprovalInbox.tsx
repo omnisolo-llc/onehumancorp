@@ -41,16 +41,8 @@ export default function ApprovalInbox({
     }
   };
 
-  const extractPayload = (description: string) => {
-    const parts = description.split(" | Payload: ");
-    if (parts.length > 1) {
-      try {
-        return { desc: parts[0], payload: JSON.parse(parts[1]) };
-      } catch (e) {
-        return { desc: parts[0], payload: null };
-      }
-    }
-    return { desc: description, payload: null };
+  const extractPayload = (req: ApprovalRequest) => {
+    return { desc: req.description, payload: req.payload };
   };
 
   return (
@@ -126,7 +118,7 @@ export default function ApprovalInbox({
             </div>
           ) : (
             approvals.map((req) => {
-              const { desc, payload } = extractPayload(req.description);
+              const { desc, payload } = extractPayload(req);
               return (
 
               <div
@@ -402,7 +394,7 @@ export default function ApprovalInbox({
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      if (payload && payload.original_message) {
+                      if (payload && (payload.original_message || payload.draft_reply)) {
                         setSelectedReview(req);
                       } else {
                         onReject(req.id);
@@ -410,7 +402,7 @@ export default function ApprovalInbox({
                     }}
                     className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    {payload && payload.original_message ? 'Review' : 'Reject / Edit'}
+                    {payload && (payload.original_message || payload.draft_reply) ? 'Review' : 'Reject / Edit'}
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
@@ -437,14 +429,14 @@ export default function ApprovalInbox({
               <div className="mb-4">
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Context</p>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
-                   {extractPayload(selectedReview.description).payload?.original_message || "N/A"}
+                   {selectedReview.payload?.original_message || "N/A"}
                 </div>
               </div>
 
               <div className="mb-6">
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Draft</p>
                 <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                  {extractPayload(selectedReview.description).payload?.generated_response || "N/A"}
+                  {selectedReview.payload?.generated_response || selectedReview.payload?.draft_reply || "N/A"}
                 </div>
               </div>
 
