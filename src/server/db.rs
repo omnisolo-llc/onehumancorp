@@ -458,6 +458,7 @@ impl DB {
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
+                        business_address TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -492,6 +493,40 @@ impl DB {
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
+                        customer_address TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS fulfillment_profiles (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        enable_local_delivery BOOLEAN DEFAULT 0,
+                        enable_pickup BOOLEAN DEFAULT 0,
+                        enable_shipping BOOLEAN DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS fulfillment_methods (
+                        id TEXT PRIMARY KEY,
+                        order_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        cost REAL NOT NULL,
+                        provider TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS shipping_labels (
+                        id TEXT PRIMARY KEY,
+                        order_id TEXT NOT NULL,
+                        tracking_number TEXT NOT NULL,
+                        label_url TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',

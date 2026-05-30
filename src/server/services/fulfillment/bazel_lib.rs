@@ -6,4 +6,4 @@ pub use ::server_lib::*;
 pub mod __bazel_package;
 
 pub use __bazel_package::*;
-pub mod fulfillment;
+pub use __bazel_package::service::*;

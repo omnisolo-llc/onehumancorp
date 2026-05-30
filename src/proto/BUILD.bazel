@@ -20,6 +20,7 @@ exports_files([
 proto_library(
     name = "hub_proto",
     srcs = ["hub.proto"],
+    deps = [":organization_proto", ":agent_proto"],
     visibility = ["//visibility:public"],
 )
 

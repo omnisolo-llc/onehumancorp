@@ -22,6 +22,7 @@ message Organization {
   repeated TeamMember members = 6;
   repeated RoleProfile role_profiles = 7;
   string tier = 8;
+  string business_address = 9;
 }
 
 message TeamMember {
@@ -62,4 +63,35 @@ message OnboardingRequest {
 service OrganizationService {
   rpc CreateOrganization(Organization) returns (Organization);
   rpc GetOrganizationChart(Organization) returns (OrganizationChart);
+}
+
+message FulfillmentProfile {
+  string id = 1;
+  string tenant_id = 2;
+  bool enable_local_delivery = 3;
+  bool enable_pickup = 4;
+  bool enable_shipping = 5;
+}
+
+message FulfillmentMethod {
+  string id = 1;
+  string order_id = 2;
+  string type = 3;
+  float cost = 4;
+  string provider = 5;
+}
+
+message ShippingLabel {
+  string id = 1;
+  string order_id = 2;
+  string tracking_number = 3;
+  string label_url = 4;
+}
+
+message ShippingZone {
+  string id = 1;
+  string profile_id = 2;
+  string name = 3;
+  float max_radius_miles = 4;
+  float cost = 5;
 }

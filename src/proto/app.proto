@@ -26,6 +26,8 @@ message Order {
   string product_id = 3;
   int64 amount_cents = 4;
   string status = 5;
+  string customer_address = 7;
+  ohc.organization.FulfillmentMethod fulfillment_method = 9;
   int64 created_at_unix = 6;
 }
 

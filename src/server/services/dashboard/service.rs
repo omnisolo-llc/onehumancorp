@@ -193,7 +193,11 @@ impl DashboardService for MyDashboardService {
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
-                                };
+            customer_address: String::new(),
+            fulfillment_method: None,,
+            customer_address: String::new(),
+            fulfillment_method: None,
+        };
                                 results.push(o);
                             }
                         }
@@ -209,7 +213,11 @@ impl DashboardService for MyDashboardService {
                                     amount_cents: (amount_real * 100.0) as i64,
                                     status: r.try_get("status").unwrap_or_default(),
                                     created_at_unix: 0,
-                                };
+            customer_address: String::new(),
+            fulfillment_method: None,,
+            customer_address: String::new(),
+            fulfillment_method: None,
+        };
                                 results.push(o);
                             }
                         }
@@ -246,10 +254,13 @@ impl DashboardService for MyDashboardService {
                                 domain: "".to_string(),
                                 ceo_id: "".to_string(),
                                 created_at_unix: 0,
+            customer_address: String::new(),
+            fulfillment_method: None,
                                 members: vec![],
                                 role_profiles: vec![],
-                                tier: row.try_get("tier").unwrap_or_default(),
-                            });
+                                tier: row.try_get("tier").unwrap_or_default(),,
+            business_address: String::new(),
+        });
                         }
                     }
                     crate::db::DbStore::Sqlite(pool) => {
@@ -262,10 +273,13 @@ impl DashboardService for MyDashboardService {
                                 domain: "".to_string(),
                                 ceo_id: "".to_string(),
                                 created_at_unix: 0,
+            customer_address: String::new(),
+            fulfillment_method: None,
                                 members: vec![],
                                 role_profiles: vec![],
-                                tier: row.try_get("tier").unwrap_or_default(),
-                            });
+                                tier: row.try_get("tier").unwrap_or_default(),,
+            business_address: String::new(),
+        });
                         }
                     }
                 }

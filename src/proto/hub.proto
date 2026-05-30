@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ohc.orchestration;
 
+import "src/proto/organization.proto";
 
 option go_package = "github.com/onehumancorp/mono/src/proto;pb";
 
@@ -1703,4 +1704,23 @@ message GetBookingLinkRequest {
 
 message GetBookingLinkResponse {
   string link = 1;
+}
+
+message CalculateFulfillmentRequest {
+  string tenant_id = 1;
+  string customer_address = 2;
+  float cart_total = 3;
+}
+
+message CalculateFulfillmentResponse {
+  repeated ohc.organization.FulfillmentMethod available_methods = 1;
+}
+
+message GenerateShippingLabelRequest {
+  string order_id = 1;
+}
+
+service FulfillmentService {
+  rpc CalculateFulfillment(CalculateFulfillmentRequest) returns (CalculateFulfillmentResponse);
+  rpc GenerateShippingLabel(GenerateShippingLabelRequest) returns (ohc.organization.ShippingLabel);
 }

@@ -1,0 +1,37 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_fulfillment",
+    srcs = [
+        "bazel_lib.rs",
+        "mod.rs",
+        "service.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    visibility = ["//visibility:public"],
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        "//src/proto:hub_tonic",
+        "//src/proto:organization_prost",
+        "//src/server/ohc:server_ohc",
+        "//src/server:server_lib",
+        "@crates//:chrono",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:uuid",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "server_services_fulfillment_test",
+    crate = ":server_services_fulfillment",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        "//src/proto:hub_tonic",
+        "//src/proto:organization_prost",
+        "@crates//:tokio",
+        "@crates//:tonic",
+    ],
+)

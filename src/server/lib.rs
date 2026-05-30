@@ -2781,6 +2781,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
+        let fulfillment_service = crate::services::fulfillment::service::MyFulfillmentService::new(hub.clone());
+    let fulfillment_service = ::server_ohc::hub::fulfillment_service_server::FulfillmentServiceServer::with_interceptor(fulfillment_service, spiffe_interceptor.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
@@ -4479,11 +4481,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
+                             <div id="fulfillment-options" style="margin-bottom: 20px;">
+                                 <p>Calculating fulfillment options...</p>
+                             </div>
                              <p>100% money back guarantee. Secure SSL payments.</p>
                              <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
+
 
                      <!-- Diagnostics Page -->
                      <div id="diagnostics-screen" class="screen">
@@ -6022,7 +6028,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+
+                        async function loadFulfillmentOptions() {
+                            const address = "123 Main St, Springfield"; // Mock address
+                            document.getElementById('fulfillment-options').innerHTML = `<p>Calculating fulfillment options for ${address}...</p>`;
+                            setTimeout(() => {
+                                document.getElementById('fulfillment-options').innerHTML = `
+                                    <p><strong>You are 3 miles away!</strong></p>
+                                    <div style="display: flex; gap: 10px; flex-direction: column;">
+                                        <label><input type="radio" name="fulfillment" value="pickup" checked> Pickup (Free)</label>
+                                        <label><input type="radio" name="fulfillment" value="local_delivery"> Local Delivery (.00)</label>
+                                        <label><input type="radio" name="fulfillment" value="shipping"> Standard Shipping (2.00)</label>
+                                    </div>
+                                `;
+                            }, 500);
+                        }
+                        if (id === 'checkout-screen') {
+                            loadFulfillmentOptions();
+                        }
+                        if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
