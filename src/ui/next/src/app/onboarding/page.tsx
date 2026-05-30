@@ -367,6 +367,18 @@ export default function OnboardingWizard() {
                       />
                    </div>
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Domain Choice</label>
+                  <select
+                    value={domainChoice}
+                    onChange={(e) => setDomainChoice(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] appearance-none"
+                    style={{ backgroundColor: 'transparent' }}
+                  >
+                    <option value="subdomain" className="text-black">Subdomain (e.g. my-store.ohc.store)</option>
+                    <option value="custom" className="text-black">Custom Domain (e.g. my-store.com)</option>
+                  </select>
+                </div>
               </div>
 
               {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}

@@ -22,6 +22,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     // Step 2: Review
     await expect(page.getByRole('heading', { name: "Review Details", exact: false })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Domain Choice')).toBeVisible();
+    await page.getByRole('combobox').selectOption('custom');
     await page.getByRole('button', { name: /Continue/i }).click();
 
     // Step 3: Style
@@ -44,6 +46,6 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     expect(postData.website_template).toBe('Modern');
 
     await expect(page.getByRole('heading', { name: "You're Live!", exact: false })).toBeVisible({ timeout: 15000 });
-    expect(postData.domain_choice).toBe('subdomain');
+    expect(postData.domain_choice).toBe('custom');
   });
 });
