@@ -7,6 +7,7 @@ use tracing::{info_span, Instrument};
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
 pub(crate) use crate::prompt_construction::build_hierarchical_system_prompt;
+pub use crate::prompt_construction::HierarchicalPromptBuilder;
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
