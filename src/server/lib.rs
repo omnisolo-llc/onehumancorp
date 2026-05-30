@@ -6101,7 +6101,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen' };
+                            const pathAliases = { '/business-setup': 'setup-screen', '/website-builder': 'setup-screen', '/team': 'team-screen', '/agents': 'team-screen', '/login': 'login-screen', '/dashboard': 'dashboard-screen', '/': 'dashboard-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             if (screenId === 'setup-screen') {
