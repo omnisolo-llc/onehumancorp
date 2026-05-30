@@ -16,6 +16,11 @@ pub struct SocialPostRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTeamInviteResponse {
+    pub invite_link: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostResponse {
     pub posted: bool,
     pub post_id: String,
@@ -713,7 +718,7 @@ async fn handle_team_invite_accept(
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
-) -> Result<Json<()>, StatusCode> {
+) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -727,7 +732,9 @@ async fn handle_create_team_invite(
                 };
                 state.hub.append_recent_event(msg);
             }
-            Ok(Json(()))
+            Ok(Json(CreateTeamInviteResponse {
+                invite_link: format!("https://ohc.app/invite/{}/{}", req.team_id, req.invitee_id),
+            }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -988,7 +995,7 @@ mod tests {
         let res_json: GenerateLoyaltyResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(res_json.message.contains("Platinum status at Maya Cakes!"));
-        assert!(res_json.message.contains("Give $15 off"));
+        assert!(res_json.message.contains("Give them $15 off"));
     }
 
     #[tokio::test]
