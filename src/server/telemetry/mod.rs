@@ -24,12 +24,42 @@ static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
 static MEETING_EVENT: OnceLock<Counter<u64>> = OnceLock::new();
 static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
+static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
+    POSTGRES_LOCK_CONTENTION.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_postgres_lock_contention_total")
+            .with_description("Total number of PostgreSQL lock contentions")
+            .build()
+    })
+}
+
+pub fn get_llm_network_latency_histogram() -> &'static Histogram<f64> {
+    LLM_NETWORK_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.f64_histogram("ohc_llm_network_latency_seconds")
+            .with_description("Latency to external LLM providers in seconds")
+            .build()
+    })
+}
 
 pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
     MCP_TOOL_CALLS_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
         meter.u64_counter("ohc_mcp_tool_calls_total")
             .with_description("Total number of MCP tool calls")
+            .build()
+    })
+}
+
+pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
+    HARNESS_EXECUTION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .f64_histogram("harness_execution_latency")
+            .with_description("Execution latency for Harness")
             .build()
     })
 }
@@ -87,6 +117,36 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
             opentelemetry::KeyValue::new("type", token_type.to_string()),
         ],
     );
+}
+
+pub fn record_harness_execution_latency(latency_seconds: f64) {
+    let histogram = get_harness_execution_latency();
+    let deployment_mode = get_deployment_mode();
+    histogram.record(
+        latency_seconds,
+        &[opentelemetry::KeyValue::new(
+            "deployment_mode",
+            deployment_mode.to_string(),
+        )],
+    );
+}
+
+#[cfg(test)]
+mod harness_execution_tests {
+    use super::*;
+
+    #[test]
+    fn test_get_harness_execution_latency() {
+        let histogram = get_harness_execution_latency();
+        // Just calling it ensures it initializes correctly
+        histogram.record(1.0, &[]);
+    }
+
+    #[test]
+    fn test_record_harness_execution_latency() {
+        // Just calling it ensures it doesn't panic
+        record_harness_execution_latency(1.0);
+    }
 }
 
 pub fn record_agent_api_call(agent_id: &str, role: &str, api: &str) {
@@ -148,6 +208,7 @@ pub fn record_swarm_task_completed(mission_id: &str) {
 
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -226,6 +287,26 @@ pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
         &[
             opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
             opentelemetry::KeyValue::new("status", status.to_string()),
+        ]
+    );
+}
+
+pub fn record_postgres_lock_contention(operation: &str) {
+    let counter = get_postgres_lock_contention_counter();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("operation", operation.to_string()),
+        ]
+    );
+}
+
+pub fn record_llm_network_latency(model: &str, latency: f64) {
+    let histogram = get_llm_network_latency_histogram();
+    histogram.record(
+        latency,
+        &[
+            opentelemetry::KeyValue::new("model", model.to_string()),
         ]
     );
 }
@@ -355,6 +436,44 @@ pub async fn record_autodream_sync(
         "counter",
         count,
         serde_json::json!({}),
+    )
+    .await
+}
+
+pub async fn record_llm_call_cost(
+    pool: &PgPool,
+    organization_id: &str,
+    model: &str,
+    cost_usd: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_llm_call_cost",
+        "counter",
+        cost_usd as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "model": model,
+        }),
+    )
+    .await
+}
+
+pub async fn record_outbound_api_cost(
+    pool: &PgPool,
+    organization_id: &str,
+    api_name: &str,
+    cost_usd: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_outbound_api_cost",
+        "counter",
+        cost_usd as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "api_name": api_name,
+        }),
     )
     .await
 }

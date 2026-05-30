@@ -10,8 +10,13 @@ const promotions = [
 
 export async function POST(request: Request) {
   try {
-    const { tenant } = await request.json();
-    const tenantName = tenant || 'my-store';
+    // Extract tenant_id securely from auth claims via headers instead of request body payload
+    const orgId = request.headers.get('x-organization-id');
+    if (!orgId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const tenantName = orgId || 'my-store';
 
     // Pick a random promotion
     const randomPromo = promotions[Math.floor(Math.random() * promotions.length)];

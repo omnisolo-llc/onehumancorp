@@ -43,7 +43,7 @@ impl LocalProxyServer {
                 .instrument(tracing::info_span!("local_stateful_proxy"))
                 .await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Err(tonic::Status::invalid_argument(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

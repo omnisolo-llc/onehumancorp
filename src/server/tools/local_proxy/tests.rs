@@ -57,7 +57,7 @@ async fn test_local_proxy_server_invoke_missing_context_id() {
 }
 
 #[tokio::test]
-async fn test_local_proxy_server_invoke_unimplemented() {
+async fn test_local_proxy_server_invoke_invalid() {
     let server = LocalProxyServer::new();
     let req = McpInvokeRequest {
         tool_id: "unknown_tool".to_string(),
@@ -67,5 +67,5 @@ async fn test_local_proxy_server_invoke_unimplemented() {
         spiffe_id: "".to_string(),
     };
     let err = server.invoke_tool(&req).await.unwrap_err();
-    assert_eq!(err.code(), tonic::Code::Unimplemented);
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
 }

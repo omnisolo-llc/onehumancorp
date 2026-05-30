@@ -74,9 +74,15 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
     }
 }
 
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
+    let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None));
+    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
+
     Router::new()
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
         .route("/sites", get(list_sites).post(create_site))
+
         .route("/sites/{site_id}/pages", get(list_pages).post(create_page))
         .route(
             "/pages/{page_id}/blocks",
@@ -89,6 +95,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/publish_draft", post(publish_draft))
         .route("/geo_score", post(geo_score))
         .route("/auto_seo", post(auto_seo))
+        .layer(axum::Extension(edge_state))
         .with_state(pool)
 }
 
@@ -399,13 +406,40 @@ async fn generate_storefront(
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
-    let prompt = format!(
+    // Step 1: The Advisor extracts metadata
+    let advisor_prompt = format!(
+        r#"You are The Advisor. Extract business metadata from the following description.
+User Description: "{}"
+Return a JSON object strictly matching this structure:
+{{
+  "name": "...",
+  "business_type": "...",
+  "vibe": "..."
+}}
+Only return the JSON. No markdown formatting, no explanations."#,
+        payload.description
+    );
+
+    let advisor_response = minimax.reason(&advisor_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let cleaned_advisor = advisor_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+    let business_context: BusinessContext = serde_json::from_str(cleaned_advisor).map_err(|e| {
+        tracing::error!("Failed to parse JSON from Advisor AI: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Step 2: The Promoter generates the layout and content
+    let promoter_prompt = format!(
         r#"You are The Promoter (Marketing & Advertising & SEO). Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
-First, synthesize the user's business description to select an appropriate template, generate copywriting, and select relevant concepts.
+Use the following business context extracted by The Advisor:
+Name: {}
+Type: {}
+Vibe: {}
+
+Original User Description: "{}"
+
+First, synthesize the context to select an appropriate template, generate copywriting, and select relevant concepts.
 Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
-
-User Description: "{}"
 
 The JSON must exactly match this structure:
 {{
@@ -446,13 +480,16 @@ The JSON must exactly match this structure:
   ]
 }}
 Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
+        business_context.name,
+        business_context.business_type,
+        business_context.vibe,
         payload.description
     );
 
-    let response = minimax.reason(&prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let promoter_response = minimax.reason(&promoter_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Clean up response if it contains markdown formatting
-    let cleaned_response = response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+    let cleaned_response = promoter_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
     let site_draft: SiteDraft = serde_json::from_str(cleaned_response).map_err(|e| {
         tracing::error!("Failed to parse JSON from AI: {}", e);

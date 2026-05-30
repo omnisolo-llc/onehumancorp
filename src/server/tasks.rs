@@ -92,6 +92,7 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
+    pub(crate) broadcaster: Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>,
 }
 
 impl TaskManager {
@@ -99,6 +100,7 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
+            broadcaster: None,
         }
     }
 
@@ -106,6 +108,17 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
+            broadcaster: None,
+        }
+    }
+
+    pub fn set_broadcaster(&mut self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
+        self.broadcaster = Some(broadcaster);
+    }
+
+    fn broadcast(&self, task: &SharedTask, event_type: &str) {
+        if let Some(ref b) = self.broadcaster {
+            b(task.clone(), event_type.to_string());
         }
     }
 
@@ -174,6 +187,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
+            self.broadcast(&task, "task_status_updated");
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -187,6 +201,7 @@ impl TaskManager {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
+                self.broadcast(&task, "task_claimed");
                 return Ok(Some(task.clone()));
             }
         }
@@ -199,6 +214,7 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
+                self.broadcast(&task, "task_review");
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -261,6 +277,70 @@ impl TaskManager {
             }
         }
         Err("task not found".to_string())
+    }
+
+
+    pub async fn submit_for_approval(&self, task_id: &str, org_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), String> {
+        let (new_approval_status, new_updated_at, new_proposed_content, new_action_risk) = {
+            let mut tasks = self.tasks.write().unwrap();
+            if let Some(task) = tasks.get_mut(task_id) {
+                if task.organization_id != org_id {
+                    return Err("Unauthorized".to_string());
+                }
+                task.approval_status = Some("PENDING".to_string());
+                task.proposed_content = Some(proposed_content.to_string());
+                let risk = match action_risk {
+                    "HIGH" => ActionRisk::High,
+                    "LOW" => ActionRisk::Low,
+                    _ => ActionRisk::Unspecified,
+                };
+                task.action_risk = Some(risk.clone());
+                task.updated_at = Utc::now();
+                (task.approval_status.clone(), task.updated_at, task.proposed_content.clone(), task.action_risk.clone())
+            } else {
+                return Err("task not found".to_string());
+            }
+        };
+
+        let db_clone = self.db.read().unwrap().clone();
+        if let Some(db) = db_clone {
+            let risk_str = match new_action_risk {
+                Some(ActionRisk::High) => "HIGH",
+                Some(ActionRisk::Low) => "LOW",
+                _ => "UNSPECIFIED",
+            };
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let _res = sqlx::query(
+                        "UPDATE shared_tasks_decomposition SET approval_status = $1, proposed_content = $2, action_risk = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                    )
+                    .bind(&new_approval_status)
+                    .bind(&new_proposed_content)
+                    .bind(risk_str)
+                    .bind(new_updated_at)
+                    .bind(task_id)
+                    .bind(org_id)
+                    .execute(&db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let _res = sqlx::query(
+                        "UPDATE shared_tasks_decomposition SET approval_status = ?, proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                    )
+                    .bind(&new_approval_status)
+                    .bind(&new_proposed_content)
+                    .bind(risk_str)
+                    .bind(new_updated_at.to_rfc3339())
+                    .bind(task_id)
+                    .bind(org_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        Ok(())
     }
 
     pub async fn approve_task(&self, task_id: &str, is_approved: bool, required_org_id: &str) -> Result<(), String> {
@@ -340,6 +420,7 @@ impl TaskManager {
                 task.payload = payload;
             }
             task.updated_at = new_updated_at;
+            self.broadcast(&task, "task_approved");
         }
 
         Ok(())

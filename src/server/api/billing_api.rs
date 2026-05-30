@@ -60,10 +60,7 @@ pub async fn my_plan_handler(
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
-        ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
         ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-        ::server_pricing::rate_limit::PlanTier::Standard => "Standard",
-        ::server_pricing::rate_limit::PlanTier::Advanced => "Advanced",
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
     }.to_string();
@@ -71,15 +68,26 @@ pub async fn my_plan_handler(
     let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-    let next_bill_estimated = match tier {
-        ::server_pricing::rate_limit::PlanTier::Free => 0,
-        ::server_pricing::rate_limit::PlanTier::Entry => 5,
-        ::server_pricing::rate_limit::PlanTier::Starter => 9,
-        ::server_pricing::rate_limit::PlanTier::Standard => 19,
-        ::server_pricing::rate_limit::PlanTier::Advanced => 24,
-        ::server_pricing::rate_limit::PlanTier::Pro => 29,
-        ::server_pricing::rate_limit::PlanTier::Business => 79,
+    let base_bill = match tier {
+        ::server_pricing::rate_limit::PlanTier::Free => 0.0,
+        ::server_pricing::rate_limit::PlanTier::Starter => 29.0,
+        ::server_pricing::rate_limit::PlanTier::Pro => 79.0,
+        ::server_pricing::rate_limit::PlanTier::Business => 299.0,
     };
+
+    let now = chrono::Utc::now();
+    use chrono::Datelike;
+    let days_elapsed = now.day() as u32;
+    // rough total days
+    let total_days = 30;
+
+    let projected_cost = ::server_pricing::calculator::calculate_projected_monthly_cost(
+        base_bill,
+        days_elapsed,
+        total_days
+    );
+
+    let next_bill_estimated = projected_cost as i32;
 
     Json(MyPlanResponse {
         current_plan: plan_name,
@@ -112,12 +120,26 @@ pub async fn cost_dashboard_handler(
     let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
     let period_start = start_of_month.format("%Y-%m-%d").to_string();
     let period_end = now.format("%Y-%m-%d").to_string();
+
     let auditor = hub.get_cost_auditor();
+    let hub_clone = hub.clone();
+    let tenant_id_clone = tenant_id.clone();
 
-    let llm_cost_f64 = auditor.get_total_cost();
-    let total_revenue_f64 = auditor.get_total_revenue();
+    // Proper concurrent execution combining spawn_blocking for CPU/sync methods
+    // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
+    let auditor_future = tokio::task::spawn_blocking(move || {
+        (auditor.get_total_cost(), auditor.get_total_revenue())
+    });
 
-    let storage_bytes = hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
+    let storage_future = tokio::task::spawn(async move {
+        hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+    });
+
+    let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
+
+    let storage_bytes = storage_res.unwrap_or(0);
+    let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
+
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 

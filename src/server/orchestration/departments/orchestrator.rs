@@ -117,6 +117,7 @@ pub struct DepartmentOrchestrator {
     memory_repo: Arc<VectorRepository>,
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
+    approval_counter: Counter<u64>,
 }
 
 impl DepartmentOrchestrator {
@@ -127,6 +128,7 @@ impl DepartmentOrchestrator {
         };
         let meter = global::meter("ohc.orchestrator");
         let action_counter = meter.u64_counter("agent.actions.total").build();
+        let approval_counter = meter.u64_counter("agent.actions.approvals").build();
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
@@ -135,6 +137,7 @@ impl DepartmentOrchestrator {
             memory_repo,
             mesh,
             action_counter,
+            approval_counter,
         }
     }
 
@@ -298,76 +301,6 @@ impl DepartmentOrchestrator {
                 Ok(req.clone())
             }
         }
-    }
-
-    pub async fn get_department_status(&self, tenant_id: &str) -> Vec<crate::orchestration::departments::types::DepartmentDashboardStatus> {
-        let mut results = HashMap::new();
-        for dep in vec![
-            DepartmentType::Operations,
-            DepartmentType::Marketing,
-            DepartmentType::Sales,
-            DepartmentType::CustomerSuccess,
-            DepartmentType::Finance,
-            DepartmentType::Legal,
-            DepartmentType::BusinessAdvisory,
-        ] {
-            results.insert(dep, crate::orchestration::departments::types::DepartmentDashboardStatus {
-                department: dep,
-                pending_approvals: 0,
-                completed_actions: 0,
-            });
-        }
-
-        match &self.db.store {
-            DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = $1 GROUP BY department, status")
-                    .bind(tenant_id)
-                    .fetch_all(&self.db.pool)
-                    .await {
-                    use sqlx::Row;
-                    for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
-                        let count: i64 = row.get("count");
-
-                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
-                            if let Some(status) = results.get_mut(&dep) {
-                                if status_str == "PENDING_APPROVAL" {
-                                    status.pending_approvals += count;
-                                } else {
-                                    status.completed_actions += count;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = ? GROUP BY department, status")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await {
-                    use sqlx::Row;
-                    for row in rows {
-                        let dep_str: String = row.get("department");
-                        let status_str: String = row.get("status");
-                        let count: i64 = row.get("count");
-
-                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
-                            if let Some(status) = results.get_mut(&dep) {
-                                if status_str == "PENDING_APPROVAL" {
-                                    status.pending_approvals += count;
-                                } else {
-                                    status.completed_actions += count;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        results.into_values().collect()
     }
 
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
@@ -616,9 +549,21 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
+
+        let lock_acquired = self.mesh.acquire_lock(&lock_key, "orchestrator", 60).await;
+        if let Ok(acquired) = lock_acquired {
+            if !acquired {
+                return Err("Failed to acquire lock for approval decision".to_string());
+            }
+        } else {
+            return Err("Error communicating with lock service".to_string());
+        }
+
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
+        let mut error_response = None;
         let opt_department = match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
@@ -633,8 +578,14 @@ impl DepartmentOrchestrator {
                         use sqlx::Row;
                         Some(r.get::<String, _>("department"))
                     }
-                    Ok(None) => return Err("Unauthorized".to_string()),
-                    Err(e) => return Err(e.to_string()),
+                    Ok(None) => {
+                        error_response = Some("Unauthorized".to_string());
+                        None
+                    }
+                    Err(e) => {
+                        error_response = Some(e.to_string());
+                        None
+                    }
                 }
             }
             DbStore::Sqlite(pool) => {
@@ -650,14 +601,32 @@ impl DepartmentOrchestrator {
                         use sqlx::Row;
                         Some(r.get::<String, _>("department"))
                     }
-                    Ok(None) => return Err("Unauthorized".to_string()),
-                    Err(e) => return Err(e.to_string()),
+                    Ok(None) => {
+                        error_response = Some("Unauthorized".to_string());
+                        None
+                    }
+                    Err(e) => {
+                        error_response = Some(e.to_string());
+                        None
+                    }
                 }
             }
         };
 
-        if approved {
-            if let Some(dep) = opt_department {
+        if let Some(err) = error_response {
+            let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+            return Err(err);
+        }
+
+        if let Some(dep) = &opt_department {
+            let decision_str = if approved { "approved" } else { "rejected" };
+            self.approval_counter.add(1, &[
+                KeyValue::new("tenant_id", tenant_id.to_string()),
+                KeyValue::new("decision", decision_str),
+                KeyValue::new("department", dep.to_string())
+            ]);
+
+            if approved {
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id
@@ -668,6 +637,7 @@ impl DepartmentOrchestrator {
             }
         }
 
+        let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
         Ok(())
     }
 

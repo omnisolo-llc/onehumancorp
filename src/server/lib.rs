@@ -187,10 +187,10 @@ pub mod proto {
     }
 }
 
-use crate::proto::orchestration::hub_service_server::{HubService, HubServiceServer};
-use crate::proto::orchestration::growth_service_server::GrowthServiceServer;
-use crate::proto::billing::billing_service_server::BillingServiceServer;
-use crate::proto::orchestration::*;
+use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
+use crate::ohc::billing::billing_service_server::BillingServiceServer;
+use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -257,7 +257,7 @@ struct DraftReplyResponse {
 
 #[derive(serde::Deserialize)]
 struct HttpMetricsRequest {
-    tenant_id: String,
+    // tenant_id: String, // Extracted from claims for safety
 }
 
 #[derive(serde::Serialize)]
@@ -271,7 +271,7 @@ async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
-    axum::Json(payload): axum::Json<HttpMetricsRequest>,
+    axum::Json(_payload): axum::Json<HttpMetricsRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
@@ -292,12 +292,10 @@ async fn http_metrics_handler(
         Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
     };
 
-    let tenant_id = payload.tenant_id;
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default_tenant".to_string());
+
     if tenant_id == "system" {
         return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
-    }
-    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
-         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
@@ -490,7 +488,7 @@ async fn http_login_handler(
         .into_response()
 }
 
-async fn advisory_insights_handler(
+pub async fn advisory_insights_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
@@ -530,27 +528,38 @@ async fn advisory_insights_handler(
         }
     };
 
-    // Gather context from DB
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    // Gather context from DB and order counts concurrently
+    let (org_res, active_orders_res) = tokio::join!(
+        async {
+            sqlx::query_as::<_, (String, String)>(
+                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&db.pool)
+            .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+            )
+            .bind(&tenant_id)
+            .fetch_one(&db.pool)
+            .await
+        }
+    );
 
-    // Get order counts
-    let active_orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (business_name, industry) = org_res
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
+    let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -627,9 +636,11 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
+    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -666,10 +677,7 @@ impl HubService for MyHubService {
 
         let plan_name = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => "Free",
-            ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
             ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-            ::server_pricing::rate_limit::PlanTier::Standard => "Standard",
-            ::server_pricing::rate_limit::PlanTier::Advanced => "Advanced",
             ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
             ::server_pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
@@ -679,10 +687,7 @@ impl HubService for MyHubService {
 
         let next_bill_estimated = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => 0,
-            ::server_pricing::rate_limit::PlanTier::Entry => 5,
             ::server_pricing::rate_limit::PlanTier::Starter => 9,
-            ::server_pricing::rate_limit::PlanTier::Standard => 19,
-            ::server_pricing::rate_limit::PlanTier::Advanced => 24,
             ::server_pricing::rate_limit::PlanTier::Pro => 29,
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
@@ -1462,8 +1467,9 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
         
+        let prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
+        match client.reason(&prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -1509,7 +1515,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -2153,8 +2159,156 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
             "/api/dev/seed",
-            axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "ok": true }))
+            axum::routing::post({
+                let db = db.clone();
+                move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
+                    let scenario = payload.get("scenario").and_then(|v| v.as_str()).unwrap_or("");
+
+                    if scenario == "launch-readiness" {
+                        let tenant_id = "default";
+
+                        let result = db.execute_with_retry("seed_data", || async {
+                            match &db.store {
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO tenants (id, name, tier) VALUES (?, ?, ?)"
+                                    )
+                                    .bind(tenant_id)
+                                    .bind("My Local Business")
+                                    .bind("free")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("prod_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Artisan Sourdough Loaf")
+                                    .bind("Freshly baked daily.")
+                                    .bind(8.50)
+                                    .bind(850)
+                                    .bind("USD")
+                                    .bind(15)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("prod_demo2")
+                                    .bind(tenant_id)
+                                    .bind("Consultation Hour")
+                                    .bind("One hour of expert advice.")
+                                    .bind(150.00)
+                                    .bind(15000)
+                                    .bind("USD")
+                                    .bind(999)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)"
+                                    )
+                                    .bind("cust_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Alice Demo")
+                                    .bind("alice@example.com")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("ord_demo1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind(158.50)
+                                    .bind("completed")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query(
+                                        "INSERT INTO tenants (id, name, tier) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind(tenant_id)
+                                    .bind("My Local Business")
+                                    .bind("free")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("prod_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Artisan Sourdough Loaf")
+                                    .bind("Freshly baked daily.")
+                                    .bind(8.50)
+                                    .bind(850)
+                                    .bind("USD")
+                                    .bind(15)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("prod_demo2")
+                                    .bind(tenant_id)
+                                    .bind("Consultation Hour")
+                                    .bind("One hour of expert advice.")
+                                    .bind(150.00)
+                                    .bind(15000)
+                                    .bind("USD")
+                                    .bind(999)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("cust_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Alice Demo")
+                                    .bind("alice@example.com")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("ord_demo1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind(158.50)
+                                    .bind("completed")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                            }
+                            Ok::<(), String>(())
+                        }).await;
+
+                        if let Err(e) = result {
+                            tracing::error!("Failed to seed data: {}", e);
+                            return axum::Json(serde_json::json!({ "ok": false, "error": e }));
+                        }
+                    }
+
+                    axum::Json(serde_json::json!({ "ok": true }))
+                }
             }),
         )
         .route(
@@ -2558,6 +2712,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
+                        }
+                        .animated-dropdown {
+                            transition: max-height 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), margin-top 250ms cubic-bezier(0.4, 0, 0.2, 1), padding-top 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                            overflow: hidden;
+                            max-height: 0;
+                            opacity: 0;
+                            margin-top: 0;
+                            padding-top: 0;
+                            border-top-color: transparent;
+                        }
+                        .animated-dropdown.open {
+                            max-height: 500px;
+                            opacity: 1;
+                            margin-top: 15px;
+                            padding-top: 15px;
+                            border-top-color: var(--border);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2967,7 +3137,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             opacity: 1;
             transform: translateY(0);
             position: relative;
-            border-radius: 16px;
         }
 
         #setup-screen button, #setup-screen input {
@@ -3026,10 +3195,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
             .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
             .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-            .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
-            .video-info { padding: 12px; }
-            .video-info h4 { margin: 0 0 4px 0; }
-            .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+            .video-thumbnail { background: #000; aspect-ratio: 9/16; width: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; position: relative; }
+            .video-thumbnail::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8)); }
+            .video-info { padding: 12px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 2; pointer-events: none; }
+            .video-info h4 { margin: 0 0 4px 0; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+            .video-info p { margin: 0; color: rgba(255,255,255,0.8); font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
 
@@ -3085,16 +3255,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     el.addEventListener("mouseenter", () => showTooltip(el, text));
                                     el.addEventListener("mouseleave", hideTooltip);
 
-                                    // Mobile Long Press
+                                    // Mobile Long Press (Added by Scribe)
                                     el.addEventListener("touchstart", (e) => {
-                                        tooltipTimeout = setTimeout(() => {
-                                            showTooltip(el, text);
-                                        }, 500); // 500ms for long press
+                                        tooltipTimeout = setTimeout(() => { showTooltip(el, text); }, 500);
                                     }, {passive: true});
 
                                     el.addEventListener("touchend", () => {
                                         clearTimeout(tooltipTimeout);
-                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
+                                        setTimeout(hideTooltip, 2000);
                                     });
 
                                     el.addEventListener("touchmove", () => {
@@ -3194,14 +3362,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Ongoing Tasks</p>
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
+                            <button onclick="receive5StarReview()">Simulate 5-Star Review</button>
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
                                 <button onclick="dismissMilestone()">Dismiss</button>
+                                <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 8px; text-align: center;">Share to WhatsApp</a>
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
-                            <h3>Approval Inbox</h3>
+                            <h3>Pending Actions Hub</h3>
                         </div>
                         <div class="card glass" id="activity-feed"></div>
                         <div class="card glass">
@@ -3582,8 +3752,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
-                                <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                <div id="ambassador-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
                                     <h4 style="margin-top: 0;">Settings</h4>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
@@ -3595,8 +3766,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
-                                <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                <div id="manager-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
                                     <h4 style="margin-top: 0;">Settings</h4>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for order refunds
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('manager', this.checked)">
@@ -3619,7 +3791,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
-                                settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+                                settingsDiv.classList.toggle('open');
                             }
                         }
 
@@ -3680,19 +3852,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (!container) return;
 
                                     if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3>';
                                         data.pending_approvals.forEach(approval => {
+                                            const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
                                             container.innerHTML += `
-                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
-                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
+                                                    ${payloadStr}
+                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                                    </div>
                                                 </div>
                                             `;
                                         });
                                     } else {
-                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
                                     }
                                 }
                             } catch (e) {
@@ -3701,6 +3877,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function decideApproval(id, approved) {
+                            const card = document.getElementById('approval-card-' + id);
+                            if (card) {
+                                card.style.display = 'none';
+                            }
                             try {
                                 const res = await fetch('/api/agents/approvals/' + id, {
                                     method: 'POST',
@@ -3712,11 +3892,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (res.ok) {
                                     fetchApprovals();
-                                fetchActivityFeed();
+                                    fetchActivityFeed();
                                 } else {
+                                    if (card) card.style.display = 'block';
                                     alert('Failed to process approval.');
                                 }
                             } catch (e) {
+                                if (card) card.style.display = 'block';
                                 console.error('Error processing approval:', e);
                             }
                         }
@@ -3735,14 +3917,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -3755,14 +3937,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- MailerLite Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Customer Emails</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3775,14 +3957,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Shippo Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Shipping Labels</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3795,14 +3977,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Whereby Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4113,9 +4295,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; position: relative;">
-                        <div id="setup-error" class="error" style="display: none; margin: 16px; border-radius: 8px; padding: 12px; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); color: #FF3B30;"></div>
-                        <h1 style="margin-bottom: 24px; padding: 0 16px; margin-top: 16px;">OneHuman</h1>
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
@@ -4797,6 +4978,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 3000);
                         }
 
+                        function receive5StarReview() {
+                            showMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.');
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const shareUrl = encodeURIComponent(`Just got a 5-star review! 🌟 Launch your business on OHC today: ohc://join?ref=${tenant}`);
+                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
+                            whatsappBtn.href = `https://wa.me/?text=${shareUrl}`;
+                            whatsappBtn.style.display = 'inline-block';
+                        }
+
                         let orderReadyCount = 0;
                         function markOrderReady() {
                             orderReadyCount += 1;
@@ -4829,6 +5019,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function dismissMilestone() {
                             document.getElementById('milestone-card').style.display = 'none';
+                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
+                            if (whatsappBtn) {
+                                whatsappBtn.style.display = 'none';
+                            }
                         }
 
                         function shareMilestoneToX(milestoneId) {
@@ -5093,16 +5287,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
-                        let errorTimeout = null;
-                        function showError(message) {
-                            const errDiv = document.getElementById('setup-error');
-                            if (errDiv) {
-                                errDiv.innerText = message;
-                                errDiv.style.display = 'block';
-                                if (errorTimeout) clearTimeout(errorTimeout);
-                                errorTimeout = setTimeout(() => { errDiv.style.display = 'none'; }, 4000);
-                            }
-                        }
 
                         function validateInputs(stepId) {
                             if (stepId === 3 && currentStep === 2) {
@@ -5111,7 +5295,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
                                 if (!valid) {
-                                    showError('Please select a business type');
+                                    alert('Please select a business type');
                                     return false;
                                 }
                             }
@@ -5120,7 +5304,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let valid = false;
                                 inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    showError('Please enter a business name (at least 3 characters)');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -5128,11 +5312,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
                                 const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    showError('Please enter a product or service name');
+                                    alert('Please enter a product or service name');
                                     return false;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    showError('Please enter a valid price (e.g., 10.00)');
+                                    alert('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
@@ -5140,7 +5324,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    showError('Please enter a valid email address');
+                                    alert('Please enter a valid email address');
                                     return false;
                                 }
                             }
@@ -5765,7 +5949,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
+                                if(data.link && data.link.title && data.link.url) {
+                                    if(data.link.url === '/api-docs') {
+                                        aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
+                                    } else {
+                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
+                                    }
+                                }
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }

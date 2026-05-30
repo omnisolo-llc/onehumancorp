@@ -462,11 +462,12 @@ pub struct DiscountShareResponse {
 
 async fn handle_generate_discount_share(
     Extension(_state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
-    // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
+    // Derive from authenticated claims
+    let tenant_id = auth_info.tenant_id;
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, &tenant_id);
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,

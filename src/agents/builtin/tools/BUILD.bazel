@@ -23,7 +23,7 @@ rust_library(
         "marketplace.rs",
         "marketplace_tool.rs",
         "pydantic.rs",
-        "goose_wrapper.rs",
+        "claude_plugins.rs",
         "repo_map.rs",
         "ollama.rs",
         "read.rs",
@@ -37,7 +37,6 @@ rust_library(
         "subagent.rs",
         "tail.rs",
         "task.rs",
-        "todowrite.rs",
         "toolsearch.rs",
         "webfetch.rs",
         "websearch.rs",
@@ -95,17 +94,3 @@ rust_test(
     ],
 )
 
-rust_test(
-    name = "todowrite_test",
-    srcs = ["todowrite_test.rs"],
-    edition = "2024",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":tools",
-        "@crates//:tokio",
-        "@crates//:serde_json",
-    ],
-)

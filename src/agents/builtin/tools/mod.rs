@@ -13,7 +13,6 @@ pub mod grep;
 pub mod webfetch;
 pub mod websearch;
 pub mod sendmessage;
-pub mod todowrite;
 pub mod toolsearch;
 pub mod task;
 pub mod booking;
@@ -38,6 +37,7 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
+pub mod claude_plugins;
 pub mod marketplace;
 pub mod marketplace_tool;
 
@@ -83,9 +83,6 @@ pub trait ToolExecutor: Send + Sync {
     ) -> Result<String, ToolError>;
 }
 
-/// Shared todo list state.
-pub type SharedTodos = Arc<RwLock<Vec<todowrite::TodoItem>>>;
-
 /// Shared task store state.
 pub type SharedTaskStore = Arc<RwLock<task::TaskStore>>;
 
@@ -94,7 +91,6 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
-    todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
     working_dir: Option<std::path::PathBuf>,
@@ -120,8 +116,6 @@ pub fn all_tools(
         booking::booking_list_appointments_tool(booking_store.clone()),
         booking::booking_create_appointment_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
-        todowrite::todowrite_tool(todos.clone()),
-        todowrite::todoread_tool(todos.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
         task::task_get_tool(task_store.clone()),
@@ -142,11 +136,7 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        ];
-    // Inject goose (Agentic AI) MCP extensions dynamically
-    let mut goose_tools = goose_wrapper::load_goose_tools(Arc::new(ohc_builtin_agent_core::goose::GooseMcpLoader::new()));
-    tools.append(&mut goose_tools);
-
+    ];
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
@@ -155,4 +145,3 @@ pub fn all_tools(
 
     tools
 }
-pub mod goose_wrapper;

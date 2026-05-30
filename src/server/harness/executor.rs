@@ -1,13 +1,17 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
+
+
+use super::network_proxy::NetworkProxy;
 
 pub struct LocalShellTask {
     manager: SandboxManager,
 }
 
 impl LocalShellTask {
+
     pub fn new(pool: Option<PgPool>) -> Self {
         LocalShellTask {
             manager: SandboxManager::new(pool),
@@ -18,30 +22,43 @@ impl LocalShellTask {
         self.manager.update_config(policy_json).await
     }
 
+
+
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
 
+
         // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
         let task_id = "unknown_task";
         let agent_id = "unknown_agent";
 
+        let policy = self.manager.get_policy();
+        let proxy = NetworkProxy::new(policy.allowed_domains.clone(), agent_id.to_string(), task_id.to_string());
+        let (proxy_port, _shutdown_tx) = proxy.start(0).await.map_err(|e| format!("Failed to start proxy: {}", e))?;
+
         record_bubblewrap_spawn(agent_id, task_id);
+
         let start = Instant::now();
 
         let output = tokio::process::Command::new("bash")
             .arg("-c")
             .arg(&wrapped_cmd)
+            .env("HTTP_PROXY", format!("http://127.0.0.1:{}", proxy_port))
+            .env("HTTPS_PROXY", format!("http://127.0.0.1:{}", proxy_port))
             .output()
             .await
             .map_err(|e| format!("Failed to spawn process: {}", e))?;
 
         let exit_code = output.status.code().unwrap_or(-1);
 
-        let latency = start.elapsed().as_secs_f64() * 1000.0;
-        record_bubblewrap_execution_latency(agent_id, task_id, latency);
+        let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
+        record_bubblewrap_execution_latency(agent_id, task_id, latency_ms);
+
+        let latency_seconds = start.elapsed().as_secs_f64();
+        record_harness_execution_latency(latency_seconds);
 
         if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");
@@ -114,5 +131,20 @@ mod tests {
         let msg = result.unwrap();
         assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
         assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+    }
+
+    #[tokio::test]
+    async fn test_proxy_injection() {
+        let mut task = LocalShellTask::new(None);
+        let policy_json = r#"{
+            "allowed_domains": ["example.com"]
+        }"#;
+
+        task.update_config(policy_json).await.unwrap();
+
+        let result = task.execute("echo $HTTP_PROXY").await;
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(output.contains("http://127.0.0.1:"));
     }
 }

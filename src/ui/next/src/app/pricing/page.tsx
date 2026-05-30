@@ -22,7 +22,7 @@ export default function PricingPage() {
         </button>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
+      <main id="pricing-screen" className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
         <div className="text-center mb-8">
           <p className="text-lg" style={{ color: '#86868B' }}>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>

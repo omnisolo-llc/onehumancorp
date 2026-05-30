@@ -18,6 +18,7 @@ export default function Dashboard() {
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
@@ -37,6 +38,12 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+
+  // Growth Loop: Post-Purchase Social Share State
+  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
+  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
+  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
@@ -53,6 +60,11 @@ export default function Dashboard() {
   const [isGeneratingReview, setIsGeneratingReview] = useState<boolean>(false);
   const [reviewMessage, setReviewMessage] = useState<string>("");
   const [reviewSent, setReviewSent] = useState<boolean>(false);
+
+  // Growth Loop: Viral Waitlist State
+  const [showWaitlistModal, setShowWaitlistModal] = useState<boolean>(false);
+  const [isGeneratingWaitlist, setIsGeneratingWaitlist] = useState<boolean>(false);
+  const [waitlistMessage, setWaitlistMessage] = useState<string>("");
 
   // Growth Loop: Abandoned Cart Recovery State
   const [showCartModal, setShowCartModal] = useState<boolean>(false);
@@ -339,7 +351,17 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-center w-full">
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -360,9 +382,11 @@ export default function Dashboard() {
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
-             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
-               <span>⚡️</span> KAIROS
-             </Link>
+             <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
+               <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+                 <span>⚡️</span> KAIROS
+               </Link>
+             </WithTooltip>
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
@@ -372,7 +396,53 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Business Analytics Widget */}
+         <section className="mb-6 animate-fade-in">
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+               <div className="flex items-center gap-4">
+                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
+               </div>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+               </div>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
+               </div>
+           </div>
+
+           {/* Advanced AI Insights Soft Paywall */}
+           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
+               <div className="filter blur-sm select-none opacity-50">
+                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
+                   <div className="flex gap-4">
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                   </div>
+               </div>
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
+                       Unlock predictive analytics to foresee trends and boost your revenue.
+                   </p>
+                   <button
+                       onClick={() => {
+                           if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+                               window.location.href = '/pricing';
+                           }
+                       }}
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                       Upgrade to Pro
+                   </button>
+               </div>
+           </div>
+         </section>
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
@@ -942,6 +1012,119 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Post-Purchase Social Share */}
+         {showSaleCelebration && (
+         <section className="mb-8 mt-8">
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
+                        🎉
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">New Order Received!</h3>
+                        <p className="text-sm text-gray-800 font-medium">Alex just bought "Premium Coffee Beans" for $24.99</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => {
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            navigator.clipboard.writeText(message);
+                            setSaleShareCopied(true);
+                            setTimeout(() => setSaleShareCopied(false), 2000);
+                        }}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                    >
+                        {saleShareCopied ? (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                Copy Share Message
+                            </>
+                        )}
+                    </button>
+                    <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        onClick={() => setShowSaleCelebration(false)}
+                    >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                        Share on X
+                    </a>
+                </div>
+            </div>
+         </section>
+         )}
+
+         {/* Growth Loop: Milestone Celebration */}
+         {showMilestoneBanner && (
+           <section className="mb-8 animate-fade-in">
+              <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                  <div className="flex-1 text-white">
+                      <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl">🎉</span>
+                          <h3 className="text-xl font-bold font-outfit text-white">Milestone Unlocked: Your First Customers!</h3>
+                      </div>
+                      <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
+                      <button
+                          onClick={() => {
+                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const url = `ohc://join?ref=${tenant}`;
+                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              setShowMilestoneBanner(false);
+                          }}
+                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
+                      >
+                          Share & Claim Reward
+                      </button>
+                  </div>
+                  <div className="hidden md:flex flex-col items-center justify-center p-4">
+                      <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                          <span className="text-4xl font-bold text-white">100</span>
+                      </div>
+                  </div>
+              </div>
+           </section>
+         )}
+
+         {/* Growth Loop: Viral Waitlist Campaign */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Viral Waitlist & Restock</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Pre-Launch Demand</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: '#ffffff', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex-1 flex flex-col gap-3">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900">Build Hype for Out-of-Stock Items</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed max-w-xl">
+                        Let customers join a waitlist for sold-out products. They can move up the queue and get priority access by sharing their unique referral link with friends.
+                    </p>
+                    <button
+                        onClick={() => setShowWaitlistModal(true)}
+                        className="mt-2 w-fit px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all flex items-center justify-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Create Waitlist Campaign
+                    </button>
+                </div>
+                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
+                   <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full opacity-50"></div>
+                   <div className="relative text-5xl">⏳</div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -982,26 +1165,16 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Items</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        if (productCount >= 10) {
-                            setShowPaywallModal(true);
-                        } else {
-                            setProductCount(prev => prev + 1);
-                            if (!productAdded) {
-                                setProductAdded(true);
-                                setTrialDaysLeft(prev => prev + 7);
-                            }
-                        }
-                    }}
+                    onClick={() => setShowAddItemModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
                 >
-                    <span>+ Add Product</span>
+                    <span>+ Add Item</span>
                 </button>
             </div>
          </section>
@@ -1248,6 +1421,80 @@ export default function Dashboard() {
         </div>
       )}
 
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+                <button onClick={() => setNewItemType('product')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'product' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Physical Product</button>
+                <button onClick={() => setNewItemType('service')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'service' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Service</button>
+                <button onClick={() => setNewItemType('digital')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'digital' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Digital Good</button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                </div>
+
+                {newItemType === 'product' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="10" />
+                    </div>
+                )}
+
+                {newItemType === 'service' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="60" />
+                    </div>
+                )}
+
+                {newItemType === 'digital' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
+                        <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                    </div>
+                )}
+            </div>
+
+            <button
+                onClick={() => {
+                    setShowAddItemModal(false);
+                    if (productCount >= 10) {
+                        setShowPaywallModal(true);
+                    } else {
+                        setProductCount(prev => prev + 1);
+                        if (!productAdded) {
+                            setProductAdded(true);
+                            setTrialDaysLeft(prev => prev + 7);
+                        }
+                    }
+                }}
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
+            >
+                Save {newItemType === 'product' ? 'Product' : newItemType === 'service' ? 'Service' : 'Digital Good'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Paywall Modal */}
       {showPaywallModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -1436,6 +1683,67 @@ export default function Dashboard() {
                         </button>
                     )}
                 </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Viral Waitlist Modal */}
+      {showWaitlistModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+            <button onClick={() => setShowWaitlistModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner">
+                    ⏳
+                </div>
+                <h2 className="text-xl font-bold font-outfit text-gray-900">Waitlist Campaign</h2>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Generate a viral waitlist for your out-of-stock products. Customers can share their link to move up the queue.</p>
+
+              <button
+                  onClick={async () => {
+                      setIsGeneratingWaitlist(true);
+                      // Simulate API call for generating the waitlist content
+                      setTimeout(() => {
+                          setWaitlistMessage("Sign up for the waitlist to get early access when we restock! Want to skip the line? Share this link with 3 friends, and when they sign up, you'll be bumped to the top of the queue. \n\nJoin here: https://ohc.store/waitlist/premium-coffee\n\n⚡ Powered by OHC");
+                          setIsGeneratingWaitlist(false);
+                      }, 1200);
+                  }}
+                  disabled={isGeneratingWaitlist}
+                  className={`w-full py-3 text-white rounded-xl text-sm font-semibold shadow-md transition-all flex items-center justify-center gap-2 ${isGeneratingWaitlist ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
+              >
+                  {isGeneratingWaitlist ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Generating...
+                      </>
+                  ) : "Generate Waitlist Copy"}
+              </button>
+
+              {waitlistMessage && (
+                  <div className="mt-4 animate-fade-in space-y-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap font-medium">{waitlistMessage}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(waitlistMessage);
+                                alert("Waitlist copy copied to clipboard!");
+                                setShowWaitlistModal(false);
+                            }}
+                            className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-colors"
+                        >
+                            Copy to Clipboard
+                        </button>
+                      </div>
+                  </div>
               )}
             </div>
           </div>
