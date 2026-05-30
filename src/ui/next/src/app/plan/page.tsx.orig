@@ -150,7 +150,7 @@ export default function MyPlanPage() {
                             style={{
                                 width: planData?.storage_limit_bytes ?
                                     `${Math.min(((planData.storage_used_bytes || 0) / planData.storage_limit_bytes) * 100, 100)}%`
-                                    : '100%'
+                                    : '5%'
                             }}
                         ></div>
                     </div>
