@@ -14,7 +14,7 @@ describe('HelpChat Component', () => {
 
   it('renders the floating button initially', () => {
     render(<HelpChat />);
-    expect(screen.getByText('Ask anything')).toBeInTheDocument();
+    expect(screen.getByText('Ask anything')).toBeTruthy();
   });
 
   it('opens the chat interface when floating button is clicked', () => {
@@ -22,9 +22,9 @@ describe('HelpChat Component', () => {
     const button = screen.getByText('Ask anything').closest('button');
     fireEvent.click(button!);
 
-    expect(screen.getByText('Help Agent')).toBeInTheDocument();
-    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Ask me anything...')).toBeInTheDocument();
+    expect(screen.getByText('Help Agent')).toBeTruthy();
+    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeTruthy();
+    expect(screen.getByPlaceholderText('Ask me anything...')).toBeTruthy();
   });
 
   it('sends a message and displays user and agent reply', async () => {
@@ -51,14 +51,14 @@ describe('HelpChat Component', () => {
     fireEvent.click(submitBtn!);
 
     // Check user message is displayed immediately
-    expect(screen.getByText('How do I add a product?')).toBeInTheDocument();
+    expect(screen.getByText('How do I add a product?')).toBeTruthy();
 
     // Check input is cleared
     expect(input).toHaveValue('');
 
     // Wait for agent reply
     await waitFor(() => {
-      expect(screen.getByText('Here is your mocked response')).toBeInTheDocument();
+      expect(screen.getByText('Here is your mocked response')).toBeTruthy();
     });
   });
 
@@ -77,7 +77,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(submitBtn!);
 
     await waitFor(() => {
-      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeTruthy();
     });
   });
 });

@@ -36,13 +36,13 @@ describe('TooltipRegistry', () => {
     fireEvent.mouseEnter(button.parentElement!);
 
     await waitFor(() => {
-      expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+      expect(screen.getByText('Fetched tooltip text')).toBeTruthy();
     });
 
     fireEvent.mouseLeave(button.parentElement!);
 
     await waitFor(() => {
-      expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+      expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
     });
   });
 });
