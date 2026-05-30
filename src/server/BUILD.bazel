@@ -45,6 +45,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mod.rs",
     "//src/server/api:supply.rs",
     "//src/server/api:telemetry.rs",
+    "//src/server/api:auth/mod.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",

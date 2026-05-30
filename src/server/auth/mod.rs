@@ -307,11 +307,11 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+    pub fn authenticate(&self, username: &str, password: &str, org_id: String) -> Result<User, String> {
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+        let name_key = TenantKey { org_id: org_id.clone(), key: username.to_string() };
         let mut user_id_opt = by_name.get(&name_key).cloned();
 
         if user_id_opt.is_none() && org_id.is_empty() {
@@ -326,7 +326,7 @@ impl Store {
         }
 
         if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
+            if !org_id.is_empty() && user_org != &org_id {
                 return Err("invalid credentials".to_string());
             }
         }
@@ -599,7 +599,7 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.store.authenticate(&req.username, &req.password, req.organization_id.clone()) {
             Ok(user) => {
                 match self.store.issue_token(&user) {
                     Ok(token) => {

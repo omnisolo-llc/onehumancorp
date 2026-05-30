@@ -15,6 +15,7 @@ exports_files(
         "mod.rs",
         "supply.rs",
         "telemetry.rs",
+    "auth/mod.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -36,6 +37,7 @@ rust_library(
         "mod.rs",
         "supply.rs",
         "telemetry.rs",
+    "auth/mod.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
