@@ -238,6 +238,7 @@ jobs:
   bazel-test:
     name: Bazel test
     needs:
+      - bazel-build
       - check-changes
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
@@ -299,12 +300,25 @@ jobs:
             //...
 
   bazel-test-e2e:
-    name: Bazel Playwright E2E
+    name: Bazel Playwright E2E (${{ matrix.shard }})
     needs:
+      - bazel-build
       - check-changes
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - playwright_shard_1_of_8
+          - playwright_shard_2_of_8
+          - playwright_shard_3_of_8
+          - playwright_shard_4_of_8
+          - playwright_shard_5_of_8
+          - playwright_shard_6_of_8
+          - playwright_shard_7_of_8
+          - playwright_shard_8_of_8
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -359,8 +373,8 @@ jobs:
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test Playwright E2E target
-        run: bazelisk test //src/e2e:playwright
+      - name: Test Playwright E2E shard
+        run: bazelisk test //src/e2e:playwright_spec_coverage //src/e2e:${{ matrix.shard }}
 
   kind-e2e:
     name: Kind E2E
