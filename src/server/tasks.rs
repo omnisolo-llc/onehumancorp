@@ -217,14 +217,36 @@ impl TaskManager {
 
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
+
+        let deps_to_check: Option<Vec<String>> = tasks.get(task_id).map(|t| t.dependencies.clone());
+
+        if let Some(deps) = deps_to_check {
+            let mut all_deps_completed = true;
+            for dep_id in &deps {
+                if let Some(dep_task) = tasks.get(dep_id) {
+                    if dep_task.status != "COMPLETED" {
+                        all_deps_completed = false;
+                        break;
+                    }
+                } else {
+                    all_deps_completed = false;
+                    break;
+                }
+            }
+            if !all_deps_completed {
+                return Ok(None);
+            }
+        }
+
         if let Some(task) = tasks.get_mut(task_id) {
             let is_valid_state = task.status == "PENDING" || task.ultraplan_phase.as_deref() == Some("APPROVED");
             if is_valid_state && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
-                self.broadcast(&task, "task_claimed");
-                return Ok(Some(task.clone()));
+                let task_clone = task.clone();
+                self.broadcast(&task_clone, "task_claimed");
+                return Ok(Some(task_clone));
             }
         }
         Ok(None)

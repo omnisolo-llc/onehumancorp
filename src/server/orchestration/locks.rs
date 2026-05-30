@@ -56,40 +56,62 @@ impl DistributedLock for StandaloneLock {
 pub struct RedisLock {
     client: redis::Client,
     multiplexed_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    fallback_lock: StandaloneLock,
 }
 
 impl RedisLock {
     pub fn new(client: redis::Client) -> Self {
-        Self { client, multiplexed_conn: tokio::sync::OnceCell::new() }
+        Self {
+            client,
+            multiplexed_conn: tokio::sync::OnceCell::new(),
+            fallback_lock: StandaloneLock::new(),
+        }
     }
 }
 
 #[async_trait::async_trait]
 impl DistributedLock for RedisLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        let mut conn = self.multiplexed_conn.get_or_try_init(|| async {
+        let conn_res = self.multiplexed_conn.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?.clone();
-        let key = format!("ohc:lock:task:{}", task_id);
+        }).await;
 
-        let acquired: bool = redis::cmd("SET")
-            .arg(&key)
-            .arg("1")
-            .arg("NX")
-            .arg("EX")
-            .arg(5)
-            .query_async(&mut conn)
-            .await
-            .unwrap_or(false);
+        match conn_res {
+            Ok(conn) => {
+                let mut conn_clone = conn.clone();
+                let key = format!("ohc:lock:task:{}", task_id);
 
-        if !acquired {
-            return Err("failed to acquire redis lock".to_string());
+                let cmd_res: redis::RedisResult<bool> = redis::cmd("SET")
+                    .arg(&key)
+                    .arg("1")
+                    .arg("NX")
+                    .arg("EX")
+                    .arg(5)
+                    .query_async(&mut conn_clone)
+                    .await;
+
+                match cmd_res {
+                    Ok(acquired) => {
+                        if !acquired {
+                            return Err("failed to acquire redis lock".to_string());
+                        }
+
+                        Ok(LockGuard {
+                            _local_guard: None,
+                            redis_client: Some(self.client.clone()),
+                            redis_key: Some(key),
+                        })
+                    }
+                    Err(_) => {
+                        // Fallback on redis command error
+                        self.fallback_lock.acquire(task_id).await
+                    }
+                }
+            }
+            Err(_) => {
+                // Fallback on connection error
+                self.fallback_lock.acquire(task_id).await
+            }
         }
-
-        Ok(LockGuard {
-            _local_guard: None,
-            redis_client: Some(self.client.clone()),
-            redis_key: Some(key),
-        })
     }
 }

@@ -27,19 +27,31 @@ pub async fn mesh_ws_handler(
 #[derive(serde::Deserialize)]
 pub struct BroadcastRequest {
     pub topic: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
+    pub msg_id: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct DirectRequest {
     pub target_agent_id: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
+    pub msg_id: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MailboxRequest {
     pub mailbox_id: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
+    pub msg_id: String,
 }
 
 fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
@@ -69,7 +81,15 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let message = MeshMessage {
+        agent_id: payload.agent_id.clone(),
+        action: payload.action.clone(),
+        status: payload.status.clone(),
+        payload: payload.payload.clone(),
+        msg_id: payload.msg_id.clone(),
+    };
+
+    match transport.publish(&payload.topic, message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -95,7 +115,15 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let message = MeshMessage {
+        agent_id: payload.agent_id.clone(),
+        action: payload.action.clone(),
+        status: payload.status.clone(),
+        payload: payload.payload.clone(),
+        msg_id: payload.msg_id.clone(),
+    };
+
+    match transport.publish(&payload.topic, message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -113,8 +141,16 @@ pub async fn direct_handler(
         return err_response;
     }
 
+    let message = MeshMessage {
+        agent_id: payload.agent_id.clone(),
+        action: payload.action.clone(),
+        status: payload.status.clone(),
+        payload: payload.payload.clone(),
+        msg_id: payload.msg_id.clone(),
+    };
+
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
-    match transport.publish(&topic, payload.message.into()).await {
+    match transport.publish(&topic, message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -132,8 +168,16 @@ pub async fn mailbox_handler(
         return err_response;
     }
 
+    let message = MeshMessage {
+        agent_id: payload.agent_id.clone(),
+        action: payload.action.clone(),
+        status: payload.status.clone(),
+        payload: payload.payload.clone(),
+        msg_id: payload.msg_id.clone(),
+    };
+
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
-    match transport.publish(&topic, payload.message.into()).await {
+    match transport.publish(&topic, message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -299,13 +343,11 @@ mod tests {
 
         let req_body = DirectRequest {
             target_agent_id: "agent-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            }
+            agent_id: "test".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"ws_test".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         // Missing x-spiffe-id header
@@ -342,13 +384,11 @@ mod tests {
 
         let req_body = MailboxRequest {
             mailbox_id: "mailbox-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            }
+            agent_id: "test".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"ws_test".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
         // Missing x-spiffe-id header
