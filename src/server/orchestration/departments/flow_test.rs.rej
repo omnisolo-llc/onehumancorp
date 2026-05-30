@@ -1,0 +1,11 @@
+--- flow_test.rs
++++ flow_test.rs
+@@ -48,7 +48,7 @@
+         }
+
+         // Simulate new order event routing to Operations
+         let event = DepartmentEvent {
+             id: Uuid::new_v4().to_string(),
+             tenant_id: tenant_id.clone(),
+-            event_type: "tenant.order.created".to_string(), // Operations agent subscribes to this
++            event_type: "tenant.order.created".to_string(),

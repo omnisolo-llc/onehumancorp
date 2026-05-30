@@ -246,6 +246,37 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
+    pub async fn get_ai_budget(&self, tenant_id: &str) -> Option<i32> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query("SELECT ai_budget FROM tenants WHERE tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_optional(&self.db.pool)
+                    .await;
+                match row {
+                    Ok(Some(r)) => {
+                        use sqlx::Row;
+                        r.try_get("ai_budget").ok()
+                    }
+                    _ => None,
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT ai_budget FROM tenants WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await;
+                match row {
+                    Ok(Some(r)) => {
+                        use sqlx::Row;
+                        r.try_get("ai_budget").ok()
+                    }
+                    _ => None,
+                }
+            }
+        }
+    }
+
     pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
 
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());

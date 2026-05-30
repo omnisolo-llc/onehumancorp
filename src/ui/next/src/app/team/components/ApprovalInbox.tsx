@@ -148,6 +148,10 @@ export default function ApprovalInbox({
                   </span>
                 </div>
 
+                <h3 className="font-outfit font-semibold text-gray-900 text-lg leading-tight mb-2">
+                  {req.payload?.feature_type === "ambassador_reply" || desc === "Draft email for review" ? "The Ambassador drafted an email." : "Draft for Review"}
+                </h3>
+
                 <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
                   {desc}
                 </p>
@@ -410,7 +414,7 @@ export default function ApprovalInbox({
                     }}
                     className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    {payload && payload.original_message ? 'Review' : 'Reject / Edit'}
+                    Edit
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}

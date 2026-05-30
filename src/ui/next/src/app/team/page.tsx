@@ -27,6 +27,7 @@ const DEPARTMENTS = [
 
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [aiBudget, setAiBudget] = useState<number | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,6 +37,9 @@ export default function TeamPage() {
       if (response.ok) {
         const data = await response.json();
         setApprovals(data.pending_approvals || []);
+        if (data.ai_budget !== undefined && data.ai_budget !== null) {
+          setAiBudget(data.ai_budget);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch approvals", error);
@@ -97,6 +101,28 @@ export default function TeamPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
       <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+
+        {/* Budget Alert Toast */}
+        {aiBudget !== null && aiBudget < 10 && (
+          <div className="absolute top-4 left-4 right-4 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+            <div className="bg-white/80 backdrop-blur-[20px] saturate-200 border border-orange-200 shadow-lg rounded-2xl p-4 flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 text-orange-600">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-outfit font-semibold text-gray-900 text-sm">Your agents have been busy!</h3>
+                  <p className="text-xs text-gray-600 mt-0.5">You are at 90% of your AI budget.</p>
+                </div>
+              </div>
+              <button className="w-full bg-orange-50 text-orange-700 hover:bg-orange-100 font-medium text-xs py-2 rounded-xl transition-colors mt-1">
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
