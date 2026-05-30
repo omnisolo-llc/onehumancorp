@@ -245,7 +245,6 @@ impl BookingService {
         .await;
 
         tx.commit().await.map_err(|e| e.to_string())?;
-
         Ok(())
     }
 }
