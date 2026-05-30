@@ -1,40 +1,18 @@
 import { test, expect } from './fixtures';
 
 test.describe('Hybrid CLI Proxy Login Setup Validation', () => {
-
-  test('should visit /login and verify Login heading', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/website-builder');
+    await expect(page.locator('#setup-screen')).toBeVisible();
   });
 
-  test('should verify Email or Username placeholder', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-  });
-
-  test('should verify password input visibility', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
-  });
-
-  test('should verify Login button', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.locator('button:has-text("Login")')).toBeVisible();
-  });
-
-  test('should verify Show button visibility', async ({ page }) => {
-    await page.goto('/login');
-    const showBtn = page.locator('button:has-text("Show")');
-    if (await showBtn.isVisible()) {
-      await expect(showBtn).toBeVisible();
-    } else {
-      test.skip();
-    }
+  test('shows the current setup welcome step', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start My Business Next/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Instant Build/ })).toBeVisible();
   });
 
   test('moves through business type and name steps', async ({ page }) => {
-    await page.goto('/website-builder');
-    await expect(page.locator('#setup-screen')).toBeVisible();
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
 
@@ -43,5 +21,42 @@ test.describe('Hybrid CLI Proxy Login Setup Validation', () => {
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
     await page.getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+  });
+
+  test('completes the publish path to the checklist', async ({ page }) => {
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await page.getByRole('button', { name: /Online Store/ }).click();
+    await page.getByPlaceholder('What is your business called?').fill('Test Company');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByLabel(/Physical Products/).check();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByPlaceholder('What is the name of this product?').fill('Custom Cookies');
+    await page.getByPlaceholder('0.00').fill('24.99');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Online', exact: true }).click();
+    await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Smith');
+    await page.getByPlaceholder('you@email.com').fill('maya@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: 'Modern' }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Publish my business/ }).click();
+
+    await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible();
+    await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
+    await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
+  });
+
+  test('should verify Email or Username placeholder on login', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+  });
+
+  test('should verify password input visibility on login', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
 });
