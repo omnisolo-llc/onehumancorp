@@ -5082,8 +5082,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             let html = '';
                             for (const key in block.content) {
-                                html += `<label style="display:block; margin-top:8px;">${key}</label>`;
-                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                                let label = key;
+                                let idKey = key;
+                                if (block.type === 'HeroBlock' && key === 'headline') {
+                                    label = 'title';
+                                    idKey = 'title';
+                                }
+                                html += `<label style="display:block; margin-top:8px;">${label}</label>`;
+                                html += `<input type="text" id="edit-${idKey}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
                             }
                             document.getElementById('sheet-content').innerHTML = html;
                             document.getElementById('block-editor-sheet').classList.add('open');
@@ -5099,7 +5105,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const block = storefrontDraftState.find(b => b.id === activeBlockId);
                             for (const key in block.content) {
                                 const input = document.getElementById(`edit-${key}`);
-                                if (input) block.content[key] = input.value;
+                                if (input) {
+                                    block.content[key] = input.value;
+                                } else if (key === 'headline') {
+                                    // Map edit-title to headline for HeroBlock
+                                    const titleInput = document.getElementById('edit-title');
+                                    if (titleInput) {
+                                        block.content[key] = titleInput.value;
+                                    }
+                                }
                             }
                             closeBottomSheet();
                             renderStorefrontPreview();
