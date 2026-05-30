@@ -151,8 +151,8 @@ impl IntegrationService for MyIntegrationService {
         request: Request<CreateEventRequest>,
     ) -> Result<Response<CreateEventResponse>, Status> {
         let req = request.into_inner();
-        match self.registry.create_event(&req.integration_id, &req.summary, &req.start_time, &req.end_time).await {
-            Ok(event_id) => Ok(Response::new(CreateEventResponse { event_id })),
+        match self.registry.create_event(&req.integration_id, &req.summary, &req.start_time, &req.end_time, req.generate_meet_link).await {
+            Ok((event_id, meet_link)) => Ok(Response::new(CreateEventResponse { event_id, meet_link: meet_link.unwrap_or_default() })),
             Err(e) => Err(Status::internal(e)),
         }
     }

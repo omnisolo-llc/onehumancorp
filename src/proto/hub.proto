@@ -1690,10 +1690,12 @@ message CreateEventRequest {
   string summary = 2;
   string start_time = 3;
   string end_time = 4;
+  bool generate_meet_link = 5;
 }
 
 message CreateEventResponse {
   string event_id = 1;
+  string meet_link = 2;
 }
 
 message GetBookingLinkRequest {

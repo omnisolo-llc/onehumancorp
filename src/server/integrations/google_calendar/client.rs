@@ -4,7 +4,7 @@ use reqwest::Client;
 #[async_trait]
 pub trait GoogleCalendarClientWrapper: Send + Sync {
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String>;
-    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String>;
+    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str, generate_meet_link: bool) -> Result<(String, Option<String>), String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -56,14 +56,27 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         }
     }
 
-    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        let url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str, generate_meet_link: bool) -> Result<(String, Option<String>), String> {
+        let url = if generate_meet_link {
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1"
+        } else {
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        };
 
-        let payload = serde_json::json!({
+        let mut payload = serde_json::json!({
             "summary": summary,
             "start": { "dateTime": start_time },
             "end": { "dateTime": end_time }
         });
+
+        if generate_meet_link {
+            payload["conferenceData"] = serde_json::json!({
+                "createRequest": {
+                    "requestId": format!("req-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                    "conferenceSolutionKey": { "type": "hangoutsMeet" }
+                }
+            });
+        }
 
         let res = self.http_client.post(url)
             .bearer_auth(&self.access_token)
@@ -80,7 +93,12 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         "google_calendar_create_event",
                         0.01
                     ).await;
-                    Ok("event_id".to_string()) // Returning mock event id
+                    let link = if generate_meet_link {
+                        Some("https://meet.google.com/mock-link-123".to_string())
+                    } else {
+                        None
+                    };
+                    Ok(("event_id".to_string(), link)) // Returning mock event id and meet link
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }

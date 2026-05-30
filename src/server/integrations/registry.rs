@@ -679,7 +679,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
+    pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str, generate_meet_link: bool) -> Result<(String, Option<String>), String> {
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
@@ -689,7 +689,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.create_event(summary, start_time, end_time).await;
+            return c.create_event(summary, start_time, end_time, generate_meet_link).await;
         }
         Err("integration not found or not supported".to_string())
     }
