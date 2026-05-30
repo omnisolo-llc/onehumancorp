@@ -4825,7 +4825,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[tokio::test]
     async fn test_verification_loops_llm_judge_sensor_rejection_recovery() {
         struct MockLlmClientJudge {
             call_count: tokio::sync::Mutex<usize>,

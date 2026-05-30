@@ -1,0 +1,135 @@
+name: Bazel Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bazel-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
+
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
+          # Fork PRs can still restore from the shared cache but do not save remote cache.
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
+            build --build_metadata=ROLE=CI
+            build --show_timestamps
+
+      - name: Test fast targets
+        run: |
+          bazelisk test \
+            --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
+            --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
+            //...
+
+  bazel-test-e2e:
+    name: Bazel Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
+
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
+          # Fork PRs can still restore from the shared cache but do not save remote cache.
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
+            build --build_metadata=ROLE=CI
+            build --show_timestamps
+
+      - name: Pull E2E Docker images
+        run: |
+          docker pull pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine
+
+      - name: Test Playwright E2E target
+        run: bazelisk test //src/e2e:playwright
