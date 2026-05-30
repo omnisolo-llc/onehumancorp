@@ -436,21 +436,7 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
-                    CREATE TABLE IF NOT EXISTS customer_timeline (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        customer_id TEXT NOT NULL,
-                        event_type TEXT NOT NULL,
-                        source TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        metadata TEXT DEFAULT '{}',
-                        embedding BLOB,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
+
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
