@@ -172,14 +172,14 @@ mod tests {
         let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost_cents' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         use sqlx::Row;
         let value: f32 = row.get("value");
-        assert_eq!(value, 1.5);
+        assert_eq!(value, 150.0);
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
@@ -199,14 +199,14 @@ mod tests {
         let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost_cents' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         use sqlx::Row;
         let value: f32 = row.get("value");
-        assert_eq!(value, 0.5);
+        assert_eq!(value, 50.0);
 
         let labels_json: String = row.get("labels_json");
         let parsed: Value = serde_json::from_str(&labels_json).unwrap();
