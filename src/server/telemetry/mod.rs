@@ -26,6 +26,8 @@ static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static TOOL_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static TOOL_EXECUTION_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -346,6 +348,39 @@ pub fn record_llm_network_latency(model: &str, latency: f64) {
             opentelemetry::KeyValue::new("model", model.to_string()),
         ]
     );
+}
+
+pub fn get_tool_execution_latency_histogram() -> &'static Histogram<f64> {
+    TOOL_EXECUTION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter
+            .f64_histogram("ohc_tool_execution_latency_seconds")
+            .with_description("Tool execution latency")
+            .build()
+    })
+}
+
+pub fn get_tool_execution_total_counter() -> &'static Counter<u64> {
+    TOOL_EXECUTION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter
+            .u64_counter("ohc_tool_execution_total")
+            .with_description("Total tool executions")
+            .build()
+    })
+}
+
+pub fn record_tool_execution(tool_name: &str, status: &str, latency_sec: f64) {
+    let histogram = get_tool_execution_latency_histogram();
+    let counter = get_tool_execution_total_counter();
+
+    let attributes = [
+        opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
+        opentelemetry::KeyValue::new("status", status.to_string()),
+    ];
+
+    histogram.record(latency_sec, &attributes);
+    counter.add(1, &attributes);
 }
 
 pub fn get_task_processing_latency_histogram() -> &'static Histogram<f64> {

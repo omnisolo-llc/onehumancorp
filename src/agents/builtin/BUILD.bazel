@@ -312,6 +312,7 @@ rust_test(
     deps = [
         "//src/agents/builtin:core",
         "//src/agents/builtin/tools:tools",
+        "//src/server/telemetry:server_telemetry",
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:serde_json",
