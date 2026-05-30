@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AI-Automated Scheduling and Booking', () => {
   test.beforeEach(async ({ page }) => {
     // 1) start from the home page after user login with no pre-authenticated shortcuts
-    await page.goto('http://localhost:3000/dashboard');
+    await page.goto('/dashboard');
   });
 
   test('user can navigate to calendar from dashboard and view AI scheduled appointments', async ({ page }) => {
