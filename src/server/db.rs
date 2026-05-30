@@ -16,6 +16,7 @@ pub fn get_pool() -> PgPool {
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
+            .max_connections(50) // Increase connections to prevent PoolTimedOut in tests
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -30,7 +31,7 @@ pub fn get_pool() -> PgPool {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .acquire_timeout(std::time::Duration::from_secs(10)) // Increase timeout
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
     })
@@ -242,6 +243,7 @@ impl DB {
                 .unwrap_or(30);
             let pool = loop {
                 match sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(50)
                     .before_acquire(|conn, _meta| {
                         Box::pin(async move {
                             use sqlx::Executor;
@@ -256,7 +258,7 @@ impl DB {
                             Ok(true)
                         })
                     })
-                    .acquire_timeout(std::time::Duration::from_millis(2000))
+                    .acquire_timeout(std::time::Duration::from_secs(10))
                     .connect(&pg_url)
                     .await
                 {
