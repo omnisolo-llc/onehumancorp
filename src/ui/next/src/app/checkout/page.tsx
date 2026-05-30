@@ -24,12 +24,12 @@ export default function CheckoutPage() {
         setReferralLink(data.referral_link);
       } else {
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(`ohc://join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(`ohc://join?ref=${tenant}`);
     }
 
     setIsProcessing(false);

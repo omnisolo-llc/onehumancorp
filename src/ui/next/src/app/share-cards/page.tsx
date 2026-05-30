@@ -13,7 +13,7 @@ export default function ShareCardsPage() {
 
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-    setShareLink(`https://ohc.store/join?ref=${tenant}`);
+    setShareLink(`ohc://join?ref=${tenant}`);
   }, []);
 
   const getThemeStyles = () => {
