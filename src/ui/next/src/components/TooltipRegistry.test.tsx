@@ -28,7 +28,15 @@ describe('TooltipRegistry', () => {
       width: 100, height: 20, top: 0, left: 0, bottom: 20, right: 100, x: 0, y: 0, toJSON: () => {}
     }));
 
+
+
+    // wait for fetch to resolve
+    await waitFor(() => {
+      expect(button).toBeInTheDocument();
+    });
     fireEvent.mouseEnter(button.parentElement!);
+
+
 
     await waitFor(() => {
       expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();

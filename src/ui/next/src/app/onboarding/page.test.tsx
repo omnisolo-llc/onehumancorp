@@ -21,7 +21,10 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url) => {
+    if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
   });
 
   afterEach(() => {
@@ -40,21 +43,12 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
+    (global.fetch as any).mockImplementation((url) => {
+    if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    if (url === '/api/onboarding/intake') return Promise.resolve({ ok: true, json: () => Promise.resolve({ business_type: 'Bakery', business_name: 'Maya Bakery', categories: ['food'], initial_products: [{ name: 'Cake', price: '20' }] }) });
+    if (url === '/api/onboarding/start') return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: "Success!" }) });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -117,9 +111,10 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    (global.fetch as any).mockImplementation((url) => {
+    if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    return Promise.resolve({ ok: false });
+  });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -161,9 +156,10 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    (global.fetch as any).mockImplementation((url) => {
+    if (url === '/api/onboarding/state') return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    return Promise.resolve({ ok: false });
+  });
 
     act(() => { render(<OnboardingWizard />); });
 

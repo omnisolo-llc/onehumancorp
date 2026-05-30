@@ -1,3 +1,9 @@
+
+beforeAll(() => {
+  if (typeof window !== 'undefined' && window.HTMLElement) {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  }
+});
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HelpChat } from './HelpChat';
