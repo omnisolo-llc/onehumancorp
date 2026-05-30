@@ -7,7 +7,6 @@ exports_files([
     "agent_service.proto",
     "app.proto",
     "billing.proto",
-    "campaign.proto",
     "common.proto",
     "docs.proto",
     "hub.proto",
@@ -213,21 +212,6 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-# ── Campaign ───────────────────────────────────────────────────────────────────
-
-proto_library(
-    name = "campaign_proto",
-    srcs = ["campaign.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "campaign",
-    proto = ":campaign_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
