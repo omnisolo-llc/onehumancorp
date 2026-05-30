@@ -229,6 +229,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod campaign;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2803,11 +2804,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
+    let campaign_repo = std::sync::Arc::new(crate::domain::repository::campaign_repo::CampaignRepository::new(db.pool.clone()));
+    let campaign_service = crate::services::campaign::service::MyCampaignService::new(campaign_repo);
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::campaign::campaign_service_server::CampaignServiceServer::with_interceptor(campaign_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
