@@ -4343,128 +4343,217 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
-
-                        <div class="card glass">
-                            <h3>Free</h3>
-                            <p>$0 / month</p>
-                            <ul>
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1 style="margin: 0;">Pricing Plans</h1>
+                            <button class="secondary" onclick="showScreen('my-plan-screen')">Back to My Plan</button>
+                        </div>
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <p style="font-size: 18px; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         </div>
 
-                        <div class="card glass">
-                            <h3>Starter</h3>
-                            <p>$29 / month</p>
-                            <p>Suggested for growing stores</p>
-                            <ul>
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Pro</h3>
-                            <p>$79 / month</p>
-                            <ul>
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
-                        </div>
-
-                        <div class="card glass">
-                            <h3>Business</h3>
-                            <p>$299 / month</p>
-                            <ul>
-                                <li>Unlimited Agents</li>
-                                <li>Unlimited AI actions</li>
-                                <li>500GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
-                        </div>
-
-                        <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade, downgrade, or cancel?</h3>
-                                <p class="answer">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 48px;">
+                            <!-- Free Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px; border: 1px solid var(--border);">
+                                <div>
+                                    <h3 style="font-size: 24px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Free</h3>
+                                    <p style="font-size: 20px; font-weight: 600; margin-bottom: 16px; margin-top: 0;">$0 <span style="font-size: 14px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                    <ul style="list-style: none; padding: 0; margin-bottom: 24px;">
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 1 Agent Limit</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 100 AI actions / month</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 500MB Storage Quota</li>
+                                        <li style="display: flex; gap: 8px;"><span>✓</span> 10 Products Limit</li>
+                                    </ul>
+                                </div>
+                                <button class="secondary" style="width: 100%; opacity: 0.7; cursor: not-allowed;">Current Plan</button>
                             </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+
+                            <!-- Starter Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px; border: 2px solid var(--primary); position: relative;">
+                                <div style="position: absolute; top: 0; right: 0; background: var(--primary); color: white; font-size: 12px; font-weight: bold; padding: 4px 12px; border-bottom-left-radius: 8px; border-top-right-radius: 8px;">Recommended</div>
+                                <div>
+                                    <h3 style="font-size: 24px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Starter</h3>
+                                    <p style="font-size: 20px; font-weight: 600; margin-bottom: 8px; margin-top: 0;">$29 <span style="font-size: 14px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                    <p style="font-size: 12px; color: var(--primary); font-weight: 500; margin-bottom: 16px; margin-top: 0;">Suggested for growing stores</p>
+                                    <ul style="list-style: none; padding: 0; margin-bottom: 24px;">
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 3 Agents Limit</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 1,000 AI actions / month</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 5GB Storage Quota</li>
+                                        <li style="display: flex; gap: 8px;"><span>✓</span> 100 Products Limit</li>
+                                    </ul>
+                                </div>
+                                <button onclick="showScreen('checkout-screen')" style="width: 100%; border: none;">Upgrade to Starter via Stripe</button>
+                            </div>
+
+                            <!-- Pro Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px; border: 1px solid var(--border);">
+                                <div>
+                                    <h3 style="font-size: 24px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Pro</h3>
+                                    <p style="font-size: 20px; font-weight: 600; margin-bottom: 16px; margin-top: 0;">$79 <span style="font-size: 14px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                    <ul style="list-style: none; padding: 0; margin-bottom: 24px;">
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 10 Agents Limit</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> Unlimited AI actions</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 50GB Storage Quota</li>
+                                        <li style="display: flex; gap: 8px;"><span>✓</span> Unlimited Products</li>
+                                    </ul>
+                                </div>
+                                <button class="secondary" onclick="showScreen('checkout-screen')" style="width: 100%;">Upgrade to Pro via Stripe</button>
+                            </div>
+
+                            <!-- Business Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px; border: 1px solid var(--border);">
+                                <div>
+                                    <h3 style="font-size: 24px; font-weight: bold; margin-bottom: 8px; margin-top: 0;">Business</h3>
+                                    <p style="font-size: 20px; font-weight: 600; margin-bottom: 16px; margin-top: 0;">$299 <span style="font-size: 14px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                    <ul style="list-style: none; padding: 0; margin-bottom: 24px;">
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> Unlimited Agents</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> Unlimited AI actions</li>
+                                        <li style="margin-bottom: 12px; display: flex; gap: 8px;"><span>✓</span> 500GB Storage Quota</li>
+                                        <li style="display: flex; gap: 8px;"><span>✓</span> Unlimited Products</li>
+                                    </ul>
+                                </div>
+                                <button class="secondary" onclick="showScreen('checkout-screen')" style="width: 100%;">Upgrade to Business via Stripe</button>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <p style="font-size: 14px; color: var(--text-secondary);">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
+                        </div>
+
+                        <div class="card glass" style="padding: 24px; border: 1px solid var(--border);">
+                            <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px; padding: 0; margin-top: 0;">Frequently Asked Questions</h2>
+                            <div style="margin-bottom: 16px;">
+                                <h3 style="font-weight: 600; font-size: 16px; margin-bottom: 4px; margin-top: 0;">How do I upgrade, downgrade, or cancel?</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                            </div>
+                            <div>
+                                <h3 style="font-weight: 600; font-size: 16px; margin-bottom: 4px; margin-top: 0;">What is the storage limit?</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
-                        <h1>My Plan</h1>
-                        <p id="my-plan-name">Plan: Free</p>
-                        <p>Status: Active</p>
-                        <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
-                            <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1>My Plan</h1>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                                <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                            </div>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
-                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+
+                        <div class="card glass" style="display: flex; gap: 24px; margin-bottom: 24px; padding: 24px; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <h2 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; padding: 0;">Current Plan</h2>
+                                <p id="my-plan-name" style="font-size: 28px; font-weight: bold; margin: 0; color: var(--text-primary);">Plan: Free</p>
+                                <span style="display: inline-block; padding: 4px 8px; background: #e0f2f1; color: #00695c; border-radius: 4px; font-size: 12px; font-weight: bold; margin-top: 8px;">Active</span>
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <h2 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; padding: 0;">Estimated Next Bill</h2>
+                                <p id="my-plan-next-bill" style="font-size: 28px; font-weight: bold; margin: 0; color: var(--text-primary);">Estimated Next Bill: $0.00</p>
+                            </div>
+                            <div style="flex: 1; text-align: right; min-width: 200px;">
+                                <button onclick="showScreen('pricing-screen')" style="width: 100%; padding: 12px; font-size: 16px;">Upgrade Plan</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="margin-bottom: 24px; padding: 24px;">
+                            <h2 style="font-size: 18px; margin-bottom: 16px; padding: 0;">Your Current Usage</h2>
+
+                            <div style="margin-bottom: 24px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 500;">AI Actions Used</span>
+                                    <span id="my-plan-ai-usage" style="color: var(--text-secondary); font-size: 14px;">AI Actions Used: 0 / 100</span>
+                                </div>
+                                <div style="width: 100%; background: var(--bg-color); border-radius: 8px; height: 10px; overflow: hidden; border: 1px solid var(--border);">
+                                    <div id="my-plan-ai-bar" style="background: var(--primary); height: 100%; width: 0%; border-radius: 8px;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 500;">Storage Used</span>
+                                    <span id="my-plan-storage-usage" style="color: var(--text-secondary); font-size: 14px;">Storage Used: 0MB / 500MB</span>
+                                </div>
+                                <div style="width: 100%; background: var(--bg-color); border-radius: 8px; height: 10px; overflow: hidden; border: 1px solid var(--border);">
+                                    <div id="my-plan-storage-bar" style="background: var(--accent-green); height: 100%; width: 0%; border-radius: 8px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                            <div class="card glass hover-glass" style="cursor: pointer; padding: 16px; border: 1px solid var(--border);" onclick="showScreen('cost-dashboard-screen')">
+                                <h3 style="font-size: 16px; margin-bottom: 4px;">View Cost Details</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Check your total costs, AI agent limits, and storage details.</p>
+                            </div>
+                            <div class="card glass hover-glass" style="cursor: pointer; padding: 16px; border: 1px solid var(--border);" onclick="showScreen('pricing-screen')">
+                                <h3 style="font-size: 16px; margin-bottom: 4px;">Change Plan</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Upgrade or downgrade your current subscription.</p>
+                            </div>
+                            <div class="card glass hover-glass" style="cursor: pointer; padding: 16px; border: 1px solid var(--border);" onclick="alert('Downloading Invoice...')">
+                                <h3 style="font-size: 16px; margin-bottom: 4px;">Download Invoice</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Get a PDF copy of your recent billing statements.</p>
+                            </div>
+                            <div class="card glass hover-glass" style="cursor: pointer; padding: 16px; border: 1px solid var(--border);" onclick="alert('Are you sure you want to cancel?')">
+                                <h3 style="font-size: 16px; color: #d32f2f; margin-bottom: 4px;">Cancel Subscription</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">Cancel your subscription. You will lose access to premium features.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost Transparency Dashboard</h1>
-                        <p>Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass">
-                            <h2>Billing Period</h2>
-                            <p id="cost-dashboard-period">Period: -</p>
-
-                            <h2 style="margin-top: 24px;">Costs</h2>
-                            <ul style="list-style: none; padding: 0;">
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>LLM Inference Cost</span>
-                                    <strong id="cost-dashboard-llm">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>Storage & CDN</span>
-                                    <strong id="cost-dashboard-storage">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>Payment Processor Fees</span>
-                                    <strong id="cost-dashboard-payment-fees">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary);">
-                                    <strong>Total Costs</strong>
-                                    <strong id="cost-dashboard-total">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green);">
-                                    <strong>Total Revenue</strong>
-                                    <strong id="cost-dashboard-revenue">$0.00</strong>
-                                </li>
-                            </ul>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1 style="margin: 0;">Cost Transparency</h1>
+                            <button class="secondary" onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                         </div>
-                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
+
+                        <div class="card glass" style="padding: 24px; margin-bottom: 24px; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h2 style="font-size: 20px; font-weight: bold; margin: 0;">Advisory Summary</h2>
+                                <span id="cost-dashboard-period" style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">Period: -</span>
+                            </div>
+                            <div style="display: flex; gap: 24px; align-items: center;">
+                                <div style="flex: 1; padding: 16px; background: var(--bg-color); border-radius: 12px; border: 1px solid var(--border);">
+                                    <h3 style="font-size: 14px; color: var(--text-secondary); margin: 0 0 4px 0; font-weight: 500;">Total Costs</h3>
+                                    <p id="cost-dashboard-total" style="font-size: 32px; font-weight: bold; margin: 0; color: var(--text-primary);">$0.00</p>
+                                </div>
+                                <div style="flex: 1; padding: 16px; background: var(--bg-color); border-radius: 12px; border: 1px solid var(--border);">
+                                    <h3 style="font-size: 14px; color: var(--text-secondary); margin: 0 0 4px 0; font-weight: 500;">Total Revenue</h3>
+                                    <p id="cost-dashboard-revenue" style="font-size: 32px; font-weight: bold; margin: 0; color: var(--accent-green);">$0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="padding: 24px; border: 1px solid var(--border);">
+                            <h2 style="font-size: 20px; font-weight: bold; margin: 0 0 24px 0;">Cost Breakdown</h2>
+
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg-color); border-radius: 12px; border: 1px solid var(--border);">
+                                    <div>
+                                        <span style="font-weight: 500; color: var(--text-primary); display: block; margin-bottom: 4px;">LLM Usage</span>
+                                        <span style="font-size: 14px; color: var(--text-secondary);">Cost of AI agent actions and interactions.</span>
+                                    </div>
+                                    <strong id="cost-dashboard-llm" style="font-size: 18px; color: var(--text-primary);">$0.00</strong>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg-color); border-radius: 12px; border: 1px solid var(--border);">
+                                    <div>
+                                        <span style="font-weight: 500; color: var(--text-primary); display: block; margin-bottom: 4px;">Storage & CDN</span>
+                                        <span style="font-size: 14px; color: var(--text-secondary);">Cost of cloud storage and file hosting.</span>
+                                    </div>
+                                    <strong id="cost-dashboard-storage" style="font-size: 18px; color: var(--text-primary);">$0.00</strong>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg-color); border-radius: 12px; border: 1px solid var(--border);">
+                                    <div>
+                                        <span style="font-weight: 500; color: var(--text-primary); display: block; margin-bottom: 4px;">Payment Processor Fees</span>
+                                        <span style="font-size: 14px; color: var(--text-secondary);">Stripe transaction fees on processed revenue.</span>
+                                    </div>
+                                    <strong id="cost-dashboard-payment-fees" style="font-size: 18px; color: var(--text-primary);">$0.00</strong>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Advisory Dashboard Screen -->
@@ -5985,10 +6074,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                         let aiLimit = data.ai_actions_limit ? data.ai_actions_limit : 'Unlimited';
                                         document.getElementById('my-plan-ai-usage').textContent = 'AI Actions Used: ' + data.ai_actions_used + ' / ' + aiLimit;
+                                        let aiPercent = data.ai_actions_limit ? Math.min((data.ai_actions_used / data.ai_actions_limit) * 100, 100) : 100;
+                                        let aiBar = document.getElementById('my-plan-ai-bar');
+                                        if (aiBar) aiBar.style.width = aiPercent + '%';
 
                                         let storageUsedMB = Math.round(data.storage_used_bytes / (1024 * 1024));
                                         let storageLimitText = data.storage_limit_bytes ? Math.round(data.storage_limit_bytes / (1024 * 1024)) + 'MB' : 'Unlimited';
                                         document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
+                                        let storagePercent = data.storage_limit_bytes ? Math.min((data.storage_used_bytes / data.storage_limit_bytes) * 100, 100) : 100;
+                                        let storageBar = document.getElementById('my-plan-storage-bar');
+                                        if (storageBar) storageBar.style.width = storagePercent + '%';
                                     })
                                     .catch(err => console.error('Error fetching plan info:', err));
                             }
