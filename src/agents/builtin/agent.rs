@@ -5,7 +5,6 @@ use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
-use crate::prompt_construction::HierarchicalPromptBuilder;
 use crate::guardrails::GuardrailRegistry;
 pub(crate) use crate::prompt_construction::build_hierarchical_system_prompt;
 use ohc_builtin_agent_llm::LlmClient;
