@@ -147,4 +147,36 @@ test.describe('Success Milestones Notifications', () => {
     await expect(whatsappShare).toBeVisible();
     await expect(whatsappShare).toHaveAttribute('href', /wa\.me.*5-star/i);
   });
+
+  test('should navigate to milestones page and display unlocked milestones', async ({ page }) => {
+    // 1. Login
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.waitForURL('**/dashboard');
+
+    // 2. Trigger an event that unlocks a milestone (First Order)
+    const markReadyBtn = page.locator('button:has-text("Mark Order Ready")');
+    await expect(markReadyBtn).toBeVisible();
+    await markReadyBtn.click();
+
+    await expect(page.locator('text=First Sale!')).toBeVisible({ timeout: 10000 });
+
+    // 3. Navigate to Milestones page
+    await page.goto('/milestones');
+    await page.waitForLoadState('networkidle');
+
+    // 4. Verify Milestones page
+    await expect(page.locator('text=Success Milestones')).toBeVisible();
+
+    // 5. Check if First Order is marked as unlocked
+    // Since unlocked changes the styling and title from default, let's verify it rendered unlocked state
+    const firstOrderCard = page.locator('div').filter({ hasText: 'First Order!' }).first();
+    await expect(firstOrderCard).toBeVisible();
+
+    // Check that we don't see the Locked status for First Order
+    const lockedText = firstOrderCard.locator('text=Locked');
+    await expect(lockedText).toBeHidden();
+  });
 });

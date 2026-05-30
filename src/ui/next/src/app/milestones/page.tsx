@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function MilestonesPage() {
@@ -8,13 +8,13 @@ export default function MilestonesPage() {
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const milestones = [
+  const [milestones, setMilestones] = useState([
     {
       id: "first-order",
       title: "First Order! 🎉",
       description: "You've officially made your first sale on OHC.",
       date: "Oct 12, 2023",
-      unlocked: true,
+      unlocked: false,
       icon: "🎉"
     },
     {
@@ -22,7 +22,7 @@ export default function MilestonesPage() {
       title: "10th Order Milestone",
       description: "Double digits! Your business is gaining momentum.",
       date: "Nov 05, 2023",
-      unlocked: true,
+      unlocked: false,
       icon: "🚀"
     },
     {
@@ -30,7 +30,7 @@ export default function MilestonesPage() {
       title: "100th Customer",
       description: "A century of happy customers.",
       date: "Jan 22, 2024",
-      unlocked: true,
+      unlocked: false,
       icon: "💯"
     },
     {
@@ -41,7 +41,34 @@ export default function MilestonesPage() {
       unlocked: false,
       icon: "💰"
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    async function fetchMilestones() {
+      try {
+        const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+        const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
+        const data = await res.json();
+
+        if (data && data.milestones) {
+          setMilestones(prev => prev.map(m => {
+            const apiM = data.milestones.find((am: any) =>
+               (m.id === 'first-order' && am.id === 'first_sale') ||
+               (m.id === '10th-order' && am.id === '10th_order') ||
+               (m.id === '100th-customer' && am.id === '100_visitors')
+            );
+            if (apiM && apiM.reached) {
+              return { ...m, unlocked: true, title: apiM.title, description: apiM.description };
+            }
+            return m;
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch milestones:", e);
+      }
+    }
+    fetchMilestones();
+  }, []);
 
   const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: ohc://join?ref=milestone";
 
