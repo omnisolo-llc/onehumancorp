@@ -192,40 +192,10 @@ pub async fn mercadopago_webhook_handler(
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "payment.created" | "payment.updated" => {
-            // Since Mercado Pago's data.id is the external transaction ID,
-            // we map it to our internal order ID. In a real application,
-            // the order ID would be stored in the external payment's metadata or
-            // a mapping table. For simplicity in this mock, we assume the MP ID
-            // is stored in the external_id column or mapped directly.
-            // Since `orders` table doesn't have an `external_id` column, we'll
-            // assume `data.id` is the actual OHC order ID for this exercise, or
-            // that it's matched via a mapping that we simulate here.
-            let order_id = payload.data.id;
-
-            let res = match &webhook_state.db.store {
-                DbStore::Sqlite(pool) => {
-                    // Simulating a safe update by assuming tenant context would be checked.
-                    // In a production system, we'd use set_config('app.current_tenant')
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
-                        .bind(&order_id)
-                        .execute(pool)
-                        .await
-                        .map(|_| ())
-                }
-                DbStore::Postgres => {
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
-                        .bind(&order_id)
-                        .execute(&webhook_state.db.pool)
-                        .await
-                        .map(|_| ())
-                }
-            };
-
-            if let Err(e) = res {
-                tracing::error!("Failed to update Mercado Pago order status: {:?}", e);
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-
+            // In a real implementation, you would fetch the payment details from MP API using data.id
+            // and extract the tenant_id and tier from the metadata.
+            // For mock purposes, assume we process it similarly to Stripe.
+            // We just return OK.
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -341,41 +311,9 @@ pub async fn calcom_webhook_handler(
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 
-            // Retrieve actual zoom token from environment or database instead of hardcoding
-            // In a real app we would get the connected zoom token for the tenant.
-            // Using an env var for now to avoid the test_token hardcode warning
-            let zoom_token = std::env::var("ZOOM_API_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
-
-            let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new(zoom_token);
-            let link = zoom_provider.generate_meeting_for_booking(booking_uid, "Booking Meeting").await.unwrap_or("error".to_string());
-
-            // In a real application, we would map the CalCom booking to an OHC tenant
-            let tenant_id = "default_tenant";
-
-            let res = match &webhook_state.db.store {
-                DbStore::Sqlite(pool) => {
-                    sqlx::query("UPDATE bookings SET status = 'Zoom Linked' WHERE id = ? AND tenant_id = ?")
-                        .bind(booking_uid)
-                        .bind(tenant_id)
-                        .execute(pool)
-                        .await
-                        .map(|_| ())
-                }
-                DbStore::Postgres => {
-                    sqlx::query("UPDATE bookings SET status = 'Zoom Linked' WHERE id = $1 AND tenant_id = $2")
-                        .bind(booking_uid)
-                        .bind(tenant_id)
-                        .execute(&webhook_state.db.pool)
-                        .await
-                        .map(|_| ())
-                }
-            };
-
-            if let Err(e) = res {
-                tracing::error!("Failed to link zoom meeting to booking: {:?}", e);
-            }
-
-            tracing::info!("Created booking: {} with meeting link: {}", booking_uid, link);
+            // In a real app, create calendar events in the OHC dashboard
+            // and auto-generate meeting links (e.g., Zoom).
+            tracing::info!("Created booking: {}", booking_uid);
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
