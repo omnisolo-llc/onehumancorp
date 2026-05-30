@@ -1,6 +1,8 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
+use crate::services::booking::BookingService;
+use uuid::Uuid;
 
 pub struct SalesAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -28,6 +30,27 @@ impl Department for SalesAgent {
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
         let risk = ActionRisk::DraftForReview;
+        let mut action_payload = event.payload.clone();
+
+        // Process autonomous quote generation if requested
+        let is_quote_request = event.event_type == "tenant.quote.requested"
+            || action_payload.get("action").and_then(|v| v.as_str()) == Some("draft_quote");
+
+        if is_quote_request {
+            let tenant_uuid = Uuid::parse_str(&event.tenant_id).unwrap_or_else(|_| Uuid::new_v4());
+            let customer_uuid = Uuid::new_v4(); // Generate dummy customer UUID for now
+            let amount_cents = 15000; // $150.00 default estimate for a service
+
+            // Create the draft quote in the system using BookingService
+            let quote = BookingService::create_draft_quote(tenant_uuid, customer_uuid, amount_cents);
+
+            // Enrich the payload with the quote details for the UI
+            if let Some(obj) = action_payload.as_object_mut() {
+                obj.insert("quote_id".to_string(), Value::String(quote.id.to_string()));
+                obj.insert("amount".to_string(), Value::String(format!("${:.2}", amount_cents as f64 / 100.0)));
+                obj.insert("description".to_string(), Value::String("Service Quote Estimate".to_string()));
+            }
+        }
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
@@ -36,7 +59,7 @@ impl Department for SalesAgent {
             "Quote generated for review".to_string(),
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            action_payload,
         ).await.map(|_| ())
     }
 

@@ -10,6 +10,10 @@ type Message = {
   content: string;
   date: string;
   draft?: string;
+  quoteDraft?: {
+    amount: string;
+    description: string;
+  };
 };
 
 export default function InboxPage() {
@@ -41,6 +45,18 @@ export default function InboxPage() {
       date: 'Yesterday',
       draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
     },
+    {
+      id: 4,
+      sender: 'Sarah (SMS)',
+      source: 'SMS',
+      icon: '📱',
+      content: 'Hi Carlos, my pipe is leaking under the kitchen sink. Can you fix it?',
+      date: 'Just now',
+      quoteDraft: {
+        amount: '$150',
+        description: 'Kitchen Sink Pipe Repair'
+      }
+    },
   ]);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -63,13 +79,14 @@ export default function InboxPage() {
     if (msgId) {
        const msg = messages.find(m => m.id === msgId);
        if (msg && msg.draft) contentToSend = msg.draft;
+       if (msg && msg.quoteDraft) contentToSend = `Quote Attached: ${msg.quoteDraft.description} - ${msg.quoteDraft.amount}. Please click here to pay deposit and book.`;
     }
 
     if (!contentToSend) return;
     setMessages([...messages, { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' }]);
 
     if (msgId) {
-      setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
+      setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined, quoteDraft: undefined } : m));
     }
     setReplyInput('');
     setEditingId(null);
@@ -151,6 +168,32 @@ export default function InboxPage() {
             <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
+
+
+            {/* Auto-Drafted AI Quote Component */}
+            {msg.quoteDraft && msg.sender !== 'Me' && (
+               <div className="mt-3 ml-4 bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-3 shadow-sm relative">
+                  <div className="absolute -top-3 left-4 bg-[#bae6fd] text-[#0369a1] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                     AI Quote Draft
+                  </div>
+
+                  <div className="mt-2 p-3 bg-white rounded border border-[#e0f2fe]">
+                    <p className="text-sm font-semibold text-gray-900">Quote Drafted</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-gray-600">{msg.quoteDraft.description}</span>
+                      <span className="text-sm font-bold text-gray-900">{msg.quoteDraft.amount}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-[#bae6fd]/50">
+                     <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#0284c7] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#0369a1] transition-colors flex items-center justify-center gap-1">
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                         Approve & Send
+                     </button>
+                  </div>
+               </div>
+            )}
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
