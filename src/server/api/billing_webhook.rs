@@ -418,3 +418,41 @@ pub async fn mailchimp_webhook_handler(
 ) -> impl axum::response::IntoResponse {
     axum::http::StatusCode::OK.into_response()
 }
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TwilioEvent {
+    pub message: String,
+}
+
+pub async fn twilio_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(_payload): axum::Json<TwilioEvent>,
+) -> impl axum::response::IntoResponse {
+    axum::http::StatusCode::OK.into_response()
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ZoomEvent {
+    pub event: String,
+    pub payload: serde_json::Value,
+}
+
+pub async fn zoom_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(_payload): axum::Json<ZoomEvent>,
+) -> impl axum::response::IntoResponse {
+    axum::http::StatusCode::OK.into_response()
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ShippoEvent {
+    pub event: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn shippo_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(_payload): axum::Json<ShippoEvent>,
+) -> impl axum::response::IntoResponse {
+    axum::http::StatusCode::OK.into_response()
+}

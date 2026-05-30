@@ -387,6 +387,9 @@ export default function Dashboard() {
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
+             <Link href="/integrations" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
+               Connect Tools
+             </Link>
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>

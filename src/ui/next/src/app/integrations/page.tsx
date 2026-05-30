@@ -28,22 +28,21 @@ export default function Integrations() {
   });
 
   const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
-    }
     if (id === 'twilio') {
       setShowTwilioModal(true);
+      return;
+    }
+
+    const integration = integrations.find(i => i.id === id);
+    alert(`Connecting ${integration?.name} via OAuth...`);
+    setIntegrations(prev => prev.map(i =>
+      i.id === id ? { ...i, status: "connected" } : i
+    ));
+
+    if (id === 'manychat') {
+      router.push('/inbox');
+    } else if (id === 'cal_com') {
+      router.push("/dashboard");
     }
   };
 
