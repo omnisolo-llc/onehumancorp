@@ -18,7 +18,7 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
     >
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 flex items-center justify-center border border-blue-200/50 shadow-inner flex-shrink-0">
-           <span className="text-xl font-bold text-blue-600 font-outfit">{name.charAt(4)}</span>
+           <span className="text-xl font-bold text-blue-600 font-outfit">{name?.charAt(4)}</span>
         </div>
 
         <div>

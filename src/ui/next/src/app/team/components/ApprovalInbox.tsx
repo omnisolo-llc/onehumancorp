@@ -152,7 +152,7 @@ export default function ApprovalInbox({
                   {desc}
                 </p>
 
-                {req.payload?.feature_type === "ambassador_reply" && (
+                {payload?.feature_type === "ambassador_reply" && (
                   <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                       <svg
@@ -172,7 +172,7 @@ export default function ApprovalInbox({
                     </div>
 
                     <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
-                      "{req.payload.original_message}"
+                      "{payload?.original_message}"
                     </div>
 
                     <div className="text-blue-800 font-semibold text-sm mt-2 flex items-center gap-2">
@@ -182,12 +182,12 @@ export default function ApprovalInbox({
                        AI Draft
                     </div>
                     <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
-                      {req.payload.generated_response}
+                      {payload?.generated_response}
                     </div>
                   </div>
                 )}
 
-                {req.payload?.feature_type === "legal_compliance" && (
+                {payload?.feature_type === "legal_compliance" && (
                   <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
                       <svg
@@ -215,7 +215,7 @@ export default function ApprovalInbox({
                   </div>
                 )}
 
-                {req.payload?.feature_type === "global_localization" && (
+                {payload?.feature_type === "global_localization" && (
                   <div className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
                     <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
                       <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ export default function ApprovalInbox({
                   </div>
                 )}
 
-                {req.payload?.feature_type === "ai_geo" && (
+                {payload?.feature_type === "ai_geo" && (
                   <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                       <svg
@@ -299,7 +299,7 @@ export default function ApprovalInbox({
                   </div>
                 )}
 
-                {req.payload?.feature_type === "social_calendar" && (
+                {payload?.feature_type === "social_calendar" && (
                   <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
                       <svg
@@ -355,7 +355,7 @@ export default function ApprovalInbox({
                   </div>
                 )}
 
-                {req.payload?.feature_type === "abandoned_cart" && (
+                {payload?.feature_type === "abandoned_cart" && (
                   <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
                       <svg
@@ -402,7 +402,7 @@ export default function ApprovalInbox({
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      if (payload && payload.original_message) {
+                      if (payload && payload?.original_message) {
                         setSelectedReview(req);
                       } else {
                         onReject(req.id);
@@ -410,7 +410,7 @@ export default function ApprovalInbox({
                     }}
                     className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    {payload && payload.original_message ? 'Review' : 'Reject / Edit'}
+                    {payload && payload?.original_message ? 'Review' : 'Reject / Edit'}
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
