@@ -90,6 +90,7 @@ rust_library(
         "verification_loops.rs",
         "visual_workflow.rs",
         "visual_orchestration.rs",
+        "orchestration_loop.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",

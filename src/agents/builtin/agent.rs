@@ -1979,6 +1979,7 @@ impl Agent {
         }
 
         let mut turn_count = 0;
+        // SOTA Harness Patterns (2025-2026): 1. The Orchestration Loop -> Mechanically, it is a while loop executing the TAO (Thought-Action-Observation) cycle: Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
         while turn_count < max_iterations {
             let iteration = turn_count;
             turn_count += 1;
@@ -6335,6 +6336,7 @@ mod hierarchical_prompt_tests {
 }
 
 
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }

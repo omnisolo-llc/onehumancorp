@@ -1,7 +1,7 @@
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use crate::agent::AgentRunConfig;
 
-/// ToolGater implements the Anthropic Mechanic: 3-Stage Tool Gating.
+/// SOTA Harness Patterns (2025-2026): Guardrails & Safety: Anthropic 3-stage gating
 /// Trust establishment at project load -> Permission check before each tool call -> Explicit user confirmation for high-risk operations.
 pub struct ToolGater;
 

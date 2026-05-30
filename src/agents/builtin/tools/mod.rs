@@ -51,6 +51,7 @@ impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
 }
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
+// SOTA Harness Patterns (2025-2026): Tools: Tool Layer Registration & Sandboxing
 pub struct Tool {
     pub name: String,
     pub description: String,

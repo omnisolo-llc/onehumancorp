@@ -15,6 +15,7 @@ pub trait ToolGuardrail: Send + Sync {
 }
 
 #[derive(Clone)]
+// SOTA Harness Patterns (2025-2026): Guardrails & Safety: OpenAI 3 hooks
 pub struct GuardrailRegistry {
     pub input_guardrails: Vec<Arc<dyn InputGuardrail>>,
     pub output_guardrails: Vec<Arc<dyn OutputGuardrail>>,

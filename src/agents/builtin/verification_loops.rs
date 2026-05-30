@@ -4,7 +4,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 
-/// A feedforward verification loop using linters, type-checkers, or unit tests.
+/// SOTA Harness Patterns (2025-2026): Verification Loops: Guides, Visual, Sensors -> A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
 pub trait ComputationalGuide: Send + Sync {
     async fn verify(&self, code: &str, context: &str) -> Result<(), String>;
