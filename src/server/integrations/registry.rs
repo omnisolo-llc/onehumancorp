@@ -596,7 +596,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str, address_to: serde_json::Value, address_from: serde_json::Value) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -606,7 +606,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.fetch_rates(weight, dimensions).await;
+            return c.fetch_rates(weight, dimensions, address_to, address_from).await;
         }
         Err("integration not found or not supported".to_string())
     }
