@@ -27,7 +27,7 @@ test("AI Team Dashboard and Approval Inbox", async ({ page, request }) => {
   ).toBeVisible();
 
   // 3. User approves the action (Swipe right / Approve button)
-  const approveBtn = page.locator("button", { hasText: "Review & Send" }).first();
+  const approveBtn = page.locator("button", { hasText: "Approve" }).first();
   await approveBtn.click();
 
   // Wait for the action to be processed

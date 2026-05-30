@@ -1,6 +1,6 @@
 use std::sync::Arc;
-
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};
+use serde_json::Value;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolCall};
 
 /// DeerFlow Unique Harness Innovations: Built-in observability: LangSmith and Langfuse integration
 pub trait ObservabilityProvider: Send + Sync {

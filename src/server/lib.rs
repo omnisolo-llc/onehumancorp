@@ -334,7 +334,6 @@ use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
-    dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
@@ -343,7 +342,7 @@ pub struct MyHubService {
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
@@ -353,7 +352,7 @@ impl MyHubService {
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
     }
 }
 
@@ -406,7 +405,6 @@ struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
-    total_campaigns_sent: i64,
 }
 
 async fn http_metrics_handler(
@@ -442,7 +440,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
+    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -460,23 +458,16 @@ async fn http_metrics_handler(
                 .bind(&tenant_id)
                 .fetch_one(&db.pool)
                 .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
         }
     );
 
     let active_customers = active_customers_res.unwrap_or(0);
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent }),
+        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
     )
         .into_response()
 }
@@ -802,116 +793,6 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
-    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
-
-    async fn stream_messages(
-        &self,
-        request: Request<StreamMessagesRequest>,
-    ) -> Result<Response<Self::StreamMessagesStream>, Status> {
-        let req = request.into_inner();
-        let agent_id = req.agent_id.clone();
-
-        let rx = self.hub.subscribe(agent_id.clone());
-        let drained = self.hub.get_inbox(&agent_id);
-
-        let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
-
-        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
-            .map(|res| match res {
-                Ok(msg) => Ok(msg),
-                Err(e) => Err(Status::internal(e.to_string())),
-            });
-
-        let full_stream = drained_stream.chain(rx_stream);
-
-        Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
-    }
-
-    async fn reason(
-        &self,
-        request: Request<ReasonRequest>,
-    ) -> Result<Response<ReasonResponse>, Status> {
-        let req = request.into_inner();
-        let api_key = self.hub.minimax_api_key().to_string();
-        if api_key.is_empty() {
-            return Err(Status::failed_precondition("Minimax API key is not configured"));
-        }
-
-        let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
-            Err(e) => Err(Status::internal(e)),
-        }
-    }
-
-
-    async fn trigger_custom_order(
-        &self,
-        request: Request<TriggerCustomOrderRequest>,
-    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
-        let req = request.into_inner();
-
-        // Dispatch an event to Operations
-        let ops_event = crate::orchestration::departments::types::DepartmentEvent {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: req.organization_id.clone(),
-            event_type: "NEW_ORDER".to_string(),
-            payload: serde_json::json!({
-                "customer_name": req.customer_name,
-                "details": req.details
-            }),
-        };
-        let _ = self.dept_orchestrator.dispatch_event(ops_event).await;
-
-        // Manually enqueue an approval request for Customer Success (for the test scenario)
-        let cs_approval = crate::orchestration::departments::types::ApprovalRequest {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: req.organization_id.clone(),
-            department: crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-            description: format!("Draft Confirmation for {}", req.customer_name),
-            status: crate::orchestration::departments::types::ApprovalStatus::PendingApproval,
-            action_risk: crate::orchestration::departments::types::ActionRisk::DraftForReview,
-            payload: Some(serde_json::json!({
-                "draft_copy": format!("Hi {}, thank you for your custom order!", req.customer_name),
-                "customer_name": req.customer_name,
-                "details": req.details
-            })),
-        };
-        self.dept_orchestrator.add_approval_request(cs_approval).await;
-
-        Ok(Response::new(TriggerCustomOrderResponse {
-            success: true,
-        }))
-    }
-
-    async fn decompose_task(
-        &self,
-        request: Request<DecomposeTaskRequest>,
-    ) -> Result<Response<DecomposeTaskResponse>, Status> {
-        let req = request.into_inner();
-
-        for st in req.sub_tasks {
-            let mut filtered_deps = Vec::new();
-            for dep in st.dependencies {
-                if dep != req.task_id {
-                    filtered_deps.push(dep);
-                }
-            }
-
-            self.hub.task_manager().create_task_with_plan(
-                req.organization_id.clone(),
-                String::new(),
-                req.task_id.clone(),
-                filtered_deps,
-                st.title,
-                st.description,
-                st.priority,
-            ).map_err(|e| Status::internal(e))?;
-        }
-
-        Ok(Response::new(DecomposeTaskResponse { success: true }))
-    }
-
 
     async fn get_my_plan(
         &self,
@@ -1596,8 +1477,7 @@ impl HubService for MyHubService {
             .clone();
 
         let req = request.into_inner();
-
-        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved).await
+        self.hub.task_manager().approve_task(&req.task_id, req.is_approved, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
@@ -1605,59 +1485,35 @@ impl HubService for MyHubService {
         }))
     }
 
-async fn get_pending_approvals(
+    async fn get_pending_approvals(
         &self,
         request: Request<GetPendingApprovalsRequest>,
     ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
         let req = request.into_inner();
-        let limit = 100;
-        let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
+        let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
 
-        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
-            let mut proposed_content = "".to_string();
-            if let Some(payload) = &task.payload {
-                if let Some(draft) = payload.get("draft_copy") {
-                    proposed_content = draft.as_str().unwrap_or("").to_string();
-                } else if let Some(r#gen) = payload.get("generated_response") {
-                    proposed_content = r#gen.as_str().unwrap_or("").to_string();
-                } else if let Some(r#gen) = payload.get("action_type") {
-                    if r#gen.as_str() == Some("DRAFT_EMAIL") {
-                        proposed_content = "Drafted email...".to_string();
-                    }
-                }
-            }
-            if proposed_content.is_empty() && task.payload.is_some() {
-                proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
-            }
-
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = tasks.into_iter().map(|task| {
             ::server_ohc::orchestration::SharedTask {
                 id: task.id,
-                organization_id: task.tenant_id,
-                parent_plan_id: "".to_string(),
-                dependencies: vec![],
-                title: format!("{:?}", task.department),
-                description: task.description,
-                status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
-                    crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
-                    crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
-                },
-                assigned_agent_id: "".to_string(),
-                priority: "High".to_string(),
-                payload: "{}".to_string(),
-                locked_until_unix: 0,
-                created_at_unix: 0,
-                updated_at_unix: 0,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
                 action_risk: match task.action_risk {
-                    crate::orchestration::departments::types::ActionRisk::AutoExecute => 1,
-                    crate::orchestration::departments::types::ActionRisk::DraftForReview => 2,
+                    Some(crate::tasks::ActionRisk::Low) => 1,
+                    Some(crate::tasks::ActionRisk::High) => 2,
+                    _ => 0,
                 },
-                approval_status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
-                    crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
-                    crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
-                },
-                proposed_content,
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
             }
         }).collect();
 
@@ -1666,6 +1522,110 @@ async fn get_pending_approvals(
         }))
     }
 
+    async fn trigger_custom_order(
+        &self,
+        request: Request<TriggerCustomOrderRequest>,
+    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        let req = request.into_inner();
+
+        let mut ops_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-ops-{}", uuid::Uuid::new_v4()),
+            format!("Process Custom Order for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        ops_task.action_risk = Some(crate::tasks::ActionRisk::Low);
+        self.hub.task_manager().insert_task(ops_task);
+
+        let mut cs_task = self.hub.task_manager().create_task(
+            req.organization_id.clone(),
+            format!("mission-cs-{}", uuid::Uuid::new_v4()),
+            format!("Draft Confirmation for {}", req.customer_name),
+            req.details.clone(),
+            "P1".to_string(),
+        ).map_err(|e| Status::internal(e))?;
+        cs_task.action_risk = Some(crate::tasks::ActionRisk::High);
+        cs_task.approval_status = Some("PENDING".to_string());
+        cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
+        self.hub.task_manager().insert_task(cs_task);
+
+        Ok(Response::new(TriggerCustomOrderResponse {
+            success: true,
+        }))
+    }
+
+    async fn decompose_task(
+        &self,
+        request: Request<DecomposeTaskRequest>,
+    ) -> Result<Response<DecomposeTaskResponse>, Status> {
+        let req = request.into_inner();
+
+        for st in req.sub_tasks {
+            let mut filtered_deps = Vec::new();
+            for dep in st.dependencies {
+                if dep != req.task_id {
+                    filtered_deps.push(dep);
+                }
+            }
+            // Delegate the dependency validation to the TaskManager or Orchestrator logic
+            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
+
+            self.hub.task_manager().create_task_with_plan(
+                req.organization_id.clone(),
+                String::new(),
+                req.task_id.clone(),
+                filtered_deps,
+                st.title,
+                st.description,
+                st.priority,
+            ).map_err(|e| Status::internal(e))?;
+        }
+
+        Ok(Response::new(DecomposeTaskResponse { success: true }))
+    }
+
+    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
+
+    async fn stream_messages(
+        &self,
+        request: Request<StreamMessagesRequest>,
+    ) -> Result<Response<Self::StreamMessagesStream>, Status> {
+        let req = request.into_inner();
+        let agent_id = req.agent_id.clone();
+
+        let rx = self.hub.subscribe(agent_id.clone());
+        let drained = self.hub.get_inbox(&agent_id);
+
+        let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
+
+        let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
+            .map(|res| match res {
+                Ok(msg) => Ok(msg),
+                Err(e) => Err(Status::internal(e.to_string())),
+            });
+
+        let full_stream = drained_stream.chain(rx_stream);
+
+        Ok(Response::new(Box::pin(full_stream) as Self::StreamMessagesStream))
+    }
+
+    async fn reason(
+        &self,
+        request: Request<ReasonRequest>,
+    ) -> Result<Response<ReasonResponse>, Status> {
+        let req = request.into_inner();
+        let api_key = self.hub.minimax_api_key().to_string();
+        if api_key.is_empty() {
+            return Err(Status::failed_precondition("Minimax API key is not configured"));
+        }
+
+        let client = minimax::MinimaxClient::new(api_key);
+        match client.reason(&req.prompt).await {
+            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
 
     async fn delegate_sub_task(
         &self,
@@ -2770,7 +2730,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(crate::auth::Store::new());
     
@@ -4690,7 +4650,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
-                            <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
+                            <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
@@ -5122,14 +5082,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             let html = '';
                             for (const key in block.content) {
-                                let label = key;
-                                let idKey = key;
-                                if (block.type === 'HeroBlock' && key === 'headline') {
-                                    label = 'title';
-                                    idKey = 'title';
-                                }
-                                html += `<label style="display:block; margin-top:8px;">${label}</label>`;
-                                html += `<input type="text" id="edit-${idKey}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                                html += `<label style="display:block; margin-top:8px;">${key}</label>`;
+                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
                             }
                             document.getElementById('sheet-content').innerHTML = html;
                             document.getElementById('block-editor-sheet').classList.add('open');
@@ -5145,15 +5099,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const block = storefrontDraftState.find(b => b.id === activeBlockId);
                             for (const key in block.content) {
                                 const input = document.getElementById(`edit-${key}`);
-                                if (input) {
-                                    block.content[key] = input.value;
-                                } else if (key === 'headline') {
-                                    // Map edit-title to headline for HeroBlock
-                                    const titleInput = document.getElementById('edit-title');
-                                    if (titleInput) {
-                                        block.content[key] = titleInput.value;
-                                    }
-                                }
+                                if (input) block.content[key] = input.value;
                             }
                             closeBottomSheet();
                             renderStorefrontPreview();
@@ -6207,7 +6153,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen', '/help': 'help-screen', '/api-docs': 'api-docs-screen', '/changelog': 'changelog-screen' };
+                            const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             if (screenId === 'setup-screen') {
