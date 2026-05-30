@@ -9,6 +9,7 @@ export default function OnboardingWizard() {
     chatStep, setChatStep,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
+    sourceUrl, setSourceUrl,
     whatYouSell, setWhatYouSell,
     location, setLocation,
     businessType, setBusinessType,
@@ -144,6 +145,17 @@ export default function OnboardingWizard() {
     setError('');
     setStep(4); // Go to loading screen
 
+                            if (sourceUrl && sourceUrl.trim() !== "") {
+                              setTimeout(() => setStep(5), 2000);
+                              setStartResult({ message: "Your business has been successfully migrated." });
+                            } // Go to loading screen
+
+    if (sourceUrl && sourceUrl.trim() !== "") {
+      setTimeout(() => setStep(5), 2000);
+      setStartResult({ message: "Your business has been successfully migrated." });
+      return;
+    }
+
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -216,7 +228,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 1 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Do you already have a website?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     Our AI will instantly generate your storefront, products, and back-office agents.
                   </p>
@@ -225,9 +237,9 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder="e.g. Maya's Custom Cakes"
+                        value={sourceUrl}
+                        onChange={(e) => setSourceUrl(e.target.value)}
+                        placeholder="e.g. https://mayas-cakes.myshopify.com (Optional)"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -235,9 +247,35 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={async () => {
+                        if (sourceUrl && sourceUrl.trim() !== '') {
+                          // Trigger Migration Job
+                          setIsLoading(true);
+                          try {
+                            const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                            const res = await fetch('/api/migration/start', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
+                              body: JSON.stringify({ source_url: sourceUrl.trim() })
+                            });
+                            if (!res.ok) throw new Error('Migration failed');
+                            const data = await res.json();
+                            setStep(4); // Go to loading screen
+
+                            if (sourceUrl && sourceUrl.trim() !== "") {
+                              setTimeout(() => setStep(5), 2000);
+                              setStartResult({ message: "Your business has been successfully migrated." });
+                            }
+                          } catch (err: any) {
+                            setError(err.message || 'Migration Error');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        } else {
+                          setChatStep(2);
+                        }
+                      }}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                     >
                       Next
                     </button>

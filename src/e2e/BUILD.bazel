@@ -32,6 +32,7 @@ define_playwright_tests(
         "login.spec.ts",
         "login_ux.spec.ts",
         "telemetry_sync.spec.ts",
+
         "viral_embed.spec.ts",
     ],
     specs = glob(["*.spec.ts"]),

@@ -6,6 +6,7 @@ interface OnboardingState {
   chatStep: number;
   businessDescription: string;
   businessName: string;
+  sourceUrl: string;
   whatYouSell: string;
   location: string;
   businessType: string;
@@ -23,6 +24,7 @@ interface OnboardingState {
   setChatStep: (step: number) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
+  setSourceUrl: (url: string) => void;
   setWhatYouSell: (what: string) => void;
   setLocation: (location: string) => void;
   setBusinessType: (type: string) => void;
@@ -45,6 +47,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       chatStep: 1,
       businessDescription: '',
       businessName: '',
+      sourceUrl: '',
       whatYouSell: '',
       location: '',
       businessType: 'Online Store',
@@ -62,6 +65,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setChatStep: (chatStep) => set({ chatStep }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
+      setSourceUrl: (sourceUrl) => set({ sourceUrl }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
       setLocation: (location) => set({ location }),
       setBusinessType: (businessType) => set({ businessType }),
