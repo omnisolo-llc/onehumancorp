@@ -5184,7 +5184,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     closeDomainSetup();
                                     fireConfetti();
                                     setTimeout(() => {
-                                        showScreen('dashboard-screen');
+                                        showScreen('checklist-screen');
                                     }, 2000);
                                 } else {
                                     console.error('Failed to publish');

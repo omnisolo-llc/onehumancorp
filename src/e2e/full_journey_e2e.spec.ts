@@ -3,62 +3,20 @@ import { test, expect } from './fixtures';
 test.describe('Onboarding Guide E2E Journey', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text="Your business, live in minutes."')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Describe your business in a sentence' })).toBeVisible();
   });
 
   test('Complete Path to Live Business and Checklist', async ({ page }) => {
-    // 1. Wizard start
-    await page.click('button:has-text("🚀 Start My Business")');
+    await page.getByPlaceholder(/e\.g\. I run a local bakery called Maya's Cakes\.\.\./).fill("I run Journey Shop, an online store that sells The Journey Book for 29.99.");
+    await page.getByRole('button', { name: /Launch your business in 10 minutes/ }).click();
 
-    // 2. Business Type
-    await page.click('text="Online Store"');
-    await page.click('button:has-text("Next →")');
+    await expect(page.getByRole('heading', { name: 'Edit Website' })).toBeVisible({ timeout: 15000 });
 
-    // 3. Company Info
-    await page.fill('input[placeholder="What is your business called?"]', 'Journey Shop');
-    await page.click('button:has-text("Generate Description")');
-    await page.waitForLoadState("networkidle");
-    await page.click('button:has-text("Next →")');
-
-    // 4. Selling Categories
-    await page.check('text="Physical Products"');
-    await page.click('button:has-text("Next →")');
-
-    // 5. First Product
-    await page.fill('input[placeholder="What is the name of this product?"]', 'The Journey Book');
-    await page.fill('input[placeholder="0.00"]', '29.99');
-
-    await expect(page.locator('button:has-text("Generate AI Description")')).toBeVisible();
-    await page.click('button:has-text("Generate AI Description")');
-    await page.waitForLoadState("networkidle");
-
-    await page.click('button:has-text("Next →")');
-
-    // 6. Payments
-    await page.click('text="Online"');
-    await page.click('button:has-text("Next →")');
-
-    // 7. Theme
-    await page.click('text="Modern"');
-    await page.click('button:has-text("Next →")');
-
-    // 8. Domain
-    await page.click('text="🌐 Free OHC Domain"');
-    await page.click('button:has-text("Next →")');
-
-    // 9. Review & Launch
-    await expect(page.locator('text="Publish my business"')).toBeVisible();
-    await page.click('button:has-text("Publish my business")');
-
-    // Wait for the success state/confetti
-    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
-
-    // 10. Welcome Checklist
-    const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');
-    await viewChecklistBtn.click();
+    // Publish
+    await page.getByRole('button', { name: /Publish Changes/ }).click();
 
     // Verify the checklist loaded correctly
-    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible();
+    await expect(page.locator('text="You\'re set up! Here\'s what to do next:"')).toBeVisible({ timeout: 15000 });
 
     // Verify all tasks
     await expect(page.locator('text="✅ Business live"')).toBeVisible();
