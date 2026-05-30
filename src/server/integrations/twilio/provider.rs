@@ -49,6 +49,10 @@ impl TwilioProvider {
         }
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn provision_number(&self, area_code: &str) -> Result<String, String> {
+        self.client.provision_number(area_code).await
+    }
 }
 
 #[cfg(test)]
@@ -67,6 +71,10 @@ mod tests {
         async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
+        }
+
+        async fn provision_number(&self, _area_code: &str) -> Result<String, String> {
+            Ok("+1234567890".to_string())
         }
     }
 

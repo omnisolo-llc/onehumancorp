@@ -14,6 +14,7 @@ exports_files(
         "mesh_handler.rs",
         "mod.rs",
         "telemetry.rs",
+        "voice.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -34,6 +35,7 @@ rust_library(
         "mesh_handler.rs",
         "mod.rs",
         "telemetry.rs",
+        "voice.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
