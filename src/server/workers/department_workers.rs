@@ -44,6 +44,7 @@ impl OperationsWorker {
         let task = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
                     UPDATE department_tasks
@@ -112,28 +113,28 @@ impl OperationsWorker {
             if let Some(items) = items {
                 for item in items {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
-                        let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .execute(&db.pool)
-                                    .await;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND organization_id = $3")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .execute(&db.pool)
-                                    .await;
+                        let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
+                        let product_info = match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                                ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                                sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(quantity)
                                     .bind(product_id)
                                     .bind(&tenant_id)
-                                    .fetch_optional(&db.pool)
-                                    .await
-                                    .unwrap_or(None);
+                                    .execute(&mut *tx)
+                                    .await.map_err(|e| e.to_string())?;
+
+                                let row = sqlx::query("SELECT inventory_count, title as name, supplier_name, supplier_contact FROM products WHERE id = $1 AND tenant_id = $2")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_optional(&mut *tx)
+                                    .await.map_err(|e| e.to_string())?;
+
+                                tx.commit().await.map_err(|e| e.to_string())?;
+
                                 match row {
                                     Some(r) => (
                                         r.try_get::<i32, _>("inventory_count").unwrap_or(10),
@@ -145,27 +146,23 @@ impl OperationsWorker {
                                 }
                             },
                             crate::db::DbStore::Sqlite(pool) => {
-                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND tenant_id = ?")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .execute(pool)
-                                    .await;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND organization_id = ?")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .execute(pool)
-                                    .await;
+                                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
+                                sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(quantity)
                                     .bind(product_id)
                                     .bind(&tenant_id)
+                                    .execute(&mut *tx)
+                                    .await.map_err(|e| e.to_string())?;
+
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND tenant_id = ?")
+                                    .bind(product_id)
                                     .bind(&tenant_id)
-                                    .fetch_optional(pool)
-                                    .await
-                                    .unwrap_or(None);
+                                    .fetch_optional(&mut *tx)
+                                    .await.map_err(|e| e.to_string())?;
+
+                                tx.commit().await.map_err(|e| e.to_string())?;
+
                                 match row {
                                     Some(r) => (
                                         r.try_get::<i32, _>("inventory_count").unwrap_or(10),
@@ -178,19 +175,25 @@ impl OperationsWorker {
                             }
                         };
 
+                        let (inventory_count, product_name, supplier_name, supplier_contact) = product_info;
+
                         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
 
                         let recent_sales: i64 = match &db.store {
                             crate::db::DbStore::Postgres => {
-                                sqlx::query_scalar(
+                                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                                ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+                                let val = sqlx::query_scalar(
                                     "SELECT COALESCE(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = $1 AND oi.tenant_id = $2 AND o.created_at >= $3"
                                 )
                                 .bind(product_id)
                                 .bind(&tenant_id)
                                 .bind(thirty_days_ago)
-                                .fetch_one(&db.pool)
+                                .fetch_one(&mut *tx)
                                 .await
-                                .unwrap_or(0)
+                                .unwrap_or(0);
+                                tx.commit().await.map_err(|e| e.to_string())?;
+                                val
                             },
                             crate::db::DbStore::Sqlite(pool) => {
                                 sqlx::query_scalar(
@@ -217,12 +220,16 @@ impl OperationsWorker {
                             let title = format!("Restock Item: {}", product_name);
                             let existing_task: i64 = match &db.store {
                                 crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = $1 AND title = $2 AND status = 'PENDING'")
+                                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                                    ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+                                    let val = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND title = $2 AND status = 'PENDING'")
                                         .bind(&tenant_id)
                                         .bind(&title)
-                                        .fetch_one(&db.pool)
+                                        .fetch_one(&mut *tx)
                                         .await
-                                        .unwrap_or(0)
+                                        .unwrap_or(0);
+                                    tx.commit().await.map_err(|e| e.to_string())?;
+                                    val
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
                                     sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = ? AND title = ? AND status = 'PENDING'")
@@ -258,6 +265,8 @@ impl OperationsWorker {
 
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
+                                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                                    ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
                                     if let Err(e) = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
@@ -269,10 +278,11 @@ impl OperationsWorker {
                                     .bind(&title)
                                     .bind(&description)
                                     .bind(&drafted_msg)
-                                    .execute(&db.pool)
+                                    .execute(&mut *tx)
                                     .await {
                                         tracing::error!("Failed to insert restock task: {}", e);
                                     }
+                                    tx.commit().await.map_err(|e| e.to_string())?;
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
                                     if let Err(e) = sqlx::query(
@@ -307,6 +317,9 @@ impl OperationsWorker {
 
             match &db.store {
                 crate::db::DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
                     sqlx::query(
                         r#"
                         INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
@@ -316,20 +329,20 @@ impl OperationsWorker {
                     .bind(&new_task_id)
                     .bind(&tenant_id)
                     .bind(&new_payload)
-                    .execute(&db.pool)
+                    .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                         .bind(&id)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
 
                     // Check for order milestones
-                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1::uuid")
+                    let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
                         .bind(&tenant_id)
-                        .fetch_one(&db.pool)
+                        .fetch_one(&mut *tx)
                         .await
                         .unwrap_or(0);
 
@@ -350,7 +363,7 @@ impl OperationsWorker {
                         .bind(&milestone_id)
                         .bind(&tenant_id)
                         .bind(milestone_type)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await;
 
                         let _ = sqlx::query(
@@ -363,11 +376,14 @@ impl OperationsWorker {
                         .bind(&tenant_id)
                         .bind(milestone_title)
                         .bind(milestone_msg)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await;
                     }
+                    tx.commit().await.map_err(|e| e.to_string())?;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
                     sqlx::query(
                         r#"
                         INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
@@ -377,20 +393,20 @@ impl OperationsWorker {
                     .bind(&new_task_id)
                     .bind(&tenant_id)
                     .bind(new_payload.to_string())
-                    .execute(sqlite_pool)
+                    .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&id)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
 
                     // Check for order milestones (Sqlite)
                     let order_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = ?")
                         .bind(&tenant_id)
-                        .fetch_one(sqlite_pool)
+                        .fetch_one(&mut *tx)
                         .await
                         .unwrap_or(0);
 
@@ -411,7 +427,7 @@ impl OperationsWorker {
                         .bind(&milestone_id)
                         .bind(&tenant_id)
                         .bind(milestone_type)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await;
 
                         let _ = sqlx::query(
@@ -424,9 +440,10 @@ impl OperationsWorker {
                         .bind(&tenant_id)
                         .bind(milestone_title)
                         .bind(milestone_msg)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await;
                     }
+                    tx.commit().await.map_err(|e| e.to_string())?;
                 }
             }
         }
@@ -459,9 +476,11 @@ mod tests {
             );
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
-                organization_id TEXT NOT NULL,
+                tenant_id TEXT NOT NULL,
                 name TEXT,
-                inventory_count INT
+                inventory_count INT,
+                supplier_name TEXT,
+                supplier_contact TEXT
             );
             CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
@@ -495,7 +514,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // Insert a product with low inventory
-            sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'Low Stock Item', 2)")
+            sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'Low Stock Item', 2)")
                 .execute(pool).await.unwrap();
 
             // Insert a task
@@ -536,7 +555,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // High inventory but massive velocity
-            sqlx::query("INSERT INTO products (id, organization_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'Fast Selling Item', 50)")
+            sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'Fast Selling Item', 50)")
                 .execute(pool).await.unwrap();
 
             let order_id = "order_1";
@@ -651,6 +670,7 @@ impl CustomerSuccessWorker {
         let task = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
                     UPDATE department_tasks
@@ -720,11 +740,14 @@ impl CustomerSuccessWorker {
             // Fetch business context
             let (tenant_name, tenant_industry) = match &db.store {
                 crate::db::DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
                     let row = sqlx::query("SELECT name, industry FROM tenants WHERE id = $1")
                         .bind(&tenant_id)
-                        .fetch_optional(&db.pool)
+                        .fetch_optional(&mut *tx)
                         .await
                         .unwrap_or(None);
+                    tx.commit().await.map_err(|e| e.to_string())?;
                     match row {
                         Some(r) => (
                             r.try_get::<String, _>("name").unwrap_or_else(|_| "Your Business".to_string()),
@@ -796,6 +819,9 @@ impl CustomerSuccessWorker {
 
             match &db.store {
                 crate::db::DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
@@ -807,7 +833,7 @@ impl CustomerSuccessWorker {
                         .bind(&tenant_id)
                         .bind(&title)
                         .bind(&drafted_msg)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await;
                     } else {
                         // Insert directly to agent_inbox as an auto-reply
@@ -820,18 +846,22 @@ impl CustomerSuccessWorker {
                         .bind(&tenant_id)
                         .bind(Uuid::new_v4().to_string())
                         .bind(&drafted_msg)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await;
                     }
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = jsonb_set(payload, '{drafted_message}', $1), updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                         .bind(&drafted_msg)
                         .bind(&id)
-                        .execute(&db.pool)
+                        .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
@@ -843,7 +873,7 @@ impl CustomerSuccessWorker {
                         .bind(&tenant_id)
                         .bind(&title)
                         .bind(&drafted_msg)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await;
                     } else {
                         // Insert directly to agent_inbox as an auto-reply
@@ -856,16 +886,18 @@ impl CustomerSuccessWorker {
                         .bind(&tenant_id)
                         .bind(Uuid::new_v4().to_string())
                         .bind(&drafted_msg)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await;
                     }
 
                     sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', payload = json_patch(payload, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(json!({"drafted_message": drafted_msg}).to_string())
                         .bind(&id)
-                        .execute(sqlite_pool)
+                        .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
                 }
             }
         }
@@ -923,18 +955,22 @@ impl PromoterWorker {
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
-                                    .execute(&db_social.pool)
-                                    .await;
+                                    if let Ok(mut tx) = db_social.pool.begin().await {
+                                        let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                            "#
+                                        )
+                                        .bind(&task_id)
+                                        .bind(org_id)
+                                        .bind(&title)
+                                        .bind(&drafted_post)
+                                        .execute(&mut *tx)
+                                        .await;
+                                        let _ = tx.commit().await;
+                                    }
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
                                     let _ = sqlx::query(

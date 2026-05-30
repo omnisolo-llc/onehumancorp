@@ -236,7 +236,7 @@ impl StateManager for StandaloneStateManager {
         };
 
         let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
-            state_manager_timeout(),
+            std::time::Duration::from_secs(2),
             acquire_and_fetch,
         )
         .await

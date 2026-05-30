@@ -267,6 +267,77 @@ mod parity_tests {
     }
 
     #[tokio::test]
+    async fn test_shared_task_fields_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "test_org_parity_fields";
+        let now = chrono::Utc::now();
+        let payload = "{\"key\": \"value\"}";
+
+        // SharedTask construction (simulating data in DB)
+        // We'll use the tables created by migrations
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+             sqlx::query(
+                "INSERT INTO swarm_tasks (id, mission_id, title, status, payload, locked_until, created_at, updated_at) VALUES (?, 'mission_1', 'Title', 'PENDING', ?, ?, ?, ?)"
+            )
+            .bind(&task_id)
+            .bind(payload)
+            .bind(now.to_rfc3339())
+            .bind(now.to_rfc3339())
+            .bind(now.to_rfc3339())
+            .execute(pool)
+            .await
+            .unwrap();
+
+            let row = sqlx::query("SELECT payload, locked_until, created_at FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            let res_payload: String = row.get("payload");
+            let res_locked: String = row.get("locked_until");
+            let res_created: String = row.get("created_at");
+
+            assert_eq!(res_payload, payload);
+            assert!(chrono::DateTime::parse_from_rfc3339(&res_locked).is_ok());
+            assert!(chrono::DateTime::parse_from_rfc3339(&res_created).is_ok());
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+             sqlx::query(
+                "INSERT INTO swarm_tasks (id, mission_id, title, status, payload, locked_until, created_at, updated_at) VALUES ($1, 'mission_1', 'Title', 'PENDING', $2, $3, $4, $5)"
+            )
+            .bind(parsed_id)
+            .bind(payload)
+            .bind(now)
+            .bind(now)
+            .bind(now)
+            .execute(&db.pool)
+            .await
+            .unwrap();
+
+            let row = sqlx::query("SELECT payload, locked_until, created_at FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            let res_payload: String = row.get("payload");
+            let _res_locked: chrono::DateTime<chrono::Utc> = row.get("locked_until");
+            let _res_created: chrono::DateTime<chrono::Utc> = row.get("created_at");
+
+            assert_eq!(res_payload, payload);
+        }
+    }
+
+    #[tokio::test]
     async fn test_parity_timezones() {
         let sqlite_db = setup_sqlite_db().await;
         let pg_db = setup_postgres_db().await;

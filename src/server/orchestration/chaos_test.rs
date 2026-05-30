@@ -353,6 +353,70 @@ mod chaos_tests {
     }
 
     #[tokio::test]
+    async fn test_db_deadlock_simulation() {
+        // We use two tasks trying to acquire two different locks in reverse order
+        let transport = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+
+        let t1 = transport.clone();
+        let t2 = transport.clone();
+
+        let handle1 = tokio::spawn(async move {
+            let _ = t1.acquire_lock("lock_a", "agent_1", 5).await;
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            t1.acquire_lock("lock_b", "agent_1", 5).await
+        });
+
+        let handle2 = tokio::spawn(async move {
+            let _ = t2.acquire_lock("lock_b", "agent_2", 5).await;
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            t2.acquire_lock("lock_a", "agent_2", 5).await
+        });
+
+        let res1 = handle1.await.unwrap();
+        let res2 = handle2.await.unwrap();
+
+        // One of them must fail to acquire the second lock because of mutual exclusion
+        assert!(!(res1.unwrap_or(false) && res2.unwrap_or(false)), "Deadlock should be prevented by lock exclusion");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_latency_injection() {
+        struct LatentTransport {
+            inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+            latency: Duration,
+        }
+
+        #[async_trait]
+        impl ohc_builtin_agent::mesh::transport::MeshTransport for LatentTransport {
+            async fn publish(&self, topic: &str, event: ohc_builtin_agent::mesh::transport::TeammateMeshEvent) -> Result<(), String> {
+                tokio::time::sleep(self.latency).await;
+                self.inner.publish(topic, event).await
+            }
+            async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+                self.inner.subscribe(topic, handler).await
+            }
+            async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+                 tokio::time::sleep(self.latency).await;
+                 self.inner.acquire_lock(resource, owner, ttl_seconds).await
+            }
+            async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+                 self.inner.release_lock(resource, owner).await
+            }
+            async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+        }
+
+        let latent = Arc::new(LatentTransport {
+            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            latency: Duration::from_millis(100),
+        });
+
+        let start = std::time::Instant::now();
+        let _ = latent.acquire_lock("test", "agent", 10).await;
+        assert!(start.elapsed() >= Duration::from_millis(100));
+    }
+
+    #[tokio::test]
     async fn test_standalone_db_pull_fallback() {
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
