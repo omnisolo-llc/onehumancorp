@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -8,6 +9,9 @@ import { describe, it, expect, vi } from 'vitest';
 global.fetch = vi.fn() as any;
 
 describe('HelpChat Component', () => {
+  beforeAll(() => {
+    window.HTMLElement.prototype.scrollIntoView = function() {};
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

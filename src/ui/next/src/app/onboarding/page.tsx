@@ -24,12 +24,11 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isReadyToSync, setIsReadyToSync] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -48,18 +47,22 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => {
+      setIsReadyToSync(true);
+    });
   }, []);
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isReadyToSync) return;
 
     // Only save if we are past the initial state
     if (step === 1 && chatStep === 1 && !businessName) return;
@@ -77,6 +80,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -94,8 +98,8 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, isLoaded
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
+    aiAgents, aiAutoRespond, isReadyToSync
   ]);
 
   const handleIntake = async () => {
@@ -190,7 +194,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  if (!isLoaded) return null;
+  if (!isReadyToSync) return null;
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">

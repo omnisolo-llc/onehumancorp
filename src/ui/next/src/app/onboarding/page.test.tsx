@@ -35,7 +35,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -69,7 +69,7 @@ describe('OnboardingWizard', () => {
     });
 
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -139,7 +139,7 @@ describe('OnboardingWizard', () => {
     });
 
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -188,7 +188,7 @@ describe('OnboardingWizard', () => {
     });
 
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -215,7 +215,7 @@ describe('OnboardingWizard', () => {
       firstProductPrice: '20'
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -229,7 +229,7 @@ describe('OnboardingWizard', () => {
   it('Step 3: Can select AI agents and toggle auto-respond', async () => {
     useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -262,7 +262,7 @@ describe('OnboardingWizard', () => {
       startResult: { message: "Your business has been successfully launched." }
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
