@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "market_research",
+    srcs = ["research.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/domain/market_research",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "market_research_test",
+    srcs = ["research_test.go"],
+    embed = [":market_research"],
+)
