@@ -5124,7 +5124,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -5212,7 +5212,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="max-width: 375px; margin: 0 auto; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -6231,9 +6231,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                             if (!validateInputs(parseInt(stepId) || stepId)) return;
                             if (prevStep === 3 && parseInt(stepId) === 4) {
-                                const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
-                                if (!hasCompanyName) {
+                                const companyNameInput = document.getElementById('step-3-business-name');
+                                const companyName = companyNameInput ? companyNameInput.value.trim() : '';
+                                if (companyName.length < 3) {
+                                    alert('Business name must be at least 3 characters long.');
+                                    return;
+                                }
+                                const companyDescInput = document.getElementById('step-3-business-name-2');
+                                const companyDesc = companyDescInput ? companyDescInput.value.trim() : '';
+                                if (companyDesc.length < 3) {
+                                    alert('Business description must be at least 3 characters long.');
                                     return;
                                 }
                             }
