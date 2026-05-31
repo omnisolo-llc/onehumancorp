@@ -29,7 +29,7 @@ test.describe('Invisible Storefront Generator Flow', () => {
 
     // Expect loading state
     await expect(page.getByText('Agents are building your store...')).toBeVisible();
-    await expect(page.getByText('Generating...')).toBeVisible(); // from the button if it's visible, but the whole page changes to a loader. Wait, the page changes to a loader.
+    // Button is unmounted, so we can't expect 'Generating...' to be visible from the button.
 
     // Expect success state
     await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 15000 });
@@ -87,9 +87,8 @@ test.describe('Invisible Storefront Generator Flow', () => {
     const genButton = page.getByRole('button', { name: /Generate Storefront/ });
     await genButton.click();
 
-    // Check loading button
-    await expect(genButton).toBeDisabled();
-    await expect(page.getByText('Generating...')).toBeVisible();
+    // The whole page changes to loading screen, button is gone
+    await expect(page.getByText('Agents are building your store...')).toBeVisible();
   });
 
   test('button is disabled when input is empty', async ({ page }) => {
