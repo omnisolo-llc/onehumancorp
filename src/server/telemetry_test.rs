@@ -529,8 +529,8 @@ fn test_record_llm_network_latency() {
 #[test]
 fn test_sync_latency_and_payload_histograms() {
     let latency_histogram = ::server_telemetry::get_sync_latency_histogram();
-    latency_histogram.record(1.23, &[::server_telemetry::opentelemetry::KeyValue::new("mode", "Standalone")]);
+    latency_histogram.record(1.23, &[opentelemetry::KeyValue::new("mode", "Standalone")]);
 
     let payload_histogram = ::server_telemetry::get_sync_payload_size_histogram();
-    payload_histogram.record(1024.0, &[::server_telemetry::opentelemetry::KeyValue::new("mode", "Standalone")]);
+    payload_histogram.record(1024.0, &[opentelemetry::KeyValue::new("mode", "Standalone")]);
 }
