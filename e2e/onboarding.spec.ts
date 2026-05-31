@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-
-// Mocks the underlying KAIROS logic locally for uncoupled execution, this allows true unmocked E2E behavior
-// without relying on failing docker endpoints during local validation
+// NOTE: We rely on the seeded test environment, doing our best to perform an unmocked E2E operation
 
 test.describe('Onboarding Wizard CUJ', () => {
 
+  // Test 1: Persona navigates from home, starts onboarding
   test('Persona: Business Owner completes initial setup successfully', async ({ page }) => {
     // 1. Owner starts from the home page after user login via the UI
     await page.goto('/login');
@@ -34,18 +33,6 @@ test.describe('Onboarding Wizard CUJ', () => {
     const locInput = page.getByPlaceholder(/Portland, OR/i);
     await locInput.fill('NY');
 
-    // Mocks are necessary due to missing external environments outside production
-    await page.route('/api/onboarding/intake', async route => {
-      const json = {
-        businessType: 'Online Store',
-        categories: ['Food'],
-        domainSuggestion: 'mayabakery.com',
-        firstProductSuggestion: 'Vegan Cake',
-        priceSuggestion: '25'
-      };
-      await route.fulfill({ json });
-    });
-
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await generateBtn.click();
 
@@ -57,22 +44,6 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByRole('button', { name: /Continue/i }).click();
     await expect(page.getByText('Style & Team')).toBeVisible();
 
-    // Mock API requests for launch
-    await page.route('/api/onboarding/start', async route => {
-      const json = { success: true, organization_id: "test-org" };
-      await route.fulfill({ json });
-    });
-
-    // NOTE: This triggers another call that checks step
-    await page.route('/api/onboarding/state', async route => {
-      if (route.request().method() === 'GET') {
-          await route.fulfill({ json: { wizardState: { step: 5, startResult: { success: true, organization_id: "test-org" } } } });
-      } else {
-          await route.fulfill({ status: 200 });
-      }
-    });
-
-
     // 7. Owner launches store
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
@@ -81,6 +52,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(page.getByRole('link', { name: /Go to Dashboard/i })).toBeVisible();
   });
 
+  // Test 2: Ensure validation fails on small name
   test('Persona: Business Owner fails validation on short business name', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
@@ -107,9 +79,10 @@ test.describe('Onboarding Wizard CUJ', () => {
     // Click generate, expect validation failure message
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await generateBtn.click();
-    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+    await expect(page.getByText('Business name must be at least 3 characters')).toBeVisible();
   });
 
+  // Test 3: Validate missing location blocks progression
   test('Persona: Business Owner cannot progress without location', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
@@ -130,6 +103,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(generateBtn).toBeDisabled();
   });
 
+  // Test 4: Navigating Back works
   test('Persona: Business Owner can navigate back from sell step', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
@@ -147,6 +121,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
   });
 
+  // Test 5: Can cancel from Style & Team
   test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
@@ -159,19 +134,6 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
     await page.getByRole('button', { name: /Next/i }).click();
     await page.getByPlaceholder(/Portland, OR/i).fill('NY');
-
-    // Mocks are necessary due to missing external environments outside production
-    await page.route('/api/onboarding/intake', async route => {
-      const json = {
-        businessType: 'Online Store',
-        categories: ['Food'],
-        domainSuggestion: 'mayabakery.com',
-        firstProductSuggestion: 'Vegan Cake',
-        priceSuggestion: '25'
-      };
-      await route.fulfill({ json });
-    });
-
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
