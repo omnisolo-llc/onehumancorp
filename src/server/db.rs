@@ -401,8 +401,7 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0
+                        version INTEGER DEFAULT 1
                     );
 
                     DROP TABLE IF EXISTS shared_tasks;
@@ -418,8 +417,7 @@ impl DB {
                         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
@@ -1583,6 +1581,7 @@ mod e2e_tenant_isolation_tests {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_swarm_tasks_tests {
+    use std::sync::Arc;
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
         if std::env::var("DATABASE_URL").is_err() {
@@ -1590,7 +1589,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let _pool = sqlx::postgres::PgPoolOptions::new()
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1609,7 +1608,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let _pool2 = sqlx::postgres::PgPoolOptions::new()
+        let pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
