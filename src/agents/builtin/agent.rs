@@ -1731,6 +1731,55 @@ impl Agent {
             Err("Checkpointer not configured".into())
         }
     }
+    pub async fn run_actor_model(
+        self: Arc<Self>,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::actor_model::{ActorSystem, LlmActor, ToolActor, UserActor, ActorMessage, ActorMessagePayload, Actor};
+        let system = Arc::new(ActorSystem::new());
+
+        let llm_actor = LlmActor {
+            name: "LlmActor".to_string(),
+            agent: self.clone(),
+            config: cfg.clone(),
+        };
+        let tool_actor = ToolActor {
+            name: "ToolActor".to_string(),
+            tools: self.tools.clone(),
+        };
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let user_actor = UserActor {
+            name: "UserActor".to_string(),
+            tx,
+        };
+
+        let (llm_tx, llm_rx) = tokio::sync::mpsc::channel(10);
+        let (tool_tx, tool_rx) = tokio::sync::mpsc::channel(10);
+        let (user_tx, user_rx) = tokio::sync::mpsc::channel(10);
+
+        system.register(llm_actor.name(), llm_tx).await;
+        system.register(tool_actor.name(), tool_tx).await;
+        system.register(user_actor.name(), user_tx).await;
+
+        llm_actor.start(llm_rx, system.clone());
+        tool_actor.start(tool_rx, system.clone());
+        user_actor.start(user_rx, system.clone());
+
+        system.send(ActorMessage {
+            sender: "UserActor".to_string(),
+            recipient: "LlmActor".to_string(),
+            payload: ActorMessagePayload::UserTask(initial_message.to_string()),
+        }).await?;
+
+        match rx.recv().await {
+            Some(Ok(res)) => Ok(res),
+            Some(Err(e)) => Err(e.into()),
+            None => Err("Actor system closed unexpectedly".into()),
+        }
+    }
+
 
     pub async fn run<F>(
         &self,
