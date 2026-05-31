@@ -50,6 +50,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -76,7 +78,9 @@ export default function OnboardingWizard() {
       categories,
       websiteTemplate,
       firstProductName,
-      firstProductPrice
+      firstProductPrice,
+      aiAgents,
+      aiAutoRespond
     };
 
     const timer = setTimeout(() => {
@@ -90,7 +94,8 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -153,7 +158,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
+          company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -220,6 +225,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -253,6 +259,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-4 flex-1">
                     <div>
                       <textarea
+                        autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
@@ -287,6 +294,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
@@ -324,6 +332,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
+                    autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -361,6 +370,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"

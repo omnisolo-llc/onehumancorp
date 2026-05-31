@@ -54,7 +54,7 @@ impl AuthConfig {
         let token = &auth_str["Bearer ".len()..];
         if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
         
-        let app_key = std::env::var("JWT_SECRET")
+        let app_key = std::env::var("OHC_JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -65,7 +65,7 @@ impl AuthConfig {
                         }
                     }
                 }
-                panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+                panic!("OHC_JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
             });
         let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
@@ -101,7 +101,7 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = std::env::var("JWT_SECRET")
+    let app_key = std::env::var("OHC_JWT_SECRET")
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| {
             let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -112,7 +112,7 @@ fn hmac_token(tok: &str) -> Vec<u8> {
                     }
                 }
             }
-            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+            panic!("OHC_JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
         });
     let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
@@ -139,8 +139,8 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let domain = parts[0];
     
     match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
-        _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
+        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
+        _ if domain.ends_with(".ohc.global") => {}
         _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
     }
     

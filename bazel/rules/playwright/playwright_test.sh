@@ -36,25 +36,36 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
-# Resolve browsers path to absolute
+# Resolve the Bazel-provided Playwright browser repository to an absolute path.
+# Every shard gets the same runfiles-backed browser directory instead of a
+# per-shard install under the temporary Playwright workspace.
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
 
-  # Resolve relative to runfiles root if it starts with ../
-  if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
-      if [[ -L bazel-out ]]; then
-          output_base="$(dirname "$(dirname "$(dirname "$(readlink bazel-out)")")")"
-          repo_path="${PLAYWRIGHT_BROWSERS_PATH#../}"
-          repo_path="${repo_path%/..}"
-          potential_path="$output_base/external/$repo_path"
-          if [[ -d "$potential_path" ]]; then
-              export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$potential_path")"
-          fi
-      fi
+  BROWSER_PATH_CANDIDATES=(
+    "$PLAYWRIGHT_BROWSERS_PATH"
+    "$RUNFILES_ROOT/$PLAYWRIGHT_BROWSERS_PATH"
+  )
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$PLAYWRIGHT_BROWSERS_PATH"
+    )
+  fi
+  if [[ -n "${TEST_WORKSPACE:-}" && -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$TEST_WORKSPACE/$PLAYWRIGHT_BROWSERS_PATH"
+    )
   fi
 
+  for candidate in "${BROWSER_PATH_CANDIDATES[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$candidate")"
+      break
+    fi
+  done
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
+      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" \( -name "chrome-headless-shell" -o -name "headless_shell" \) -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
           ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
@@ -63,14 +74,18 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
+  else
+      echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
+      exit 1
   fi
 fi
 
 # Resolve server binary path
-SERVER_BIN=""
+server_bin=""
 for candidate in "src/server/server" "../_main/src/server/server"; do
   if [[ -x "$candidate" ]]; then
-    SERVER_BIN="$(realpath "$candidate")"
+    server_bin="$(realpath "$candidate")"
     break
   fi
 done
@@ -110,7 +125,7 @@ else
   done
 fi
 
-for support_file in fixtures.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
+for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
   if [[ -f "$workspace_root/src/e2e/$support_file" ]]; then
     cp "$workspace_root/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   elif [[ -f "$RUNFILES_ROOT/src/e2e/$support_file" ]]; then
@@ -135,13 +150,9 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   exit 1
 fi
 
-# Check if Docker is available. If not, skip E2E tests gracefully.
 if ! docker info >/dev/null 2>&1; then
-  echo "Skip E2E tests due to docker failure in sandbox"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
-  exit 0
+  echo "[playwright] Error: Docker is required for Bazel Playwright E2E tests."
+  exit 1
 fi
 
 # Unique container names for parallel isolation
@@ -149,15 +160,29 @@ RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
 CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
 POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
+PORT_LOCK_ROOT="${TMPDIR:-/tmp}/ohc-e2e-port-locks"
+PORT_LOCKS=()
+mkdir -p "$PORT_LOCK_ROOT"
 
 pick_free_port() {
-  python3 - <<'PY'
+  local port
+  local lock_dir
+  while true; do
+    port="$(python3 - <<'PY'
 import socket
 
 with socket.socket() as sock:
-    sock.bind(("127.0.0.1", 0))
+    sock.bind(("0.0.0.0", 0))
     print(sock.getsockname()[1])
 PY
+)"
+    lock_dir="$PORT_LOCK_ROOT/${port}.lock"
+    if mkdir "$lock_dir" 2>/dev/null; then
+      PORT_LOCKS+=("$lock_dir")
+      echo "$port"
+      return 0
+    fi
+  done
 }
 
 cleanup() {
@@ -167,6 +192,9 @@ cleanup() {
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
   docker rm -f "$POSTGRES_NAME" "$VALKEY_NAME" >/dev/null 2>&1 || true
+  if (( ${#PORT_LOCKS[@]} > 0 )); then
+    rm -rf "${PORT_LOCKS[@]}" >/dev/null 2>&1 || true
+  fi
   exit "$exit_code"
 }
 trap cleanup EXIT
@@ -197,14 +225,33 @@ for i in $(seq 1 120); do
   sleep 1
 done
 
-echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+postgres_exec() {
+  local sql="$1"
+  local label="$2"
+  for i in $(seq 1 30); do
+    if docker exec "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc -c "$sql"; then
+      return 0
+    fi
+    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+      echo "[playwright] Postgres container exited while running: $label"
+      docker logs "$POSTGRES_NAME" || true
+      return 1
+    fi
+    sleep 1
+  done
+  echo "[playwright] Error: failed to run Postgres setup SQL: $label"
+  docker logs "$POSTGRES_NAME" || true
+  return 1
+}
 
-if [[ -z "$SERVER_BIN" ]]; then
+echo "[playwright] Initializing database roles..."
+postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
+postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
+
+if [[ -z "$server_bin" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
     if [[ -x "$candidate" ]]; then
-      SERVER_BIN="$candidate"
+      server_bin="$candidate"
       break
     fi
   done
@@ -216,19 +263,19 @@ OHC_GRPC_SERVER_PORT="$(pick_free_port)"
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
-export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
-export BASE_URL="http://localhost:$OHC_SERVER_PORT"
+export OHC_E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
+export OHC_BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
-if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
-  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
-  JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+if [[ -n "${server_bin:-}" && -x "${server_bin:-}" ]]; then
+  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $server_bin..."
+  OHC_DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+  OHC_REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  OHC_JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+    "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
