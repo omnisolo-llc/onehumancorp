@@ -55,7 +55,7 @@ esac
 echo -e "\n${BOLD}Model (optional):${RESET}"
 read -p "Enter a model name (leave blank for provider default): " agent_model
 
-PORT=${PORT:-8080}
+PORT=${OHC_PORT:-8080}
 API_URL="http://127.0.0.1:${PORT}/api/agents/hire"
 echo -e "\n${DIM}[Hiring ${agent_name} as ${agent_role} via ${API_URL}...]${RESET}"
 
