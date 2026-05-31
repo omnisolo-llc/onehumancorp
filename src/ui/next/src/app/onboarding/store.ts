@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
-  chatStep: number;
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
@@ -20,7 +19,6 @@ interface OnboardingState {
   error: string;
   startResult: any;
   setStep: (step: number) => void;
-  setChatStep: (step: number) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;
@@ -42,7 +40,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-      chatStep: 1,
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
@@ -50,7 +47,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
-  domainChoice: 'subdomain',
+      domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
       aiAgents: [],
@@ -59,7 +56,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       error: '',
       startResult: null,
       setStep: (step) => set({ step }),
-      setChatStep: (chatStep) => set({ chatStep }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
@@ -67,7 +63,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
-  setDomainChoice: (domainChoice) => set({ domainChoice }),
+      setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),

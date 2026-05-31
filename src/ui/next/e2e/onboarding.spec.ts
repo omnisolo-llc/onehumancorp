@@ -5,20 +5,9 @@ test.describe('Onboarding Wizard Flow', () => {
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
-    // Step 1: Business Name
+    // Step 1: Description
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
-    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-    await page.locator('button:has-text("Next")').click();
-
-    // Step 2: What do you sell
-    await expect(page.locator('text="What do you sell?"')).toBeVisible();
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom vegan cakes in Portland, OR...');
-    await page.locator('button:has-text("Next")').click();
-
-    // Step 3: Location
-    await expect(page.locator('text="Where are you located?"')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+    await page.locator('textarea[placeholder="e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50."]').fill('I run Maya Cakes, I bake custom vegan cakes in Portland, OR...');
 
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();

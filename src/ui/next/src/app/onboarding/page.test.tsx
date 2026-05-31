@@ -10,7 +10,6 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      chatStep: 1,
       businessName: '',
       whatYouSell: '',
       location: '',
@@ -35,11 +34,11 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it('Handles single-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
@@ -66,23 +65,8 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const input = screen.getByPlaceholderText(/I am Maya/i);
+    await user.type(input, 'I run Maya Bakery, baking custom vegan cakes in NY.');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -129,23 +113,8 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const input = screen.getByPlaceholderText(/I am Maya/i);
+    await user.type(input, 'I run Maya Bakery in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
@@ -154,7 +123,7 @@ describe('OnboardingWizard', () => {
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
