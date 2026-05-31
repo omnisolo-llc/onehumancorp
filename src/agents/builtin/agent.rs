@@ -395,7 +395,7 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
-    pub prompt_cache: Option<Arc<crate::prompt_caching::PromptCache>>,
+    pub prompt_cache: Option<Arc<ohc_builtin_agent_core::prompt_caching::PromptCache>>,
 }
 
 impl Agent {
@@ -422,7 +422,7 @@ impl Agent {
         self
     }
 
-    pub fn with_prompt_cache(mut self, cache: Arc<crate::prompt_caching::PromptCache>) -> Self {
+    pub fn with_prompt_cache(mut self, cache: Arc<ohc_builtin_agent_core::prompt_caching::PromptCache>) -> Self {
         self.prompt_cache = Some(cache);
         self
     }
@@ -6444,6 +6444,7 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
+        use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: std::sync::Arc::new(tokio::sync::Mutex::new(0)) });
         let tool = Tool {
             name: "test_tool".to_string(),
