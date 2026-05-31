@@ -36,7 +36,7 @@ describe('agent workflow API', () => {
     const body = await response.json();
     expect(body.workflow.name).toBe('Branch review');
     expect(body.workflow.workflow).toBe('ohc_review_branch');
-    expect(body.workflow.command).toContain('ohc_builtin_agent --task');
+    expect(body.workflow.command).toContain('server --task');
     expect(body.workflow.command).toContain('RunWorkflow');
   });
 });

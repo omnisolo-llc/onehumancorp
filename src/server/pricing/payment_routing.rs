@@ -1,13 +1,16 @@
+const BATCH_PAYOUT_THRESHOLD_CENTS: i64 = 10000;
+const ACH_ROUTING_THRESHOLD_CENTS: i64 = 5000;
+
 pub fn should_batch_payout(amount_cents: i64) -> bool {
     // Transaction Fee Optimization
     // To minimize Stripe transfer fees, small payouts under $100 are batched.
-    amount_cents < 10000
+    amount_cents < BATCH_PAYOUT_THRESHOLD_CENTS
 }
 
 pub fn route_payment(amount_cents: i64) -> &'static str {
     // Transaction Fee Optimization
     // To minimize Stripe transaction fees, high-value transactions are routed via ACH instead of Credit Card.
-    if amount_cents >= 5000 {
+    if amount_cents >= ACH_ROUTING_THRESHOLD_CENTS {
         "ACH"
     } else {
         "CreditCard"
