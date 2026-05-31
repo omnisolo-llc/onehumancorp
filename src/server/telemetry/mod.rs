@@ -1304,3 +1304,36 @@ pub async fn record_sync_failed_count(
     )
     .await
 }
+pub static TASKS_COMPLETED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_FAILED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_TRANSITIONS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_tasks_completed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_COMPLETED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_completed_total")
+            .with_description("Total number of successfully completed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_failed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_FAILED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_failed_total")
+            .with_description("Total number of failed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_transitions_total")
+            .with_description("Total number of task state transitions")
+            .build()
+    })
+}
