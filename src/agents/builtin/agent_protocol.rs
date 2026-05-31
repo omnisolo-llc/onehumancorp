@@ -63,7 +63,7 @@ impl AgentProtocolServer {
         };
 
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
-        let _cfg = crate::agent::AgentRunConfig::default();
+        let cfg = crate::agent::AgentRunConfig::default();
 
         match self.runner.run_async(&initial_message).await {
             Ok(result) => {
@@ -85,7 +85,7 @@ impl AgentProtocolServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::{Agent};
+    use crate::agent::{Agent, AgentRunConfig};
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
 

@@ -25,7 +25,7 @@ mod parity_tests {
     }
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(url) = std::env::var("DATABASE_URL") {
             if url.starts_with("postgres") {
                 let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
                     .connect(&url)
@@ -110,14 +110,14 @@ mod parity_tests {
         let org_id = "test_org_parity";
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_customer", || async { sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
+            sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
                 .bind(&customer_id)
                 .bind(org_id)
                 .bind("test@example.com")
                 .bind("Test User")
                 .execute(pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let email: String = sqlx::query_scalar("SELECT email FROM customers WHERE id = ?")
                 .bind(&customer_id)
@@ -128,14 +128,14 @@ mod parity_tests {
         }
 
         if let Some(ref db) = pg_db {
-            db.execute_with_retry("insert_customer", || async { sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
+            sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
                 .bind(&customer_id)
                 .bind(org_id)
                 .bind("test@example.com")
                 .bind("Test User")
                 .execute(&db.pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let email: String = sqlx::query_scalar("SELECT email FROM customers WHERE id = $1")
                 .bind(&customer_id)
@@ -157,13 +157,13 @@ mod parity_tests {
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES (?, ?, NULL, ?)")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES (?, ?, NULL, ?)")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
                 .execute(pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let parent_plan_id: Option<String> = sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = ?")
                 .bind(&task_id)
@@ -176,13 +176,13 @@ mod parity_tests {
         // Postgres
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES ($1, $2, NULL, $3)")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES ($1, $2, NULL, $3)")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
                 .execute(&db.pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let parent_plan_id: Option<String> = sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = $1")
                 .bind(parsed_id)
@@ -203,13 +203,13 @@ mod parity_tests {
         let title = "Test Txn Title";
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, ?, ?, \'PENDING\')")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, ?, ?, 'PENDING')")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
                 .execute(pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let mut tx1 = pool.begin().await.unwrap();
             // In SQLite, an immediate transaction acquires a lock, we simulate updating.
@@ -239,13 +239,13 @@ mod parity_tests {
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ($1, $2, $3, \'PENDING\')")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ($1, $2, $3, 'PENDING')")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
                 .execute(&db.pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let mut tx1 = db.pool.begin().await.unwrap();
             // In Postgres, FOR UPDATE locks the row
@@ -279,14 +279,14 @@ mod parity_tests {
         let dt = chrono::Utc::now();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES (?, ?, ?, \'PENDING\', ?)")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES (?, ?, ?, 'PENDING', ?)")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
                 .bind(dt)
                 .execute(pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = ?")
                 .bind(&task_id)
@@ -302,14 +302,14 @@ mod parity_tests {
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES ($1, $2, $3, \'PENDING\', $4)")
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES ($1, $2, $3, 'PENDING', $4)")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
                 .bind(dt)
                 .execute(&db.pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = $1")
                 .bind(parsed_id)
