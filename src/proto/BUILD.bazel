@@ -12,6 +12,7 @@ exports_files([
     "hub.proto",
     "model.proto",
     "organization.proto",
+    "finance.proto",
     "skills.proto",
 ], visibility = ["//visibility:public"])
 
@@ -212,6 +213,21 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Finance ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "finance_proto",
+    srcs = ["finance.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "finance",
+    proto = ":finance_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package ohc.finance;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/finance;financepb";
+
+message BankAccount {
+    string id = 1;
+    string tenant_id = 2;
+    string account_name = 3;
+    string institution_name = 4;
+    string last_four = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message TaxProfile {
+    string id = 1;
+    string tenant_id = 2;
+    double tax_rate_percent = 3;
+    double estimated_tax_safe = 4;
+    int64 created_at_unix = 5;
+    int64 updated_at_unix = 6;
+}
+
+message Transaction {
+    string id = 1;
+    string tenant_id = 2;
+    string bank_account_id = 3;
+    double amount = 4;
+    string currency = 5;
+    string type = 6; // 'INCOME' or 'EXPENSE'
+    string status = 7; // 'PENDING', 'COMPLETED'
+    string description = 8;
+    string vendor = 9;
+    string categorized_as = 10;
+    int64 date_unix = 11;
+    int64 created_at_unix = 12;
+    int64 updated_at_unix = 13;
+}
+
+message Receipt {
+    string id = 1;
+    string tenant_id = 2;
+    string transaction_id = 3;
+    string file_url = 4;
+    string extracted_text = 5;
+    int64 uploaded_at_unix = 6;
+}
+
+message LedgerEntry {
+    string id = 1;
+    string tenant_id = 2;
+    string transaction_id = 3;
+    string account_type = 4; // 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'
+    double amount = 5;
+    string entry_type = 6; // 'DEBIT' or 'CREDIT'
+    int64 created_at_unix = 7;
+}
+
+message FinanceSummary {
+    double total_money_in = 1;
+    double total_money_out = 2;
+    double estimated_tax_safe = 3;
+    double net_profit = 4;
+}
+
+message GetFinanceSummaryRequest {
+    string organization_id = 1;
+}
+
+message GetFinanceSummaryResponse {
+    FinanceSummary summary = 1;
+}
+
+message ProcessReceiptRequest {
+    string organization_id = 1;
+    string file_url = 2;
+    string extracted_text = 3; // Mocking OCR for now
+}
+
+message ProcessReceiptResponse {
+    bool success = 1;
+    Transaction transaction = 2;
+    Receipt receipt = 3;
+}
+
+service FinanceService {
+    rpc GetFinanceSummary(GetFinanceSummaryRequest) returns (GetFinanceSummaryResponse);
+    rpc ProcessReceipt(ProcessReceiptRequest) returns (ProcessReceiptResponse);
+}
