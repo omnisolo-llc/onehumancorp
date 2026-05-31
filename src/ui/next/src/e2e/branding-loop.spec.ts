@@ -15,8 +15,8 @@ test.describe('Branding Growth Loop', () => {
         await expect(footerLink).toContainText('OHC');
     });
 
-    test('Website Builder also shows Powered by OHC footer', async ({ page }) => {
-        await page.goto('http://localhost:3000/website-builder');
+    test('Onboarding also shows Powered by OHC footer', async ({ page }) => {
+        await page.goto('http://localhost:3000/onboarding');
         await page.evaluate(() => localStorage.setItem('ohc_builder_status', 'draft'));
         await page.reload();
         const footerLink = page.locator('a[href^="ohc://join?ref="]');

@@ -10,8 +10,8 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
 
-    await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible();
+    await page.goto('/onboarding');
+    await expect(page.locator('#setup-screen')).toBeVisible();
 
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
