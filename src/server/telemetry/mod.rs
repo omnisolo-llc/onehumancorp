@@ -1182,7 +1182,7 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("BubblewrapViolationTotal")
+            .i64_up_down_counter("telemetry.sandbox_violation_total")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })
@@ -1267,7 +1267,6 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]
