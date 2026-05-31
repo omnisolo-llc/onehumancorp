@@ -4,10 +4,10 @@ use super::db;
 use std::time::Duration;
 
 async fn setup_db() -> Option<(PgPool, Uuid)> {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("DATABASE_URL").is_err() {
         return None; // If no DB is available, tests will simply return/pass without error.
     }
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("DATABASE_URL").unwrap();
     let tenant_id = Uuid::new_v4();
     let tenant_id_clone = tenant_id.clone();
 

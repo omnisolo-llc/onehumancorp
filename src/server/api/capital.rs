@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DB,
+    pub db: Arc<DB>,
 }
 
 #[derive(Serialize)]
@@ -31,7 +31,7 @@ pub struct AcceptOfferRequest {
     pub merchant_id: String,
 }
 
-pub fn routes(db: DB) -> Router {
+pub fn routes(db: Arc<DB>) -> Router {
     let state = AppState { db };
     Router::new()
         .route("/api/v1/capital/offers/:merchant_id", get(get_offers))
