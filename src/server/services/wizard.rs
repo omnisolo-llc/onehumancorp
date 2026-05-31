@@ -109,19 +109,19 @@ impl WizardService for MyWizardService {
         let mut is_all_healthy = true;
 
         if !is_standalone {
-            let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
+            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
             if db_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_DATABASE_URL".to_string(),
+                    check: "DATABASE_URL".to_string(),
                     status: "missing".to_string(),
-                    message: "OHC_DATABASE_URL is required in cloud mode".to_string(),
+                    message: "DATABASE_URL is required in cloud mode".to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_DATABASE_URL".to_string(),
+                    check: "DATABASE_URL".to_string(),
                     status: "ok".to_string(),
-                    message: "OHC_DATABASE_URL is configured".to_string(),
+                    message: "DATABASE_URL is configured".to_string(),
                 });
             }
 
@@ -147,24 +147,24 @@ impl WizardService for MyWizardService {
                 message: "Standalone mode active".to_string(),
             });
 
-            let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
+            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
             if db_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_DATABASE_URL".to_string(),
+                    check: "DATABASE_URL".to_string(),
                     status: "missing".to_string(),
-                    message: "SQLite OHC_DATABASE_URL is required in standalone mode".to_string(),
+                    message: "SQLite DATABASE_URL is required in standalone mode".to_string(),
                 });
             } else if !db_url.starts_with("sqlite://") {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_DATABASE_URL".to_string(),
+                    check: "DATABASE_URL".to_string(),
                     status: "invalid".to_string(),
-                    message: "OHC_DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
+                    message: "DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_DATABASE_URL".to_string(),
+                    check: "DATABASE_URL".to_string(),
                     status: "ok".to_string(),
                     message: "SQLite fallback is configured".to_string(),
                 });
@@ -175,7 +175,7 @@ impl WizardService for MyWizardService {
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),
