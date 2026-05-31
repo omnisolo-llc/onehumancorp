@@ -159,9 +159,9 @@ bazelisk test //src/e2e:playwright
 Run the local Playwright suite against an already running app:
 
 ```bash
-DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc \
-REDIS_URL=redis://localhost:6379 \
-MINIMAX_API_KEY=... \
+OHC_DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc \
+OHC_REDIS_URL=redis://localhost:6379 \
+OHC_MINIMAX_API_KEY=... \
 npx playwright test
 ```
 
@@ -195,17 +195,17 @@ bazelisk run //src/server:server
 
 | Variable | Description |
 |----------|-------------|
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OHC_LLM_PROVIDER=minimax` agent runs |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `OPENAI_API_KEY` | OpenAI API key |
+| `OHC_GEMINI_API_KEY` | Google Gemini API key |
+| `OHC_MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OHC_LLM_PROVIDER=minimax` agent runs |
+| `OHC_ANTHROPIC_API_KEY` | Anthropic API key |
+| `OHC_OPENAI_API_KEY` | OpenAI API key |
 | `OHC_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
 | `OHC_LLM_MODEL` | Builtin agent model name. Defaults are provider-specific when unset |
 | `OHC_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
 | `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
-| `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
-| `MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
-| `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
+| `OHC_OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
+| `OHC_MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
+| `OHC_DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
 | `OHC_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
 | `OHC_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
 | `OHC_STANDALONE_MODE` | Set `true` to force standalone mode and SQLite enforcement |
