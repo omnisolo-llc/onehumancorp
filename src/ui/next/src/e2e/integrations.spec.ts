@@ -16,8 +16,13 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
+        // Verify new integrations are visible
+        await expect(page.locator('h3:has-text("Manychat")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Calendly")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Mailchimp")')).toBeVisible();
+
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
+        const mercadoCard = page.locator('div.rounded-\\[16px\\]', { hasText: 'Mercado Pago' }).first();
         const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
 
         // Mock window alert
@@ -28,12 +33,36 @@ test.describe('Integrations Loop', () => {
         await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
 
         // Let's connect Zoom
-        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
+        const zoomCard = page.locator('div.rounded-\\[16px\\]', { hasText: 'Zoom' }).first();
         const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
         await connectZoomButton.click();
 
         // Verify state changed
         await expect(zoomCard.locator('button:has-text("Manage")')).toBeVisible();
+
+        // Let's connect Calendly
+        const calendlyCard = page.locator('div.rounded-\\[16px\\]', { hasText: 'Calendly' }).first();
+        const connectCalendlyButton = calendlyCard.locator('button:has-text("Connect")');
+        await connectCalendlyButton.click();
+
+        // Verify state changed
+        await expect(calendlyCard.locator('button:has-text("Manage")')).toBeVisible();
+
+        // Let's connect Mailchimp
+        const mailchimpCard = page.locator('div.rounded-\\[16px\\]', { hasText: 'Mailchimp' }).first();
+        const connectMailchimpButton = mailchimpCard.locator('button:has-text("Connect")');
+        await connectMailchimpButton.click();
+
+        // Verify state changed
+        await expect(mailchimpCard.locator('button:has-text("Manage")')).toBeVisible();
+
+        // Let's connect Manychat
+        const manychatCard = page.locator('div.rounded-\\[16px\\]', { hasText: 'Manychat' }).first();
+        const connectManychatButton = manychatCard.locator('button:has-text("Connect")');
+        await connectManychatButton.click();
+
+        // Verify state changed
+        await expect(manychatCard.locator('button:has-text("Manage")')).toBeVisible();
 
     });
 

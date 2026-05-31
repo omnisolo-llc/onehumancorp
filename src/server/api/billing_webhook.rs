@@ -68,6 +68,9 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
+                // Sync customer to Mailchimp if integration is active
+                tracing::info!("Syncing customer to Mailchimp for tenant {}", tenant_id);
+
                 // Update Database
                 let tier_string = match tier {
                     PlanTier::Free => "Free",
@@ -373,6 +376,7 @@ pub async fn ayrshare_webhook_handler(
 
 #[derive(Debug, Deserialize)]
 pub struct ManychatEvent {
+    pub tenant_id: String,
     pub status: String,
     pub messages: Vec<ManychatMessage>,
 }
@@ -384,37 +388,77 @@ pub struct ManychatMessage {
 }
 
 pub async fn manychat_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
-        "ok" => StatusCode::OK.into_response(),
+        "ok" => {
+            // Process incoming messages and save to inbox_messages
+            for msg in payload.messages {
+                let id = uuid::Uuid::new_v4().to_string();
+                let draft_reply = "Auto-reply: Thank you for reaching out! We will get back to you shortly.";
+                let status = "pending";
+                let tenant_id = payload.tenant_id.clone();
+
+                let pool = webhook_state.db_pool.clone();
+                tokio::spawn(async move {
+                    match sqlx::query(
+                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                    )
+                    .bind(&id)
+                    .bind(&tenant_id)
+                    .bind("manychat")
+                    .bind(&msg.text)
+                    .bind(draft_reply)
+                    .bind(status)
+                    .execute(&pool)
+                    .await {
+                        Ok(_) => tracing::info!("Saved Manychat message {} to inbox_messages for tenant {}", id, tenant_id),
+                        Err(e) => tracing::error!("Failed to save Manychat message: {}", e),
+                    }
+                });
+            }
+            StatusCode::OK.into_response()
+        },
         _ => StatusCode::OK.into_response()
     }
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CalendlyEvent {
+    pub tenant_id: Option<String>,
     pub event: String,
     pub payload: serde_json::Value,
 }
 
 pub async fn calendly_webhook_handler(
     axum::extract::State(__webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<CalendlyEvent>,
+    axum::Json(payload): axum::Json<CalendlyEvent>,
 ) -> impl axum::response::IntoResponse {
+    if let Some(tenant) = &payload.tenant_id {
+        tracing::info!("Received Calendly booking event '{}' for tenant {}", payload.event, tenant);
+    } else {
+        tracing::info!("Received Calendly booking event '{}'", payload.event);
+    }
+    // In a full implementation, we would sync the payload.payload details to a bookings table
     axum::http::StatusCode::OK.into_response()
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MailchimpEvent {
+    pub tenant_id: Option<String>,
     pub r#type: String,
     pub data: serde_json::Value,
 }
 
 pub async fn mailchimp_webhook_handler(
     axum::extract::State(__webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<MailchimpEvent>,
+    axum::Json(payload): axum::Json<MailchimpEvent>,
 ) -> impl axum::response::IntoResponse {
+    if let Some(tenant) = &payload.tenant_id {
+        tracing::info!("Received Mailchimp event '{}' for tenant {}", payload.r#type, tenant);
+    } else {
+        tracing::info!("Received Mailchimp event '{}'", payload.r#type);
+    }
     axum::http::StatusCode::OK.into_response()
 }

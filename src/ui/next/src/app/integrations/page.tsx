@@ -8,6 +8,9 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
+    { id: "manychat", name: "Manychat", category: "social", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking & Calendar Sync." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📧", description: "Automated Email Campaigns for Customer Re-engagement." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
@@ -31,24 +34,20 @@ export default function Integrations() {
   });
 
   const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
+    if (id === 'calendly' || id === 'manychat' || id === 'mailchimp') {
+      alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
-      router.push("/dashboard");
-    }
-    if (id === 'ayrshare') {
+    } else if (id === 'ayrshare') {
       alert("Connecting Ayrshare via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push('/inbox');
-    }
-    if (id === 'twilio') {
+    } else if (id === 'twilio') {
       setShowTwilioModal(true);
-    }
-    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com') {
+    } else if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
