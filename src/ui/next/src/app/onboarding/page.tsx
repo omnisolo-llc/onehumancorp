@@ -48,6 +48,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
@@ -77,6 +78,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -94,7 +96,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -411,6 +413,32 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Domain Selection</label>
+                  <div className="grid grid-cols-1 gap-3 mb-4">
+                    <div
+                      onClick={() => setDomainChoice('subdomain')}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-sm">Subdomain</span>
+                        <span className="text-xs text-green-600 dark:text-green-400 font-bold">Free</span>
+                      </div>
+                      <div className="text-xs mt-1 opacity-70">my-business.ohc.store</div>
+                    </div>
+                    <div
+                      onClick={() => setDomainChoice('custom')}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-sm">Custom Domain</span>
+                        <span className="text-xs text-[#0066FF] font-bold">Premium</span>
+                      </div>
+                      <div className="text-xs mt-1 opacity-70">my-business.com</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
                   <div className="grid grid-cols-2 gap-3">
                     {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (

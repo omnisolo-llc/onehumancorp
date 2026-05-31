@@ -103,7 +103,17 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
+      expect(screen.getByText("Domain Selection")).toBeInTheDocument();
     });
+
+    // Test Domain Selection
+    const customDomainBtn = screen.getByText("Custom Domain");
+    await user.click(customDomainBtn);
+    expect(useOnboardingStore.getState().domainChoice).toBe("custom");
+
+    const subdomainBtn = screen.getByText("Subdomain");
+    await user.click(subdomainBtn);
+    expect(useOnboardingStore.getState().domainChoice).toBe("subdomain");
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
