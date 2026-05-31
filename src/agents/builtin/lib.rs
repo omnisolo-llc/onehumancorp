@@ -237,7 +237,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
-    
+
     match mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
             let heartbeat_transport = transport.clone();
@@ -264,4 +264,3 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
