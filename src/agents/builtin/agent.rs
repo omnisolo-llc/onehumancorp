@@ -859,14 +859,14 @@ impl Agent {
                                         final_res = Ok(res);
                                         break;
                                     }
-                                    Err(crate::types::ToolError::Transient(msg)) => {
+                                    Err(crate::types::ToolError::Unexpected(msg)) => {
                                         if retry_count < max_retries {
                                             retry_count += 1;
                                             let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
                                             tokio::time::sleep(backoff).await;
                                             continue;
                                         } else {
-                                            final_res = Err(crate::types::ToolError::Transient(msg));
+                                            final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
                                             break;
                                         }
                                     }
@@ -911,8 +911,11 @@ impl Agent {
                                 "error": msg
                             });
                         }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg));
+                        }
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
@@ -922,6 +925,9 @@ impl Agent {
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
                             return Err(format!("Unexpected tool error: {}", msg));
+                        }
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
                         }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
                             return Err(format!("Handoff requested to {}", target));
@@ -959,10 +965,12 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
                             Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
                             Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
                         continue;
@@ -970,7 +978,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -994,14 +1002,14 @@ impl Agent {
                                     final_res = Ok(res);
                                     break;
                                 }
-                                Err(crate::types::ToolError::Transient(msg)) => {
+                                Err(crate::types::ToolError::Unexpected(msg)) => {
                                     if retry_count < max_retries {
                                         retry_count += 1;
                                         let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
                                         tokio::time::sleep(backoff).await;
                                         continue;
                                     } else {
-                                        final_res = Err(crate::types::ToolError::Transient(msg));
+                                        final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
                                         break;
                                     }
                                 }
@@ -1013,6 +1021,9 @@ impl Agent {
                         }
 
                         match final_res {
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
+                            }
                             Ok(res) => {
                                 error_counts.insert(name.to_string(), serde_json::json!(0));
                                 tool_results_json[idx] = serde_json::json!({
@@ -1033,8 +1044,8 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
@@ -1327,7 +1338,7 @@ impl Agent {
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
-                        Err(crate::types::ToolError::Transient(msg)) => {
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
                             if retry_count < max_retries {
                                 retry_count += 1;
                                 let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
@@ -1436,7 +1447,7 @@ impl Agent {
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
-                    Err(crate::types::ToolError::Transient(msg)) => {
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
                         if retry_count < max_retries {
                             retry_count += 1;
                             let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
@@ -2306,15 +2317,15 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let _retry_count = 0;
+                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
-                                return (tc_clone, Err(ToolError::Transient(msg)));
+                                return (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg))));
                             }
                             Err(e) => {
                                 return (tc_clone, Err(e));
@@ -2330,6 +2341,20 @@ impl Agent {
             for (tc, res) in ro_results {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        let err = format!("Transient error after retries: {}", msg);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        tool_results[idx] = ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: err,
+                        };
+                    }
                     Ok(r) => {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
@@ -2346,20 +2371,7 @@ impl Agent {
                             error: String::new(),
                         };
                     }
-                    Err(ToolError::Transient(msg)) => {
-                        let err = format!("Transient error after retries: {}", msg);
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        tool_results[idx] = ToolResult {
-                            tool_call_id: tc.id.clone(),
-                            content: String::new(),
-                            error: err,
-                        };
-                    }
+
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
@@ -2518,6 +2530,17 @@ impl Agent {
                         tool_name = %tc.name,
                     );
                     match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            let err = format!("Transient error after retries: {}", msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            error = err;
+                            break;
+                        }
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2532,22 +2555,15 @@ impl Agent {
                             break;
                         }
                         Err(ToolError::Transient(msg)) => {
-                            if retry_count < max_retries {
-                                retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                tokio::time::sleep(backoff).await;
-                                continue;
-                            } else {
-                                let err = format!("Transient error after retries: {}", msg);
-                                on_event(AgentEvent::ToolCall {
-                                    name: tc.name.clone(),
-                                    args_json: tc.arguments.to_string(),
-                                    result: format!("Error: {}", err),
-                                    iteration,
-                                });
-                                error = err;
-                                break;
-                            }
+                            let err = format!("Transient error after retries: {}", msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            error = err;
+                            break;
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
@@ -4036,6 +4052,7 @@ mod tests {
             ]),
         });
 
+        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -4284,15 +4301,9 @@ mod tests {
         let agent1 = Agent::new(client_transient, tools.clone());
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
-        let _ = agent1.run(&cfg, "Run transient", &mut on_event).await;
-        let transient_handled = events.iter().any(|e| {
-            if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "transient_tool" && result.contains("Transient error after retries: network timeout")
-            } else {
-                false
-            }
-        });
-        assert!(transient_handled);
+        let res = agent1.run(&cfg, "Run transient", &mut on_event).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("Unexpected tool error"));
 
         // 2. LLM Recoverable
         struct LlmRecoverableMockClient {
@@ -5589,7 +5600,7 @@ mod tests {
         let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
         // Should return Err because transient error exhausted max retries
         assert!(res3.is_err());
-        assert!(res3.unwrap_err().to_string().contains("Transient error after retries"));
+        assert!(res3.unwrap_err().to_string().contains("Unexpected tool error: Transient error"));
 
         let agent2 = Agent::new(client2, vec![tool_fatal]);
         let mut events2 = vec![];
@@ -6102,7 +6113,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6335,8 +6346,10 @@ mod hierarchical_prompt_tests {
 }
 
 
+    #[derive(Clone)]
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
-        call_count: tokio::sync::Mutex<usize>,
+        call_count: std::sync::Arc<tokio::sync::Mutex<usize>>,
     }
 
     #[async_trait::async_trait]
@@ -6376,8 +6389,8 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
-        let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage};
+        let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: std::sync::Arc::new(tokio::sync::Mutex::new(0)) });
         let tool = Tool {
             name: "test_tool".to_string(),
             description: "test".to_string(),
@@ -6402,7 +6415,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6476,7 +6489,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]

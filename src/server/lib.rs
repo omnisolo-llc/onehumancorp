@@ -706,9 +706,10 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -785,9 +786,10 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -1882,10 +1884,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<GetMeetingsResponse>, Status> {
+        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
