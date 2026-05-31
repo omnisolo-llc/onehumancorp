@@ -59,7 +59,7 @@ impl ConfigSyncServer {
             "push_config" => {
                 let mut payload = params.payload.ok_or_else(|| tonic::Status::invalid_argument("Missing payload"))?;
 
-                let max_size: usize = std::env::var("OHC_MAX_CONFIG_SIZE")
+                let max_size: usize = std::env::var("MAX_CONFIG_SIZE")
                     .unwrap_or_else(|_| (1024 * 1024).to_string())
                     .parse()
                     .unwrap_or(1024 * 1024);

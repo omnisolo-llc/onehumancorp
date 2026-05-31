@@ -24,7 +24,7 @@ if [ -f ".env" ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-PORT=${OHC_PORT:-8080}
+PORT=${PORT:-8080}
 API_URL="http://127.0.0.1:${PORT}/api/dev/seed"
 
 echo -e "${DIM}[Calling API to seed data: ${API_URL}]${RESET}"

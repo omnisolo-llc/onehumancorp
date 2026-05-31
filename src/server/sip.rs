@@ -235,7 +235,7 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
