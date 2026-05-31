@@ -200,8 +200,7 @@ impl DepartmentOrchestrator {
                         if !success {
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
-                            let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
-                            let dl_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
+                            let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
 
                             match &self.db.store {
                                 DbStore::Postgres => {
@@ -323,11 +322,7 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind({
-                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                    let redacted = ::server_telemetry::redact_interface_pii(p);
-                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                })
+                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
                 .bind(now)
                 .bind(now)
                 .execute(&self.db.pool)
@@ -343,11 +338,7 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind({
-                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                    let redacted = ::server_telemetry::redact_interface_pii(p);
-                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                })
+                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
                 .bind(now)
                 .bind(now)
                 .execute(pool)

@@ -33,8 +33,8 @@ impl ShippoProvider {
         }
     }
 
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
-        self._client.fetch_rates(weight, dimensions).await
+    pub async fn fetch_rates(&self, weight: f64, dimensions: &str, address_to: serde_json::Value, address_from: serde_json::Value) -> Result<Vec<String>, String> {
+        self._client.fetch_rates(weight, dimensions, address_to, address_from).await
     }
 
     pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
