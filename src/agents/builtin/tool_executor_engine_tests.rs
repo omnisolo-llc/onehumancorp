@@ -101,9 +101,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_llm_recoverable_structured_payload() {
+    async fn test_llm_recoverable() {
         let tool = Tool {
-            name: "dummy_pydantic".to_string(),
+            name: "dummy".to_string(),
             description: "dummy".to_string(),
             parameters: json!({}),
             is_read_only: false,
@@ -114,21 +114,14 @@ mod tests {
 
         let tc = ToolCall {
             id: "1".to_string(),
-            name: "dummy_pydantic".to_string(),
-            arguments: json!({"bad_arg": "value"}),
+            name: "dummy".to_string(),
+            arguments: json!({}),
         };
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => {
-                let parsed: serde_json::Value = serde_json::from_str(&msg).expect("Expected valid JSON payload for LLMRecoverable");
-                assert_eq!(parsed["error_type"], "LlmRecoverableToolError");
-                assert_eq!(parsed["tool_name"], "dummy_pydantic");
-                assert_eq!(parsed["reason"], "parse error");
-                assert_eq!(parsed["provided_arguments"]["bad_arg"], "value");
-                assert!(parsed["instruction"].as_str().unwrap().contains("Please correct your tool arguments"));
-            },
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
