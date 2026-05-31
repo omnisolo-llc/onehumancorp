@@ -709,7 +709,7 @@ export default function BuilderPage() {
 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[60] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-[60] flex flex-col justify-end transition-opacity duration-300">
             <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[12px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
@@ -769,8 +769,10 @@ export default function BuilderPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .mac-glass-container { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.5); }
         @media (prefers-color-scheme: dark) {
           .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .mac-glass-container { background: rgba(28, 28, 30, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); }
         }
       `}} />
     </div>

@@ -145,7 +145,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
-            <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-4 rounded-[16px] flex flex-col">
+            <div key={i} className="glassmorphism shadow-sm hover:shadow-md transition-shadow p-4 rounded-[16px] flex flex-col">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
                 <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
@@ -161,7 +161,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Booking") {
     return (
       <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
+        <div className="glassmorphism shadow-sm hover:shadow-md transition-shadow p-5 rounded-[16px] text-center">
           <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title}</h2>
           <p className="text-sm text-gray-600 dark:text-[#A1A1A6] mb-4">{props.availability}</p>
           <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-semibold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
