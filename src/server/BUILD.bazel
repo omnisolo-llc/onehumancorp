@@ -231,6 +231,7 @@ SERVER_RS_SRCS = [
     "//src/server/tools/hybridfsmcp:provider.rs",
     "//src/server/tools/hybridfsmcp:server.rs",
     "sync/mod.rs",
+    "sync/autodream_sync.rs",
     "sync/service.rs",
     "//src/server/tools/hybridfsmcp:tests.rs",
     "//src/server/tools/kvmcp:mod.rs",
