@@ -4,8 +4,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+    // In production, OHC_BACKEND_URL would be defined. For local dev we use the default 8080.
+    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
     const backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-cart`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

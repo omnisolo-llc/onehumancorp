@@ -24,7 +24,7 @@ export default function ChangelogPage() {
         <div className="space-y-8">
           {sections.map((section, idx) => (
 <<<<<<< HEAD
-            <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-xl shadow-sm border border-gray-100/50 transition-all">
+            <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-2xl border border-white/50 transition-all">
 =======
             <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-2xl shadow-lg border border-white/50 relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5">
 >>>>>>> 80b76d0e (feat(docs): polish documentation pages and fix Next.js build issue)
