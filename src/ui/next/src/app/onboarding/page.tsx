@@ -215,7 +215,10 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); setChatStep(2); }}
+                  className="flex flex-col flex-1 animate-fade-in"
+                >
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     Our AI will instantly generate your storefront, products, and back-office agents.
@@ -226,6 +229,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="next"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -236,19 +240,22 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(2)}
+                      type="submit"
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
                   </div>
-                </div>
+                </form>
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); setChatStep(3); }}
+                  className="flex flex-col flex-1 animate-fade-in"
+                >
+                  <button type="button" onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -260,8 +267,17 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         autoFocus
+                        enterKeyHint="next"
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (whatYouSell.trim()) {
+                              setChatStep(3);
+                            }
+                          }
+                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -270,19 +286,22 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      type="submit"
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
                   </div>
-                </div>
+                </form>
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleIntake(); }}
+                  className="flex flex-col flex-1 animate-fade-in"
+                >
+                  <button type="button" onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -295,6 +314,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="go"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
@@ -305,21 +325,32 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={handleIntake}
+                      type="submit"
                       disabled={!location.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
                     </button>
                   </div>
-                </div>
+                </form>
               )}
             </div>
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (businessName.trim().length < 3) {
+                  setValidationError('Business Name must be at least 3 characters.');
+                  return;
+                }
+                setValidationError('');
+                setStep(3);
+              }}
+              className="flex flex-col flex-1 animate-fade-in"
+            >
+              <button type="button" onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -333,6 +364,7 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoFocus
+                    enterKeyHint="next"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -342,6 +374,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -351,6 +384,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -361,6 +395,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
+                       enterKeyHint="next"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -371,6 +406,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         inputMode="decimal"
+                       enterKeyHint="go"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -382,21 +418,14 @@ export default function OnboardingWizard() {
               {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => {
-                    if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
-                      return;
-                    }
-                    setValidationError('');
-                    setStep(3);
-                  }}
+                  type="submit"
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
               </div>
-            </div>
+            </form>
           )}
 
           {step === 3 && (
