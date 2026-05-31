@@ -193,7 +193,7 @@ Optimize agent throughput by aligning LLM requirements with cluster hardware.
 
 - **Liveness & Readiness**: `/healthz` and `/readyz` endpoints for Kubernetes probes.
 - **Tracing**: OpenTelemetry traces exported to OTLP compatible backends (Jaeger, Honeycomb).
-- **Logging**: `tracing` and `tracing-subscriber`, with JSON output when `OHC_LOG_FORMAT=json`.
+- **Logging**: `tracing` and `tracing-subscriber`, with JSON output when `LOG_FORMAT=json`.
 - **Metrics**: Prometheus metrics for system health (CPU, Memory, Request Latency).
 
 ## 11. Modular Capability Expansion Flow

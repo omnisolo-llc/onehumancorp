@@ -1,6 +1,18 @@
 import { test, expect } from './fixtures';
 
+import { test, expect } from './fixtures';
+
 test.describe('Canvas Storefront Builder E2E', () => {
+
+test.describe('Canvas Storefront Builder E2E', () => {
+  test('should render storefront builder blocks natively', async ({ page }) => {
+    await page.goto('/storefront-builder');
+    await expect(page.locator('.builder-block').first()).toBeVisible();
+    await expect(page.getByText('Get in Touch')).toBeVisible();
+    await expect(page.getByText('Our Services')).toBeVisible();
+  });
+});
+
   test('should render storefront builder blocks natively', async ({ page }) => {
     await page.goto('/storefront-builder');
 
