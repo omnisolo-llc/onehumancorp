@@ -239,14 +239,14 @@ export function HelpWidget() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 bg-transparent">
             {tab === "center" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <div className="space-y-2 mb-4">
                   {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-4 rounded-xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 transition-all">
                       {a.link ? (
                         <a href={a.link}><h4 className="font-bold text-gray-800 text-sm hover:underline">{a.title}</h4></a>
                       ) : (
