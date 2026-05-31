@@ -8,6 +8,7 @@ use super::ast::ASTParser;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
 use crate::telemetry::ViolationStore;
+use crate::telemetry::SandboxTelemetryEmitter;
 
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
@@ -43,6 +44,7 @@ pub struct SandboxManager {
     wrapper: BashWrapper,
     violation_store: Arc<ViolationStore>,
     policy: SandboxPolicy,
+    emitter: Arc<dyn SandboxTelemetryEmitter>,
 }
 
 impl SandboxManager {
@@ -50,13 +52,14 @@ impl SandboxManager {
         self.policy.clone()
     }
 
-    pub fn new(pool: Option<PgPool>) -> Self {
+    pub fn new(pool: Option<PgPool>, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         SandboxManager {
             evaluator: PermissionEvaluator::new(),
             wrapper: BashWrapper::new(),
             violation_store,
             policy: SandboxPolicy::default(),
+            emitter,
         }
     }
 }
@@ -74,6 +77,7 @@ impl SandboxAdapter for SandboxManager {
                 "ast_security_violation",
                 details
             ).await;
+            self.emitter.record_violation("unknown_agent", "unknown_task", "ast_security_violation");
             return Err(reason);
         }
 
@@ -86,6 +90,7 @@ impl SandboxAdapter for SandboxManager {
                 "command_execution",
                 details
             ).await;
+            self.emitter.record_violation("unknown_agent", "unknown_task", "command_execution_denied");
             return Err("Command execution denied by sandbox policy".to_string());
         }
 
