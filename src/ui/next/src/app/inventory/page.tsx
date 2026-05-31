@@ -27,16 +27,18 @@ export default function InventoryDashboard() {
     fetchLowStockAlerts();
   }, []);
 
+  const getTenantId = () => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
+    }
+    return 'DEFAULT';
+  };
+
   const fetchLowStockAlerts = async () => {
     try {
-      // In a real app we'd fetch from an API route that calls gRPC
-      // For testing E2E we'll simulate the endpoint via a route or mock
-      const res = await fetch('/api/v1/supply-chain/low-stock?tenant_id=tenant1');
+      const tenantId = getTenantId();
+      const res = await fetch(`/api/v1/supply-chain/low-stock?tenant_id=${tenantId}`);
       if (!res.ok) {
-         // Mock fallback for E2E
-         setLowStockMaterials([
-             { id: 'mat1', name: 'Cocoa Powder', current_quantity: 3, reorder_threshold: 10 }
-         ]);
          setLoading(false);
          return;
       }
@@ -44,10 +46,6 @@ export default function InventoryDashboard() {
       setLowStockMaterials(data.low_stock_materials || []);
     } catch (e: any) {
       setError(e.message);
-      // Mock fallback for E2E
-      setLowStockMaterials([
-         { id: 'mat1', name: 'Cocoa Powder', current_quantity: 3, reorder_threshold: 10 }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -59,21 +57,20 @@ export default function InventoryDashboard() {
     setError('');
 
     try {
+      const tenantId = getTenantId();
       const res = await fetch('/api/v1/supply-chain/approve-po', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tenant_id: 'tenant1',
+          tenant_id: tenantId,
           purchase_order_id: `po_for_${materialId}`, // Simulated ID mapping
         }),
       });
 
       if (!res.ok) {
-         // Mock success for E2E since backend might not be wired in Next API routes yet
-         setSuccessMsg(`Approved Purchase Order for ${materialId}`);
-         setLowStockMaterials(lowStockMaterials.filter(m => m.id !== materialId));
+          setError('Failed to approve PO');
       } else {
           setSuccessMsg(`Approved Purchase Order for ${materialId}`);
           setLowStockMaterials(lowStockMaterials.filter(m => m.id !== materialId));
