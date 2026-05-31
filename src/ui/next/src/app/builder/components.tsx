@@ -98,7 +98,7 @@ export function DraggableBlock({
 
 export function QRCode({ value }: { value: string }) {
   return (
-    <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-[16px] shadow-sm border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] inline-block">
+    <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 rounded-[16px] shadow-sm border border-white/50 dark:border-white/10 inline-block">
       <svg className="w-32 h-32 rounded-[12px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" rx="12" fill="white" className="dark:fill-[#1D1D1F]"/>
         <rect x="10" y="10" width="20" height="20" fill="black"/>
@@ -229,7 +229,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     }
 
     return (
-      <div className="powered-by-footer py-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] mt-6 rounded-[16px] text-center w-full">
+      <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
           href={`ohc://join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
