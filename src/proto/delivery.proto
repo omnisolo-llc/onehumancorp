@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package ohc.delivery;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/delivery;deliverypb";
+
+message Courier {
+  string id = 1;
+  string type = 2; // "in_house" or "gig"
+  string name = 3;
+  string phone = 4;
+  string vehicle_type = 5;
+  string status = 6;
+}
+
+message DispatchSession {
+  string id = 1;
+  string organization_id = 2;
+  string order_id = 3;
+  string status = 4; // "PENDING", "ACCEPTED", "IN_TRANSIT", "COMPLETED", "FAILED"
+  string active_courier_id = 5;
+  int64 promised_time_unix = 6;
+  int64 delivery_fee_cents = 7;
+  string delivery_address = 8;
+  int64 created_at_unix = 9;
+  int64 updated_at_unix = 10;
+}
+
+message LocationUpdate {
+  string id = 1;
+  string organization_id = 2;
+  string dispatch_session_id = 3;
+  string courier_id = 4;
+  double lat = 5;
+  double lng = 6;
+  int64 timestamp_unix = 7;
+}
+
+message CreateDispatchRequest {
+  string order_id = 1;
+  int64 promised_time_unix = 2;
+  int64 delivery_fee_cents = 3;
+  string delivery_address = 4;
+  string preferred_courier_type = 5;
+}
+
+message CreateDispatchResponse {
+  DispatchSession session = 1;
+}
+
+message AcceptDispatchRequest {
+  string dispatch_session_id = 1;
+  string courier_id = 2;
+}
+
+message AcceptDispatchResponse {
+  DispatchSession session = 1;
+}
+
+message UpdateLocationRequest {
+  string dispatch_session_id = 1;
+  string courier_id = 2;
+  double lat = 3;
+  double lng = 4;
+}
+
+message UpdateLocationResponse {
+  bool success = 1;
+}
+
+message GetDispatchRequest {
+  string dispatch_session_id = 1;
+}
+
+message GetDispatchResponse {
+  DispatchSession session = 1;
+  Courier courier = 2;
+}
+
+service DeliveryService {
+  rpc CreateDispatchSession(CreateDispatchRequest) returns (CreateDispatchResponse);
+  rpc AcceptDispatch(AcceptDispatchRequest) returns (AcceptDispatchResponse);
+  rpc UpdateLocation(UpdateLocationRequest) returns (UpdateLocationResponse);
+  rpc GetDispatchSession(GetDispatchRequest) returns (GetDispatchResponse);
+}

@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -14,6 +14,9 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "service.rs",
+        "dispatch/mod.rs",
+        "dispatch/service.rs",
+        "dispatch/service_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -30,6 +33,8 @@ rust_library(
         "//src/proto:app_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
+        "//src/proto:delivery_prost",
+        "//src/proto:delivery_tonic",
         "//src/proto:docs_prost",
         "//src/proto:docs_tonic",
         "//src/proto:hub_tonic",
@@ -107,4 +112,15 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_services_ops_test",
+    crate = ":server_services_ops",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:tokio",
+    ]
 )
