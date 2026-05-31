@@ -115,8 +115,9 @@ pub struct StandaloneModeEnforcer;
 impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
         let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true"
-            || std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true"
+        let env_standalone =
+            std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = env_standalone
             || cfg.standalone
             || (!is_test && cfg.database_url.is_none());
 

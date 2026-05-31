@@ -102,7 +102,7 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
         
         let mut health_checks = Vec::new();
@@ -142,7 +142,7 @@ impl WizardService for MyWizardService {
             }
         } else {
             health_checks.push(DiagnosticCheckProto {
-                check: "OHC_STANDALONE".to_string(),
+                check: "OHC_STANDALONE_MODE".to_string(),
                 status: "ok".to_string(),
                 message: "Standalone mode active".to_string(),
             });

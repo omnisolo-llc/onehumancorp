@@ -6,7 +6,7 @@ use temp_env::with_var;
 
 #[tokio::test]
 async fn test_kv_get_set_list_delete_standalone() {
-    with_var("OHC_STANDALONE", Some("true"), || async {
+    with_var("OHC_STANDALONE_MODE", Some("true"), || async {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
@@ -107,7 +107,7 @@ async fn test_tenant_id_parsing() {
 
 #[tokio::test]
 async fn test_redis_unconfigured() {
-    with_var("OHC_STANDALONE", Some("false"), || async {
+    with_var("OHC_STANDALONE_MODE", Some("false"), || async {
         let db = Arc::new(DB {
             pool: crate::db::get_pool(),
             store: DbStore::Postgres,
