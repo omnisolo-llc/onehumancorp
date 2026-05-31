@@ -99,6 +99,48 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
+                // CAPITAL ADVANCE REPAYMENT INTERCEPTION
+                if payload.r#type == "checkout.session.completed" {
+                    if let Some(amount_total) = obj.get("amount_total").and_then(|a| a.as_f64()) {
+                        let amount_in_dollars = amount_total / 100.0;
+
+                        // Check if there is an active advance
+                        if let Ok(Some(row)) = sqlx::query("SELECT id, repayment_percentage, remaining_balance FROM capital_advances WHERE tenant_id = $1 AND status = 'ACTIVE' LIMIT 1")
+                            .bind(tenant_id)
+                            .fetch_optional(&webhook_state.db.pool)
+                            .await
+                        {
+                            use sqlx::Row;
+                            let advance_id: String = row.get("id");
+                            let repayment_percentage: f64 = row.get("repayment_percentage");
+                            let mut remaining_balance: f64 = row.get("remaining_balance");
+
+                            let deduction = (amount_in_dollars * (repayment_percentage / 100.0)).min(remaining_balance);
+                            remaining_balance -= deduction;
+
+                            let new_status = if remaining_balance <= 0.0 { "COMPLETED" } else { "ACTIVE" };
+
+                            let _ = sqlx::query("UPDATE capital_advances SET remaining_balance = $1, status = $2 WHERE id = $3")
+                                .bind(remaining_balance)
+                                .bind(new_status)
+                                .bind(&advance_id)
+                                .execute(&webhook_state.db.pool)
+                                .await;
+
+                            let schedule_id = uuid::Uuid::new_v4().to_string();
+                            let payment_intent = obj.get("payment_intent").and_then(|p| p.as_str()).unwrap_or("unknown");
+
+                            let _ = sqlx::query("INSERT INTO repayment_schedules (id, advance_id, amount, deducted_from_order_id) VALUES ($1, $2, $3, $4)")
+                                .bind(schedule_id)
+                                .bind(advance_id)
+                                .bind(deduction)
+                                .bind(payment_intent)
+                                .execute(&webhook_state.db.pool)
+                                .await;
+                        }
+                    }
+                }
+
                 StatusCode::OK.into_response()
             } else {
                 StatusCode::BAD_REQUEST.into_response()

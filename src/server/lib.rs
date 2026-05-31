@@ -2404,6 +2404,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/v1/tenants/:tenant_id/capital/offer", axum::routing::get(api::capital::get_capital_offer))
+        .route("/api/v1/tenants/:tenant_id/capital/accept", axum::routing::post(api::capital::accept_capital_offer))
+        .route("/api/v1/tenants/:tenant_id/capital/advance", axum::routing::get(api::capital::get_capital_advance))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -3813,6 +3816,87 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
+
+                        <!-- Capital Advance Widget (Injected dynamically) -->
+                        <div id="capital-advance-container"></div>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", async () => {
+                                const container = document.getElementById("capital-advance-container");
+                                const tenantId = window.location.pathname.split("/")[2] || "demo-tenant-id";
+
+                                try {
+                                    const advanceRes = await fetch(`/api/v1/tenants/${tenantId}/capital/advance`);
+                                    if (advanceRes.ok) {
+                                        const advance = await advanceRes.json();
+                                        container.innerHTML = `
+                                            <div class="card glass" style="margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.2);">
+                                                <h2>Capital Advance</h2>
+                                                <p>Active Advance: $${advance.amount}</p>
+                                                <p>Remaining Balance: $${advance.remaining_balance}</p>
+                                                <p>Repayment: ${advance.repayment_percentage}% of daily sales</p>
+                                            </div>
+                                        `;
+                                        return;
+                                    }
+
+                                    const offerRes = await fetch(`/api/v1/tenants/${tenantId}/capital/offer`);
+                                    if (offerRes.ok) {
+                                        const offer = await offerRes.json();
+                                        container.innerHTML = `
+                                            <div class="card glass" style="margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.2);">
+                                                <h2>You're approved for a $${offer.max_amount} advance to grow your business.</h2>
+                                                <div style="margin: 16px 0;">
+                                                    <input type="range" id="capital-slider" min="500" max="${offer.max_amount}" step="100" value="${offer.default_amount}" style="width: 100%; accent-color: var(--accent);">
+                                                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 8px;">
+                                                        <span>$500</span>
+                                                        <span id="capital-display" style="font-weight: 600;">$${offer.default_amount}</span>
+                                                    </div>
+                                                </div>
+                                                <p id="capital-terms" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                                                    We’ll automatically deduct ${offer.repayment_percentage}% of your daily sales until $${offer.default_amount} is repaid. No hidden fees.
+                                                </p>
+                                                <button id="capital-accept-btn" style="width: 100%;">Get Funds Instantly</button>
+                                            </div>
+                                        `;
+
+                                        const slider = document.getElementById("capital-slider");
+                                        const display = document.getElementById("capital-display");
+                                        const terms = document.getElementById("capital-terms");
+                                        const acceptBtn = document.getElementById("capital-accept-btn");
+
+                                        slider.addEventListener("input", (e) => {
+                                            const val = e.target.value;
+                                            display.innerText = `$${val}`;
+                                            terms.innerText = `We’ll automatically deduct ${offer.repayment_percentage}% of your daily sales until $${val} is repaid. No hidden fees.`;
+                                        });
+
+                                        acceptBtn.addEventListener("click", async () => {
+                                            acceptBtn.innerText = "Processing...";
+                                            acceptBtn.disabled = true;
+                                            const acceptRes = await fetch(`/api/v1/tenants/${tenantId}/capital/accept`, {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ amount: parseFloat(slider.value) })
+                                            });
+                                            if (acceptRes.ok) {
+                                                // Success animation logic
+                                                container.innerHTML = `
+                                                    <div class="card glass" style="margin-bottom: 24px; text-align: center; border: 1px solid var(--accent);">
+                                                        <h2>🎉 Funds Added!</h2>
+                                                        <p>Your advance has been deposited to your account.</p>
+                                                    </div>
+                                                `;
+                                                setTimeout(() => window.location.reload(), 2000);
+                                            } else {
+                                                acceptBtn.innerText = "Error accepting offer";
+                                            }
+                                        });
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to load capital data", e);
+                                }
+                            });
+                        </script>
 
                         <div class="card glass" id="legacy-hybrid-landing-coverage">
                             <h2>OneHumanCorp</h2>
