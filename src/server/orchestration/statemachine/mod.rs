@@ -33,7 +33,7 @@ pub struct TaskDeliberation {
     pub organization_id: String,
     pub status: String,
     pub dependencies: serde_json::Value,
-    pub agent_id: Option<String>,
+    pub assigned_agent_id: Option<String>,
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -60,7 +60,7 @@ impl DeliberationStateMachine {
     pub async fn claim_for_deliberation(
         &self,
         organization_id: &str,
-        agent_id: &str,
+        assigned_agent_id: &str,
     ) -> Result<Option<TaskDeliberation>, String> {
         match &self.db {
             DbStore::Postgres(pool) => {
@@ -85,11 +85,11 @@ impl DeliberationStateMachine {
                     sqlx::query(
                         r#"
                         UPDATE shared_tasks_decomposition
-                        SET status = 'DELIBERATING', agent_id = $1, updated_at = $2
+                        SET status = 'DELIBERATING', assigned_agent_id = $1, updated_at = $2
                         WHERE id = $3 AND organization_id = $4
                         "#
                     )
-                    .bind(agent_id)
+                    .bind(assigned_agent_id)
                     .bind(Utc::now())
                     .bind(&task_id)
                     .bind(organization_id)
@@ -104,7 +104,7 @@ impl DeliberationStateMachine {
                         organization_id: row.get("organization_id"),
                         status: "DELIBERATING".to_string(),
                         dependencies: row.get("dependencies"),
-                        agent_id: Some(agent_id.to_string()),
+                        assigned_agent_id: Some(assigned_agent_id.to_string()),
                         locked_until: row.try_get("locked_until").unwrap_or(None),
                         created_at: row.get("created_at"),
                         updated_at: Utc::now(),
@@ -136,11 +136,11 @@ impl DeliberationStateMachine {
                     sqlx::query(
                         r#"
                         UPDATE shared_tasks_decomposition
-                        SET status = 'DELIBERATING', agent_id = ?, updated_at = ?
+                        SET status = 'DELIBERATING', assigned_agent_id = ?, updated_at = ?
                         WHERE id = ? AND organization_id = ?
                         "#
                     )
-                    .bind(agent_id)
+                    .bind(assigned_agent_id)
                     .bind(Utc::now().to_rfc3339())
                     .bind(&task_id)
                     .bind(organization_id)
@@ -165,7 +165,7 @@ impl DeliberationStateMachine {
                         organization_id: row.get("organization_id"),
                         status: "DELIBERATING".to_string(),
                         dependencies: row.get("dependencies"),
-                        agent_id: Some(agent_id.to_string()),
+                        assigned_agent_id: Some(assigned_agent_id.to_string()),
                         locked_until,
                         created_at: dt_created,
                         updated_at: Utc::now(),
@@ -378,16 +378,22 @@ mod tests {
             CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                 id TEXT PRIMARY KEY,
                 organization_id TEXT NOT NULL,
+                mission_id TEXT,
+                parent_plan_id TEXT,
+                dependencies JSONB DEFAULT '[]',
                 title TEXT NOT NULL,
                 description TEXT,
                 status TEXT NOT NULL DEFAULT 'PENDING',
-                agent_id TEXT,
                 priority TEXT NOT NULL DEFAULT 'P2',
-                payload TEXT,
-                parent_plan_id TEXT,
-                dependencies TEXT NOT NULL DEFAULT '[]',
-                locked_until TEXT,
+                payload JSONB DEFAULT '{}',
+                deliberation_log JSONB DEFAULT '[]',
+                depth INTEGER,
+                ultraplan_phase TEXT,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT,
                 tokens_consumed INTEGER DEFAULT 0,
+                assigned_agent_id TEXT,
                 agent_role TEXT,
                 model TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -421,7 +427,7 @@ mod tests {
         let claimed_task = claimed.unwrap();
         assert_eq!(claimed_task.id, "t1");
         assert_eq!(claimed_task.status, "DELIBERATING");
-        assert_eq!(claimed_task.agent_id.unwrap(), "agent1");
+        assert_eq!(claimed_task.assigned_agent_id.unwrap(), "agent1");
 
         // Try claim again, should be none since it's no longer pending
         let claimed2 = sm.claim_for_deliberation("org1", "agent2").await.unwrap();
@@ -434,7 +440,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -458,7 +464,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -476,7 +482,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
