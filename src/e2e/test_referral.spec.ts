@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { memberPage as page } from './fixtures';
+import { test, expect } from './fixtures';
+
 
 test('referral link is properly updated based on tenant_id', async ({ page }) => {
   // Go to home and sign in

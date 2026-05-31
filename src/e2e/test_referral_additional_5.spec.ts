@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { memberPage as page } from './fixtures';
+import { test, expect } from './fixtures';
+
 
 test('powered by OHC link is updated dynamically', async ({ page, context }) => {
   await page.goto('/');

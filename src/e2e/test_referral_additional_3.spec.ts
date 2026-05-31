@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { memberPage as page } from './fixtures';
+import { test, expect } from './fixtures';
+
 
 test('referral link defaults to DEFAULT when no tenant_id', async ({ page, context }) => {
   await page.goto('/');

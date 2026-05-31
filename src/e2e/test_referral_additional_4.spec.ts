@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { memberPage as page } from './fixtures';
+import { test, expect } from './fixtures';
+
 
 test('second copy invite message works with unique ID', async ({ page, context }) => {
   await page.goto('/');
