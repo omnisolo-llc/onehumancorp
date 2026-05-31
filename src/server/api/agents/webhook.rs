@@ -98,7 +98,7 @@ async fn handle_webhook(
     let risk = ActionRisk::DraftForReview;
 
     // Generate a draft reply
-    let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let draft_reply = if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(

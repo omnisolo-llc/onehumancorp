@@ -80,11 +80,11 @@ pub struct Client {
 
 impl Client {
     pub fn new_from_env() -> Self {
-        let base_url = std::env::var("OHC_PLANE_URL")
+        let base_url = std::env::var("PLANE_URL")
             .unwrap_or_else(|_| "http://plane-api:8000".to_string());
-        let api_key = std::env::var("OHC_PLANE_API_KEY").unwrap_or_default();
-        let workspace = std::env::var("OHC_PLANE_WORKSPACE").unwrap_or_default();
-        let project = std::env::var("OHC_PLANE_PROJECT").unwrap_or_default();
+        let api_key = std::env::var("PLANE_API_KEY").unwrap_or_default();
+        let workspace = std::env::var("PLANE_WORKSPACE").unwrap_or_default();
+        let project = std::env::var("PLANE_PROJECT").unwrap_or_default();
         
         Client {
             base_url,
