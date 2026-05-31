@@ -6364,19 +6364,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
-                        function generateSeasonalPromo() {
+                        async function generateSeasonalPromo() {
                             const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
                             const discountInput = document.getElementById('promo-discount').value || '10';
 
-                            // Sanitize inputs to prevent XSS
-                            const occasion = occasionInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            const discount = discountInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const promoContentEl = document.getElementById('promo-content');
+                            const promoResultEl = document.getElementById('promo-result');
 
-                            const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
+                            promoResultEl.style.display = 'block';
+                            promoContentEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 24px; height: 24px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 8px;"></div><p style="margin: 0; font-size: 14px;">Generating...</p></div>';
 
-                            const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
-                            document.getElementById('promo-content').innerHTML = content;
-                            document.getElementById('promo-result').style.display = 'block';
+                            try {
+                                const response = await fetch('/api/v1/growth/campaign/generate-seasonal-promo', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ occasion: occasionInput, discount: discountInput })
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    promoContentEl.innerHTML = data.html_content;
+                                } else {
+                                    promoContentEl.innerHTML = '<p style="color: red;">Failed to generate promo. Please try again.</p>';
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                promoContentEl.innerHTML = '<p style="color: red;">Failed to generate promo. Please try again.</p>';
+                            }
                         }
 
                         function showScreen(id) {
