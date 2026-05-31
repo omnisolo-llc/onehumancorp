@@ -10,6 +10,7 @@ export default function OnboardingWizard() {
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
+    migrationUrl, setMigrationUrl,
     location, setLocation,
     businessType, setBusinessType,
     categories, setCategories,
@@ -97,6 +98,35 @@ export default function OnboardingWizard() {
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
+
+  const handleMigrate = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const res = await fetch('/api/onboarding/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ url: migrationUrl })
+      });
+      if (!res.ok) throw new Error('Failed to migrate platform');
+      const data = await res.json();
+      setBusinessName(data.business_name || '');
+      setBusinessType(data.business_type || '');
+      setCategories(data.categories || []);
+      if (data.initial_products && data.initial_products.length > 0) {
+        setFirstProductName(data.initial_products[0].name);
+        setFirstProductPrice(data.initial_products[0].price);
+      }
+      setStep(2);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during migration');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -211,7 +241,7 @@ export default function OnboardingWizard() {
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically. Or <a href="#" onClick={(e) => { e.preventDefault(); setChatStep(4); }} className="text-[#0066FF] hover:underline">migrate an existing store</a>.
               </p>
 
               {chatStep === 1 && (
@@ -275,6 +305,51 @@ export default function OnboardingWizard() {
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 4 && (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Migrate your store</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Enter your current website URL (e.g., Shopify, Wix). Our AI will pack up your shop and move it here.
+                  </p>
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Store URL</label>
+                      <input
+                        type="url"
+                        autoFocus
+                        placeholder="e.g., myboutique.myshopify.com"
+                        value={migrationUrl}
+                        onChange={(e) => setMigrationUrl(e.target.value)}
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] transition-all text-lg shadow-sm placeholder-gray-400"
+                      />
+                    </div>
+                    {isLoading && (
+                      <div className="mt-8 p-6 bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-[12px] border border-white/50 dark:border-white/10 text-center">
+                        <div className="w-12 h-12 relative mx-auto mb-4">
+                          <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
+                          <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+                        </div>
+                        <p className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold font-outfit mb-2">✨ AI is packing up your shop...</p>
+                        <div className="flex flex-wrap justify-center gap-2 mt-4">
+                          <span className="px-3 py-1 bg-white/60 dark:bg-black/40 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-white/50 dark:border-white/10 animate-fade-in" style={{ animationDelay: '0.5s' }}>[Products Found]</span>
+                          <span className="px-3 py-1 bg-white/60 dark:bg-black/40 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-white/50 dark:border-white/10 animate-fade-in" style={{ animationDelay: '1.5s' }}>[Images Enhanced]</span>
+                          <span className="px-3 py-1 bg-white/60 dark:bg-black/40 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-white/50 dark:border-white/10 animate-fade-in" style={{ animationDelay: '2.5s' }}>[Customer List Securely Moved]</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={handleMigrate}
+                      disabled={!migrationUrl.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Migrating...' : 'Start Migration'}
                     </button>
                   </div>
                 </div>

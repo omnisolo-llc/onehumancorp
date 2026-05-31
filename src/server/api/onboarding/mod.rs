@@ -11,6 +11,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
+        .route("/migrate", post(migrate_platform_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -18,6 +19,21 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+#[derive(serde::Deserialize)]
+pub struct MigrateRequest {
+    pub url: String,
+}
+
+async fn migrate_platform_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<MigrateRequest>,
+) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
+    match agent.migrate_platform(&payload.url).await {
+        Ok(data) => Ok(Json(data)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 #[derive(serde::Deserialize)]

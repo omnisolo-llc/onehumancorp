@@ -7,6 +7,8 @@ interface OnboardingState {
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
+  migrationUrl: string;
+  setMigrationUrl: (url: string) => void;
   location: string;
   businessType: string;
   categories: string[];
@@ -46,6 +48,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
+  migrationUrl: '',
+  setMigrationUrl: (url) => set({ migrationUrl: url }),
       location: '',
       businessType: 'Online Store',
       categories: [],

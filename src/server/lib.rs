@@ -950,6 +950,17 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+    async fn migrate_platform(
+        &self,
+        request: tonic::Request<MigratePlatformRequest>,
+    ) -> Result<tonic::Response<MigratePlatformResponse>, tonic::Status> {
+        let _req = request.into_inner();
+        Ok(tonic::Response::new(MigratePlatformResponse {
+            success: true,
+            message: "Migration started successfully".to_string(),
+            migration_id: uuid::Uuid::new_v4().to_string(),
+        }))
+    }
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(

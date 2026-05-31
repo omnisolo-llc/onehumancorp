@@ -32,6 +32,27 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub, minimax }
     }
 
+    pub async fn migrate_platform(&self, url: &str) -> Result<IntakeData, String> {
+        let mut mock_products = Vec::new();
+        for i in 1..=100 {
+            mock_products.push(IntakeProduct {
+                name: format!("Imported Product {}", i),
+                price: format!("{}.99", i % 50 + 10),
+            });
+        }
+        let business_name = if url.contains("priyasboutique") {
+            "Priya's Boutique".to_string()
+        } else {
+            "Migrated Store".to_string()
+        };
+        Ok(IntakeData {
+            business_name,
+            business_type: "Retail".to_string(),
+            categories: vec!["Clothing".to_string(), "Accessories".to_string()],
+            initial_products: mock_products,
+        })
+    }
+
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 

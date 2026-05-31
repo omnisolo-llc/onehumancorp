@@ -276,6 +276,7 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc MigratePlatform(MigratePlatformRequest) returns (MigratePlatformResponse);
 
   rpc GetMyPlan(EmptyRequest) returns (MyPlanResponse);
   rpc GetCostDashboard(EmptyRequest) returns (CostDashboardResponse);
@@ -298,6 +299,17 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+}
+
+message MigratePlatformRequest {
+  string source_url = 1;
+  string platform = 2;
+}
+
+message MigratePlatformResponse {
+  bool success = 1;
+  string message = 2;
+  string migration_id = 3;
 }
 
 message StartOnboardingResponse {
