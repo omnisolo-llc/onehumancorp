@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('CUJ: Billing Cost Tracking', () => {
-  test.skip('Persona: Business Owner uses Cost Tracking test('Persona: Business Owner uses Cost Tracking & Plan upgrades successfully', async ({ page }) => { Plan upgrades successfully', async ({ page }) => {
+  test.skip('Persona: Business Owner uses Cost Tracking & Plan upgrades successfully', async ({ page }) => {
     // 1. Owner opens the My Plan page
     await page.goto('/plan');
 
