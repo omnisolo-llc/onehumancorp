@@ -41,7 +41,7 @@ define_playwright_tests(
         "viral_embed.spec.ts",
     ],
     specs = glob(["*.spec.ts"]),
->>>>>>> 117a00ab (feat(docs): polish documentation pages and fix Next.js build issue)
+>>>>>>> 80b76d0e (feat(docs): polish documentation pages and fix Next.js build issue)
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]),
 )

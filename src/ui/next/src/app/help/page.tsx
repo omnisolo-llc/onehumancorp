@@ -43,7 +43,7 @@ export default function HelpCenterPage() {
               </div>
             </Link>
           ))}
->>>>>>> 117a00ab (feat(docs): polish documentation pages and fix Next.js build issue)
+>>>>>>> 80b76d0e (feat(docs): polish documentation pages and fix Next.js build issue)
         </div>
 
         {filteredArticles.length === 0 ? (

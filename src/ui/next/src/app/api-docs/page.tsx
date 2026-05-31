@@ -174,7 +174,7 @@ export default function ApiDocsPage() {
 =======
     <div className="min-h-screen bg-white">
       <div className="bg-yellow-50/80 backdrop-blur-md border-l-4 border-yellow-400 p-4 mb-4 sticky top-0 z-50 shadow-sm">
->>>>>>> 117a00ab (feat(docs): polish documentation pages and fix Next.js build issue)
+>>>>>>> 80b76d0e (feat(docs): polish documentation pages and fix Next.js build issue)
         <p className="text-yellow-700 text-sm">
           <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
         </p>
