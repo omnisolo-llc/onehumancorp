@@ -88,7 +88,7 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      })?.catch(err => console.error('Failed to sync onboarding state', err));
+      }).catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
@@ -158,7 +158,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
+          company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -225,6 +225,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -258,6 +259,7 @@ export default function OnboardingWizard() {
                   <div className="space-y-4 flex-1">
                     <div>
                       <textarea
+                        autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
@@ -292,6 +294,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
@@ -329,6 +332,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
+                    autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -336,12 +340,19 @@ export default function OnboardingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
+                  <select
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
+                  >
+                    <option value="" disabled className="text-gray-500">Select a business type</option>
+                    <option value="Physical Products" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Physical Products</option>
+                    <option value="Digital Products" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Digital Products</option>
+                    <option value="Services & Bookings" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Services & Bookings</option>
+                    <option value="Food & Beverage" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Food & Beverage</option>
+                    <option value="Subscriptions" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Subscriptions</option>
+                    <option value="Creative Portfolios" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Creative Portfolios</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
@@ -366,6 +377,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
