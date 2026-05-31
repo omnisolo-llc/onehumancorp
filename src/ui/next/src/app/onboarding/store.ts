@@ -1,13 +1,10 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface OnboardingState {
   step: number;
-  chatStep: number;
   businessDescription: string;
   businessName: string;
-  whatYouSell: string;
-  location: string;
   businessType: string;
   categories: string[];
   websiteTemplate: string;
@@ -20,11 +17,8 @@ interface OnboardingState {
   error: string;
   startResult: any;
   setStep: (step: number) => void;
-  setChatStep: (step: number) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
-  setWhatYouSell: (what: string) => void;
-  setLocation: (location: string) => void;
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
@@ -42,32 +36,27 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-      chatStep: 1,
-      businessDescription: '',
-      businessName: '',
-      whatYouSell: '',
-      location: '',
-      businessType: 'Online Store',
+      businessDescription: "",
+      businessName: "",
+      businessType: "Online Store",
       categories: [],
-      websiteTemplate: 'Modern',
-  domainChoice: 'subdomain',
-      firstProductName: '',
-      firstProductPrice: '',
+      websiteTemplate: "Modern",
+      domainChoice: "subdomain",
+      firstProductName: "",
+      firstProductPrice: "",
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
-      error: '',
+      error: "",
       startResult: null,
       setStep: (step) => set({ step }),
-      setChatStep: (chatStep) => set({ chatStep }),
-      setBusinessDescription: (businessDescription) => set({ businessDescription }),
+      setBusinessDescription: (businessDescription) =>
+        set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
-      setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
-      setLocation: (location) => set({ location }),
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
-  setDomainChoice: (domainChoice) => set({ domainChoice }),
+      setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
@@ -77,7 +66,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
-    }
-  )
+      name: "onboarding-storage-v4", // Changed name to avoid cache collision with new structure
+    },
+  ),
 );
