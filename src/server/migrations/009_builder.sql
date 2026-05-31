@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS builder_blocks (
     block_type TEXT NOT NULL,
     content JSONB NOT NULL DEFAULT '{}'::jsonb,
     sort_order INTEGER NOT NULL DEFAULT 0,
+    state TEXT NOT NULL DEFAULT 'draft',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

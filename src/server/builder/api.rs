@@ -283,7 +283,7 @@ async fn list_blocks(
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<BlockResponse>>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let blocks = db::list_blocks(&pool, tenant_id, page_id)
+    let blocks = db::list_blocks(&pool, tenant_id, page_id, "draft")
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(
@@ -316,6 +316,7 @@ async fn create_block(
         payload.block_type,
         payload.content,
         payload.sort_order,
+        "draft"
     )
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -381,6 +382,14 @@ async fn publish_site(
     Extension(claims): Extension<Claims>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    let pages = db::list_pages(&pool, tenant_id, site_id).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    for page in pages {
+        db::promote_draft_to_live(&pool, tenant_id, page.id)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
     jobs::enqueue_publish_site_job(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -525,10 +534,14 @@ async fn publish_draft(
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
         for draft_block in draft_page.blocks {
-            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
+            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order, "draft")
                 .await
                 .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
         }
+
+        db::promote_draft_to_live(&pool, tenant_id, page.id)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     // 3. Enqueue Job

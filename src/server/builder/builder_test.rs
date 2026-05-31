@@ -56,10 +56,10 @@ async fn test_builder_db_crud() {
     assert_eq!(pages[0].id, page.id);
 
     // 3. Create Blocks
-    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"headline": "Hello", "subtitle": "World"}), 0).await.expect("Failed to create block 1");
-    let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
+    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"headline": "Hello", "subtitle": "World"}), 0, "draft").await.expect("Failed to create block 1");
+    let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1, "draft").await.expect("Failed to create block 2");
 
-    let blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    let blocks = db::list_blocks(&pool, tenant_id, page.id, "draft").await.expect("Failed to list blocks");
     assert_eq!(blocks.len(), 2);
     assert_eq!(blocks[0].id, block1.id);
     assert_eq!(blocks[1].id, block2.id);
@@ -70,7 +70,7 @@ async fn test_builder_db_crud() {
 
     // 5. Reorder Blocks
     db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
-    let reordered_blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    let reordered_blocks = db::list_blocks(&pool, tenant_id, page.id, "draft").await.expect("Failed to list blocks");
     assert_eq!(reordered_blocks[0].id, block2.id); // block2 should now be first
     assert_eq!(reordered_blocks[1].id, block1.id);
 
@@ -266,6 +266,51 @@ async fn test_builder_generate_and_publish_draft() {
     assert_eq!(res.status(), 200);
     let site: super::api::SiteResponse = res.json().await.unwrap();
     assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
+
+    // Clean up
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+}
+
+#[tokio::test]
+async fn test_draft_live_separation() {
+    let (pool, tenant_id) = match setup_db().await {
+        Some(v) => v,
+        None => return,
+    };
+
+    // Create Site and Page
+    let site = match db::create_site(&pool, tenant_id, Some("draft-live-test.com".to_string())).await {
+        Ok(s) => s,
+        Err(_) => return, // Unmigrated db handling
+    };
+    let page = db::create_page(&pool, tenant_id, site.id, "/".to_string(), "Home".to_string()).await.expect("Failed to create page");
+
+    // Create a draft block
+    let draft_block = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"headline": "Draft Hero", "subtitle": "Testing"}), 0, "draft").await.expect("Failed to create draft block");
+
+    assert_eq!(draft_block.state, "draft");
+
+    // List live blocks - should be empty
+    let live_blocks_before = db::list_blocks(&pool, tenant_id, page.id, "live").await.expect("Failed to list live blocks");
+    assert_eq!(live_blocks_before.len(), 0);
+
+    // List draft blocks - should have 1
+    let draft_blocks_before = db::list_blocks(&pool, tenant_id, page.id, "draft").await.expect("Failed to list draft blocks");
+    assert_eq!(draft_blocks_before.len(), 1);
+
+    // Promote draft to live
+    db::promote_draft_to_live(&pool, tenant_id, page.id).await.expect("Failed to promote draft to live");
+
+    // List live blocks - should have 1
+    let live_blocks_after = db::list_blocks(&pool, tenant_id, page.id, "live").await.expect("Failed to list live blocks");
+    assert_eq!(live_blocks_after.len(), 1);
+    assert_eq!(live_blocks_after[0].block_type, "HeroBlock");
+    assert_eq!(live_blocks_after[0].content["headline"], "Draft Hero");
+    assert_eq!(live_blocks_after[0].state, "live");
+
+    // Ensure draft blocks still exist
+    let draft_blocks_after = db::list_blocks(&pool, tenant_id, page.id, "draft").await.expect("Failed to list draft blocks");
+    assert_eq!(draft_blocks_after.len(), 1);
 
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;

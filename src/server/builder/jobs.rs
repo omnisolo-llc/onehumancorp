@@ -40,7 +40,7 @@ async fn execute_publish_site_job(
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     for page in &pages {
-        let blocks = super::db::list_blocks(pool, tenant_id, page.id).await?;
+        let blocks = super::db::list_blocks(pool, tenant_id, page.id, "live").await?;
 
         let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
 

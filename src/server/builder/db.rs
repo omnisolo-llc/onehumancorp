@@ -68,11 +68,12 @@ pub struct Block {
     pub block_type: String,
     pub content: Value,
     pub sort_order: i32,
+    pub state: String,
 }
 
 pub async fn get_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid) -> Result<Block, sqlx::Error> {
     sqlx::query_as::<_, Block>(
-        "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND id = $2",
+        "SELECT id, tenant_id, page_id, block_type, content, sort_order, state FROM builder_blocks WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
     .bind(block_id)
@@ -80,32 +81,34 @@ pub async fn get_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid) -> Result
     .await
 }
 
-pub async fn list_blocks(pool: &PgPool, tenant_id: Uuid, page_id: Uuid) -> Result<Vec<Block>, sqlx::Error> {
+pub async fn list_blocks(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, state: &str) -> Result<Vec<Block>, sqlx::Error> {
     sqlx::query_as::<_, Block>(
-        "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND page_id = $2 ORDER BY sort_order ASC",
+        "SELECT id, tenant_id, page_id, block_type, content, sort_order, state FROM builder_blocks WHERE tenant_id = $1 AND page_id = $2 AND state = $3 ORDER BY sort_order ASC",
     )
     .bind(tenant_id)
     .bind(page_id)
+    .bind(state)
     .fetch_all(pool)
     .await
 }
 
-pub async fn create_block(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, block_type: String, content: Value, sort_order: i32) -> Result<Block, sqlx::Error> {
+pub async fn create_block(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, block_type: String, content: Value, sort_order: i32, state: &str) -> Result<Block, sqlx::Error> {
     sqlx::query_as::<_, Block>(
-        "INSERT INTO builder_blocks (tenant_id, page_id, block_type, content, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, page_id, block_type, content, sort_order",
+        "INSERT INTO builder_blocks (tenant_id, page_id, block_type, content, sort_order, state) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, tenant_id, page_id, block_type, content, sort_order, state",
     )
     .bind(tenant_id)
     .bind(page_id)
     .bind(block_type)
     .bind(content)
     .bind(sort_order)
+    .bind(state)
     .fetch_one(pool)
     .await
 }
 
 pub async fn update_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid, content: Value) -> Result<Block, sqlx::Error> {
     sqlx::query_as::<_, Block>(
-        "UPDATE builder_blocks SET content = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3 RETURNING id, tenant_id, page_id, block_type, content, sort_order",
+        "UPDATE builder_blocks SET content = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3 RETURNING id, tenant_id, page_id, block_type, content, sort_order, state",
     )
     .bind(content)
     .bind(tenant_id)
@@ -128,6 +131,32 @@ pub async fn reorder_blocks(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, block
         .execute(&mut *tx)
         .await?;
     }
+    tx.commit().await?;
+    Ok(())
+}
+
+pub async fn promote_draft_to_live(pool: &PgPool, tenant_id: Uuid, page_id: Uuid) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    // Delete existing live blocks
+    sqlx::query("DELETE FROM builder_blocks WHERE tenant_id = $1 AND page_id = $2 AND state = 'live'")
+        .bind(tenant_id)
+        .bind(page_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Copy draft blocks to live
+    sqlx::query(
+        "INSERT INTO builder_blocks (tenant_id, page_id, block_type, content, sort_order, state)
+         SELECT tenant_id, page_id, block_type, content, sort_order, 'live'
+         FROM builder_blocks
+         WHERE tenant_id = $1 AND page_id = $2 AND state = 'draft'"
+    )
+    .bind(tenant_id)
+    .bind(page_id)
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
     Ok(())
 }

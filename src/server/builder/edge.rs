@@ -138,7 +138,7 @@ async fn regenerate_cache(
 
     let page = &pages[0];
 
-    let blocks = super::db::list_blocks(&pool, tenant_id, page.id)
+    let blocks = super::db::list_blocks(&pool, tenant_id, page.id, "live")
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
