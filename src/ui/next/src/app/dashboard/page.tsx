@@ -5,8 +5,6 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
-  const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -116,6 +114,8 @@ export default function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
+  const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
     async function checkMilestones() {
@@ -288,11 +288,12 @@ export default function Dashboard() {
 
     fetchMetrics();
 
-    return () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", updateOfflineStatus);
         window.removeEventListener("storage", handleStorage);
         clearInterval(queueCheckInterval);
+
+    return () => {
         if (ws) ws.close();
     };
   }, []);

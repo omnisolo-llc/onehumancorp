@@ -102,7 +102,7 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
 
         
         let mut health_checks = Vec::new();
@@ -125,24 +125,24 @@ impl WizardService for MyWizardService {
                 });
             }
 
-            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_default();
+            let redis_url = std::env::var("REDIS_URL").unwrap_or_default();
             if redis_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_REDIS_URL".to_string(),
+                    check: "REDIS_URL".to_string(),
                     status: "missing".to_string(),
-                    message: "OHC_REDIS_URL is required in cloud mode".to_string(),
+                    message: "REDIS_URL is required in cloud mode".to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
-                    check: "OHC_REDIS_URL".to_string(),
+                    check: "REDIS_URL".to_string(),
                     status: "ok".to_string(),
-                    message: "OHC_REDIS_URL is configured".to_string(),
+                    message: "REDIS_URL is configured".to_string(),
                 });
             }
         } else {
             health_checks.push(DiagnosticCheckProto {
-                check: "OHC_STANDALONE_MODE".to_string(),
+                check: "OHC_STANDALONE".to_string(),
                 status: "ok".to_string(),
                 message: "Standalone mode active".to_string(),
             });
