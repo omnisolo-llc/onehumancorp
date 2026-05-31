@@ -61,7 +61,7 @@ mod tests {
     fn test_analytics_pii_redaction_cross_mode() {
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_STANDALONE", Some("true")),
             ],
             || {
                 let tracker = Tracker::new();
