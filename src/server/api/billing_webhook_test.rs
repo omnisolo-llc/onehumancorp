@@ -200,3 +200,157 @@ async fn test_mercadopago_webhook_handler_payment_created() {
     let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
     assert_eq!(response.status(), StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_twilio_webhook_handler() {
+    use axum::http::StatusCode;
+    use axum::extract::{State, Json};
+    use axum::response::IntoResponse;
+    use crate::api::billing_webhook::{twilio_webhook_handler, WebhookState, TwilioEvent};
+    use std::sync::Arc;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: Arc::new(db),
+    };
+
+    let event = TwilioEvent {
+        message_sid: Some("SM123".to_string()),
+        message_status: Some("delivered".to_string()),
+        from: Some("+1234567890".to_string()),
+        body: Some("Test body".to_string()),
+    };
+
+    let response = twilio_webhook_handler(State(state), Json(event)).await.into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_meta_webhook_handler() {
+    use axum::http::StatusCode;
+    use axum::extract::{State, Json};
+    use axum::response::IntoResponse;
+    use crate::api::billing_webhook::{meta_webhook_handler, WebhookState, MetaEvent};
+    use std::sync::Arc;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: Arc::new(db),
+    };
+
+    let event = MetaEvent {
+        object: "page".to_string(),
+        entry: vec![],
+    };
+
+    let response = meta_webhook_handler(State(state), Json(event)).await.into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_shippo_webhook_handler() {
+    use axum::http::StatusCode;
+    use axum::extract::{State, Json};
+    use axum::response::IntoResponse;
+    use crate::api::billing_webhook::{shippo_webhook_handler, WebhookState, ShippoEvent};
+    use std::sync::Arc;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: Arc::new(db),
+    };
+
+    let event = ShippoEvent {
+        event: "track_updated".to_string(),
+        data: serde_json::json!({}),
+    };
+
+    let response = shippo_webhook_handler(State(state), Json(event)).await.into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_zoom_webhook_handler() {
+    use axum::http::StatusCode;
+    use axum::extract::{State, Json};
+    use axum::response::IntoResponse;
+    use crate::api::billing_webhook::{zoom_webhook_handler, WebhookState, ZoomEvent};
+    use std::sync::Arc;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: Arc::new(db),
+    };
+
+    let event = ZoomEvent {
+        event: "meeting.started".to_string(),
+        payload: serde_json::json!({}),
+    };
+
+    let response = zoom_webhook_handler(State(state), Json(event)).await.into_response();
+    assert_eq!(response.status(), StatusCode::OK);
+}

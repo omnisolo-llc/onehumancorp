@@ -480,3 +480,65 @@ pub async fn mailchimp_webhook_handler(
 ) -> impl axum::response::IntoResponse {
     axum::http::StatusCode::OK.into_response()
 }
+
+#[derive(Debug, Deserialize)]
+pub struct TwilioEvent {
+    pub message_sid: Option<String>,
+    pub message_status: Option<String>,
+    pub from: Option<String>,
+    pub body: Option<String>,
+}
+
+pub async fn twilio_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<TwilioEvent>,
+) -> impl IntoResponse {
+    // Basic placeholder for Twilio webhooks
+    tracing::info!("Received Twilio webhook");
+    StatusCode::OK.into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MetaEvent {
+    pub object: String,
+    pub entry: Vec<serde_json::Value>,
+}
+
+pub async fn meta_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<MetaEvent>,
+) -> impl IntoResponse {
+    // Basic placeholder for Meta (Instagram/Facebook) webhooks
+    tracing::info!("Received Meta webhook");
+    StatusCode::OK.into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShippoEvent {
+    pub event: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn shippo_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<ShippoEvent>,
+) -> impl IntoResponse {
+    // Basic placeholder for Shippo webhooks
+    tracing::info!("Received Shippo webhook");
+    StatusCode::OK.into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZoomEvent {
+    pub event: String,
+    pub payload: serde_json::Value,
+}
+
+pub async fn zoom_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<ZoomEvent>,
+) -> impl IntoResponse {
+    // Basic placeholder for Zoom webhooks
+    tracing::info!("Received Zoom webhook");
+    StatusCode::OK.into_response()
+}
