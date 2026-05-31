@@ -1567,7 +1567,7 @@ mod get_conflicts_tests {
         let id: String = rows[0].try_get("id").unwrap();
         let ref_count: i32 = rows[0].try_get("reference_count").unwrap();
 
-        // It will pick `r1` as winner arbitrarily (since a=r1, b=r2, and we return (&a, &b))
+        // It will pick `r1` as winner using lexicographical comparison (since a=r1, b=r2)
         assert_eq!(id, "rec4_a");
         // new ref count = r1.reference_count (1) + r2.reference_count (2) + 1 = 4
         assert_eq!(ref_count, 4);
@@ -2300,6 +2300,10 @@ mod determine_conflict_winner_tests {
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a"); // fallback to a
         assert_eq!(loser.id, "b");
+
+        let (winner2, loser2) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner2.id, "a");
+        assert_eq!(loser2.id, "b");
     }
 }
 // Trigger PR for Memory Consolidation Feature
