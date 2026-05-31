@@ -96,19 +96,33 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
+        let mode = ::server_telemetry::get_deployment_mode();
+
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+        let rows = match sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
             .fetch_all(&self.sqlite_pool)
-            .await?;
+            .await {
+                Ok(r) => r,
+                Err(e) => {
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "db_fetch_error").await;
+                    return Err(e.into());
+                }
+            };
+
+        let batch_size = rows.len() as f32;
+        let mut payload_size_bytes = 0.0;
 
         for row in rows {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
+            payload_size_bytes += payload.len() as f32;
 
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
                 Err(e) => {
                     warn!("Failed to begin pg transaction: {}", e);
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_tx_begin_error").await;
                     continue;
                 }
             };
@@ -123,6 +137,7 @@ impl HybridSyncDaemon {
                 Ok(_) => {
                     if let Err(e) = tx.commit().await {
                         warn!("Failed to commit pg transaction for mission {}: {}", id, e);
+                        let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_tx_commit_error").await;
                         continue;
                     }
 
@@ -145,31 +160,52 @@ impl HybridSyncDaemon {
                                 "Failed to update local sync status for mission {}: {}",
                                 id, e
                             );
+                            let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "sqlite_update_error").await;
                         }
                     }
                 }
                 Err(e) => {
                     let _ = tx.rollback().await;
                     warn!("Failed to sync agent_mission to pg: {}", e);
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_insert_error").await;
                     continue;
                 }
             }
+        }
+
+        if batch_size > 0.0 {
+            let latency_ms = start_time.elapsed().as_millis() as f32;
+            let _ = ::server_telemetry::record_sync_daemon_batch_size(&self.pg_pool, batch_size, mode).await;
+            let _ = ::server_telemetry::record_sync_payload_size(&self.pg_pool, payload_size_bytes, mode).await;
+            let _ = ::server_telemetry::record_sync_latency(&self.pg_pool, latency_ms, mode).await;
         }
 
         Ok(())
     }
 
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Find tasks requiring cloud escalation
-        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
-            .fetch_all(&self.sqlite_pool)
-            .await?;
+        let start_time = std::time::Instant::now();
+        let mode = ::server_telemetry::get_deployment_mode();
 
+        // Find tasks requiring cloud escalation
+        let rows = match sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
+            .fetch_all(&self.sqlite_pool)
+            .await {
+                Ok(r) => r,
+                Err(e) => {
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "db_fetch_error").await;
+                    return Err(e.into());
+                }
+            };
+
+        let batch_size = rows.len() as f32;
+        let mut payload_size_bytes = 0.0;
         let mut success_count = 0;
 
         for row in rows {
             let id: String = row.get("memory_id");
             let context: String = row.get("context");
+            payload_size_bytes += context.len() as f32;
 
             // Sanitize PII
             let parsed: Value = serde_json::from_str(&context).unwrap_or(json!({ "raw": context }));
@@ -197,6 +233,7 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_tx_begin_error").await;
                     continue;
                 }
             };
@@ -215,6 +252,7 @@ impl HybridSyncDaemon {
                     .execute(&self.sqlite_pool)
                     .await;
                 let _ = tx.rollback().await;
+                let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_insert_error").await;
                 continue;
             }
 
@@ -235,14 +273,21 @@ impl HybridSyncDaemon {
                             .bind(&id)
                             .execute(&self.sqlite_pool)
                             .await;
+                        let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_tx_commit_error").await;
                         continue;
                     }
 
                     // Update SQLite sync status
-                    sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED' WHERE memory_id = ?")
+                    match sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED' WHERE memory_id = ?")
                         .bind(&id)
                         .execute(&self.sqlite_pool)
-                        .await?;
+                        .await {
+                        Ok(_) => {},
+                        Err(e) => {
+                            let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "sqlite_update_error").await;
+                            return Err(e.into());
+                        }
+                    }
                     info!(
                         "Successfully escalated memory_id: {} to cloud queue: {}",
                         id, queue_id
@@ -263,6 +308,7 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
+                    let _ = ::server_telemetry::record_sync_daemon_error_total(&self.pg_pool, 1.0, mode, "pg_insert_queue_error").await;
                 }
             }
         }
@@ -271,12 +317,19 @@ impl HybridSyncDaemon {
             if let Err(e) = ::server_telemetry::record_sync_escalation(
                 &self.pg_pool,
                 success_count as f32,
-                ::server_telemetry::get_deployment_mode(),
+                mode,
             )
             .await
             {
                 warn!("Failed to record sync escalation telemetry: {}", e);
             }
+        }
+
+        if batch_size > 0.0 {
+            let latency_ms = start_time.elapsed().as_millis() as f32;
+            let _ = ::server_telemetry::record_sync_daemon_batch_size(&self.pg_pool, batch_size, mode).await;
+            let _ = ::server_telemetry::record_sync_payload_size(&self.pg_pool, payload_size_bytes, mode).await;
+            let _ = ::server_telemetry::record_sync_latency(&self.pg_pool, latency_ms, mode).await;
         }
 
         Ok(())
