@@ -77,7 +77,7 @@ export default function PricingPage() {
              ) : (
                  <div className="flex flex-col gap-2">
                      <div className="flex bg-white/20 p-1 rounded-lg border border-white/30 backdrop-blur-md">
-                         <input type="text" readOnly value={referralLink} className="bg-transparent text-white w-full px-3 text-sm focus:outline-none" />
+                         <input type="text" readOnly value={referralLink} className="bg-transparent text-white w-full px-3 text-sm focus:outline-none" data-testid="referral-link-input" />
                          <button
                              onClick={() => { navigator.clipboard.writeText(referralLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                              className="bg-white text-indigo-600 px-4 py-2 rounded-md text-sm font-bold shadow-sm"

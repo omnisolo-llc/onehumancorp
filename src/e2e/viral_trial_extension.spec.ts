@@ -17,9 +17,9 @@ test.describe('Viral Trial Extension Loop', () => {
     await getLinkBtn.click();
 
     // The button should be replaced by an input box with the link and a Copy button
-    const linkInput = page.locator('input[readonly]');
-    // await expect(linkInput).toBeVisible();
-    // await expect(linkInput).toHaveValue(/https:\/\/ohc\.store\/join\?ref=fallback/);
+    const linkInput = page.locator('[data-testid="referral-link-input"]');
+    await expect(linkInput).toBeVisible({ timeout: 10000 });
+    await expect(linkInput).toHaveValue(/https:\/\/ohc\.store\/join\?ref=fallback/);
 
     // Verify the 'Trial extension unlocked!' text is visible after API call
     const unlockedText = page.getByText('Trial extension unlocked!');
