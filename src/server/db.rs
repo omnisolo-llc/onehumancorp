@@ -13,14 +13,12 @@ static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    // Prevent Tenant Leakage by ensuring every leased connection starts with an empty tenant context,
-                    // enforcing an explicit opt-in for Row-Level Security via set_org_context before any reads/writes.
                     conn.execute("SET app.current_tenant = ''").await?;
                     Ok(true)
                 })
@@ -59,14 +57,8 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| {
-                let cfg = crate::config::get();
-                cfg.database_url.clone().unwrap_or_else(|| {
-                    let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
-                    format!("sqlite://{}", default_path.to_string_lossy())
-                })
-            });
+        let database_url = env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
@@ -168,9 +160,9 @@ impl DB {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
                 std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
-                    let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
+                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
                     if secret_path.exists() {
-                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
                             if !bytes.trim().is_empty() {
                                 return bytes.trim().to_string();
                             }
@@ -395,19 +387,6 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
-                    CREATE TABLE IF NOT EXISTS tool_integrations (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        description TEXT,
-                        api_url TEXT,
-                        integration_code TEXT,
-                        status TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
                         tenant_id VARCHAR NOT NULL,
@@ -1185,7 +1164,7 @@ mod tests {
         temp_env::with_vars(
             vec![
                 (
-                    "OHC_DATABASE_URL",
+                    "DATABASE_URL",
                     Some("postgres://localhost:54321/nonexistent"),
                 ),
                 ("OHC_DB_CONNECT_MAX_ATTEMPTS", Some("1")),
@@ -1210,7 +1189,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -1248,7 +1227,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -1306,7 +1285,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -1432,7 +1411,7 @@ mod security_tests_final {
 
         temp_env::with_vars(
             vec![
-                ("OHC_DATABASE_URL", Some(&*database_url)),
+                ("DATABASE_URL", Some(&*database_url)),
                 ("OHC_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
@@ -1497,7 +1476,7 @@ mod security_tests_final {
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -1562,7 +1541,7 @@ mod e2e_tenant_isolation_tests {
     async fn test_before_acquire_resets_tenant() {
         // Security Regression Test: Ensure PgPoolOptions are created
         // with a global before_acquire that sets app.current_tenant to ''
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -1606,7 +1585,7 @@ mod e2e_tenant_isolation_tests {
 mod e2e_tenant_isolation_swarm_tasks_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 

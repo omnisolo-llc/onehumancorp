@@ -6,7 +6,7 @@ set -euo pipefail
 # We will start the Next.js UI in dev mode and run a specialized raw Playwright script
 # to capture the UI states and sync them to docs/app/.
 
-export OHC_BASE_URL="http://localhost:3000"
+export BASE_URL="http://localhost:3000"
 
 # Start next dev
 cd src/ui/next
