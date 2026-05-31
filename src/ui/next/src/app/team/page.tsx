@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+import ActivityLog from './components/ActivityLog';
 
 export type ApprovalRequest = {
   id: string;
@@ -120,17 +121,22 @@ export default function TeamPage() {
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
              </div>
           ) : (
-            DEPARTMENTS.map(dept => {
-              const pendingCount = approvals.filter(a => a.department === dept.id).length;
-              return (
-                <DepartmentCard
-                  key={dept.id}
-                  name={dept.name}
-                  pendingCount={pendingCount}
-                  onClick={() => setSelectedDepartment(dept.id)}
-                />
-              );
-            })
+            <>
+              {DEPARTMENTS.map(dept => {
+                const pendingCount = approvals.filter(a => a.department === dept.id).length;
+                return (
+                  <DepartmentCard
+                    key={dept.id}
+                    name={dept.name}
+                    pendingCount={pendingCount}
+                    onClick={() => setSelectedDepartment(dept.id)}
+                  />
+                );
+              })}
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <ActivityLog />
+              </div>
+            </>
           )}
         </div>
       </div>

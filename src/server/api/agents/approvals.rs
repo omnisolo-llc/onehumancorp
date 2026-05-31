@@ -13,6 +13,12 @@ use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
 #[derive(Serialize)]
+pub struct ActivityResponse {
+    pub activities: Vec<ApprovalRequest>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Serialize)]
 pub struct ApprovalsResponse {
     pub pending_approvals: Vec<ApprovalRequest>,
     pub next_cursor: Option<String>,
@@ -80,7 +86,7 @@ async fn list_activity_feed(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => return (StatusCode::UNAUTHORIZED, Json(ActivityResponse { activities: vec![], next_cursor: None })).into_response(),
     };
 
     let limit = query.limit.unwrap_or(20);
@@ -93,8 +99,8 @@ async fn list_activity_feed(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: activities,
+    (StatusCode::OK, Json(ActivityResponse {
+        activities,
         next_cursor,
     })).into_response()
 }
