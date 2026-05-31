@@ -13,7 +13,7 @@ impl PaymentRouter {
     pub const CARD_FEE_FIXED: f64 = 0.30;
     pub const ACH_FEE_PERCENTAGE: f64 = 0.008;
     pub const ACH_FEE_CAP: f64 = 5.0;
-    pub const ACH_MIN_AMOUNT: f64 = 50.0;
+    pub const OHC_ACH_MIN_AMOUNT: f64 = 50.0;
 
     /// Returns the optimal payment method based on the transaction amount.
     /// Stripe Credit Card fee: 2.9% + $0.30
@@ -34,7 +34,7 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = std::env::var("OHC_ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::OHC_ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::OHC_ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -47,7 +47,7 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = std::env::var("OHC_ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::OHC_ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::OHC_ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {

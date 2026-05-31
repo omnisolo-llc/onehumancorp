@@ -27,11 +27,11 @@ spec:
           ports:
             - containerPort: {{ .Values.ohcCore.service.port }}
           env:
-            - name: LOG_FORMAT
+            - name: OHC_LOG_FORMAT
               value: "json"
-            - name: LOG_LEVEL
+            - name: OHC_LOG_LEVEL
               value: "info"
-            - name: LISTEN_ADDR
+            - name: OHC_LISTEN_ADDR
               value: "0.0.0.0:{{ .Values.ohcCore.service.port }}"
             - name: RUST_LOG
               value: "info"
