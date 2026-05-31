@@ -1,0 +1,10 @@
+--- src/e2e/BUILD.bazel
++++ src/e2e/BUILD.bazel
+@@ -23,6 +23,7 @@
+ define_playwright_tests(
+     ci_specs = [
++        "documentation.spec.ts",
+         "grandmother_test.spec.ts",
+         "help.spec.ts",
+         "kairos_orchestration.spec.ts",
+         "landing_ux.spec.ts",
