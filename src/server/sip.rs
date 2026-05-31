@@ -395,7 +395,7 @@ mod tests {
 
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAlways write clean code.");
+        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\n--- AGENTS.md ---\nAlways write clean code.");
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
