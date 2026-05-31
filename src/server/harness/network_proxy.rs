@@ -3,20 +3,22 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
-use ::server_telemetry::record_bubblewrap_violation;
+use crate::telemetry::SandboxTelemetryEmitter;
 
 pub struct NetworkProxy {
     allowed_domains: Arc<Vec<String>>,
     agent_id: String,
     task_id: String,
+    emitter: Arc<dyn SandboxTelemetryEmitter>,
 }
 
 impl NetworkProxy {
-    pub fn new(allowed_domains: Vec<String>, agent_id: String, task_id: String) -> Self {
+    pub fn new(allowed_domains: Vec<String>, agent_id: String, task_id: String, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Self {
         Self {
             allowed_domains: Arc::new(allowed_domains),
             agent_id,
             task_id,
+            emitter,
         }
     }
 
@@ -28,6 +30,7 @@ impl NetworkProxy {
 
         let agent_id = self.agent_id.clone();
         let task_id = self.task_id.clone();
+        let emitter = self.emitter.clone();
 
         tokio::spawn(async move {
             loop {
@@ -38,8 +41,9 @@ impl NetworkProxy {
                                 let domains = allowed_domains.clone();
                                 let a_id = agent_id.clone();
                                 let t_id = task_id.clone();
+                                let emitter_clone = emitter.clone();
                                 tokio::spawn(async move {
-                                    if let Err(e) = handle_connection(stream, domains, a_id, t_id).await {
+                                    if let Err(e) = handle_connection(stream, domains, a_id, t_id, emitter_clone).await {
                                         tracing::debug!("Proxy connection error: {}", e);
                                     }
                                 });
@@ -59,7 +63,7 @@ impl NetworkProxy {
     }
 }
 
-async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<String>>, agent_id: String, task_id: String) -> Result<(), String> {
+async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<String>>, agent_id: String, task_id: String, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Result<(), String> {
     let mut buffer = [0; 4096];
     let bytes_read = stream.read(&mut buffer).await.map_err(|e| e.to_string())?;
 
@@ -98,7 +102,7 @@ async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<Strin
     });
 
     if !is_allowed {
-        record_bubblewrap_violation(&agent_id, &task_id, "network_violation_denied");
+        emitter.record_violation(&agent_id, &task_id, "network_violation_denied");
         let response = "HTTP/1.1 403 Forbidden\r\n\r\nDenied by sandbox proxy policy";
         let _ = stream.write_all(response.as_bytes()).await;
         return Err(format!("Domain {} is blocked", host_without_port));
@@ -144,10 +148,13 @@ async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<Strin
 mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use crate::telemetry::MockTelemetryEmitter;
+    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn test_proxy_denied() {
-        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string());
+        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
+        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string(), mock_emitter.clone());
         let (port, _shutdown) = proxy.start(0).await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -160,11 +167,13 @@ mod tests {
         let response = String::from_utf8_lossy(&buffer[..bytes_read]);
 
         assert!(response.contains("403 Forbidden"));
+        assert_eq!(mock_emitter.violation_count.load(Ordering::SeqCst), 1);
     }
 
     #[tokio::test]
     async fn test_proxy_allowed() {
-        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string());
+        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
+        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string(), mock_emitter.clone());
         let (port, _shutdown) = proxy.start(0).await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;

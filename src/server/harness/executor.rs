@@ -1,20 +1,32 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_harness_execution_latency};
+use std::sync::Arc;
 
 
 use super::network_proxy::NetworkProxy;
+use crate::telemetry::{DefaultSandboxTelemetryEmitter, SandboxTelemetryEmitter};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
+    emitter: Arc<dyn SandboxTelemetryEmitter>,
 }
 
 impl LocalShellTask {
 
     pub fn new(pool: Option<PgPool>) -> Self {
+        let emitter: Arc<dyn SandboxTelemetryEmitter> = Arc::new(DefaultSandboxTelemetryEmitter);
         LocalShellTask {
-            manager: SandboxManager::new(pool),
+            manager: SandboxManager::new(pool, emitter.clone()),
+            emitter,
+        }
+    }
+
+    pub fn new_with_emitter(pool: Option<PgPool>, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Self {
+        LocalShellTask {
+            manager: SandboxManager::new(pool, emitter.clone()),
+            emitter,
         }
     }
 
@@ -36,7 +48,7 @@ impl LocalShellTask {
         let agent_id = "unknown_agent";
 
         let policy = self.manager.get_policy();
-        let proxy = NetworkProxy::new(policy.allowed_domains.clone(), agent_id.to_string(), task_id.to_string());
+        let proxy = NetworkProxy::new(policy.allowed_domains.clone(), agent_id.to_string(), task_id.to_string(), self.emitter.clone());
         let (proxy_port, _shutdown_tx) = proxy.start(0).await.map_err(|e| format!("Failed to start proxy: {}", e))?;
 
         record_bubblewrap_spawn(agent_id, task_id);
@@ -61,7 +73,7 @@ impl LocalShellTask {
         record_harness_execution_latency(latency_seconds);
 
         if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
-            record_bubblewrap_violation(agent_id, task_id, "permission_denied");
+            self.emitter.record_violation(agent_id, task_id, "permission_denied");
         }
 
         if !output.status.success() {
@@ -75,10 +87,13 @@ impl LocalShellTask {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::telemetry::MockTelemetryEmitter;
+    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn test_allowed_command_execution() {
-        let task = LocalShellTask::new(None);
+        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
+        let task = LocalShellTask::new_with_emitter(None, mock_emitter.clone());
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
@@ -87,12 +102,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_denied_command_execution() {
-        let task = LocalShellTask::new(None);
+        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
+        let task = LocalShellTask::new_with_emitter(None, mock_emitter.clone());
         let result = task.execute("sudo rm -rf /").await;
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.contains("SANDBOX_FAILURE"));
         assert!(err.contains("Command execution denied by sandbox policy"));
+        assert!(mock_emitter.violation_count.load(Ordering::SeqCst) > 0);
     }
 
     #[tokio::test]
