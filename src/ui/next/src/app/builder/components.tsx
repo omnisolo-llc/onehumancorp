@@ -234,7 +234,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
           href={`ohc://join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
-          <span className="font-inter">⚡ Powered by</span>
+          <span className="font-inter">Powered by</span>
           <span className="font-outfit font-bold tracking-tight">OHC</span>
           <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
