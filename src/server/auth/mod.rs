@@ -448,13 +448,13 @@ impl Store {
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
-                let redis_key = format!("revoked_token:{}", jti);
+                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
                 let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
             }
         }
     }
 
-    pub async fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
         {
             let revoked = self.revoked.read().unwrap();
             if let Some(exp) = revoked.get(jti) {
@@ -465,7 +465,7 @@ impl Store {
         }
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                let redis_key = format!("revoked_token:{}", jti);
+                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
                 let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
                 if let Ok(true) = exists {
                     return true;
