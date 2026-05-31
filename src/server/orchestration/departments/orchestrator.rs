@@ -637,50 +637,7 @@ impl DepartmentOrchestrator {
                 KeyValue::new("department", dep.to_string())
             ]);
 
-
             if approved {
-                // Flash Sale execution logic
-                if dep == "business_advisory" || dep == "businessadvisory" {
-                    if let Some(payload) = &original_payload {
-                        if let Some(adj_id) = payload.get("adjustment_id").and_then(|v| v.as_str()) {
-                            if let Some(prod_id) = payload.get("product_id").and_then(|v| v.as_str()) {
-                                if let Some(adj_price) = payload.get("adjusted_price").and_then(|v| v.as_f64()) {
-                                    match &self.db.store {
-                                        DbStore::Postgres => {
-                                            let _ = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
-                                                .bind(adj_price)
-                                                .bind((adj_price * 100.0) as i64)
-                                                .bind(prod_id)
-                                                .bind(tenant_id)
-                                                .execute(&self.db.pool)
-                                                .await;
-
-                                            let _ = sqlx::query("UPDATE dynamic_price_adjustments SET approval_status = 'approved', updated_at = NOW() WHERE id = $1")
-                                                .bind(adj_id)
-                                                .execute(&self.db.pool)
-                                                .await;
-                                        }
-                                        DbStore::Sqlite(pool) => {
-                                            let _ = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
-                                                .bind(adj_price)
-                                                .bind((adj_price * 100.0) as i64)
-                                                .bind(prod_id)
-                                                .bind(tenant_id)
-                                                .execute(pool)
-                                                .await;
-
-                                            let _ = sqlx::query("UPDATE dynamic_price_adjustments SET approval_status = 'approved', updated_at = datetime('now') WHERE id = ?")
-                                                .bind(adj_id)
-                                                .execute(pool)
-                                                .await;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,
@@ -702,6 +659,96 @@ impl DepartmentOrchestrator {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
+
+
+    pub async fn append_to_timeline(&self, event: crate::orchestration::departments::types::TimelineEvent) -> Result<(), String> {
+        let meta_str = event.metadata.map(|v| v.to_string()).unwrap_or_else(|| "{}".to_string());
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_customer_timeline(&self, tenant_id: &str, customer_id: &str, limit: i64) -> Result<Vec<crate::orchestration::departments::types::TimelineEvent>, String> {
+        let mut results = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT $3")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(row.get("created_at")),
+                    });
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(created_at),
+                    });
+                }
+            }
+        }
+        results.reverse();
+        Ok(results)
+    }
 
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
