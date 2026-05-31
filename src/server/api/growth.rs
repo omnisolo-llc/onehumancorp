@@ -1025,8 +1025,8 @@ async fn handle_wall_of_love_js(
     Query(query): Query<WallOfLoveQuery>,
 ) -> impl IntoResponse {
     let store = query.store.unwrap_or_else(|| "my-store".to_string());
-    // Basic protection against XSS in store name (js string context)
-    let safe_store = store.replace("'", "&apos;").replace("<", "&lt;").replace(">", "&gt;");
+    // Safe serialization for JS context
+    let safe_store_js = serde_json::to_string(&store).unwrap_or_else(|_| "\"my-store\"".to_string());
 
     let js = format!(
         r#"
@@ -1034,7 +1034,7 @@ async fn handle_wall_of_love_js(
     const container = document.getElementById('ohc-wall-of-love');
     if (!container) return;
 
-    const storeName = '{safe_store}';
+    const storeName = {safe_store_js};
     const storeParam = encodeURIComponent(storeName);
 
     const style = document.createElement('style');
@@ -1127,7 +1127,7 @@ async fn handle_wall_of_love_js(
     container.appendChild(widget);
 }})();
 "#,
-        safe_store = safe_store
+        safe_store_js = safe_store_js
     );
 
     ([(axum::http::header::CONTENT_TYPE, "application/javascript")], js)
