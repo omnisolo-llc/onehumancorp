@@ -97,7 +97,7 @@ impl HybridSyncDaemon {
 
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -109,6 +109,11 @@ impl HybridSyncDaemon {
                 Ok(t) => t,
                 Err(e) => {
                     warn!("Failed to begin pg transaction: {}", e);
+                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        .bind(e.to_string())
+                        .bind(&id)
+                        .execute(&self.sqlite_pool)
+                        .await;
                     continue;
                 }
             };
@@ -123,11 +128,16 @@ impl HybridSyncDaemon {
                 Ok(_) => {
                     if let Err(e) = tx.commit().await {
                         warn!("Failed to commit pg transaction for mission {}: {}", id, e);
+                        let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(e.to_string())
+                            .bind(&id)
+                            .execute(&self.sqlite_pool)
+                            .await;
                         continue;
                     }
 
                     let update_res = sqlx::query(
-                        "UPDATE agent_missions SET synced_to_cloud = true WHERE id = ?",
+                        "UPDATE agent_missions SET synced_to_cloud = true, sync_error = NULL, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?",
                     )
                     .bind(&id)
                     .execute(&self.sqlite_pool)
@@ -151,6 +161,11 @@ impl HybridSyncDaemon {
                 Err(e) => {
                     let _ = tx.rollback().await;
                     warn!("Failed to sync agent_mission to pg: {}", e);
+                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        .bind(e.to_string())
+                        .bind(&id)
+                        .execute(&self.sqlite_pool)
+                        .await;
                     continue;
                 }
             }
