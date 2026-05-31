@@ -35,7 +35,6 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
-    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -76,7 +75,6 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -280,10 +278,7 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
-        if integration_id == "resend" {
-            let mut clients = self.resend_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
-        }
+
 
         Ok(inst)
     }
@@ -759,12 +754,7 @@ impl IntegrationsRegistry {
             return c.send_email(to, subject, body).await;
         }
 
-        if integration_id == "resend" {
-            let clients = self.resend_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.send_email(to, "noreply@onehumancorp.com", subject, body).await;
-            }
-        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -852,24 +842,6 @@ mod tests {
         registry.connect("cal_com", "", creds).unwrap();
 
         let _res = registry.cal_com_get_free_busy("cal_com", "2023", "2024").await;
-
-    }
-
-    #[tokio::test]
-    async fn test_resend_integration() {
-        let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-            integration_id: "resend".to_string(),
-            base_url: "".to_string(),
-            bot_token: "".to_string(),
-            chat_id: "".to_string(),
-            webhook_url: "".to_string(),
-            api_token: "test_token".to_string(),
-            from_phone: "".to_string(),
-        };
-        registry.connect("resend", "", creds).unwrap();
-
-        let _res = registry.send_email("resend", "test@test.com", "sub", "body").await;
 
     }
 
