@@ -24,7 +24,7 @@ async fn test_sqlite_task_queue() {
         )"
     ).execute(&pool).await.unwrap();
 
-    let queue = SQLiteTaskQueue::new(Arc::new(pool));
+    let queue = SQLiteTaskQueue::new(Arc::new(pool.clone()));
 
     let job = Job {
         id: "job-1".to_string(),
@@ -35,15 +35,19 @@ async fn test_sqlite_task_queue() {
         status: "QUEUED".to_string(),
         attempts: 0,
         max_attempts: 3,
-        run_after: Utc::now() - chrono::Duration::seconds(1),
+        run_after: Utc::now() - chrono::Duration::seconds(100),
         locked_until: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Utc::now() - chrono::Duration::seconds(100),
+        updated_at: Utc::now() - chrono::Duration::seconds(100),
     };
 
     queue.enqueue(job).await.unwrap();
 
+    // Since enqueue adds run_after time depending on queue length, let's artificially update it to make sure it's valid
+    sqlx::query("UPDATE sub_agent_jobs SET run_after = '2000-01-01 00:00:00' WHERE id = 'job-1'").execute(&pool).await.unwrap();
+
     let dequeued_opt = queue.dequeue(vec!["test-role".to_string()], 100, 100).await.unwrap();
+    assert!(dequeued_opt.is_some(), "Dequeued job is None, expected Some");
     let dequeued = dequeued_opt.unwrap();
     assert_eq!(dequeued.id, "job-1");
     assert_eq!(dequeued.tenant_id, "system");
