@@ -30,6 +30,7 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
+static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -61,7 +62,13 @@ fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
 fn workflow_agent_binary() -> String {
     std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
-        .unwrap_or_else(|_| "ohc_builtin_agent".to_string())
+        .unwrap_or_else(|_| {
+            if let Ok(exe_path) = std::env::current_exe() {
+                exe_path.to_string_lossy().to_string()
+            } else {
+                "ohc_builtin_agent".to_string()
+            }
+        })
 }
 
 fn workflow_agent_task(task: &str) -> String {
@@ -92,6 +99,33 @@ fn dispatch_workflow(record: WorkflowRecord) {
     let task = workflow_agent_task(&record.task);
 
     tokio::spawn(async move {
+        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+        if is_standalone {
+            if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
+                use ohc_builtin_agent::proto::agent_service::agent_service_server::AgentService;
+                let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
+                    task: task.clone(),
+                    working_dir: String::new(),
+                    parent_context_json: String::new(),
+                    ..Default::default()
+                };
+                match svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                    Ok(resp) => {
+                        let inner = resp.into_inner();
+                        if !inner.error.is_empty() {
+                            set_workflow_result(&id, "failed", Some(inner.result), Some(inner.error));
+                        } else {
+                            set_workflow_result(&id, "completed", Some(inner.result), None);
+                        }
+                    }
+                    Err(e) => {
+                        set_workflow_result(&id, "failed", None, Some(format!("In-process agent error: {}", e)));
+                    }
+                }
+                return;
+            }
+        }
+
         let output = tokio::process::Command::new(&binary)
             .arg("--task")
             .arg(task)
@@ -706,9 +740,10 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -785,9 +820,10 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -1882,10 +1918,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<GetMeetingsResponse>, Status> {
+        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
@@ -2180,6 +2216,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
         svc_impl.init_memory().await;
         let svc = std::sync::Arc::new(svc_impl);
+        let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());
 
         let heartbeat_transport = builtin_transport.clone();
         tokio::spawn(async move {
