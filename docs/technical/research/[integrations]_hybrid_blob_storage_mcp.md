@@ -12,7 +12,7 @@ Current blob storage solutions in MCP are highly fragmented. Local tools like Re
 **Architecture:**
 - Add a new package `src/server/lib/integrations/hybrid_blob/`.
 - Introduce a `BlobManager` that implements the MCP Tool interface.
-- Must support a local File System driver and a cloud S3-compatible driver, dynamically choosing based on configuration or environment variables (e.g., presence of `S3_ENDPOINT`).
+- Must support a local File System driver and a cloud S3-compatible driver, dynamically choosing based on configuration or environment variables (e.g., presence of `OHC_S3_ENDPOINT`).
 
 **API Contracts:**
 - `WriteBlob(ctx context.Context, key string, data []byte) error`
@@ -28,7 +28,7 @@ Current blob storage solutions in MCP are highly fragmented. Local tools like Re
 ## Implementation Prompt
 "Implement the Hybrid Blob Storage MCP tool in `src/server/lib/integrations/hybrid_blob/`.
 1. Create `blob.go` defining the `BlobManager` and its MCP capabilities (`ReadBlob` and `WriteBlob`).
-2. Implement environment-agnostic logic. To determine if the backend should be S3, check for `S3_ENDPOINT` environment variable. If missing, fall back to a local temporary directory configured by the environment (do not use `.ohc/`).
+2. Implement environment-agnostic logic. To determine if the backend should be S3, check for `OHC_S3_ENDPOINT` environment variable. If missing, fall back to a local temporary directory configured by the environment (do not use `.ohc/`).
 3. Implement strict path sanitization to prevent path traversal attacks in the local driver.
 4. For the S3 driver, use the official AWS SDK for Go v2 (or an S3-compatible equivalent) to handle `PutObject` and `GetObject`. Ensure object keys are prefixed with the tenant's `organization_id` to enforce isolation.
 5. Create tests in `blob_test.go` using `t.TempDir()` for isolated local testing. Mock the S3 client for cloud-mode tests. Never hardcode workspace directories.
