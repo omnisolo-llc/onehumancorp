@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS agent_kv_store (
     PRIMARY KEY (tenant_id, kv_key)
 );
 ALTER TABLE agent_kv_store ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_agent_kv_store ON agent_kv_store USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_kv_store ON agent_kv_store USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));

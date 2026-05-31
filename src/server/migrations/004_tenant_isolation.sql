@@ -37,7 +37,7 @@ BEGIN
                     AND policyname = pol_name
             ) THEN
                 EXECUTE format(
-                    'CREATE POLICY %I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true))',
+                    'CREATE POLICY %I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))',
                     pol_name,
                     t_name
                 );
@@ -61,7 +61,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_shared_tasks_decomposition
                 ON shared_tasks_decomposition
-                USING (organization_id::text = current_setting('app.current_tenant', true));
+                USING (organization_id::text = current_setting('app.current_tenant', true)) WITH CHECK (organization_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;
 END
@@ -81,7 +81,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_agent_session_data
                 ON agent_session_data
-                USING (agent_id IN (SELECT id FROM agents WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+                USING (agent_id IN (SELECT id FROM agents WHERE tenant_id::text = current_setting('app.current_tenant', true))) WITH CHECK (agent_id IN (SELECT id FROM agents WHERE tenant_id::text = current_setting('app.current_tenant', true)));
         END IF;
     END IF;
 
@@ -97,7 +97,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_swarm_truth_embeddings
                 ON swarm_truth_embeddings
-                USING (memory_id IN (SELECT id FROM agent_memories WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+                USING (memory_id IN (SELECT id FROM agent_memories WHERE tenant_id::text = current_setting('app.current_tenant', true))) WITH CHECK (memory_id IN (SELECT id FROM agent_memories WHERE tenant_id::text = current_setting('app.current_tenant', true)));
         END IF;
     END IF;
 
@@ -113,7 +113,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_swarm_tasks
                 ON swarm_tasks
-                USING (mission_id IN (SELECT id FROM agent_missions WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+                USING (mission_id IN (SELECT id FROM agent_missions WHERE tenant_id::text = current_setting('app.current_tenant', true))) WITH CHECK (mission_id IN (SELECT id FROM agent_missions WHERE tenant_id::text = current_setting('app.current_tenant', true)));
         END IF;
     END IF;
 
@@ -129,7 +129,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_meeting_transcripts
                 ON meeting_transcripts
-                USING (meeting_id IN (SELECT id FROM meeting_rooms WHERE tenant_id::text = current_setting('app.current_tenant', true)));
+                USING (meeting_id IN (SELECT id FROM meeting_rooms WHERE tenant_id::text = current_setting('app.current_tenant', true))) WITH CHECK (meeting_id IN (SELECT id FROM meeting_rooms WHERE tenant_id::text = current_setting('app.current_tenant', true)));
         END IF;
     END IF;
 END
@@ -149,7 +149,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_sub_agent_queue
                 ON sub_agent_queue
-                USING (tenant_id::text = current_setting('app.current_tenant', true));
+                USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;
 END
