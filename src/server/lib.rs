@@ -973,11 +973,12 @@ impl HubService for MyHubService {
         let tenant_id_clone = tenant_id.clone();
 
         let hub_clone = self.hub.clone();
+        let tenant_id_clone_2 = tenant_id.clone();
 
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
+                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
                 (llm, rev)
             }),
             async move {
