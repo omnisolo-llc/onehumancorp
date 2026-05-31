@@ -54,7 +54,7 @@ To start your agents and prepare the orchestration engine, initialize the swarm.
 ohc-cli swarm init --mode=hybrid
 ```
 
-*This command automatically negotiates with the [Central Orchestration Hub](../../architecture/orchestration/hybrid-orchestration-master.md) and establishes local fallback capabilities (SQLite) via the [Hybrid OS architecture](../../architecture/kairos/hybrid-os-design.md).*
+*This command automatically negotiates with the [Central Orchestration Hub](../architecture/orchestration/hybrid-orchestration-master.md) and establishes local fallback capabilities (SQLite) via the [Hybrid OS architecture](../architecture/kairos/hybrid-os-design.md).*
 
 ### 2. Task Delegation
 
