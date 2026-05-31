@@ -23,6 +23,7 @@ async fn test_shared_task_orchestrator() {
 
     let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
     let db = Arc::new(db);
+    crate::telemetry::init_telemetry();
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
     let task = SharedTaskV4 {
@@ -112,6 +113,7 @@ async fn test_shared_task_orchestrator_sqlite() {
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
+    crate::telemetry::init_telemetry();
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
     let task = SharedTaskV4 {
@@ -188,6 +190,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
+    crate::telemetry::init_telemetry();
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
     // Task 1: pending, no dependencies
@@ -286,6 +289,7 @@ async fn test_shared_task_orchestrator_update_and_list_sqlite() {
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
+    crate::telemetry::init_telemetry();
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
     let task1 = SharedTaskV4 {
@@ -357,6 +361,7 @@ async fn test_shared_task_orchestrator_dependencies() {
 
     let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
     let db = Arc::new(db);
+    crate::telemetry::init_telemetry();
     let orchestrator = SharedTaskOrchestrator::new(db.clone());
 
     // Task 1: pending, no dependencies

@@ -189,6 +189,7 @@ impl SharedTaskOrchestrator {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let _lock = self.sqlite_mutex.lock().await;
+                tracing::info!("SQLite fallback lock acquired for shared_tasks");
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row = sqlx::query(
@@ -321,6 +322,7 @@ impl SharedTaskOrchestrator {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let _lock = self.sqlite_mutex.lock().await;
+                tracing::info!("SQLite fallback lock acquired for shared_tasks");
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let current_status: String = sqlx::query("SELECT status FROM shared_tasks_v4 WHERE id = ?")

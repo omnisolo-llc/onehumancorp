@@ -1305,3 +1305,9 @@ pub async fn record_sync_failed_count(
     )
     .await
 }
+
+pub fn init_telemetry() {
+    let meter = opentelemetry::global::meter("ohc.telemetry.heartbeat");
+    let init_counter = meter.u64_counter("ohc_telemetry_init_heartbeats_total").build();
+    init_counter.add(1, &[]);
+}

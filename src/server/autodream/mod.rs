@@ -103,6 +103,7 @@ impl AutoDreamWorker {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
+        tracing::info!("AutoDream: Found {} stale sessions", stale_sessions.len());
         
         let client = crate::minimax::LocalLLMClient::new();
 
@@ -551,6 +552,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        crate::telemetry::init_telemetry();
         let worker = AutoDreamWorker::new(db.clone());
 
         assert!(worker.consolidate_epoch().await.is_ok());
@@ -584,6 +586,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        crate::telemetry::init_telemetry();
         let worker = AutoDreamWorker::new(db.clone());
 
         let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter, &worker.cache).await;
