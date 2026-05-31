@@ -21,16 +21,7 @@ type WorkflowRecord = {
 const workflows: WorkflowRecord[] = [];
 
 function agentBinary() {
-  const override = process.env.OHC_BUILTIN_AGENT_BINARY || process.env.OHC_AGENT_BINARY;
-  if (override) {
-    return override;
-  }
-
-  const standaloneMode = (process.env.OHC_STANDALONE_MODE || '').toLowerCase();
-  const sourceMode = (process.env.OHC_SOURCE_MODE || '').toLowerCase();
-  const isCluster = standaloneMode === 'false' || ['cloud', 'cluster', 'headless'].includes(sourceMode);
-
-  return isCluster ? 'ohc-builtin-agent' : 'server';
+  return process.env.OHC_BUILTIN_AGENT_BINARY || process.env.OHC_AGENT_BINARY || 'ohc_builtin_agent';
 }
 
 function buildAgentTask(task: string) {

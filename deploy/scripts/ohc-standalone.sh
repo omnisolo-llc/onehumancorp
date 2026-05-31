@@ -19,15 +19,16 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export OHC_STANDALONE_MODE=true
+export STANDALONE_MODE=true
 # Tuning memory limits for standalone wrapper
 export TOKIO_WORKER_THREADS=2
 export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=4
 export GOMEMLIMIT=256MiB
 export GOGC=50
-export OHC_LOG_FORMAT="json"
-export OHC_LOG_LEVEL="info"
+export OHC_STANDALONE=true
+export LOG_FORMAT="json"
+export LOG_LEVEL="info"
 export RUST_LOG="info"
 export OHC_RUNTIME_DIR=".ohc/runtime"
 export OHC_MEMORY_DIR="${OHC_RUNTIME_DIR}/memory"
