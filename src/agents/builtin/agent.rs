@@ -395,6 +395,7 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub prompt_cache: Option<Arc<crate::prompt_caching::PromptCache>>
 }
 
 impl Agent {
@@ -410,12 +411,19 @@ impl Agent {
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
             event_stream: None,
+            prompt_cache: self.prompt_cache.clone(),
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
+            prompt_cache: None,
         }
     }
 
     pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
         self.memory_store = Some(store);
+        self
+    }
+
+    pub fn with_prompt_cache(mut self, cache: Arc<crate::prompt_caching::PromptCache>) -> Self {
+        self.prompt_cache = Some(cache);
         self
     }
 
@@ -1682,6 +1690,7 @@ impl Agent {
 
         let temp_agent = Agent {
             event_stream: None,
+            prompt_cache: self.prompt_cache.clone(),
             llm: self.llm.clone(),
             tools: structured_tools,
             progress: self.progress.clone(),
@@ -1794,6 +1803,7 @@ impl Agent {
         if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
                 event_stream: None,
+            prompt_cache: self.prompt_cache.clone(),
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
@@ -2113,7 +2123,27 @@ impl Agent {
                 estimated_cost_usd = tracing::field::Empty,
             );
 
-            let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
+            let mut cached_response = None;
+            let prompt_hash = format!("{:?}", req);
+            if let Some(cache) = &self.prompt_cache {
+                if let Some(cached) = cache.get(&prompt_hash) {
+                    tracing::info!("Prompt Cache hit! Saving tokens and time.");
+                    cached_response = Some(cached.text.clone());
+                }
+            }
+
+            let resp = if let Some(cached_text) = cached_response {
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant(cached_text),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some(uuid::Uuid::new_v4().to_string()),
+                })
+            } else {
+                self.llm.chat(req.clone()).instrument(llm_span.clone()).await
+            };
+
+            let resp = match resp {
                 Ok(r) => r,
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
