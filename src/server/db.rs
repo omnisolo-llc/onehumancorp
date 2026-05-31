@@ -1100,7 +1100,7 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status IN ('STUCK', 'blocked') OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -1108,7 +1108,7 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1)")
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status IN ('STUCK', 'blocked') OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1)")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();

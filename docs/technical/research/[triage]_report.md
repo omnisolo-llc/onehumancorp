@@ -3,7 +3,7 @@
 # 🧹 Maintainer: Triage & Debt Report
 
 ## Phase 1: Audit
-- Verified the Swarm Dashboard and identified multiple stagnant/blocked missions in `.agent-task/missions/`.
+- Verified the Swarm Dashboard and identified multiple stagnant/blocked missions.
 - Audited `[observability]_sync_daemon_metrics_gap.md` report claiming missing mode-specific metrics for Hybrid MCP RAG Sync Daemon.
 - Audited K8s resource limits, finding redundant VPA and HPA config entries.
 

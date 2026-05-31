@@ -65,7 +65,7 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'blocked') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -623,6 +623,16 @@ mod tests {
                 .await
                 .unwrap();
 
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("blocked_mission_id")
+                .bind("blocked")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
             let very_old_time = chrono::Utc::now() - chrono::Duration::hours(48);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stale_pending_mission_id")
@@ -661,6 +671,13 @@ mod tests {
             let status_stuck: String = row_stuck.get("status");
             assert_eq!(status_stuck, "FAILED");
 
+            let row_blocked = sqlx::query("SELECT status FROM agent_missions WHERE id = 'blocked_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_blocked: String = row_blocked.get("status");
+            assert_eq!(status_blocked, "FAILED");
+
             // Verify stale PENDING mission was marked FAILED
             let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
                 .fetch_one(&pool)
@@ -679,7 +696,7 @@ mod tests {
 
             // Clean up using a transaction
             let mut tx_clean = pool.begin().await.unwrap();
-            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id', 'blocked_mission_id')")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();

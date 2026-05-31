@@ -1,7 +1,7 @@
 <div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
 # 🧹 Maintainer: Triage & Debt Report
 ## Phase 1: Audit
--   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions in `.agent-task/missions/`.
+-   Verified the Swarm Dashboard and identified multiple stagnant/blocked missions.
 -   Audited K8s resource limits, finding redundant VPA and HPA.
 ## Phase 2: Hygiene
 -   Sanitized the mission backlog by permanently failing `STUCK` missions to ensure no stuck missions persist in endless retry loops.
