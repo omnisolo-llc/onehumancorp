@@ -25,7 +25,7 @@ mod parity_tests {
     }
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(url) = std::env::var("DATABASE_URL") {
             if url.starts_with("postgres") {
                 let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
                     .connect(&url)

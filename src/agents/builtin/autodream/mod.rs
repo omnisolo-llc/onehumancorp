@@ -409,7 +409,7 @@ mod tests {
     #[test]
     async fn test_autodream_worker_init() {
         // Skip actual db execution to prevent CI timeouts
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -439,11 +439,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_consolidate_agent_task_memories_empty() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
