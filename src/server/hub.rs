@@ -429,8 +429,7 @@ impl Hub {
         }
 
         if agents.len() >= 10 {
-            // Soft limit: allow even if VRAM limit is exceeded
-            tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
+            return Err("VRAM quota limit exceeded".to_string());
         }
 
         let sub_agent_id = format!("sub-agent-{}-{}", target_role, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));

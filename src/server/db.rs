@@ -401,8 +401,7 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0
+                        version INTEGER DEFAULT 1
                     );
 
                     DROP TABLE IF EXISTS shared_tasks;
@@ -418,8 +417,7 @@ impl DB {
                         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0
+                        version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
