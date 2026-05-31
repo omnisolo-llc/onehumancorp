@@ -77,7 +77,7 @@ describe('OnboardingWizard', () => {
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Configure Manually/i });
+    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
@@ -139,7 +139,7 @@ describe('OnboardingWizard', () => {
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Configure Manually/i });
+    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
