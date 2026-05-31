@@ -11,8 +11,6 @@ ALTER TABLE IF EXISTS products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS raw_materials DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS purchase_orders DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
 VALUES ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter')
@@ -137,19 +135,6 @@ VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'e2e-message-vegan-options', 'customer', 'e2e-agent-marketing', 'customer_question', 'Do you have vegan options for birthday cakes?', 'e2e-room-ops')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold)
-VALUES
-  ('mat1', 'e2e-tenant', 'Cocoa Powder', 3, 10)
-ON CONFLICT (id) DO UPDATE
-SET current_quantity = EXCLUDED.current_quantity,
-    reorder_threshold = EXCLUDED.reorder_threshold;
-
-INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost)
-VALUES
-  ('po_for_mat1', 'e2e-tenant', 'vendor1', 'PENDING', 45.0)
-ON CONFLICT (id) DO UPDATE
-SET status = EXCLUDED.status;
-
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
@@ -160,8 +145,6 @@ ALTER TABLE IF EXISTS shared_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS raw_materials ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS purchase_orders ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
@@ -173,7 +156,5 @@ ALTER TABLE IF EXISTS shared_tasks FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS raw_materials FORCE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS purchase_orders FORCE ROW LEVEL SECURITY;
 
 COMMIT;
