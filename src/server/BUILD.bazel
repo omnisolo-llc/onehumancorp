@@ -382,7 +382,6 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":server_lib",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "@crates//:tokio",

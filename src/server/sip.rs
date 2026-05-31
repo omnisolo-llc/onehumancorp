@@ -235,7 +235,7 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
@@ -349,7 +349,7 @@ mod tests {
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -496,7 +496,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_logic_success() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -584,9 +584,9 @@ mod tests {
         assert!(res_dummy.is_err());
 
         // Now, if a real database is available, test the actual logic.
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
+            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no DATABASE_URL
         };
 
         if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
@@ -689,7 +689,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_drain_mission_queue_success() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };

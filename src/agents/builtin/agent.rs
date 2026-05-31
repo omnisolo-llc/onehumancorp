@@ -393,7 +393,6 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
-    pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
 }
 
@@ -409,7 +408,6 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
-            event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
         }
     }
@@ -1182,24 +1180,7 @@ impl Agent {
         let max_attempts = 3;
         loop {
             attempts += 1;
-            let event_stream_clone = self.event_stream.clone();
-            let mut on_event_wrapper = &mut |e: AgentEvent| {
-                if let Some(stream) = &event_stream_clone {
-                    let openhands_event = match &e {
-                        AgentEvent::TaskError { error } => Some(crate::openhands::EventType::Action(crate::openhands::Action::AgentMessage {
-                            content: format!("TaskError: {}", error),
-                        })),
-                        AgentEvent::ToolCall { name, args_json, .. } => Some(crate::openhands::EventType::Action(crate::openhands::Action::RunCommand {
-                            command: format!("{} {}", name, args_json),
-                        })),
-                        _ => None,
-                    };
-                    if let Some(evt) = openhands_event {
-                        let _ = stream.publish(evt);
-                    }
-                }
-                on_event(e);
-            };
+            let mut on_event_wrapper = |e| on_event(e);
             let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
             match result {
                 Ok(Ok(res)) => {
@@ -1681,7 +1662,6 @@ impl Agent {
         });
 
         let temp_agent = Agent {
-            event_stream: None,
             llm: self.llm.clone(),
             tools: structured_tools,
             progress: self.progress.clone(),
@@ -1793,7 +1773,6 @@ impl Agent {
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
-                event_stream: None,
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
