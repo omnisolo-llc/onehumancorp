@@ -367,3 +367,12 @@ CREATE INDEX IF NOT EXISTS swarm_truth_embeddings_embedding_hnsw_idx ON swarm_tr
 CREATE INDEX IF NOT EXISTS autodream_memories_embedding_hnsw_idx ON autodream_memories USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS memories_embedding_hnsw_idx ON memories USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS consolidated_memory_embedding_hnsw_idx ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
+
+CREATE TABLE IF NOT EXISTS action_tokens (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    approval_request_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL
+);

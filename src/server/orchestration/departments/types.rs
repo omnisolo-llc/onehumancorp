@@ -114,3 +114,13 @@ pub struct TimelineEvent {
     pub metadata: Option<serde_json::Value>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionToken {
+    pub id: String,
+    pub tenant_id: String,
+    pub approval_request_id: String,
+    pub status: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
