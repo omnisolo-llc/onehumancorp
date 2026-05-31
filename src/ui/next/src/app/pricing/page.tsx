@@ -72,7 +72,7 @@ export default function PricingPage() {
                     disabled={isGenerating}
                     className="w-full bg-white text-indigo-600 font-bold py-3 px-6 rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
                  >
-                    {isGenerating ? "Get My Invite Link" : "Get My Invite Link"}
+                    {isGenerating ? "Generating..." : "Get My Invite Link"}
                  </button>
              ) : (
                  <div className="flex flex-col gap-2">
