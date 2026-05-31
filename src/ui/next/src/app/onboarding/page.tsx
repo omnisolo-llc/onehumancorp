@@ -133,6 +133,89 @@ export default function OnboardingWizard() {
       if (intakeData.location) {
         setLocation(intakeData.location);
       }
+      if (intakeData.location) {
+        setLocation(intakeData.location);
+      }
+
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: combinedDescription,
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: 'online',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
+          website_template: websiteTemplate,
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: domainChoice || 'subdomain',
+          price_type: 'fixed'
+        })
+      });
+
+      if (!startRes.ok) {
+        throw new Error('Failed to start onboarding');
+      }
+
+      const result = await startRes.json();
+      result.message = intakeData.setup_summary || "We generated your storefront and set up default products.";
+      setStartResult(result);
+      localStorage.setItem('has_onboarded', 'true');
+      setStep(5);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during onboarding');
+      setStep(1);
+      setChatStep(2);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleZeroClickIntake = async () => {
+    setIsLoading(true);
+    setError('');
+    setStep(4);
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const combinedDescription = `What we sell: ${whatYouSell}`;
+
+      const intakeRes = await fetch('/api/onboarding/zero-click', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: combinedDescription })
+      });
+
+      if (!intakeRes.ok) {
+        throw new Error('Failed to process business details');
+      }
+
+      const intakeData = await intakeRes.json();
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+      if (intakeData.location) {
+        setLocation(intakeData.location);
+      }
 
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
@@ -209,6 +292,9 @@ export default function OnboardingWizard() {
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
+      if (intakeData.location) {
+        setLocation(intakeData.location);
+      }
       if (intakeData.location) {
         setLocation(intakeData.location);
       }
@@ -442,8 +528,9 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
+                  </div>
+                </div>
+              )}
                    </div>
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
