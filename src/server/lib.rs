@@ -2588,6 +2588,47 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/v1/voice/settings", axum::routing::get(api::voice::get_voice_settings_handler).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
+        .route("/api/v1/voice/settings", axum::routing::post(api::voice::save_voice_settings_handler).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
+        .route("/api/v1/webhooks/voice/incoming", axum::routing::post(api::voice::incoming_voice_webhook_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -4268,6 +4309,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
+                        <div id="voice-call-log" class="card glass" style="display: none;">
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">Incoming Call Log <span style="font-size: 20px;">📞</span></h3>
+                            <p>Caller wants a plumbing quote.</p>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="alert('Playing audio...')">Play Audio Recording</button>
+                                <button class="secondary" onclick="alert('Calling back...')">Call Back</button>
+                            </div>
+                        </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
@@ -4275,6 +4324,77 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
                         </div>
                     </div>
+
+                    <!-- Voice AI Screen -->
+                    <div id="voice-ai-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <button class="secondary" onclick="showScreen('settings-screen')" style="margin-bottom: 16px;">< Back</button>
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Receptionist</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 4px;">Enable Receptionist</h3>
+                                <p style="font-size: 13px; margin: 0; color: var(--text-secondary);">Answer calls 24/7</p>
+                            </div>
+                            <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                <input type="checkbox" id="voice-ai-enable" style="opacity: 0; width: 0; height: 0;" onchange="document.getElementById('voice-slider').style.backgroundColor = this.checked ? 'var(--accent-green)' : '#ccc';">
+                                <span id="voice-slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;">
+                                    <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;"></span>
+                                </span>
+                            </label>
+                            <style>
+                                #voice-ai-enable:checked + #voice-slider span { transform: translateX(22px); }
+                            </style>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Business Phone Number</h3>
+                            <input type="text" id="voice-ai-number" value="(555) 123-4567" readonly style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.02); color: var(--text-secondary); cursor: not-allowed;" />
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Business Profile & Greeting</h3>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">What should the receptionist say when it answers?</p>
+                            <textarea id="voice-ai-greeting" placeholder="e.g. Hi, thanks for calling. How can I help you today?" style="width: 100%; min-height: 80px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'Inter', sans-serif; resize: vertical;"></textarea>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Call Routing</h3>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">If it's an emergency, forward call to:</p>
+                            <input type="tel" id="voice-ai-forward" placeholder="Mobile Phone Number" style="width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; font-family: 'Inter', sans-serif;" />
+                            <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Otherwise, the AI will take a message and save it to your Inbox.</p>
+                        </div>
+
+                        <button onclick="saveVoiceAiSettings()" style="width: 100%; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 600;">Save Settings</button>
+                    </div>
+
+                    <script>
+                        async function saveVoiceAiSettings() {
+                            const enabled = document.getElementById('voice-ai-enable').checked;
+                            const greeting = document.getElementById('voice-ai-greeting').value;
+                            const forward = document.getElementById('voice-ai-forward').value;
+
+                            try {
+                                const response = await fetch('/api/v1/voice/settings', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ enabled, greeting, forward })
+                                });
+
+                                if (response.ok) {
+                                    alert('Settings saved successfully');
+                                    showScreen('settings-screen');
+                                } else {
+                                    alert('Failed to save settings');
+                                }
+                            } catch (e) {
+                                console.error('Error saving voice ai settings', e);
+                                alert('Network error while saving settings');
+                            }
+                        }
+                    </script>
 
                     <!-- Meetings Screen -->
                     <div id="meetings-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
@@ -4857,6 +4977,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="document.body.className='light-theme'">Light</button>
                         <p>Date Format</p>
                         <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
+
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);" />
+
+                        <h2>Voice AI Receptionist</h2>
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Let an AI answer your business calls when you are busy.</p>
+                        <button onclick="showScreen('voice-ai-screen')" style="width: 100%; margin-bottom: 24px;">Configure Voice AI</button>
+
                         <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
 
