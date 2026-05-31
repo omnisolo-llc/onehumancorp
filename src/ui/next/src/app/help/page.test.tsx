@@ -1,14 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HelpCenterPage from './page';
 import userEvent from '@testing-library/user-event';
-
-vi.mock('next/link', () => {
-  return {
-    default: ({ children, href }: any) => <a href={href}>{children}</a>
-  };
-});
 
 describe('HelpCenterPage', () => {
   beforeEach(() => {
@@ -49,6 +43,22 @@ describe('HelpCenterPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
       expect(screen.getByText('My Store')).toBeInTheDocument();
+    });
+  });
+
+  it('displays no matching articles message when search fails', async () => {
+    const user = userEvent.setup();
+    render(<HelpCenterPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Search for help articles...');
+    await user.type(searchInput, 'nonexistentxyz123');
+
+    await waitFor(() => {
+      expect(screen.getByText('No articles found matching "nonexistentxyz123"')).toBeInTheDocument();
     });
   });
 });
