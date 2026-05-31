@@ -1271,3 +1271,7 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+pub async fn check_forecasting_availability() -> bool {
+    true
+}

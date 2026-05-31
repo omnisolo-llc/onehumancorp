@@ -110,4 +110,18 @@ mod tests {
             assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
         }
     }
+
+    #[tokio::test]
+    async fn test_get_pending_balance_no_redis() {
+        let batcher = PayoutBatcher::new(None, 10000);
+        let result = batcher.get_pending_balance("acct_1").await.unwrap();
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_force_payout_no_redis() {
+        let batcher = PayoutBatcher::new(None, 10000);
+        let result = batcher.force_payout("acct_1").await.unwrap();
+        assert_eq!(result, None);
+    }
 }
