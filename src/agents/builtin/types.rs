@@ -175,6 +175,9 @@ pub enum HumanInLoopSpectrum {
     CollaborativeEdit,
     /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
     Supervisory,
+    /// Aider: Human-in-loop pair programming
+    PairProgramming,
+
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
