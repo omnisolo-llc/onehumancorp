@@ -1026,7 +1026,7 @@ async fn handle_wall_of_love_js(
 ) -> impl IntoResponse {
     let store = query.store.unwrap_or_else(|| "my-store".to_string());
     // Basic protection against XSS in store name (js string context)
-    let safe_store = store.replace("'", "\'").replace("<", "\<").replace(">", "\>");
+    let safe_store = store.replace("'", "\\'").replace("<", "\\<").replace(">", "\\>");
 
     let js = format!(
         r#"
