@@ -26,7 +26,6 @@ pub struct CostAuditor {
     agent_costs: Mutex<HashMap<String, f64>>,
     tenant_costs: Mutex<HashMap<String, f64>>,
     agent_budgets: Mutex<HashMap<String, f64>>,
-    tenant_revenues: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
     caching_savings: Mutex<f64>,
     storage_savings: Mutex<f64>,
@@ -54,7 +53,6 @@ impl CostAuditor {
             agent_costs: Mutex::new(HashMap::new()),
             tenant_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
-            tenant_revenues: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
             caching_savings: Mutex::new(0.0),
             storage_savings: Mutex::new(0.0),
@@ -212,11 +210,6 @@ impl CostAuditor {
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
-    pub fn get_tenant_revenue(&self, tenant_id: &str) -> f64 {
-        let tenant_revenues = self.tenant_revenues.lock().unwrap();
-        *tenant_revenues.get(tenant_id).unwrap_or(&0.0)
-    }
-
     pub fn get_total_revenue(&self) -> f64 {
         let agent_revenues = self.agent_revenues.lock().unwrap();
         agent_revenues.values().sum()
@@ -230,14 +223,10 @@ impl CostAuditor {
         calculator::calculate_efficiency(cost, output_tokens)
     }
 
-    pub fn record_revenue(&self, agent_id: &str, tenant_id: &str, amount: f64) {
+    pub fn record_revenue(&self, agent_id: &str, amount: f64) {
         let mut agent_revenues = self.agent_revenues.lock().unwrap();
         let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
         *current_revenue += amount;
-
-        let mut tenant_revenues = self.tenant_revenues.lock().unwrap();
-        let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
-        *current_tenant_revenue += amount;
     }
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
@@ -361,7 +350,7 @@ mod tests {
         let cost = auditor.record_event(event);
         assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
 
-        auditor.record_revenue("agent1", "tenant1", 5.0);
+        auditor.record_revenue("agent1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
         
