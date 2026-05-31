@@ -434,6 +434,19 @@ pub async fn bench_advisory_insights_latency() {
             }
         );
 
+        let active_orders = _active_orders_res;
+        // Now simulate caching the insight in our handler
+        let cache_key = format!("advisory_insight:{}:{}", tenant_id, active_orders);
+        let cache = ::server_utils::cache::HybridCache::<String>::new(None);
+
+        // Cache read simulate
+        if let Some(_cached_output) = cache.get(&cache_key).await {
+            // fast path
+        } else {
+            // mock the first set
+            cache.set(&cache_key, "mock insight".to_string(), std::time::Duration::from_secs(3600)).await;
+        }
+
         fetch_times.push(start.elapsed().as_micros());
     }
 

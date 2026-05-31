@@ -788,6 +788,7 @@ async fn http_login_handler(
 pub async fn advisory_insights_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
+    hub: std::sync::Arc<crate::hub::Hub>,
     headers: axum::http::HeaderMap,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -2857,7 +2858,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::routing::get({
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+                let hub_clone = hub.clone();
+                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, hub_clone, headers).await }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
