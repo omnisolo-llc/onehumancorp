@@ -14,7 +14,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
+
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
