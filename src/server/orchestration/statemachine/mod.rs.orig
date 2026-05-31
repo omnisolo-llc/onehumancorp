@@ -415,7 +415,7 @@ mod tests {
 
         // Insert pending task
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, locked_until) VALUES ('t1', 'org1', 'task 1', 'PENDING', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t1', 'org1', 'task 1', 'PENDING')"
         )
         .execute(&pool)
         .await
@@ -440,7 +440,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id, locked_until) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -464,7 +464,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id, locked_until) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -482,7 +482,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id, locked_until) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, assigned_agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -500,7 +500,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, locked_until) VALUES ('t3', 'org1', 'task 3', 'RESOLVING_DEPENDENCIES', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3', 'org1', 'task 3', 'RESOLVING_DEPENDENCIES')"
         )
         .execute(&pool)
         .await
@@ -522,7 +522,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, locked_until) VALUES ('t3b', 'org1', 'task 3', 'PENDING', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3b', 'org1', 'task 3', 'PENDING')"
         )
         .execute(&pool)
         .await
@@ -539,7 +539,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, locked_until) VALUES ('t4', 'org1', 'task 4', 'DELIBERATING', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4', 'org1', 'task 4', 'DELIBERATING')"
         )
         .execute(&pool)
         .await
@@ -561,7 +561,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, locked_until) VALUES ('t4b', 'org1', 'task 4', 'DELIBERATING', NULL)"
+            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4b', 'org1', 'task 4', 'DELIBERATING')"
         )
         .execute(&pool)
         .await

@@ -199,8 +199,29 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "[playwright] Building pgvector image..."
+docker build -t e2e-pgvector:pg16 - << 'DOCKERFILE'
+FROM public.ecr.aws/docker/library/postgres:16
+USER root
+RUN apt-get update && apt-get install -y \
+    postgresql-server-dev-16 \
+    gcc \
+    make \
+    git \
+ && git clone --branch v0.5.1 https://github.com/pgvector/pgvector.git \
+ && cd pgvector \
+ && make \
+ && make install \
+ && cd .. \
+ && rm -rf pgvector \
+ && apt-get remove -y postgresql-server-dev-16 gcc make git \
+ && apt-get autoremove -y \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+DOCKERFILE
+
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
+docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc e2e-pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
 PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
