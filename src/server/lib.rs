@@ -706,10 +706,9 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
-    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&compressed_prompt).await {
+    match client.reason(&prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -786,10 +785,9 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
-    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&compressed_prompt).await {
+    match client.reason(&prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -1685,8 +1683,7 @@ async fn get_pending_approvals(
 
         // Quota Enforcement
         if self.hub.get_agents_count() >= 10 {
-            // Soft limit: allow even if VRAM limit is exceeded
-        tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
+            return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
         }
         
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
@@ -1926,7 +1923,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+            tracing::warn!("Failed to dispatch critical SMS to [REDACTED]: {}. Expected if Twilio is not configured.", e);
         }
     }
     Ok(())
@@ -2082,22 +2079,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
-    let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
-    let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
-    let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
-    let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
-
     dept_orchestrator.register_department(ops_agent).await;
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
-    dept_orchestrator.register_department(sales_agent).await;
-    dept_orchestrator.register_department(finance_agent).await;
-    dept_orchestrator.register_department(legal_agent).await;
-    dept_orchestrator.register_department(advisory_agent).await;
-
-    let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
-    let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
-    department_service.start().await.expect("Failed to start DepartmentService");
 
     let tm_mesh = handoff_mesh.clone();
     hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
@@ -2349,7 +2333,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
                 if let Err(e) = res {
-                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                    tracing::warn!("Failed to send SMS to [REDACTED]: {}. This is expected if Twilio is not configured.", e);
                 }
             });
 
@@ -2663,8 +2647,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(api::offline_sync::offline_sync_handler))
-
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
@@ -3633,23 +3615,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
                         <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
 
-                        <div class="card glass" id="legacy-hybrid-landing-coverage">
-                            <h2>OneHumanCorp</h2>
-                            <h2>Hybrid Agentic OS</h2>
-                            <div style="display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                                <div>
-                                    <h3>Local-First Sovereignty</h3>
-                                    <p>Zero Cloud Telemetry</p>
-                                    <button onclick="showScreen('setup-screen')">Start Local Workspace</button>
-                                </div>
-                                <div>
-                                    <h3>Cloud Convenience</h3>
-                                    <p>Seamless Team Expansion</p>
-                                    <button onclick="showScreen('team-screen')">Deploy to Cloud</button>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="card glass" id="legacy-dashboard-coverage">
                             <h2>Action Required</h2>
                             <p>CustomerSuccess Department</p>
@@ -4186,20 +4151,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
-                        <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
-                            <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
-                            <p style="color: var(--text-secondary);">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
-                            <button style="width: 100%; margin-top: 8px;" onclick="openCloudBridgeInvite()">Invite to Cloud Team</button>
-                        </div>
-
-                        <div id="cloud-bridge-invite-modal" class="card glass" role="dialog" aria-modal="true" aria-labelledby="cloud-bridge-invite-title" style="display: none; position: fixed; z-index: 3000; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 32px)); box-shadow: var(--shadow-lg);">
-                            <button aria-label="Close Cloud Bridge Invite" onclick="closeCloudBridgeInvite()" style="position: absolute; right: 12px; top: 12px; width: 36px; height: 36px; padding: 0; border-radius: 999px; background: transparent; color: var(--text-secondary);">×</button>
-                            <h2 id="cloud-bridge-invite-title" class="outfit" style="margin-top: 8px;">Cloud Bridge Invite</h2>
-                            <p style="color: var(--text-secondary);">Share this link to provision a temporary multi-tenant context for your collaborator, while you maintain local sovereignty.</p>
-                            <input id="cloud-bridge-invite-link" type="text" readonly value="https://ohc.app/invite/team-default" style="width: 100%; margin: 8px 0 12px 0;" />
-                            <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
-                        </div>
-
                         <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
                             <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
                             <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
@@ -4289,40 +4240,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        async function openCloudBridgeInvite() {
-                            const modal = document.getElementById('cloud-bridge-invite-modal');
-                            const input = document.getElementById('cloud-bridge-invite-link');
-                            const copyButton = document.getElementById('cloud-bridge-copy-button');
-                            if (modal) modal.style.display = 'block';
-                            if (copyButton) copyButton.textContent = 'Copy Link';
-                            if (input) input.value = 'https://ohc.app/invite/team-default';
-                            try {
-                                const response = await fetch('/api/v1/growth/team-invites', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
-                                });
-                                if (!response.ok) return;
-                                const data = await response.json();
-                                if (data && data.invite_link && input) input.value = data.invite_link;
-                            } catch (e) {
-                                console.error('Failed to create team invite', e);
-                            }
-                        }
-
-                        function closeCloudBridgeInvite() {
-                            const modal = document.getElementById('cloud-bridge-invite-modal');
-                            if (modal) modal.style.display = 'none';
-                        }
-
-                        function copyCloudBridgeInvite() {
-                            const input = document.getElementById('cloud-bridge-invite-link');
-                            const button = document.getElementById('cloud-bridge-copy-button');
-                            const value = input ? input.value : '';
-                            if (navigator.clipboard) navigator.clipboard.writeText(value);
-                            if (button) button.textContent = 'Copied!';
-                        }
-
                         function openLegacyDepartment(name) {
                             const detail = document.getElementById('legacy-department-detail');
                             const title = document.getElementById('legacy-department-title');

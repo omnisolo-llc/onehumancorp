@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS agent_departments (
     UNIQUE(tenant_id, department_type)
 );
 ALTER TABLE agent_departments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_agent_departments ON agent_departments USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_departments ON agent_departments USING (tenant_id::text = current_setting('app.current_tenant', true));

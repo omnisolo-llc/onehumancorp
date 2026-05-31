@@ -146,7 +146,7 @@ impl CloudSynchronizerImpl {
 
         for (mission_id, resp, latency) in results {
             if let Some(pool) = &self.pool {
-                let _ = record_sync_latency(pool, latency, mode).await;
+                let _ = record_sync_latency(pool, latency * 1000.0, mode).await;
             }
 
             match resp {
