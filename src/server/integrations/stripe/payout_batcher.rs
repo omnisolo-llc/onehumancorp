@@ -95,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_payout_with_redis() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
             let batcher = PayoutBatcher::new(Some(redis_url), 10000); // $100 threshold
 
             // clear state
