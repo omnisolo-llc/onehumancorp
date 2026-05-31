@@ -248,7 +248,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
-        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
+        let ctx_root = std::env::var("OHC_CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
         } else {

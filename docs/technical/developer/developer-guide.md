@@ -227,14 +227,14 @@ docker compose -f deploy/docker-compose.yml down -v
 |----------|---------|-------------|
 | `OHC_PORT` | `18789` | HTTP/Axum listen port for the Rust server; Docker Compose exposes the packaged server on `8080` |
 | `OHC_GRPC_PORT` | `8081` | gRPC/tonic listen port |
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
-| `REDIS_URL` | `redis://127.0.0.1/` | Redis address used by rate limiting and cloud mesh paths |
-| `OHC_STANDALONE` | `false` | Enables standalone-mode config enforcement |
+| `OHC_DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
+| `OHC_REDIS_URL` | `redis://127.0.0.1/` | Redis address used by rate limiting and cloud mesh paths |
+| `OHC_STANDALONE_MODE` | `false` | Enables standalone-mode config enforcement |
 | `OHC_SQLITE_KEY` | *(required for SQLite)* | Required encryption key when using SQLite-backed standalone state |
 | `OHC_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
 | `OHC_HEADLESS` | `false` | Selects API-only/headless integration behavior |
-| `GEMINI_API_KEY` | *(empty)* | Google Gemini API key for AI model calls |
-| `LOG_FORMAT` | *(empty)* | Set to `json` for JSON logs |
+| `OHC_GEMINI_API_KEY` | *(empty)* | Google Gemini API key for AI model calls |
+| `OHC_LOG_FORMAT` | *(empty)* | Set to `json` for JSON logs |
 | `RUST_LOG` | `info` through tracing defaults | Optional tracing filter (`debug`, `info`, `warn`, `error`) |
 
 ### Frontend assets

@@ -125,19 +125,19 @@ impl WizardService for MyWizardService {
                 });
             }
 
-            let redis_url = std::env::var("REDIS_URL").unwrap_or_default();
+            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_default();
             if redis_url.is_empty() {
                 is_all_healthy = false;
                 health_checks.push(DiagnosticCheckProto {
-                    check: "REDIS_URL".to_string(),
+                    check: "OHC_REDIS_URL".to_string(),
                     status: "missing".to_string(),
-                    message: "REDIS_URL is required in cloud mode".to_string(),
+                    message: "OHC_REDIS_URL is required in cloud mode".to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
-                    check: "REDIS_URL".to_string(),
+                    check: "OHC_REDIS_URL".to_string(),
                     status: "ok".to_string(),
-                    message: "REDIS_URL is configured".to_string(),
+                    message: "OHC_REDIS_URL is configured".to_string(),
                 });
             }
         } else {
