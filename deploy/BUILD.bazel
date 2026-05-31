@@ -99,13 +99,13 @@ oci_push(
 )
 
 # ── agent image (onehumancorp/agent) ──────────────────────────────────────────
-# Cluster agents run as their own binary. Standalone desktop keeps the agent
-# in-process inside //src/server:server instead.
+# The agent image bundles the ironclaw CLI alongside the ohc server binary so
+# that any specialised AI agent container can be started from this base.
 
 pkg_tar(
     name = "agent_pkg",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/server:server",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -113,9 +113,12 @@ pkg_tar(
 oci_image(
     name = "agent_image",
     base = "@distroless_cc",
-    entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
+    # The agent container runs the ohc server; the ironclaw binary is available
+    # as a sidecar tool inside the container.
+    entrypoint = ["/usr/local/bin/server"],
     tars = [
         ":agent_pkg",
+        ":server_migrations_pkg",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -137,9 +140,12 @@ oci_load(
 oci_image(
     name = "default_agent_image",
     base = "@distroless_cc",
-    entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
+    # Internal default agent runtime: same Bazel-built server image, configured
+    # to bootstrap the builtin provider when no external workforce exists.
+    entrypoint = ["/usr/local/bin/server"],
     tars = [
         ":agent_pkg",
+        ":server_migrations_pkg",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
