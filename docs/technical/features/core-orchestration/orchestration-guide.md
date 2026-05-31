@@ -39,7 +39,7 @@ The Core Orchestration Engine is the "brain" of One Human Corp. It transforms hi
 | Symptom | Probable Cause | Resolution |
 |---------|----------------|------------|
 | Agent stuck in `IDLE` | No pending tasks in Hub | Check if the PM agent has broken down the main goal. |
-| Message delivery failure | Redis connection lost | Verify `REDIS_ADDR` env var and pod status. |
+| Message delivery failure | Redis connection lost | Verify `OHC_REDIS_ADDR` env var and pod status. |
 | Identity Error | SPIRE SVID expired | Trigger a manual rotation via `/api/identities/rotate`. |
 
 ### FAQ

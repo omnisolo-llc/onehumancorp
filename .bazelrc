@@ -86,8 +86,8 @@ test:verbose --test_output=streamed
 test:remote-jobs --jobs=50
 
 # ── Test environment pass-through ─────────────────────────────────────────────
-test --test_env=GEMINI_API_KEY
-test --test_env=MINIMAX_API_KEY
+test --test_env=OHC_GEMINI_API_KEY
+test --test_env=OHC_MINIMAX_API_KEY
 test --test_env=MCP_BUNDLE_DIR
 test --test_env=CI
 test --test_env=HOME
@@ -96,8 +96,8 @@ test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
 test --test_env=PATH
 
 # ── Action environment ────────────────────────────────────────────────────────
-build --action_env=GEMINI_API_KEY
-build --action_env=MINIMAX_API_KEY
+build --action_env=OHC_GEMINI_API_KEY
+build --action_env=OHC_MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 

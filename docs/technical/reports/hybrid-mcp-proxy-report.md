@@ -23,7 +23,7 @@ This report outlines a strategic imperative: **Mode-Aware Hybrid MCP Proxies**. 
 
 Competitors build tools that are acutely aware of their environment. If an agent writes a file in Claude Code, it uses local POSIX APIs. If Replit Agent writes a file, it uses Replit's virtualized FS.
 
-OHC will introduce **Mode-Aware MCP Proxies**. When an OHC Agent uses the `write_blob` tool, it interacts with an `mcp.BlobProvider` interface. In `OHC_STANDALONE=true` mode, this proxy routes to `sqlite/local fs`. In `OHC_MULTITENANT=true` mode, the exact same agent logic seamlessly writes to a multi-tenant `S3` bucket.
+OHC will introduce **Mode-Aware MCP Proxies**. When an OHC Agent uses the `write_blob` tool, it interacts with an `mcp.BlobProvider` interface. In `OHC_STANDALONE_MODE=true` mode, this proxy routes to `sqlite/local fs`. In `OHC_MULTITENANT=true` mode, the exact same agent logic seamlessly writes to a multi-tenant `S3` bucket.
 
 ## Visualizing the Hybrid MCP Proxy Architecture
 
@@ -31,7 +31,7 @@ OHC will introduce **Mode-Aware MCP Proxies**. When an OHC Agent uses the `write
 graph TD
     A[OHC Agent] -->|Executes Tool: write_blob| B(MCP BlobProxy)
     B -->|Checks Environment| C{Execution Mode}
-    C -->|OHC_STANDALONE| D[Local FS / SQLite Blob Store]
+    C -->|OHC_STANDALONE_MODE| D[Local FS / SQLite Blob Store]
     C -->|OHC_MULTITENANT| E[AWS S3 / Cloud Storage]
 
     D --> F[Data Persisted Securely]

@@ -36,7 +36,7 @@ async fn execute_publish_site_job(
 
     let pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     for page in &pages {

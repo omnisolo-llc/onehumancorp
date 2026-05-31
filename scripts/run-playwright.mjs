@@ -28,21 +28,21 @@ async function waitForPort(port, maxAttempts = 30) {
 
 async function main() {
   console.log('[run-playwright] Starting infrastructure...');
-  if (process.env.E2E_SKIP_DOCKER !== 'true') {
+  if (process.env.OHC_E2E_SKIP_DOCKER !== 'true') {
     await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'up', '-d']);
   }
 
   console.log('[run-playwright] Server already built in outer execution');
 
-  const serverBin = process.env.SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
+  const serverBin = process.env.OHC_SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
   console.log(`[run-playwright] Starting server at ${serverBin}...`);
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
-      REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      OHC_DATABASE_URL: process.env.OHC_DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
+      OHC_REDIS_URL: process.env.OHC_REDIS_URL ?? 'redis://localhost:6379',
       OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
     },
   });
@@ -58,7 +58,7 @@ async function main() {
     await runCommand('npx', ['playwright', 'test', ...args]);
   } finally {
     server.kill();
-    if (process.env.E2E_SKIP_DOCKER !== 'true') {
+    if (process.env.OHC_E2E_SKIP_DOCKER !== 'true') {
       await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'down']);
     }
   }

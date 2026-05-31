@@ -7,8 +7,8 @@ mod tests {
         temp_env::with_vars(
             vec![
                 ("OHC_EXECUTION_MODE", Some("standalone")),
-                ("CHROMADB_HOST", Some("127.0.0.1")),
-                ("CHROMADB_PORT", Some("9000")),
+                ("OHC_CHROMADB_HOST", Some("127.0.0.1")),
+                ("OHC_CHROMADB_PORT", Some("9000")),
             ],
             || {
                 let provider = ChromaDbProvider::new();
@@ -47,8 +47,8 @@ mod tests {
             vec![
                 ("OHC_EXECUTION_MODE", Some("cloud")),
                 ("OHC_HEADLESS", Some("true")),
-                ("CHROMADB_HOST", Some("localhost")),
-                ("CHROMADB_PORT", Some("8000")),
+                ("OHC_CHROMADB_HOST", Some("localhost")),
+                ("OHC_CHROMADB_PORT", Some("8000")),
             ],
             || {
                 let provider = ChromaDbProvider::new();

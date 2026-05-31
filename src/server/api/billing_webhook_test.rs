@@ -10,7 +10,7 @@ use crate::db::DB;
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_completed() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
 
     // Only run if redis is available
     let client = match redis::Client::open(redis_url) {
@@ -82,7 +82,7 @@ async fn test_stripe_webhook_handler_completed() {
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_deleted() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
 
     // Only run if redis is available
     let client = match redis::Client::open(redis_url) {
@@ -161,7 +161,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
     use crate::api::billing_webhook::{mercadopago_webhook_handler, WebhookState, MercadoPagoEvent, MercadoPagoEventData};
     use std::sync::Arc;
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
         Err(_) => return,

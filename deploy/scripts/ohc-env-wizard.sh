@@ -44,12 +44,12 @@ echo ""
 # 1. Logging Level
 read -p "Log Level [info, debug, warn, error] (default: info): " log_level
 log_level=${log_level:-info}
-update_env "LOG_LEVEL" "$log_level"
+update_env "OHC_LOG_LEVEL" "$log_level"
 
 # 2. HTTP Port
 read -p "HTTP Server Port (default: 8080): " port
 port=${port:-8080}
-update_env "PORT" "$port"
+update_env "OHC_PORT" "$port"
 
 # 3. Mode configurations
 echo -e "\n${BOLD}Environment Mode Settings:${RESET}"
@@ -67,25 +67,25 @@ fi
 echo -e "\n${BOLD}LLM Provider Configuration:${RESET}"
 read -p "OpenAI API Key (leave blank to skip): " openai_key
 if [ -n "$openai_key" ]; then
-    update_env "OPENAI_API_KEY" "$openai_key"
+    update_env "OHC_OPENAI_API_KEY" "$openai_key"
 fi
 
 read -p "Anthropic API Key (leave blank to skip): " anthropic_key
 if [ -n "$anthropic_key" ]; then
-    update_env "ANTHROPIC_API_KEY" "$anthropic_key"
+    update_env "OHC_ANTHROPIC_API_KEY" "$anthropic_key"
 fi
 
 # 5. Database Settings (if applicable)
 if [ "$multitenant" = "true" ]; then
     echo -e "\n${BOLD}Cloud Mode Database Configuration:${RESET}"
-    read -p "PostgreSQL DATABASE_URL (leave blank to skip): " db_url
+    read -p "PostgreSQL OHC_DATABASE_URL (leave blank to skip): " db_url
     if [ -n "$db_url" ]; then
-        update_env "DATABASE_URL" "$db_url"
+        update_env "OHC_DATABASE_URL" "$db_url"
     fi
 
-    read -p "REDIS_URL (leave blank to skip): " redis_url
+    read -p "OHC_REDIS_URL (leave blank to skip): " redis_url
     if [ -n "$redis_url" ]; then
-        update_env "REDIS_URL" "$redis_url"
+        update_env "OHC_REDIS_URL" "$redis_url"
     fi
 fi
 
@@ -93,7 +93,7 @@ fi
 echo -e "\n${BOLD}Advanced Features:${RESET}"
 read -p "Enable MCP (Model Context Protocol) features? (true/false) (default: false): " mcp_enabled
 mcp_enabled=${mcp_enabled:-false}
-update_env "MCP_ENABLED" "$mcp_enabled"
+update_env "OHC_MCP_ENABLED" "$mcp_enabled"
 
 # Apply secure permissions to .env
 chmod 0600 "$ENV_FILE"

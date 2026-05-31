@@ -1122,7 +1122,7 @@ impl MeshTransport for UniversalTransportBridge {
 }
 
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
-    if let Ok(nats_url) = std::env::var("NATS_URL") {
+    if let Ok(nats_url) = std::env::var("OHC_NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
                 tracing::info!("Initialized NatsTransport");

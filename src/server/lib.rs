@@ -120,6 +120,81 @@ fn workflow_agent_task(task: &str) -> String {
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standalone_agent_mode_uses_current_server_binary() {
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_SOURCE_MODE", None::<&str>),
+                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
+                ("OHC_AGENT_BINARY", None::<&str>),
+            ],
+            || {
+                let current_exe = std::env::current_exe()
+                    .expect("current test executable")
+                    .to_string_lossy()
+                    .to_string();
+
+                assert!(is_standalone_runtime());
+                assert_eq!(workflow_agent_binary(), current_exe);
+            },
+        );
+    }
+
+    #[test]
+    fn cluster_agent_mode_uses_separate_builtin_agent_binary() {
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE_MODE", Some("false")),
+                ("OHC_SOURCE_MODE", None::<&str>),
+                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
+                ("OHC_AGENT_BINARY", None::<&str>),
+            ],
+            || {
+                let current_exe = std::env::current_exe()
+                    .expect("current test executable")
+                    .to_string_lossy()
+                    .to_string();
+                let binary = workflow_agent_binary();
+
+                assert!(!is_standalone_runtime());
+                assert_ne!(binary, current_exe);
+                assert!(binary.ends_with(agent_binary_name()), "{binary}");
+            },
+        );
+    }
+
+    #[test]
+    fn source_cluster_mode_uses_separate_builtin_agent_binary() {
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE_MODE", None::<&str>),
+                ("OHC_SOURCE_MODE", Some("cluster")),
+                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
+                ("OHC_AGENT_BINARY", None::<&str>),
+            ],
+            || {
+                let binary = workflow_agent_binary();
+
+                assert!(!is_standalone_runtime());
+                assert!(binary.ends_with(agent_binary_name()), "{binary}");
+            },
+        );
+    }
+
+    fn agent_binary_name() -> &'static str {
+        if cfg!(windows) {
+            "ohc-builtin-agent.exe"
+        } else {
+            "ohc-builtin-agent"
+        }
+    }
+}
+
 fn set_workflow_result(id: &str, status: &str, output: Option<String>, error: Option<String>) {
     let registry = get_workflow_registry();
     if let Ok(mut workflows) = registry.write() {
@@ -739,12 +814,12 @@ pub async fn advisory_insights_handler(
         _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
     };
 
-    let api_key = match std::env::var("MINIMAX_API_KEY") {
+    let api_key = match std::env::var("OHC_MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
         _ => {
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
-                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
+                axum::Json(HttpErrorResponse { error: "OHC_MINIMAX_API_KEY is required".to_string() }),
             )
                 .into_response();
         }
@@ -823,12 +898,12 @@ async fn draft_reply_handler(
         _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
     };
 
-    let api_key = match std::env::var("MINIMAX_API_KEY") {
+    let api_key = match std::env::var("OHC_MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
         _ => {
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
-                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
+                axum::Json(HttpErrorResponse { error: "OHC_MINIMAX_API_KEY is required".to_string() }),
             )
                 .into_response();
         }
@@ -1086,11 +1161,11 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing valid AuthInfo"))?;
         let req = request.into_inner();
 
-        let stripe_key = std::env::var("STRIPE_API_KEY")
-            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
+        let stripe_key = std::env::var("OHC_STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("OHC_STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
-        let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+        let mercadopago_client = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let alipay_client = std::env::var("OHC_ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -1127,11 +1202,11 @@ impl HubService for MyHubService {
         request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
-        let stripe_key = std::env::var("STRIPE_API_KEY")
-            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
+        let stripe_key = std::env::var("OHC_STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("OHC_STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
-        let _alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+        let _mercadopago_client = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let _alipay_client = std::env::var("OHC_ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -1990,9 +2065,9 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
     }
 
     if let Some(phone) = settings.sms_critical_phone {
-        let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
-        let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
-        let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+        let account_sid = std::env::var("OHC_TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+        let auth_token = std::env::var("OHC_TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+        let from_number = std::env::var("OHC_TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
 
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
@@ -2005,7 +2080,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
+    let use_json = std::env::var("OHC_LOG_FORMAT").unwrap_or_default() == "json";
 
     let subscriber = tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()));
@@ -2143,7 +2218,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let is_cloud = !is_standalone_runtime();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
+        std::env::var("OHC_REDIS_URL").ok().as_deref(),
         is_cloud
     ).await.expect("Failed to create MeshTransport");
 
@@ -2302,7 +2377,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
     }
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
         std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
     } else {
@@ -2388,8 +2463,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let is_standalone = is_standalone_runtime();
-    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
+    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("OHC_REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("OHC_REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {
         match &db.store {
             crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
@@ -2442,9 +2517,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
             }
 
-            let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
-            let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
-            let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+            let account_sid = std::env::var("OHC_TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+            let auth_token = std::env::var("OHC_TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+            let from_number = std::env::var("OHC_TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
 
             let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 

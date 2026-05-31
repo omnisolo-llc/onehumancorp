@@ -21,7 +21,7 @@ pub struct HybridBlobManager {
 
 impl HybridBlobManager {
     pub async fn new() -> Self {
-        let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_default();
+        let s3_endpoint = env::var("OHC_S3_ENDPOINT").unwrap_or_default();
         let is_cloud = !s3_endpoint.is_empty();
 
         let local_dir = if !is_cloud {
@@ -203,7 +203,7 @@ impl ToolExecutor for HybridBlobExecutor {
 
 pub fn hybrid_blob_tool() -> Tool {
     // Need a blocking way to instantiate if we aren't awaiting
-    let s3_endpoint = env::var("S3_ENDPOINT").unwrap_or_default();
+    let s3_endpoint = env::var("OHC_S3_ENDPOINT").unwrap_or_default();
     let is_cloud = !s3_endpoint.is_empty();
 
     let local_dir = if !is_cloud {

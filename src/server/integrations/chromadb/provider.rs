@@ -14,8 +14,8 @@ impl ChromaDbProvider {
 
         let is_mock = mode == "cloud" && headless != "true";
 
-        let host = env::var("CHROMADB_HOST").unwrap_or_else(|_| "localhost".to_string());
-        let port = env::var("CHROMADB_PORT").unwrap_or_else(|_| "8000".to_string());
+        let host = env::var("OHC_CHROMADB_HOST").unwrap_or_else(|_| "localhost".to_string());
+        let port = env::var("OHC_CHROMADB_PORT").unwrap_or_else(|_| "8000".to_string());
 
         // When in mock/cloud mode without headless, we mock the base URL
         // so we don't accidentally try to hit localhost:8000 in a pure cloud environment.
