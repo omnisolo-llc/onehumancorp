@@ -50,7 +50,7 @@ mod tests {
 
         assert_eq!(integration.name, "TestTool");
         assert_eq!(integration.tenant_id, "tenant-123");
-        assert!(integration.integration_code.unwrap().contains("TestToolClient"));
+        assert!(integration.integration_code.clone().unwrap_or_default().contains("TestToolClient"));
 
         // Verify pubsub event
         let evt = rx.recv().await.expect("Failed to receive event");
@@ -97,6 +97,6 @@ mod tests {
 
         assert_eq!(integration.name, "DummyAPI");
         assert_eq!(integration.tenant_id, "tenant-456");
-        assert!(integration.integration_code.unwrap().contains("DummyAPIClient"));
+        assert!(integration.integration_code.clone().unwrap_or_default().contains("DummyAPIClient"));
     }
 }
