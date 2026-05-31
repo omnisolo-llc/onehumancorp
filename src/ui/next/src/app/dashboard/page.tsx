@@ -115,6 +115,7 @@ export default function Dashboard() {
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
