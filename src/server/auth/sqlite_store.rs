@@ -24,7 +24,7 @@ impl UserRepository for SqliteUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -48,7 +48,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -67,7 +67,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: DateTime::from_timestamp(created_at_ts, 0).unwrap_or(Utc::now()),
             updated_at: DateTime::from_timestamp(updated_at_ts, 0).unwrap_or(Utc::now()),
             oidc_subject: row.get("oidc_subject"),
@@ -75,7 +75,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -94,7 +94,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: DateTime::from_timestamp(created_at_ts, 0).unwrap_or(Utc::now()),
             updated_at: DateTime::from_timestamp(updated_at_ts, 0).unwrap_or(Utc::now()),
             oidc_subject: row.get("oidc_subject"),
@@ -102,7 +102,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -121,7 +121,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: DateTime::from_timestamp(created_at_ts, 0).unwrap_or(Utc::now()),
             updated_at: DateTime::from_timestamp(updated_at_ts, 0).unwrap_or(Utc::now()),
             oidc_subject: row.get("oidc_subject"),
@@ -129,7 +129,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -148,7 +148,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: DateTime::from_timestamp(created_at_ts, 0).unwrap_or(Utc::now()),
             updated_at: DateTime::from_timestamp(updated_at_ts, 0).unwrap_or(Utc::now()),
             oidc_subject: row.get("oidc_subject"),
@@ -156,7 +156,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -177,7 +177,7 @@ impl UserRepository for SqliteUserRepository {
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
-                organization_id: row.get("organization_id"),
+                organization_id: row.get("tenant_id"),
                 created_at: DateTime::from_timestamp(created_at_ts, 0).unwrap_or(Utc::now()),
                 updated_at: DateTime::from_timestamp(updated_at_ts, 0).unwrap_or(Utc::now()),
                 oidc_subject: row.get("oidc_subject"),
@@ -191,8 +191,8 @@ impl UserRepository for SqliteUserRepository {
 
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 AND organization_id=$10 RETURNING id
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 AND tenant_id=$10 RETURNING id
             "#;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -222,7 +222,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = "DELETE FROM users WHERE id = $1 AND organization_id = $2 RETURNING id";
+        let query = "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
