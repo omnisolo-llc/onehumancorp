@@ -4689,31 +4689,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
-                        <h1>My Plan</h1>
-                        <p id="my-plan-name">Plan: Free</p>
-                        <p>Status: Active</p>
-                        <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
-                            <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                    <div id="my-plan-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; padding: 24px;">
+                        <h1 style="font-family: Outfit, sans-serif; font-weight: 700;">My Plan</h1>
+                        <p id="my-plan-name" style="font-family: Inter, sans-serif;">Plan: Free</p>
+                        <p style="font-family: Inter, sans-serif;">Status: <span style="color: var(--accent-green);">Active</span></p>
+                        <p id="my-plan-next-bill" style="font-family: Inter, sans-serif;">Estimated Next Bill: $0.00</p>
+                        <div class="card glass" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; margin-top: 16px;">
+                            <h3 style="font-family: Outfit, sans-serif; font-weight: 600;">Your Current Usage</h3>
+                            <p id="my-plan-ai-usage" style="font-family: Inter, sans-serif;">AI Actions Used: 0 / 100</p>
+                            <p id="my-plan-storage-usage" style="font-family: Inter, sans-serif;">Storage Used: 0MB / 500MB</p>
+                            <button onclick="alert('File chooser opened')" style="width: 100%; margin-top: 8px;">Upload Photo</button>
+                            <button onclick="showScreen('pricing-screen')" style="width: 100%; margin-top: 8px; background: rgba(255,255,255,0.8); color: var(--text);">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
-                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <button onclick="showScreen('pricing-screen')" style="width: 100%; margin-top: 16px;">Upgrade via Stripe</button>
+                        <button class="secondary" onclick="showScreen('pricing-screen')" style="width: 100%; margin-top: 8px;">Change Plan</button>
+                        <button class="secondary" style="width: 100%; margin-top: 8px; color: #dc2626; border-color: #fca5a5;">Cancel Subscription</button>
+                        <button class="secondary" style="width: 100%; margin-top: 8px;">Download Invoice</button>
+                        <button onclick="showScreen('cost-dashboard-screen')" style="width: 100%; margin-top: 16px;">View Cost Details</button>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="width: 100%; margin-top: 8px;">Back to Dashboard</button>
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost Transparency Dashboard</h1>
-                        <p>Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass">
+                    <div id="cost-dashboard-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; padding: 24px;">
+                        <h1 style="font-family: Outfit, sans-serif; font-weight: 700; font-size: 24px;">Cost Transparency Dashboard</h1>
+                        <p style="font-family: Inter, sans-serif; font-size: 14px; color: #4b5563;">Keep track of your total usage across your One Human Corp setup.</p>
+                        <div class="card glass" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; margin-top: 16px;">
                             <h2>Billing Period</h2>
                             <p id="cost-dashboard-period">Period: -</p>
 
