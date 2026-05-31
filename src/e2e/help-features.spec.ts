@@ -1,4 +1,7 @@
 import { expect, test } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('help-features');
 
 test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrough, Chat)', () => {
   test('Help Center displays searchable articles and video tutorials', async ({ page }) => {
@@ -9,16 +12,16 @@ test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrou
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
 
     // Verify an article from the API appears
-    await expect(page.locator('text=Getting Started')).toBeVisible();
+    await expect(page.getByText('Getting Started', { exact: false }).first()).toBeVisible();
 
     // Test the search functionality
     const searchInput = page.getByPlaceholder('Search for help articles...');
     await searchInput.fill('Finding Customers');
 
     // "Getting Started" should disappear
-    await expect(page.locator('text=Getting Started')).not.toBeVisible();
+    await expect(page.getByText('Getting Started', { exact: false })).not.toBeVisible();
     // "Finding Customers" should be visible
-    await expect(page.locator('text=Finding Customers')).toBeVisible();
+    await expect(page.getByText('Finding Customers', { exact: false }).first()).toBeVisible();
   });
 
   test('Contextual Tooltip displays correctly on hover', async ({ page }) => {
@@ -30,12 +33,12 @@ test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrou
 
     // Hover over the target element to trigger the tooltip
     // We target the Team Activity header which is wrapped in a WithTooltip
-    const teamActivityHeader = page.locator('text=Team Activity');
+    const teamActivityHeader = page.getByText('Team Activity', { exact: false }).first();
     await expect(teamActivityHeader).toBeVisible();
     await teamActivityHeader.hover();
 
     // Verify the tooltip text appears (this uses the floating div with z-[100])
-    await expect(page.locator('text=Monitor the real-time actions and tasks being performed by your AI workforce.')).toBeVisible();
+    await expect(page.getByText('Monitor the real-time actions and tasks being performed by your AI workforce.', { exact: false }).first()).toBeVisible();
   });
 
   test('Help Chat button and interface are operational', async ({ page }) => {
@@ -48,8 +51,8 @@ test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrou
     await askButton.click();
 
     // Verify the chat interface opens with the welcome message
-    await expect(page.locator('text=Always here to help')).toBeVisible();
-    await expect(page.locator('text=Need help setting up your store')).toBeVisible();
+    await expect(page.getByText('Always here to help', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText('Need help setting up your store', { exact: false }).first()).toBeVisible();
 
     // Enter a message and send
     const chatInput = page.getByPlaceholder('Ask me anything...');
@@ -58,7 +61,7 @@ test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrou
     await sendButton.click();
 
     // Wait for the AI's response (mocked or real)
-    await expect(page.locator('text=I am your AI Help Agent!')).toBeVisible();
+    await expect(page.getByText('I am your AI Help Agent!', { exact: false }).first()).toBeVisible();
   });
 
   test('Release Notes & Changelog is accessible', async ({ page }) => {
@@ -67,6 +70,6 @@ test.describe('Documentation Critical Features (Help Center, Tooltips, Walkthrou
 
     // Verify the Changelog page renders
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
-    await expect(page.locator('text=New AI Store Builder')).toBeVisible();
+    await expect(page.getByText('New AI Store Builder', { exact: false }).first()).toBeVisible();
   });
 });
