@@ -849,33 +849,9 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
-
-                            loop {
-                                match tool.execute.execute(args.clone()).await {
-                                    Ok(res) => {
-                                        final_res = Ok(res);
-                                        break;
-                                    }
-                                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                                        if retry_count < max_retries {
-                                            retry_count += 1;
-                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                            tokio::time::sleep(backoff).await;
-                                            continue;
-                                        } else {
-                                            final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        final_res = Err(e);
-                                        break;
-                                    }
-                                }
-                            }
+                            let mut modified_tc = tc.clone();
+                            modified_tc.arguments = args.clone();
+                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, cfg_max_retries).await;
                             (id, final_res)
                         } else {
                             // Unreachable if tool not found goes to mutating calls
@@ -923,12 +899,6 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(msg)) => {
                             return Err(format!("Fatal tool error: {}", msg));
                         }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                        }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
                             return Err(format!("Handoff requested to {}", target));
                         }
@@ -969,8 +939,6 @@ impl Agent {
                         Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
                             Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
-                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
                         continue;
@@ -992,33 +960,9 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
-
-                        loop {
-                            match tool.execute.execute(args.clone()).await {
-                                Ok(res) => {
-                                    final_res = Ok(res);
-                                    break;
-                                }
-                                Err(crate::types::ToolError::Unexpected(msg)) => {
-                                    if retry_count < max_retries {
-                                        retry_count += 1;
-                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                        tokio::time::sleep(backoff).await;
-                                        continue;
-                                    } else {
-                                        final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    final_res = Err(e);
-                                    break;
-                                }
-                            }
-                        }
+                        let mut modified_tc = tc.clone();
+                        modified_tc.arguments = args.clone();
+                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, cfg_max_retries).await;
 
                         match final_res {
                             Err(crate::types::ToolError::Transient(msg)) => {
@@ -1052,9 +996,6 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::HandoffRequested(target)) => {
                                 return Err(format!("Handoff requested to {}", target));
@@ -1332,21 +1273,13 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Unexpected(msg)) => {
-                            if retry_count < max_retries {
-                                retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                tokio::time::sleep(backoff).await;
-                                continue;
-                            } else {
-                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
-                            }
+                            break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                             if llm_recovery_attempts < max_retries {
@@ -1440,7 +1373,6 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
@@ -1448,14 +1380,7 @@ impl Agent {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Unexpected(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
+                        break format!("Error executing planned step: Transient error after retries: {}", msg);
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         if llm_recovery_attempts < max_retries {
@@ -2305,7 +2230,6 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
-                let cfg_max_retries = final_cfg.max_retries;
 
                 let tool_span = info_span!(
                     "tool_execution",
@@ -2317,20 +2241,11 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let _retry_count = 0;
-                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                    loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
-                            Ok(r) => {
-                                return (tc_clone, Ok(r));
-                            }
-                            Err(ToolError::Transient(msg)) => {
-                                return (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg))));
-                            }
-                            Err(e) => {
-                                return (tc_clone, Err(e));
-                            }
-                        }
+                    let res = self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await;
+                    match res {
+                        Ok(r) => (tc_clone, Ok(r)),
+                        Err(ToolError::Transient(msg)) => (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)))),
+                        Err(e) => (tc_clone, Err(e))
                     }
                 }.instrument(tool_span));
             }
@@ -2424,7 +2339,7 @@ impl Agent {
                                             reason: format!("Tool '{}' failed 3 times", tc.name),
                                         });
                                         tool_error_counts.remove(&tc.name);
-                                        continue;
+                                            break;
                                     }
                                 }
                             }
@@ -2523,139 +2438,123 @@ impl Agent {
                 let mut content = String::new();
                 let mut error = String::new();
 
-                loop {
-                    let tool_span = info_span!(
-                        "tool_execution",
-                        agent_id = %final_cfg.agent_id,
-                        tool_name = %tc.name,
-                    );
-                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            error = err;
-                            break;
-                        }
-                        Ok(r) => {
-                            tool_error_counts.remove(&tc.name);
-                            self.progress.record_tool_use();
-                            self.observation_store.insert(tc.id.clone(), r.clone());
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: r.clone(),
-                                iteration,
-                            });
-                            content = r;
-                            break;
-                        }
-                        Err(ToolError::Transient(msg)) => {
-                            let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            error = err;
-                            break;
-                        }
-                        Err(ToolError::LlmRecoverable(msg)) => {
-                            let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
-                            *count += 1;
-                            if *count > std::cmp::min(final_cfg.max_retries, 2) {
-                                if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
-                                    rewind_attempts_remaining -= 1;
-                                    let _ = checkpoint_history.pop();
-                                    if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                        let mut restored_msgs = None;
-                                        if let Some(checkpointer) = &self.checkpointer {
-                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                                if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
-                                                    let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                    restored_msgs = Some(msgs);
-                                                }
+                let tool_span = info_span!(
+                    "tool_execution",
+                    agent_id = %final_cfg.agent_id,
+                    tool_name = %tc.name,
+                );
+                match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        let err = format!("Transient error after retries: {}", msg);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        error = err;
+                    }
+                    Ok(r) => {
+                        tool_error_counts.remove(&tc.name);
+                        self.progress.record_tool_use();
+                        self.observation_store.insert(tc.id.clone(), r.clone());
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration,
+                        });
+                        content = r;
+                    }
+                    Err(ToolError::LlmRecoverable(msg)) => {
+                        let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
+                        *count += 1;
+                        if *count > std::cmp::min(final_cfg.max_retries, 2) {
+                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+                                rewind_attempts_remaining -= 1;
+                                let _ = checkpoint_history.pop();
+                                if let Some(prev_id) = checkpoint_history.last().cloned() {
+                                    let mut restored_msgs = None;
+                                    if let Some(checkpointer) = &self.checkpointer {
+                                        if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
+                                            if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                                                let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                                                restored_msgs = Some(msgs);
                                             }
-                                        }
-
-                                        // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                        // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                        if restored_msgs.is_none() {
-                                            let mut new_messages = Vec::new();
-                                            let mut found = false;
-                                            for m in messages.iter() {
-                                                new_messages.push(m.clone());
-                                                if let Some(rid) = &m.response_id {
-                                                    if rid == &prev_id {
-                                                        found = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            if found {
-                                                restored_msgs = Some(new_messages);
-                                            } else if !new_messages.is_empty() {
-                                                new_messages.truncate(1);
-                                                restored_msgs = Some(new_messages);
-                                            }
-                                        }
-
-                                        if let Some(msgs) = restored_msgs {
-                                            messages = msgs;
-                                            messages.push(Message::system(format!(
-                                                "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                                tc.name, prev_id
-                                            )));
-                                            on_event(AgentEvent::RewindOccurred {
-                                                iteration,
-                                                checkpoint_id: prev_id,
-                                                reason: format!("Tool '{}' failed 3 times", tc.name),
-                                            });
-                                            tool_error_counts.remove(&tc.name);
-                                            continue;
                                         }
                                     }
-                                }
-                                let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
-                                on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
-                                return Err(fatal_msg.into());
-                            }
 
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
-                                iteration,
-                            });
-                            error = msg;
-                            content = String::new();
-                            break;
+                                    // State Management: OpenAI uses lightweight previous_response_id chaining.
+                                    // Fallback to lightweight chaining if checkpointer is absent or fails.
+                                    if restored_msgs.is_none() {
+                                        let mut new_messages = Vec::new();
+                                        let mut found = false;
+                                        for m in messages.iter() {
+                                            new_messages.push(m.clone());
+                                            if let Some(rid) = &m.response_id {
+                                                if rid == &prev_id {
+                                                    found = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if found {
+                                            restored_msgs = Some(new_messages);
+                                        } else if !new_messages.is_empty() {
+                                            new_messages.truncate(1);
+                                            restored_msgs = Some(new_messages);
+                                        }
+                                    }
+
+                                    if let Some(msgs) = restored_msgs {
+                                        messages = msgs;
+                                        messages.push(Message::system(format!(
+                                            "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
+                                            tc.name, prev_id
+                                        )));
+                                        on_event(AgentEvent::RewindOccurred {
+                                            iteration,
+                                            checkpoint_id: prev_id,
+                                            reason: format!("Tool '{}' failed 3 times", tc.name),
+                                        });
+                                        tool_error_counts.remove(&tc.name);
+                                        break;
+                                    }
+                                }
+                            }
+                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
+                            return Err(fatal_msg.into());
                         }
-                        Err(ToolError::UserFixable(msg)) => {
-                            let err = format!("USER_FIXABLE: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::Fatal(msg)) => {
-                            let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::Unexpected(msg)) => {
-                            let err = format!("Unexpected tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::HandoffRequested(target)) => {
-                            on_event(AgentEvent::Handoff { target_agent: target.clone() });
-                            return Ok(format!("Handoff requested to {}", target));
-                        }
+
+                        // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: msg.clone(),
+                            iteration,
+                        });
+                        error = msg;
+                        content = String::new();
+                    }
+                    Err(ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(ToolError::Fatal(msg)) => {
+                        let err = format!("Fatal tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(ToolError::Unexpected(msg)) => {
+                        let err = format!("Unexpected tool error: {}", msg);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(ToolError::HandoffRequested(target)) => {
+                        on_event(AgentEvent::Handoff { target_agent: target.clone() });
+                        return Ok(format!("Handoff requested to {}", target));
                     }
                 }
 
