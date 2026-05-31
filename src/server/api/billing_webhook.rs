@@ -493,7 +493,6 @@ pub async fn twilio_webhook_handler(
     axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(_payload): Json<TwilioEvent>,
 ) -> impl IntoResponse {
-    // Basic placeholder for Twilio webhooks
     tracing::info!("Received Twilio webhook");
     StatusCode::OK.into_response()
 }
@@ -508,7 +507,6 @@ pub async fn meta_webhook_handler(
     axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(_payload): Json<MetaEvent>,
 ) -> impl IntoResponse {
-    // Basic placeholder for Meta (Instagram/Facebook) webhooks
     tracing::info!("Received Meta webhook");
     StatusCode::OK.into_response()
 }
@@ -523,7 +521,6 @@ pub async fn shippo_webhook_handler(
     axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(_payload): Json<ShippoEvent>,
 ) -> impl IntoResponse {
-    // Basic placeholder for Shippo webhooks
     tracing::info!("Received Shippo webhook");
     StatusCode::OK.into_response()
 }
@@ -538,7 +535,6 @@ pub async fn zoom_webhook_handler(
     axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(_payload): Json<ZoomEvent>,
 ) -> impl IntoResponse {
-    // Basic placeholder for Zoom webhooks
     tracing::info!("Received Zoom webhook");
     StatusCode::OK.into_response()
 }
