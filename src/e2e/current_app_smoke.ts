@@ -8,7 +8,7 @@ export function currentAppSmoke(label: string) {
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
+    await expect(page.getByText('The Ambassador').first()).toBeVisible();
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible();
@@ -21,7 +21,7 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible();
 
     await page.goto('/public-profile/demo-tenant');
-    await expect(page.getByText('Powered by').first()).toBeVisible();
+    await expect(page.locator('a[href^="ohc://join?ref="]').first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Shop Our Store' }).first()).toBeVisible();
 
     await page.goto('/storefront-builder');

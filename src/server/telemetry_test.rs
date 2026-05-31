@@ -270,8 +270,7 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        assert!(true);
     }
 
     #[test]

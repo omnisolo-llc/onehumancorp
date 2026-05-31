@@ -219,7 +219,20 @@ impl SipDB {
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
         let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let _permit = if is_standalone {
+                match get_sqlite_limiter().try_acquire() {
+                    Ok(p) => Some(p),
+                    Err(_) => {
+                        let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "delegate_mission_with_tx").await;
+                        Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                    }
+                }
+            } else {
+                None
+            };
             self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
         }).await;
 
