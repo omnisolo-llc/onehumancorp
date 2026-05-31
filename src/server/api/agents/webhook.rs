@@ -64,6 +64,90 @@ async fn handle_webhook(
         }
     }
 
+    if payload.source == "manychat" {
+        // Generate a draft reply
+        let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
+        let draft_reply = if !api_key.is_empty() {
+            let business_context = "A friendly small business."; // mock context
+            let prompt = format!(
+                "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
+                business_context, payload.message
+            );
+            let client = crate::minimax::MinimaxClient::new(api_key);
+            client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+        } else {
+            "Thank you for reaching out! We will get back to you shortly.".to_string()
+        };
+
+        // Save to inbox_messages
+        let id = Uuid::new_v4().to_string();
+        let status = "pending";
+        let pool = get_pool();
+        let mut tx = match pool.begin().await {
+            Ok(t) => t,
+            Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        };
+        if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+        }
+        let _ = sqlx::query(
+            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&id)
+        .bind(&payload.tenant_id)
+        .bind("manychat")
+        .bind(&payload.message)
+        .bind(&draft_reply)
+        .bind(&status)
+        .execute(&mut *tx)
+        .await;
+        let _ = tx.commit().await;
+
+        let description = format!("Incoming Manychat message: {}", payload.message);
+        let risk = ActionRisk::DraftForReview;
+
+        match orchestrator.dispatch_event(crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: payload.tenant_id.clone(),
+            event_type: "tenant.message.received".to_string(), // Ensure valid event type format
+            payload: serde_json::json!({
+                "source": "manychat",
+                "message": payload.message,
+                "draft_reply": draft_reply,
+                "inbox_message_id": id,
+            }),
+        }).await {
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Err(e) => {
+                if e.contains("AI Budget exhausted") {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                } else {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                }
+            }
+        }
+    }
+
+    if payload.source == "calendly" {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: payload.tenant_id.clone(),
+            event_type: "tenant.booking.created".to_string(),
+            payload: serde_json::json!({"source": "calendly", "message": payload.message}),
+        };
+
+        match orchestrator.dispatch_event(event).await {
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Err(e) => {
+                if e.contains("AI Budget exhausted") {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                } else {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                }
+            }
+        }
+    }
+
     if payload.source == "mercadopago" {
         if payload.message == "approved" {
             tokio::spawn(async move {

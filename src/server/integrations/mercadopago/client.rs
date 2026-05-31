@@ -65,8 +65,39 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
-        // Mock handle webhook
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        let json: serde_json::Value = serde_json::from_str(payload).unwrap_or(serde_json::Value::Null);
+
+        if json["action"].as_str() == Some("payment.created") || json["action"].as_str() == Some("payment.updated") {
+            let data_id = json["data"]["id"].as_str().unwrap_or("");
+            if data_id.is_empty() {
+                return Err("Missing payment ID in webhook payload".to_string());
+            }
+
+            let url = format!("https://api.mercadopago.com/v1/payments/{}", data_id);
+            let res = self.http_client.get(&url)
+                .bearer_auth(&self.access_token)
+                .send()
+                .await;
+
+            match res {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        let text = resp.text().await.unwrap_or_default();
+                        let payment_data: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+
+                        if payment_data["status"].as_str() == Some("approved") {
+                            // Payment verified as approved
+                            return Ok(());
+                        }
+                    } else {
+                        return Err(format!("Mercado Pago API error validating webhook: {}", resp.status()));
+                    }
+                }
+                Err(e) => return Err(format!("Network error validating webhook: {}", e)),
+            }
+        }
+
         Ok(())
     }
 }
