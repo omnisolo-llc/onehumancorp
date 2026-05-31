@@ -3901,7 +3901,7 @@ mod tests_added_for_coverage {
 
     #[tokio::test]
     async fn test_conflict_winner_scenarios() {
-        let repo = setup_repo().await;
+        let _repo = setup_repo().await;
         let now = Utc::now();
 
         // Testing owner_override
@@ -3935,10 +3935,10 @@ mod tests_added_for_coverage {
             metadata: None,
         };
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing reliability_score
@@ -3946,9 +3946,9 @@ mod tests_added_for_coverage {
         rec_a.reliability_score = 60;
         rec_b.reliability_score = 50;
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing recency
@@ -3956,14 +3956,14 @@ mod tests_added_for_coverage {
         rec_a.created_at = now;
         rec_b.created_at = now - chrono::Duration::days(1);
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing fallback
         rec_b.created_at = now;
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
     }
 }

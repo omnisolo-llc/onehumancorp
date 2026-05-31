@@ -515,28 +515,28 @@ async fn http_metrics_handler(
 
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
+            }
         }
     );
 
@@ -753,20 +753,44 @@ pub async fn advisory_insights_handler(
     // Gather context from DB and order counts concurrently
     let (org_res, active_orders_res) = tokio::join!(
         async {
-            sqlx::query_as::<_, (String, String)>(
-                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-            )
-            .bind(&tenant_id)
-            .fetch_optional(&db.pool)
-            .await
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_optional(&db.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                }
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id)
+                    .fetch_one(pool)
+                    .await
+                }
+            }
         }
     );
 
