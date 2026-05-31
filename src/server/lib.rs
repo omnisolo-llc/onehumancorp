@@ -591,8 +591,8 @@ async fn http_metrics_handler(
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
             match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE organization_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE organization_id = $1").bind(&tenant_id).fetch_one(pool).await,
             }
         },
         async {
@@ -674,9 +674,9 @@ async fn http_login_handler(
 
     let row = match sqlx::query(
         r#"
-        SELECT id, username, email, password_hash, roles, tenant_id
+        SELECT id, username, email, password_hash, roles, organization_id
         FROM users
-        WHERE tenant_id = $1 AND (username = $2 OR email = $2) AND active = TRUE
+        WHERE organization_id = $1 AND (username = $2 OR email = $2) AND active = TRUE
         LIMIT 1
         "#,
     )
