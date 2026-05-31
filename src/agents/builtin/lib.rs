@@ -5,9 +5,9 @@ pub mod scalable_multi_agent;
 // Configuration via environment variables:
 //   OHC_AGENT_ADDRESS          gRPC listen address (default: 127.0.0.1:50051)
 //   OHC_AGENT_ID               agent identifier
-//   ANTHROPIC_API_KEY          enables Anthropic Claude backend
-//   OPENAI_API_KEY             enables OpenAI backend
-//   MINIMAX_API_KEY            enables MiniMax backend
+//   OHC_ANTHROPIC_API_KEY          enables Anthropic Claude backend
+//   OHC_OPENAI_API_KEY             enables OpenAI backend
+//   OHC_MINIMAX_API_KEY            enables MiniMax backend
 //   OHC_LLM_API_KEY            generic key for OpenAI-compatible backends
 //   OHC_LLM_BASE_URL           generic OpenAI-compatible /v1 API base URL
 //   OHC_LOCAL_LLM_ENDPOINT     Ollama endpoint
@@ -104,7 +104,7 @@ fn init_otel() {
     opentelemetry::global::set_tracer_provider(tracer_provider.clone());
     let tracer = opentelemetry::trace::TracerProvider::tracer(&tracer_provider, "ohc-agent");
 
-    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
+    let use_json = std::env::var("OHC_LOG_FORMAT").unwrap_or_default() == "json";
 
     if use_json {
         use tracing_subscriber::prelude::*;
@@ -235,9 +235,11 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 
-    let is_cloud = get_env("STANDALONE_MODE", "true") != "true";
+    let standalone_mode =
+        std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string());
+    let is_cloud = standalone_mode != "true";
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
-    
+
     match mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {
             let heartbeat_transport = transport.clone();
@@ -264,4 +266,3 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
