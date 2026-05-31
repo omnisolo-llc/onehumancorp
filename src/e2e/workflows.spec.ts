@@ -14,6 +14,6 @@ test.describe('Agent Workflows', () => {
     await expect(page.getByText(workflowName)).toBeVisible();
     await expect(page.getByText('ohc_review_branch').first()).toBeVisible();
     await expect(page.getByText('Backend CLI')).toBeVisible();
-    await expect(page.getByText(/server --task/)).toBeVisible();
+    await expect(page.getByText(/ohc_builtin_agent --task/)).toBeVisible();
   });
 });

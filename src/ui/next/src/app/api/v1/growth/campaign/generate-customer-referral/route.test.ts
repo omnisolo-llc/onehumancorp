@@ -42,7 +42,6 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
     });
 
     it('returns fallback message on fetch error', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
         const req = new Request('http://localhost/api/v1/growth/campaign/generate-customer-referral', {
@@ -55,7 +54,5 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
 
         expect(res.status).toBe(200);
         expect(data.message).toContain('at our store');
-
-        consoleErrorSpy.mockRestore();
     });
 });
