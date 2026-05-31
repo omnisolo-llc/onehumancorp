@@ -16,7 +16,7 @@ impl MyOrgService {
         MyOrgService {
             hub,
             settings: RwLock::new(SettingsResponse {
-                minimax_api_key: std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default(),
+                minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
             analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),

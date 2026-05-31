@@ -115,7 +115,7 @@ async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, t
 
     let mut actual_transport = transport;
     if actual_transport.is_none() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             let topic = format!("agent_harness_output:{}", agent_type);
             if let Ok(t) = RedisIsolationTransport::new(&redis_url, &topic).await {
                 actual_transport = Some(Arc::new(t));
@@ -153,7 +153,7 @@ impl Provider for ClaudeProvider {
     }
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
         if creds.api_key.is_empty() {
-            return Err("claude provider requires an API key (OHC_ANTHROPIC_API_KEY)".to_string());
+            return Err("claude provider requires an API key (ANTHROPIC_API_KEY)".to_string());
         }
         self.base.store(creds);
         Ok(())
@@ -189,7 +189,7 @@ impl Provider for GeminiProvider {
     }
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
         if creds.api_key.is_empty() && creds.oauth_token.is_empty() {
-            return Err("gemini provider requires an API key (OHC_GEMINI_API_KEY) or an OAuth token".to_string());
+            return Err("gemini provider requires an API key (GEMINI_API_KEY) or an OAuth token".to_string());
         }
         self.base.store(creds);
         Ok(())
