@@ -19,8 +19,6 @@ pub fn get_pool() -> PgPool {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    // Prevent Tenant Leakage by ensuring every leased connection starts with an empty tenant context,
-                    // enforcing an explicit opt-in for Row-Level Security via set_org_context before any reads/writes.
                     conn.execute("SET app.current_tenant = ''").await?;
                     Ok(true)
                 })
@@ -395,19 +393,6 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
-                    CREATE TABLE IF NOT EXISTS tool_integrations (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        description TEXT,
-                        api_url TEXT,
-                        integration_code TEXT,
-                        status TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
                         tenant_id VARCHAR NOT NULL,
