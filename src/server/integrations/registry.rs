@@ -23,6 +23,7 @@ pub struct IntegrationsRegistry {
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     pub cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
+    google_business_profile_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_business_profile::provider::GoogleBusinessProfileProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
@@ -64,6 +65,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_business_profile_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -223,6 +225,11 @@ impl IntegrationsRegistry {
         if integration_id == "cal_com" {
             let mut clients = self.cal_com_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "google_business_profile" {
+            let mut clients = self.google_business_profile_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_business_profile::provider::GoogleBusinessProfileProvider::new(creds.api_token.clone())));
         }
         if integration_id == "google_calendar" {
             let mut clients = self.google_calendar_clients.write().unwrap();
@@ -390,7 +397,8 @@ impl IntegrationsRegistry {
 
     pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
         let client = {
-            if integration_id == "google_calendar" {
+
+        if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -716,7 +724,8 @@ impl IntegrationsRegistry {
 
     pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
         let client = {
-            if integration_id == "google_calendar" {
+
+        if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -757,6 +766,36 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+
+    pub async fn google_business_profile_send_message(&self, integration_id: &str, conversation_id: &str, text: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_business_profile" {
+                let clients = self.google_business_profile_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_message(conversation_id, text).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn google_business_profile_reply_review(&self, integration_id: &str, account_id: &str, location_id: &str, review_id: &str, reply: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_business_profile" {
+                let clients = self.google_business_profile_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.reply_to_review(account_id, location_id, review_id, reply).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
     pub async fn meta_send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let client = {
             if integration_id == "meta" {
@@ -914,6 +953,23 @@ mod tests {
 
     }
 
+
+    #[tokio::test]
+    async fn test_google_business_profile_integration() {
+        let registry = IntegrationsRegistry::new();
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "google_business_profile".to_string(),
+            base_url: "".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            api_token: "test_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        registry.connect("google_business_profile", "", creds).unwrap();
+        // Since Real client makes real http requests, we don't test actual method execution here
+        // to avoid hitting the network in CI/bazel sandboxes. We only verify connection logic works.
+    }
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
