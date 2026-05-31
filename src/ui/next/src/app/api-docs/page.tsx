@@ -168,7 +168,7 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-transparent p-8 backdrop-blur-[20px] saturate-200">
+    <div className="min-h-screen bg-gray-50/50 p-8">
       <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm">
         <p className="text-yellow-700 text-sm">
           <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
