@@ -104,3 +104,16 @@ pub enum ApprovalStatus {
     Approved,
     Rejected,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimelineEvent {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub event_type: String,
+    pub source: String,
+    pub content: String,
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
