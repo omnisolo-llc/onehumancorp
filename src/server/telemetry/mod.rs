@@ -17,6 +17,8 @@ static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static CHAOS_INJECTED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static TASK_RECOVERY_TIME_MS: OnceLock<Histogram<f64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
@@ -1182,7 +1184,7 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("telemetry.sandbox_violation_total")
+            .i64_up_down_counter("ohc_sandbox_violation_total")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })
@@ -1212,12 +1214,14 @@ pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latenc
 
 pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) {
     let gauge = get_bubblewrap_violation_total();
+    let env_mode = get_deployment_mode();
     gauge.add(
         1,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
             opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("EnvMode", env_mode.to_string()),
         ],
     );
 }
@@ -1303,4 +1307,47 @@ pub async fn record_sync_failed_count(
         serde_json::json!({}),
     )
     .await
+}
+
+pub fn get_chaos_injected_total() -> &'static Counter<u64> {
+    CHAOS_INJECTED_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .u64_counter("ohc_chaos_injected_total")
+            .with_description("Total number of chaos faults injected")
+            .build()
+    })
+}
+
+pub fn record_chaos_injected(fault_type: &str) {
+    let env_mode = get_deployment_mode();
+    let counter = get_chaos_injected_total();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("EnvMode", env_mode.to_string()),
+            opentelemetry::KeyValue::new("FaultType", fault_type.to_string()),
+        ],
+    );
+}
+
+pub fn get_task_recovery_time_ms_histogram() -> &'static Histogram<f64> {
+    TASK_RECOVERY_TIME_MS.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .f64_histogram("ohc_task_recovery_time_ms")
+            .with_description("Task recovery time in milliseconds after chaos events")
+            .build()
+    })
+}
+
+pub fn record_task_recovery_time_ms(latency_ms: f64) {
+    let env_mode = get_deployment_mode();
+    let histogram = get_task_recovery_time_ms_histogram();
+    histogram.record(
+        latency_ms,
+        &[
+            opentelemetry::KeyValue::new("EnvMode", env_mode.to_string()),
+        ],
+    );
 }
