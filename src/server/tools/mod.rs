@@ -4,5 +4,3 @@ pub use ::server_tools_local_proxy as local_proxy;
 pub mod fsmcp;
 pub mod kvmcp;
 pub mod config_sync;
-
-pub mod edgeoffloadmcp;

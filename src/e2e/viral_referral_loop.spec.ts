@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Post-Purchase Referral Growth Loop', () => {
     test('displays referral modal and correct links after successful payment', async ({ page }) => {
         // Go to checkout page directly
-        await page.goto('http://localhost:3000/checkout');
+        await page.goto('/checkout');
 
         // Mock localStorage to simulate a specific tenant
         await page.evaluate(() => {

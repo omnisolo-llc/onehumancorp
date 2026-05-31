@@ -1,4 +1,3 @@
-#![allow(warnings)]
 pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
