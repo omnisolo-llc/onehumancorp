@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
 
     // Construct the backend URL, forwarding search params if any
     const url = new URL(`${backendUrl}/api/v1/growth/milestones/check`);

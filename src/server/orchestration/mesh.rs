@@ -275,10 +275,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)
             .unwrap();
@@ -421,7 +421,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_mesh_transport_sqlite_file() {
-        if std::env::var("OHC_NATS_URL").is_ok() {
+        if std::env::var("NATS_URL").is_ok() {
             return;
         }
 
@@ -445,7 +445,7 @@ mod tests {
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
-    if let Ok(nats_url) = std::env::var("OHC_NATS_URL") {
+    if let Ok(nats_url) = std::env::var("NATS_URL") {
         if let Ok(transport) = ohc_builtin_agent::mesh::transport::NatsTransport::new(&nats_url).await {
             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
         }
@@ -453,13 +453,13 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
 
     match db_store {
         crate::db::DbStore::Postgres => {
-            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
             let transport = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(&redis_url).await
                 .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(pg_url) = std::env::var("OHC_DATABASE_URL") {
+            if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
                     match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
                         Ok(transport) => {
