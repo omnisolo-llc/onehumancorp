@@ -59,6 +59,8 @@ VALUES
 ,
 ('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', '{"feature_type": "abandoned_cart"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-quote', 'e2e-tenant', 'sales', 'Drafted quote based on: "How much for custom cake for 20?"', 'PENDING', 'HIGH', '{"feature_type": "quote_generation", "original_message": "How much for custom cake for 20?", "generated_quote_amount": 200, "generated_deposit_amount": 100}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+
 ('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,

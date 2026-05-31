@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 function routeIntent(message: string) {
   const lowerMsg = message.toLowerCase();
 
-  if (lowerMsg.includes('quote') || lowerMsg.includes('lead') || lowerMsg.includes('sale')) {
+  if (lowerMsg.includes('quote') || lowerMsg.includes('lead') || lowerMsg.includes('sale') || lowerMsg.includes('how much')) {
     return {
       department_assigned: 'sales',
       agent: 'The Salesperson',

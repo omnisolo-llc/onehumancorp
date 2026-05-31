@@ -422,6 +422,33 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+
+                  {req.payload?.feature_type === "quote_generation" && (
+                    <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-green-800 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Generated Quote
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-green-100">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Customer Request</p>
+                        <p className="text-sm text-gray-800 italic mb-3">"{req.payload.original_message}"</p>
+
+                        <div className="border-t border-green-100 pt-3">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600">Total Amount:</span>
+                            <span className="font-semibold text-gray-900">${req.payload.generated_quote_amount}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Required Deposit:</span>
+                            <span className="font-semibold text-green-700">${req.payload.generated_deposit_amount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "abandoned_cart" && (
                     <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
@@ -478,7 +505,7 @@ export default function ApprovalInbox({
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                     >
                       {payload && payload.original_message
-                        ? "Review"
+                        ? (req.payload?.feature_type === "quote_generation" ? "Edit" : "Review")
                         : "Reject / Edit"}
                     </button>
                     <button
@@ -487,7 +514,7 @@ export default function ApprovalInbox({
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
-                        : "Approve"}
+                        : (req.payload?.feature_type === "quote_generation" ? "Send Quote & Payment Link" : "Approve")}
                     </button>
                   </div>
                 </div>
@@ -496,8 +523,65 @@ export default function ApprovalInbox({
           )}
         </div>
 
+
+        {/* Quote Edit Modal */}
+        {selectedReview && selectedReview.payload?.feature_type === "quote_generation" && (
+          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
+            <div
+              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              style={{
+                animation: "slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              <h2 className="text-xl font-bold mb-4 font-outfit text-gray-900">
+                Edit Quote
+              </h2>
+
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+                  Customer Request
+                </p>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700 italic">
+                  "{selectedReview.payload.original_message}"
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                  Update Quote via Chat
+                </p>
+                <input
+                  type="text"
+                  placeholder="e.g., Make the deposit $100 instead"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedReview(null);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onApprove(selectedReview.id);
+                    setSelectedReview(null);
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
+                >
+                  Send Updated Quote
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Review Modal */}
-        {selectedReview && (
+        {selectedReview && selectedReview.payload?.feature_type !== "quote_generation" && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
               className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"

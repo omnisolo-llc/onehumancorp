@@ -1,6 +1,8 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
+use uuid::Uuid;
+use std::str::FromStr;
 
 pub struct SalesAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -19,10 +21,55 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec!["tenant.quote.requested".to_string(), "agent:sales:approved".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "agent:sales:approved" {
+            let payload = &event.payload;
+            let original = payload.get("original_payload");
+
+            let amount = if let Some(orig) = original {
+                orig.get("generated_deposit_amount").and_then(|v| v.as_i64()).unwrap_or(0)
+            } else {
+                0
+            };
+
+            // Generate Stripe payment link for deposit
+            let tenant_id = Uuid::from_str(&event.tenant_id).unwrap_or(Uuid::new_v4());
+            let customer_id = Uuid::new_v4(); // Generate a dummy customer ID for now
+            let mut quote = crate::services::booking::BookingService::create_draft_quote(tenant_id, customer_id, amount * 100);
+
+            match crate::services::booking::BookingService::approve_quote(&mut quote, None) {
+                Ok((_slot, link)) => {
+                    tracing::info!("EXECUTING APPROVED QUOTE: Sending deposit link: {}", link);
+
+                    let content = format!("Sent quote deposit link to customer: {}", link);
+
+                    let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: event.tenant_id.clone(),
+                        agent_id: "sales_agent".to_string(),
+                        content,
+                        embedding: vec![0.0; 1536],
+                        source_type: "AGENT_ACTION".to_string(),
+                        created_at: chrono::Utc::now(),
+                        last_referenced_at: chrono::Utc::now(),
+                        reference_count: 0,
+                        reliability_score: 100,
+                        owner_override: false,
+                        metadata: None,
+                    };
+                    self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+                },
+                Err(e) => {
+                    tracing::error!("Failed to approve quote: {}", e);
+                }
+            }
+
+            return Ok(());
+        }
+
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;

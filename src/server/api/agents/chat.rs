@@ -46,7 +46,7 @@ pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Valu
             "Draft marketing content from team chat".to_string(),
             serde_json::json!({ "original_request": msg, "action": "create_content" })
         )
-    } else if lower_msg.contains("quote") || lower_msg.contains("lead") || lower_msg.contains("discount") || lower_msg.contains("pricing") {
+    } else if lower_msg.contains("quote") || lower_msg.contains("lead") || lower_msg.contains("discount") || lower_msg.contains("pricing") || lower_msg.contains("how much") {
         (
             DepartmentType::Sales,
             "Draft sales response/quote from team chat".to_string(),
