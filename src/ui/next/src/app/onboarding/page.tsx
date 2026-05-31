@@ -342,12 +342,19 @@ export default function OnboardingWizard() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
+                  <select
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
+                  >
+                    <option value="" disabled className="text-gray-500">Select a business type</option>
+                    <option value="Physical Products" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Physical Products</option>
+                    <option value="Digital Products" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Digital Products</option>
+                    <option value="Services & Bookings" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Services & Bookings</option>
+                    <option value="Food & Beverage" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Food & Beverage</option>
+                    <option value="Subscriptions" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Subscriptions</option>
+                    <option value="Creative Portfolios" className="text-black dark:text-white bg-white dark:bg-[#16161a]">Creative Portfolios</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
