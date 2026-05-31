@@ -32,6 +32,8 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
+static ADVISORY_INSIGHTS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
         match value.trim().to_ascii_lowercase().as_str() {
@@ -825,6 +827,19 @@ pub async fn advisory_insights_handler(
         }
     };
 
+    // Check Cache First
+    let cache_key = format!("advisory_insights:{}", tenant_id);
+    let redis_client = if let Ok(url) = std::env::var("OHC_REDIS_URL") {
+        Some(redis::Client::open(url).unwrap())
+    } else {
+        None
+    };
+    let cache = ADVISORY_INSIGHTS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(redis_client));
+
+    if let Some(cached_insight) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": cached_insight }))).into_response();
+    }
+
     // Gather context from DB and order counts concurrently
     let (org_res, active_orders_res) = tokio::join!(
         async {
@@ -856,7 +871,10 @@ pub async fn advisory_insights_handler(
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            cache.set(&cache_key, output.clone(), std::time::Duration::from_secs(3600)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        },
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (

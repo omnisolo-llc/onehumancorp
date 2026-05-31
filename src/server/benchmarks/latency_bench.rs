@@ -394,13 +394,6 @@ pub async fn bench_advisory_insights_latency() {
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
-            let _headers = axum::http::HeaderMap::new();
-            // Create a valid mock JWT token or rely on internal logic handling if token is invalid
-            // The handler will return 401 Unauthorized if the token is invalid, which bypasses the parallel SQL queries.
-            // We need to simulate the SQL query latency directly or provide a valid auth context.
-            // For now, since the handler fails fast on auth, the latency benchmark only measures auth failure.
-            // Let's at least test the db calls directly.
-
             let tenant_id = "system".to_string();
 
             let start = std::time::Instant::now();
@@ -427,10 +420,69 @@ pub async fn bench_advisory_insights_latency() {
         }
 
         fetch_times.sort();
-        println!("Advisory Insights (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        println!("Advisory Insights Cloud (Parallel Postgres): p50: {} us, p95: {} us, p99: {} us",
             fetch_times[iterations / 2],
             fetch_times[(iterations as f32 * 0.95) as usize],
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
+
+    // SQLite Standalone Mode Benchmark
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await;
+    let _db_sqlite = std::sync::Arc::new(crate::db::DB { pool: sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) });
+
+    let mut fetch_times_sqlite = Vec::new();
+    for _ in 0..iterations {
+        let tenant_id = "system".to_string();
+
+        let start = std::time::Instant::now();
+        let (_org_res, _active_orders_res) = tokio::join!(
+            async {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&sqlite_pool)
+                .await
+            },
+            async {
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
+                )
+                .bind(&tenant_id)
+                .fetch_one(&sqlite_pool)
+                .await
+            }
+        );
+
+        fetch_times_sqlite.push(start.elapsed().as_micros());
+    }
+
+    fetch_times_sqlite.sort();
+    println!("Advisory Insights Standalone (Parallel SQLite): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times_sqlite[iterations / 2],
+        fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
+        fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
+    );
+
+    // Caching Benchmark
+    let cache = ::server_utils::cache::HybridCache::new(None);
+    let mut cache_hit_times = Vec::new();
+    let cache_key = "advisory_insights:system";
+    cache.set(cache_key, "Cached summary here".to_string(), std::time::Duration::from_secs(3600)).await;
+
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+        let _ = cache.get(cache_key).await;
+        cache_hit_times.push(start.elapsed().as_micros());
+    }
+    cache_hit_times.sort();
+    println!("Advisory Insights Cache Hit: p50: {} us, p95: {} us, p99: {} us",
+        cache_hit_times[iterations / 2],
+        cache_hit_times[(iterations as f32 * 0.95) as usize],
+        cache_hit_times[(iterations as f32 * 0.99) as usize]
+    );
+
 }
