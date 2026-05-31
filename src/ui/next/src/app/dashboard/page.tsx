@@ -4,7 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
+
+const safeLocalStorage = {
+  getItem: (key: string) => {
+    if (typeof window !== 'undefined') return window.localStorage.getItem(key);
+    return null;
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+  }
+};
+
 export default function Dashboard() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => setIsMounted(true), []);
+
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -14,8 +28,8 @@ export default function Dashboard() {
   const [campaignSuccess, setCampaignSuccess] = useState(false);
 
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
+    if (typeof window !== 'undefined') {
+        setHasPro(safeLocalStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -29,7 +43,7 @@ export default function Dashboard() {
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
-  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
+  const businessName = typeof window !== 'undefined' ? safeLocalStorage.getItem('business_name') || 'Maya' : 'Maya';
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -81,7 +95,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`https://ohc.store/join?ref=${typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -97,12 +111,12 @@ export default function Dashboard() {
         }
       } else {
         // Fallback to local storage tenant if API fails or no auth
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store';
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store';
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
@@ -115,33 +129,12 @@ export default function Dashboard() {
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
     async function checkMilestones() {
-      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
-      try {
-        const res = await fetch("/api/v1/growth/milestones/check");
-        const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem("10th_order_milestone_shown", "true");
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-  }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
-  useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
+      if (safeLocalStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
         const res = await fetch('/api/v1/growth/milestones/check');
         const data = await res.json();
@@ -150,7 +143,7 @@ export default function Dashboard() {
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
+            safeLocalStorage.setItem('10th_order_milestone_shown', 'true');
           }
         }
       } catch (e) {
@@ -159,7 +152,7 @@ export default function Dashboard() {
     }
     checkMilestones();
 
-    setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
+    setBannerDismissed(safeLocalStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -176,9 +169,9 @@ export default function Dashboard() {
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
     const updateOfflineStatus = () => {
-      setIsOffline(!navigator.onLine);
+      setIsOffline(!(typeof navigator !== 'undefined' ? navigator.onLine : true));
       try {
-        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        const queue = JSON.parse(safeLocalStorage.getItem("ohc_offline_queue") || "[]");
         setOfflineQueueCount(queue.length);
       } catch(e) {}
     };
@@ -186,7 +179,7 @@ export default function Dashboard() {
     const handleOnline = async () => {
       setIsOffline(false);
       try {
-        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        const queue = JSON.parse(safeLocalStorage.getItem("ohc_offline_queue") || "[]");
         if (queue.length > 0) {
           const res = await fetch("/api/v1/sync/offline", {
             method: "POST",
@@ -194,7 +187,7 @@ export default function Dashboard() {
             body: JSON.stringify({ mutations: queue })
           });
           if (res.ok) {
-            localStorage.setItem("ohc_offline_queue", "[]");
+            safeLocalStorage.setItem("ohc_offline_queue", "[]");
             setOfflineQueueCount(0);
           }
         }
@@ -217,9 +210,9 @@ export default function Dashboard() {
 
     // Setup interval to check queue dynamically (useful for offline writes in same tab)
     const queueCheckInterval = setInterval(() => {
-      if (!navigator.onLine) {
+      if (!(typeof navigator !== 'undefined' ? navigator.onLine : true)) {
          try {
-           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           const queue = JSON.parse(safeLocalStorage.getItem("ohc_offline_queue") || "[]");
            if (queue.length !== offlineQueueCount) setOfflineQueueCount(queue.length);
          } catch(e) {}
       }
@@ -274,8 +267,8 @@ export default function Dashboard() {
 
     const fetchMetrics = async () => {
         try {
-            const token = localStorage.getItem('token') || 'test-token';
-            const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+            const token = safeLocalStorage.getItem('token') || 'test-token';
+            const tenant = safeLocalStorage.getItem('tenant') || 'e2e-tenant';
 
             const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
@@ -329,10 +322,10 @@ export default function Dashboard() {
   };
 
   const claimTrialExtension = () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
+    const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    if (typeof window !== 'undefined') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    if (typeof window !== 'undefined') {
+        safeLocalStorage.setItem('has_pro', 'true');
     }
     setHasPro(true);
     setShowSoftPaywall(false);
@@ -647,11 +640,11 @@ export default function Dashboard() {
                      </div>
                      <button
                          onClick={() => {
-                             const tenant = localStorage.getItem('tenant') || 'DEFAULT';
+                             const tenant = safeLocalStorage.getItem('tenant') || 'DEFAULT';
                              const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
-                             window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                             if (typeof window !== 'undefined') window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
-                             localStorage.setItem('milestone_banner_dismissed', 'true');
+                             safeLocalStorage.setItem('milestone_banner_dismissed', 'true');
                              setBannerDismissed(true);
                              fetch('/api/v1/growth/referrals/click', {
                                  method: 'POST',
@@ -1040,7 +1033,7 @@ export default function Dashboard() {
                             setShowPromoModal(true);
                             setIsGeneratingPromo(true);
                             try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store';
                                 const response = await fetch("/api/v1/growth/promotions/generate", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -1137,7 +1130,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1157,7 +1150,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
@@ -1183,10 +1176,10 @@ export default function Dashboard() {
                       <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
                       <button
                           onClick={() => {
-                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
                               const url = `ohc://join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
-                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              if (typeof window !== 'undefined') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
                           }}
                           className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
@@ -1892,7 +1885,7 @@ export default function Dashboard() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    const tenant = typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store';
                                     await fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -2132,13 +2125,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof window !== 'undefined' ? safeLocalStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}
