@@ -33,7 +33,7 @@ pub struct CapitalAdvance {
 }
 
 pub async fn get_capital_offer(
-    State(hub): State<std::sync::Arc<crate::hub::Hub>>,
+    State(_hub): State<std::sync::Arc<crate::hub::Hub>>,
     Path(tenant_id): Path<String>,
 ) -> impl IntoResponse {
     let pool = crate::db::get_pool();
@@ -82,7 +82,7 @@ pub async fn get_capital_offer(
 }
 
 pub async fn accept_capital_offer(
-    State(hub): State<std::sync::Arc<crate::hub::Hub>>,
+    State(_hub): State<std::sync::Arc<crate::hub::Hub>>,
     Path(tenant_id): Path<String>,
     Json(payload): Json<AcceptCapitalRequest>,
 ) -> impl IntoResponse {
@@ -116,7 +116,7 @@ pub async fn accept_capital_offer(
 }
 
 pub async fn get_capital_advance(
-    State(hub): State<std::sync::Arc<crate::hub::Hub>>,
+    State(_hub): State<std::sync::Arc<crate::hub::Hub>>,
     Path(tenant_id): Path<String>,
 ) -> impl IntoResponse {
     let pool = crate::db::get_pool();

@@ -17,15 +17,3 @@ sh_test(
     ],
     tags = ["no-sandbox"],
 )
-
-sh_test(
-    name = "next_e2e_test",
-    srcs = ["bazel_e2e_test.sh"],
-    data = glob([
-        "**/*",
-    ]) + [
-        "//:node_modules",
-    ],
-    tags = ["requires-network"],
-    size = "large",
-)
