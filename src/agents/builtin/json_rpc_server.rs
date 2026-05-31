@@ -94,7 +94,7 @@ async fn handle_rpc(
         }
     };
 
-    let cfg = AgentRunConfig::default();
+    let _cfg = AgentRunConfig::default();
 
     let result = match payload.method.as_str() {
         "run_async" => {

@@ -40,7 +40,14 @@ impl PromptCache {
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
             // very rough estimate of saved cents for cache hit
-            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new(); let ratio = RATIO.get_or_init(|| { std::env::var("MISER_TOKEN_RATIO").unwrap_or_else(|_| "0.0001".to_string()).parse::<f64>().unwrap_or(0.0001) }); (r.token_count as f64 * ratio).round() as i64
+            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+            let ratio = RATIO.get_or_init(|| {
+                std::env::var("OHC_MISER_TOKEN_RATIO")
+                    .unwrap_or_else(|_| "0.0001".to_string())
+                    .parse::<f64>()
+                    .unwrap_or(0.0001)
+            });
+            (r.token_count as f64 * ratio).round() as i64
         } else {
             0
         };
@@ -94,5 +101,17 @@ mod tests {
         cache.clear_expired();
 
         assert!(cache.cache.is_empty());
+    }
+
+    #[test]
+    fn test_prompt_cache_get_with_cost_cents() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("What is the capital of France?", "Paris", 10000);
+
+        let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
+        assert!(response.is_some());
+        assert_eq!(response.unwrap().text, "Paris");
+        // 10000 * 0.0001 = 1.0 = 1 cent
+        assert_eq!(cost, 1);
     }
 }

@@ -46,26 +46,35 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(&actual_path, &new_content)
-            .await
-            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let actual_path_str = actual_path.to_string_lossy();
-            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+            let tmp_path = actual_path.with_extension("tmp.rs");
+            fs::write(&tmp_path, &new_content)
+                .await
+                .map_err(|e| format!("edit: temp file {}: {}", tmp_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+            let tmp_path_str = tmp_path.to_string_lossy();
+            let res = self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &tmp_path_str], None, vec![]).await;
+
+            // Clean up temp file
+            let _ = fs::remove_file(&tmp_path).await;
+
+            match res {
                 Ok(output) => {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                            let actual_path_str = actual_path.to_string_lossy();
+                            let clean_stderr = stderr.replace(&*tmp_path_str, &actual_path_str);
                             return Err(ToolError::LlmRecoverable(format!(
-                                "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
+                                "Verification Loop Failed: `rustc` reported syntax errors before editing {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                                path, stderr
+                                path, clean_stderr
                             )));
                         }
                     }
@@ -75,6 +84,10 @@ Please fix the errors and try again.",
                 }
             }
         }
+
+        fs::write(&actual_path, &new_content)
+            .await
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
 
 
@@ -218,5 +231,9 @@ mod tests {
         } else {
             panic!("Expected LlmRecoverable error");
         }
+
+        // Assert the target file was NOT modified since validation failed
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "fn main() { println!(\"old\"); }", "Target file should not be modified if verification fails");
     }
 }

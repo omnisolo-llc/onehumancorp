@@ -26,7 +26,7 @@ pub struct OnboardingAgent {
 
 impl OnboardingAgent {
     pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
-        let minimax = std::env::var("MINIMAX_API_KEY")
+        let minimax = std::env::var("OHC_MINIMAX_API_KEY")
             .ok()
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
         OnboardingAgent { db, hub, minimax }
@@ -2450,7 +2450,7 @@ mod tests {
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("DATABASE_URL").ok()?;
+        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
@@ -2532,7 +2532,7 @@ mod tests {
         let mut agent = OnboardingAgent::new(db.clone(), hub);
 
         // Mock MinimaxClient if we could, but here we'll just check if it handles configured key
-        if std::env::var("MINIMAX_API_KEY").is_err() {
+        if std::env::var("OHC_MINIMAX_API_KEY").is_err() {
             // Setup a fake one for testing if not present
             agent.minimax = Some(Arc::new(MinimaxClient::new("fake-key".to_string())));
         }
@@ -2573,7 +2573,7 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_service)
             .fetch_one(&db.pool)
             .await
@@ -2609,7 +2609,7 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_food)
             .fetch_one(&db.pool)
             .await

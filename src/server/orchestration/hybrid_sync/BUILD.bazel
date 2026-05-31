@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -109,4 +109,9 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_orchestration_hybrid_sync_test",
+    crate = ":server_orchestration_hybrid_sync",
 )

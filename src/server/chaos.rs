@@ -443,13 +443,19 @@ mod tests {
             // Memory exhaustion simulation
             let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
             // CPU exhaustion spinloop
+            let mut iters = 0;
             loop {
                 vec.push(1);
                 if vec.len() > 1024 * 100 {
                     vec.clear();
                 }
-                // Yield to allow timeout to trigger
-                tokio::task::yield_now().await;
+                iters += 1;
+                if iters % 1000 == 0 {
+                    tokio::task::yield_now().await;
+                    if start.elapsed() > std::time::Duration::from_millis(100) {
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                    }
+                }
             }
             // Unreachable
             #[allow(unreachable_code)]
