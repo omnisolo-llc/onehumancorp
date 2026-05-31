@@ -1098,12 +1098,24 @@ impl DB {
         timeout_secs: i64,
     ) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
-        let affected = match &self.store {
+                let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
+                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
-                    .await?.rows_affected()
+                    .await?.rows_affected();
+
+                let q_affected = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED' WHERE status IN ('QUEUED', 'RUNNING') AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .execute(sqlite_pool)
+                    .await?.rows_affected();
+
+                let j_affected = sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED' WHERE status IN ('QUEUED', 'RUNNING') AND updated_at < ?")
+                    .bind(threshold.to_rfc3339())
+                    .execute(sqlite_pool)
+                    .await?.rows_affected();
+
+                affected + q_affected + j_affected
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
@@ -1112,8 +1124,19 @@ impl DB {
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+
+                let q_affected = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED' WHERE status IN ('QUEUED', 'RUNNING') AND updated_at < $1")
+                    .bind(threshold)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+
+                let j_affected = sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED' WHERE status IN ('QUEUED', 'RUNNING') AND updated_at < $1")
+                    .bind(threshold)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+
                 tx.commit().await?;
-                affected
+                affected + q_affected + j_affected
             }
         };
         if affected > 0 {

@@ -612,6 +612,44 @@ mod tests {
             .await
             .unwrap();
 
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    parent_task_id TEXT,
+                    worker_id TEXT,
+                    scheduled_at TIMESTAMP,
+                    completed_at TIMESTAMP
+                )"
+            )
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS sub_agent_jobs (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    organization_id TEXT,
+                    parent_task_id TEXT,
+                    agent_role TEXT,
+                    attempts INTEGER DEFAULT 0,
+                    max_attempts INTEGER DEFAULT 3,
+                    run_after TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    locked_until TIMESTAMP
+                )"
+            )
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
             let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stuck_mission_id")
@@ -642,6 +680,26 @@ mod tests {
                 .bind("test_org")
                 .bind(recent_time.naive_utc())
                 .bind(recent_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            // insert stuck sub_agent_queue
+            sqlx::query("INSERT INTO sub_agent_queue (id, status, tenant_id, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("stuck_sub_agent_queue")
+                .bind("QUEUED")
+                .bind("test_org")
+                .bind(very_old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            // insert stuck sub_agent_jobs
+            sqlx::query("INSERT INTO sub_agent_jobs (id, status, organization_id, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("stuck_sub_agent_jobs")
+                .bind("RUNNING")
+                .bind("test_org")
+                .bind(very_old_time.naive_utc())
                 .execute(&mut *tx)
                 .await
                 .unwrap();
@@ -677,9 +735,33 @@ mod tests {
             let status_normal: String = row_normal.get("status");
             assert_eq!(status_normal, "PENDING");
 
+            // Verify stuck sub_agent_queue was marked FAILED
+            let row_saq = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_sub_agent_queue'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_saq: String = row_saq.get("status");
+            assert_eq!(status_saq, "FAILED");
+
+            // Verify stuck sub_agent_jobs was marked FAILED
+            let row_saj = sqlx::query("SELECT status FROM sub_agent_jobs WHERE id = 'stuck_sub_agent_jobs'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_saj: String = row_saj.get("status");
+            assert_eq!(status_saj, "FAILED");
+
             // Clean up using a transaction
             let mut tx_clean = pool.begin().await.unwrap();
             sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
+                .execute(&mut *tx_clean)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM sub_agent_queue WHERE id = 'stuck_sub_agent_queue'")
+                .execute(&mut *tx_clean)
+                .await
+                .unwrap();
+            sqlx::query("DELETE FROM sub_agent_jobs WHERE id = 'stuck_sub_agent_jobs'")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();
