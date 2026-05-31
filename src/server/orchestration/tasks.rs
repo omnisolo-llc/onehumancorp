@@ -68,7 +68,7 @@ impl TaskDecompositionService {
 
                 sqlx::query(
                     r#"
-                    INSERT INTO shared_tasks_decomposition (
+                    INSERT INTO shared_tasks (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
                         depth, created_at, updated_at
@@ -105,7 +105,7 @@ impl TaskDecompositionService {
 
                 sqlx::query(
                     r#"
-                    INSERT INTO shared_tasks_decomposition (
+                    INSERT INTO shared_tasks (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
                         depth, created_at, updated_at
@@ -179,12 +179,12 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT st.id FROM shared_tasks_decomposition st
+                    SELECT st.id FROM shared_tasks st
                     WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                     AND NOT EXISTS (
                         SELECT 1
-                        FROM json_array_elements_text(st.dependencies) AS dep_id
-                        JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
+                        FROM json_array_elements_text(st.dependencies::json) AS dep_id
+                        JOIN shared_tasks parent ON parent.id::text = dep_id
                         WHERE parent.status != 'COMPLETED'
                     )
                     LIMIT 1
@@ -208,7 +208,7 @@ impl TaskDecompositionService {
                 // Transition state
                 sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
                     WHERE id = $3
                     "#,
@@ -282,15 +282,15 @@ impl TaskDecompositionService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
-                        SELECT st.id FROM shared_tasks_decomposition st
+                        SELECT st.id FROM shared_tasks st
                         WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                         AND NOT EXISTS (
                             SELECT 1
                             FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                            JOIN shared_tasks parent ON parent.id = dep_id.value
                             WHERE parent.status != 'COMPLETED'
                         )
                         LIMIT 1
@@ -365,7 +365,7 @@ impl TaskDecompositionService {
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         id: &str,
     ) -> Result<SharedTask, String> {
-        let row = sqlx::query("SELECT * FROM shared_tasks_decomposition WHERE id = $1")
+        let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = $1")
             .bind(id)
             .fetch_one(&mut **tx)
             .await
@@ -409,7 +409,7 @@ impl TaskDecompositionService {
         tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
         id: &str,
     ) -> Result<SharedTask, String> {
-        let row = sqlx::query("SELECT * FROM shared_tasks_decomposition WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = ?")
             .bind(id)
             .fetch_one(&mut **tx)
             .await
@@ -464,7 +464,7 @@ impl TaskDecompositionService {
         let _span = tracer.start("get_task");
         match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("SELECT * FROM shared_tasks_decomposition WHERE id = $1")
+                let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = $1")
                     .bind(task_id)
                     .fetch_one(&self.db.pool)
                     .await
@@ -512,7 +512,7 @@ impl TaskDecompositionService {
                 })
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT * FROM shared_tasks_decomposition WHERE id = ?")
+                let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = ?")
                     .bind(task_id)
                     .fetch_one(pool)
                     .await
@@ -602,7 +602,7 @@ impl TaskDecompositionService {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
+                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE",
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
@@ -621,7 +621,7 @@ impl TaskDecompositionService {
                     .unwrap_or_else(|_| "{}".to_string());
 
                 sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
+                    "UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $1::jsonb, updated_at = $2 WHERE id = $3"
                 )
                 .bind(payload_update)
                 .bind(now)
@@ -654,7 +654,7 @@ impl TaskDecompositionService {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
+                    "SELECT status FROM shared_tasks WHERE id = ?",
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
@@ -673,7 +673,7 @@ impl TaskDecompositionService {
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
                     .unwrap_or_else(|_| "{}".to_string());
                 sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"
+                    "UPDATE shared_tasks SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"
                 )
                 .bind(payload_update)
                 .bind(now.to_rfc3339())
@@ -729,7 +729,7 @@ impl TaskDecompositionService {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
+                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE",
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
@@ -745,7 +745,7 @@ impl TaskDecompositionService {
                 };
 
                 sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = $1, updated_at = $2 WHERE id = $3"
+                    "UPDATE shared_tasks SET status = $1, updated_at = $2 WHERE id = $3"
                 )
                 .bind(new_status)
                 .bind(now)
@@ -782,7 +782,7 @@ impl TaskDecompositionService {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
+                    "SELECT status FROM shared_tasks WHERE id = ?",
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
@@ -798,7 +798,7 @@ impl TaskDecompositionService {
                 };
 
                 sqlx::query(
-                    "UPDATE shared_tasks_decomposition SET status = ?, updated_at = ? WHERE id = ?",
+                    "UPDATE shared_tasks SET status = ?, updated_at = ? WHERE id = ?",
                 )
                 .bind(new_status)
                 .bind(now)
@@ -870,7 +870,7 @@ mod tests {
             .unwrap();
 
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1026,7 +1026,7 @@ mod tests {
             .unwrap();
 
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1533,7 +1533,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1551,7 +1551,7 @@ mod chaos_tests {
 
         // Insert 100 tasks
         for i in 0..100 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+            sqlx::query("INSERT INTO shared_tasks (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_{}", i))
                 .execute(&pool).await.unwrap();
         }
@@ -1622,7 +1622,7 @@ mod chaos_tests {
 
         // Setup tables
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1640,7 +1640,7 @@ mod chaos_tests {
 
         // Insert 10 tasks
         for i in 0..10 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+            sqlx::query("INSERT INTO shared_tasks (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_sa_{}", i))
                 .execute(&pool).await.unwrap();
         }

@@ -19,7 +19,7 @@ async fn test_task_decomposition_service() {
         DbStore::Postgres => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -44,7 +44,7 @@ async fn test_task_decomposition_service() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    task_id TEXT NOT NULL REFERENCES shared_tasks(id),
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
@@ -59,7 +59,7 @@ async fn test_task_decomposition_service() {
         DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -84,7 +84,7 @@ async fn test_task_decomposition_service() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    task_id TEXT NOT NULL REFERENCES shared_tasks(id),
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
@@ -184,7 +184,7 @@ async fn test_task_decomposition_dag_blocked() {
         DbStore::Postgres => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -212,7 +212,7 @@ async fn test_task_decomposition_dag_blocked() {
         DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -240,7 +240,7 @@ async fn test_task_decomposition_dag_blocked() {
                 r#"
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    task_id TEXT NOT NULL REFERENCES shared_tasks(id),
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
@@ -339,7 +339,7 @@ async fn test_task_decomposition_service_fail_task() {
         DbStore::Postgres => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -364,7 +364,7 @@ async fn test_task_decomposition_service_fail_task() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    task_id TEXT NOT NULL REFERENCES shared_tasks(id),
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
@@ -376,7 +376,7 @@ async fn test_task_decomposition_service_fail_task() {
         DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
                 r#"
-                CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                CREATE TABLE IF NOT EXISTS shared_tasks (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
                     mission_id TEXT NOT NULL,
@@ -401,7 +401,7 @@ async fn test_task_decomposition_service_fail_task() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    task_id TEXT NOT NULL REFERENCES shared_tasks(id),
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
@@ -463,7 +463,7 @@ async fn test_task_decomposition_service_fail_task() {
 
     let (status, payload_str): (String, String) = match &db.store {
         DbStore::Postgres => {
-            let row = sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = $1")
+            let row = sqlx::query("SELECT status, payload FROM shared_tasks WHERE id = $1")
                 .bind(&main_task.id)
                 .fetch_one(&db.pool)
                 .await
@@ -473,7 +473,7 @@ async fn test_task_decomposition_service_fail_task() {
             (s, serde_json::to_string(&p).unwrap())
         }
         DbStore::Sqlite(pool) => {
-            let row = sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = ?")
+            let row = sqlx::query("SELECT status, payload FROM shared_tasks WHERE id = ?")
                 .bind(&main_task.id)
                 .fetch_one(pool)
                 .await

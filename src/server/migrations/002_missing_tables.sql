@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
     version INTEGER DEFAULT 1
 );
 
-CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+CREATE TABLE IF NOT EXISTS shared_tasks (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL,
     mission_id TEXT,
@@ -334,8 +334,8 @@ CREATE POLICY tenant_isolation_agent_violations ON agent_violations USING (tenan
 ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true));
 
-ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true));
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (organization_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_department_tasks ON department_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));

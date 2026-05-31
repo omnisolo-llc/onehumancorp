@@ -68,7 +68,7 @@ impl DeliberationStateMachine {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT * FROM shared_tasks_decomposition
+                    SELECT * FROM shared_tasks
                     WHERE status = 'PENDING' AND organization_id = $1
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -84,7 +84,7 @@ impl DeliberationStateMachine {
 
                     sqlx::query(
                         r#"
-                        UPDATE shared_tasks_decomposition
+                        UPDATE shared_tasks
                         SET status = 'DELIBERATING', agent_id = $1, updated_at = $2
                         WHERE id = $3 AND organization_id = $4
                         "#
@@ -120,7 +120,7 @@ impl DeliberationStateMachine {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT * FROM shared_tasks_decomposition
+                    SELECT * FROM shared_tasks
                     WHERE status = 'PENDING' AND organization_id = ?
                     LIMIT 1
                     "#
@@ -135,7 +135,7 @@ impl DeliberationStateMachine {
 
                     sqlx::query(
                         r#"
-                        UPDATE shared_tasks_decomposition
+                        UPDATE shared_tasks
                         SET status = 'DELIBERATING', agent_id = ?, updated_at = ?
                         WHERE id = ? AND organization_id = ?
                         "#
@@ -188,7 +188,7 @@ impl DeliberationStateMachine {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4 AND status = 'DELIBERATING'
                     RETURNING id
@@ -211,7 +211,7 @@ impl DeliberationStateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ? AND status = 'DELIBERATING'
                     RETURNING id
@@ -238,7 +238,7 @@ impl DeliberationStateMachine {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'COMPLETED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3 AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
                     RETURNING id, tokens_consumed, agent_role, model
@@ -275,7 +275,7 @@ impl DeliberationStateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'COMPLETED', updated_at = ?
                     WHERE id = ? AND organization_id = ? AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
                     RETURNING id
@@ -301,7 +301,7 @@ impl DeliberationStateMachine {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'FAILED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3
                     RETURNING id, tokens_consumed, agent_role, model
@@ -338,7 +338,7 @@ impl DeliberationStateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let res = sqlx::query(
                     r#"
-                    UPDATE shared_tasks_decomposition
+                    UPDATE shared_tasks
                     SET status = 'FAILED', updated_at = ?
                     WHERE id = ? AND organization_id = ?
                     RETURNING id
@@ -375,7 +375,7 @@ mod tests {
 
         sqlx::query(
             r#"
-            CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+            CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
                 organization_id TEXT NOT NULL,
                 title TEXT NOT NULL,
@@ -409,7 +409,7 @@ mod tests {
 
         // Insert pending task
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t1', 'org1', 'task 1', 'PENDING')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('t1', 'org1', 'task 1', 'PENDING')"
         )
         .execute(&pool)
         .await
@@ -434,7 +434,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status, agent_id) VALUES ('t2', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -443,7 +443,7 @@ mod tests {
         let deps = json!(["dep1", "dep2"]);
         sm.resolve_dependencies("org1", "t2", deps.clone()).await.unwrap();
 
-        let row: (String, String) = sqlx::query_as("SELECT status, dependencies FROM shared_tasks_decomposition WHERE id = 't2'")
+        let row: (String, String) = sqlx::query_as("SELECT status, dependencies FROM shared_tasks WHERE id = 't2'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -458,7 +458,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status, agent_id) VALUES ('t2b', 'org1', 'task 2', 'COMPLETED', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -476,7 +476,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status, agent_id) VALUES ('t2c', 'org1', 'task 2', 'DELIBERATING', 'agent1')"
         )
         .execute(&pool)
         .await
@@ -494,7 +494,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3', 'org1', 'task 3', 'RESOLVING_DEPENDENCIES')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('t3', 'org1', 'task 3', 'RESOLVING_DEPENDENCIES')"
         )
         .execute(&pool)
         .await
@@ -502,7 +502,7 @@ mod tests {
 
         sm.complete_deliberation("org1", "t3").await.unwrap();
 
-        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't3'")
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks WHERE id = 't3'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -516,7 +516,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t3b', 'org1', 'task 3', 'PENDING')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('t3b', 'org1', 'task 3', 'PENDING')"
         )
         .execute(&pool)
         .await
@@ -533,7 +533,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4', 'org1', 'task 4', 'DELIBERATING')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('t4', 'org1', 'task 4', 'DELIBERATING')"
         )
         .execute(&pool)
         .await
@@ -541,7 +541,7 @@ mod tests {
 
         sm.fail_deliberation("org1", "t4").await.unwrap();
 
-        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't4'")
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks WHERE id = 't4'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -555,7 +555,7 @@ mod tests {
         let sm = DeliberationStateMachine::new(DbStore::Sqlite(pool.clone()));
 
         sqlx::query(
-            "INSERT INTO shared_tasks_decomposition (id, organization_id, title, status) VALUES ('t4b', 'org1', 'task 4', 'DELIBERATING')"
+            "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('t4b', 'org1', 'task 4', 'DELIBERATING')"
         )
         .execute(&pool)
         .await

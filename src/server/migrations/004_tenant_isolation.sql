@@ -49,18 +49,18 @@ $$;
 
 DO $$
 BEGIN
-    IF to_regclass('shared_tasks_decomposition') IS NOT NULL THEN
-        ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+    IF to_regclass('shared_tasks') IS NOT NULL THEN
+        ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
 
         IF NOT EXISTS (
             SELECT 1
             FROM pg_policies
             WHERE schemaname = current_schema()
-                AND tablename = 'shared_tasks_decomposition'
-                AND policyname = 'tenant_isolation_shared_tasks_decomposition'
+                AND tablename = 'shared_tasks'
+                AND policyname = 'tenant_isolation_shared_tasks'
         ) THEN
-            CREATE POLICY tenant_isolation_shared_tasks_decomposition
-                ON shared_tasks_decomposition
+            CREATE POLICY tenant_isolation_shared_tasks
+                ON shared_tasks
                 USING (organization_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;

@@ -91,7 +91,7 @@ impl HandoffManager {
                                 match &db_clone.store {
                                     DbStore::Postgres => {
                                         let payload_json: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(serde_json::json!({}));
-                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = $1, updated_at = to_timestamp($2::double precision) WHERE id = $3 AND updated_at < to_timestamp($2::double precision)")
+                                        if let Err(e) = sqlx::query("UPDATE shared_tasks SET payload = $1, updated_at = to_timestamp($2::double precision) WHERE id = $3 AND updated_at < to_timestamp($2::double precision)")
                                             .bind(&payload_json)
                                             .bind(handoff.timestamp)
                                             .bind(&handoff.state_id)
@@ -102,7 +102,7 @@ impl HandoffManager {
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
-                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = ?, updated_at = datetime(?, 'unixepoch') WHERE id = ? AND updated_at < datetime(?, 'unixepoch')")
+                                        if let Err(e) = sqlx::query("UPDATE shared_tasks SET payload = ?, updated_at = datetime(?, 'unixepoch') WHERE id = ? AND updated_at < datetime(?, 'unixepoch')")
                                             .bind(&payload_str)
                                             .bind(handoff.timestamp)
                                             .bind(&handoff.state_id)
@@ -417,13 +417,13 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, payload TEXT, updated_at TIMESTAMP)")
+        sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, payload TEXT, updated_at TIMESTAMP)")
             .execute(&pool)
             .await
             .unwrap();
 
         // Insert a dummy task with an older timestamp to satisfy the UPDATE statement
-        sqlx::query("INSERT INTO shared_tasks_decomposition (id, payload, updated_at) VALUES ('task_123', 'old_payload', datetime('now', '-1 day'))")
+        sqlx::query("INSERT INTO shared_tasks (id, payload, updated_at) VALUES ('task_123', 'old_payload', datetime('now', '-1 day'))")
             .execute(&pool)
             .await
             .unwrap();
@@ -489,7 +489,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
         let row =
-            sqlx::query("SELECT payload FROM shared_tasks_decomposition WHERE id = 'task_123'")
+            sqlx::query("SELECT payload FROM shared_tasks WHERE id = 'task_123'")
                 .fetch_one(&pool)
                 .await
                 .unwrap();

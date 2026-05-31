@@ -334,7 +334,7 @@ impl TaskManager {
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     let _res = sqlx::query(
-                        "UPDATE shared_tasks_decomposition SET approval_status = $1, proposed_content = $2, action_risk = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                        "UPDATE shared_tasks SET approval_status = $1, proposed_content = $2, action_risk = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
                     )
                     .bind(&new_approval_status)
                     .bind(&new_proposed_content)
@@ -348,7 +348,7 @@ impl TaskManager {
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     let _res = sqlx::query(
-                        "UPDATE shared_tasks_decomposition SET approval_status = ?, proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                        "UPDATE shared_tasks SET approval_status = ?, proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
                     )
                     .bind(&new_approval_status)
                     .bind(&new_proposed_content)
@@ -404,7 +404,7 @@ impl TaskManager {
                 match &db.store {
                     crate::db::DbStore::Postgres => {
                         let _res = sqlx::query(
-                            "UPDATE shared_tasks_decomposition SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                            "UPDATE shared_tasks SET approval_status = $1, status = $2, payload = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
                         )
                         .bind(&new_approval_status)
                         .bind(&new_status)
@@ -418,7 +418,7 @@ impl TaskManager {
                     }
                     crate::db::DbStore::Sqlite(pool) => {
                         let _res = sqlx::query(
-                            "UPDATE shared_tasks_decomposition SET approval_status = ?, status = ?, payload = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                            "UPDATE shared_tasks SET approval_status = ?, status = ?, payload = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
                         )
                         .bind(&new_approval_status)
                         .bind(&new_status)
@@ -641,7 +641,7 @@ mod tests {
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
 
         let _ = sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await;
 
         let db = std::sync::Arc::new(crate::db::DB {
@@ -655,13 +655,13 @@ mod tests {
         tm.insert_task(task.clone());
 
         // Insert into DB directly for the query test
-        let _ = sqlx::query("INSERT INTO shared_tasks_decomposition (id, organization_id, status) VALUES (?, ?, ?)")
+        let _ = sqlx::query("INSERT INTO shared_tasks (id, organization_id, status) VALUES (?, ?, ?)")
             .bind(&task.id).bind("org_int").bind("PENDING")
             .execute(&pool).await.unwrap();
 
         tm.approve_task(&task.id, true, "org_int").await.unwrap();
 
-        let row: (String,) = sqlx::query_as("SELECT approval_status FROM shared_tasks_decomposition WHERE id = ?")
+        let row: (String,) = sqlx::query_as("SELECT approval_status FROM shared_tasks WHERE id = ?")
             .bind(&task.id)
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
