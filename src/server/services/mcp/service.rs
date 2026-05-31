@@ -258,6 +258,19 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let _permit = if is_standalone {
+            match crate::sip::get_sqlite_limiter().try_acquire() {
+                Ok(p) => Some(p),
+                Err(_) => {
+                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_missions").await;
+                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
+                }
+            }
+        } else {
+            None
+        };
+
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -291,7 +304,13 @@ impl McpService for MyMcpService {
         let mode = if is_standalone { "Standalone" } else { "Cloud" };
 
         let _permit = if is_standalone {
-            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
+            match crate::sip::get_sqlite_limiter().try_acquire() {
+                Ok(p) => Some(p),
+                Err(_) => {
+                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "sync_context").await;
+                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
+                }
+            }
         } else {
             None
         };

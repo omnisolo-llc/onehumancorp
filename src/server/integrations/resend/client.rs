@@ -41,7 +41,6 @@ impl ResendClientWrapper for RealResendClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    // Record cost using telemetry in the core app layer instead of from this integration
                     Ok(())
                 } else {
                     Err(format!("Resend API error: {}", resp.status()))

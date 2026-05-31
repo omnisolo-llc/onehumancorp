@@ -1308,3 +1308,31 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+pub async fn record_sync_completed_count(
+    pool: &PgPool,
+    count: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_autodream_sync_completed_total",
+        "counter",
+        count,
+        serde_json::json!({}),
+    )
+    .await
+}
+
+pub async fn record_sync_failed_count(
+    pool: &PgPool,
+    count: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_autodream_sync_failed_total",
+        "counter",
+        count,
+        serde_json::json!({}),
+    )
+    .await
+}
