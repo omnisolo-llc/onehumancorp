@@ -95,7 +95,7 @@ pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
     HARNESS_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.harness");
         meter
-            .f64_histogram("harness_execution_latency")
+            .f64_histogram("harness_execution_latency_seconds")
             .with_description("Execution latency for Harness")
             .build()
     })
@@ -1190,34 +1190,40 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
 
 pub fn record_bubblewrap_spawn(agent_id: &str, task_id: &str) {
     let gauge = get_bubblewrap_spawn_total();
+    let deployment_mode = get_deployment_mode();
     gauge.add(
         1,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
 }
 
 pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latency_ms: f64) {
     let histogram = get_bubblewrap_execution_latency();
+    let deployment_mode = get_deployment_mode();
     histogram.record(
         latency_ms,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
 }
 
 pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) {
     let gauge = get_bubblewrap_violation_total();
+    let deployment_mode = get_deployment_mode();
     gauge.add(
         1,
         &[
             opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
             opentelemetry::KeyValue::new("task_id", task_id.to_string()),
             opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
 }

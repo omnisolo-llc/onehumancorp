@@ -456,12 +456,13 @@ fn test_redact_interface_pii_malicious_payloads() {
 #[test]
 fn test_harness_telemetry_recording() {
     // This test ensures the metric recording logic runs without panicking.
-    // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
+    // It calls the `record_harness_init_latency`, `record_harness_db_io_latency`, and `record_harness_execution_latency` functions.
     // In a real environment, opentelemetry global meter would capture these.
 
     ::server_telemetry::record_harness_init_latency(1.23);
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
+    ::server_telemetry::record_harness_execution_latency(1.50);
 }
 
 #[test]

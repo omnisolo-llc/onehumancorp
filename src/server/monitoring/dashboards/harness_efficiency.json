@@ -42,7 +42,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
+          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_seconds_bucket[5m])) by (le, deployment_mode))",
           "legendFormat": "{{deployment_mode}} Execution Latency (p95)"
         }
       ]
