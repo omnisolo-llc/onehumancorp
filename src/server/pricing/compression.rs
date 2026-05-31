@@ -31,13 +31,19 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
+use std::sync::OnceLock;
+
+static STOP_WORDS: OnceLock<std::collections::HashSet<&'static str>> = OnceLock::new();
+
 pub fn reduce_tokens(data: &str) -> String {
-    let stop_words = [
-        "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
-        "and", "or", "but", "in", "on", "at", "to", "for", "with", "by",
-        "about", "as", "of", "it", "this", "that", "these", "those",
-        "then", "than", "so", "very", "can", "could", "would", "should", "will",
-    ];
+    let stop_words = STOP_WORDS.get_or_init(|| {
+        [
+            "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+            "and", "or", "but", "in", "on", "at", "to", "for", "with", "by",
+            "about", "as", "of", "it", "this", "that", "these", "those",
+            "then", "than", "so", "very", "can", "could", "would", "should", "will",
+        ].iter().cloned().collect()
+    });
 
     let mut filtered_words = Vec::new();
     let mut previous_word = String::new();
@@ -55,7 +61,7 @@ pub fn reduce_tokens(data: &str) -> String {
             continue;
         }
 
-        let is_stop = stop_words.iter().any(|&sw| lower_word == *sw);
+        let is_stop = stop_words.contains(lower_word.as_str());
 
         if !is_stop {
             filtered_words.push(word);
@@ -71,17 +77,11 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     if max_words == 0 {
         return "".to_string();
     }
-    let mut words = data.split_whitespace();
-    let mut count = 0;
-    while let Some(word) = words.next() {
-        count += 1;
-        let word_start = word.as_ptr() as usize - data.as_ptr() as usize;
-        let end_idx = word_start + word.len();
-        if count == max_words {
-            return data[..end_idx].to_string();
-        }
+    let words: Vec<&str> = data.split_whitespace().collect();
+    if words.len() <= max_words {
+        return data.to_string();
     }
-    data.to_string()
+    words[..max_words].join(" ")
 }
 
 pub fn minify_json_prompt(data: &str) -> String {
