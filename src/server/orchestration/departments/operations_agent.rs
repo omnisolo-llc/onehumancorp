@@ -1,14 +1,16 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
+use std::collections::HashMap;
 
 pub struct OperationsAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    configs: std::sync::RwLock<std::collections::HashMap<String, DepartmentConfig>>,
 }
 
 impl OperationsAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+        Self { orchestrator , configs: std::sync::RwLock::new(HashMap::new()) }
     }
 }
 
@@ -61,11 +63,12 @@ impl Department for OperationsAgent {
         self.orchestrator.dispatch_event(cs_event).await
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
+    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
+        self.configs.read().unwrap().get(tenant_id).cloned()
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
+        self.configs.write().unwrap().insert(tenant_id, config);
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {

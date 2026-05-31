@@ -5,14 +5,14 @@ use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
-    configs: HashMap<String, DepartmentConfig>,
+    configs: std::sync::RwLock<HashMap<String, DepartmentConfig>>,
 }
 
 impl CustomerSuccessAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self {
             orchestrator,
-            configs: HashMap::new(),
+            configs: std::sync::RwLock::new(HashMap::new()),
         }
     }
 }
@@ -130,11 +130,11 @@ impl Department for CustomerSuccessAgent {
     }
 
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
-        self.configs.get(tenant_id).cloned()
+        self.configs.read().unwrap().get(tenant_id).cloned()
     }
 
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
-        self.configs.insert(tenant_id, config);
+        self.configs.write().unwrap().insert(tenant_id, config);
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {

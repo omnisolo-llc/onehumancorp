@@ -399,6 +399,8 @@ rust_binary(
 # - Prefer a package wrapper test below when the test belongs to a subpackage.
 SERVER_LIB_TEST_GROUPS = {
     "agents": [
+        "orchestration::departments::agents_test::",
+        "orchestration::departments::approvals_test::",
         "sip::tests::test_delegate_mission_tc2_agents_md",
     ],
     "core": [
