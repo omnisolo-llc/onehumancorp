@@ -3814,3 +3814,156 @@ mod exhaustive_tests {
     }
 
 }
+
+#[cfg(test)]
+mod tests_added_for_coverage {
+    use crate::memory_store::{VectorRepository, EmbeddingRecord};
+    use chrono::Utc;
+    use std::sync::Arc;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    async fn setup_repo() -> Arc<VectorRepository> {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.unwrap();
+        Arc::new(VectorRepository::new_sqlite(pool))
+    }
+
+    #[tokio::test]
+    async fn test_pruning_varying_reliability() {
+        let repo = setup_repo().await;
+        let now = Utc::now();
+        let old_time = now - chrono::Duration::days(181);
+
+        // Record with reliability < 20
+        let rec1 = EmbeddingRecord {
+            id: "rec_prune_1".to_string(),
+            tenant_id: "tenant_prune".to_string(),
+            agent_id: "agent_1".to_string(),
+            content: "content".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now, // recent, but low reliability
+            reference_count: 10, // high ref count, but low reliability
+            reliability_score: 19,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record with reliability < 20 but owner override
+        let rec2 = EmbeddingRecord {
+            id: "rec_prune_2".to_string(),
+            tenant_id: "tenant_prune".to_string(),
+            agent_id: "agent_2".to_string(),
+            content: "content".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 10,
+            reliability_score: 19,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // Stale record with source_type TASK_SUMMARY, reference count < 5, owner_override false
+        let rec3 = EmbeddingRecord {
+            id: "rec_prune_3".to_string(),
+            tenant_id: "tenant_prune".to_string(),
+            agent_id: "agent_3".to_string(),
+            content: "content".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 4,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&rec1).await.unwrap();
+        repo.upsert(&rec2).await.unwrap();
+        repo.upsert(&rec3).await.unwrap();
+
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Check if pruned correctly
+        let results = repo.cross_department_search("tenant_prune", &vec![0.5; 10], 10).await.unwrap();
+        let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+
+        assert!(!ids.contains(&"rec_prune_1".to_string())); // pruned due to low reliability
+        assert!(ids.contains(&"rec_prune_2".to_string()));  // kept due to owner override
+        assert!(!ids.contains(&"rec_prune_3".to_string())); // pruned due to being stale TASK_SUMMARY
+    }
+
+    #[tokio::test]
+    async fn test_conflict_winner_scenarios() {
+        let repo = setup_repo().await;
+        let now = Utc::now();
+
+        // Testing owner_override
+        let mut rec_a = EmbeddingRecord {
+            id: "a".to_string(),
+            tenant_id: "t".to_string(),
+            agent_id: "a".to_string(),
+            content: "c".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        let mut rec_b = EmbeddingRecord {
+            id: "b".to_string(),
+            tenant_id: "t".to_string(),
+            agent_id: "a".to_string(),
+            content: "c".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "a");
+
+        // Testing reliability_score
+        rec_a.owner_override = false;
+        rec_a.reliability_score = 60;
+        rec_b.reliability_score = 50;
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "a");
+
+        // Testing recency
+        rec_a.reliability_score = 50;
+        rec_a.created_at = now;
+        rec_b.created_at = now - chrono::Duration::days(1);
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "a");
+
+        // Testing fallback
+        rec_b.created_at = now;
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+    }
+}

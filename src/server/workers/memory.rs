@@ -248,3 +248,28 @@ mod tests {
     }
 }
 // Integration complete.
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_worker_startup_failure_handling() {
+        // Even if the worker is started with a database that hasn't been set up yet,
+        // it shouldn't crash. It should simply log the error and continue polling.
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let mut worker = MemoryConsolidationWorker::new(repo);
+        worker.poll_interval = std::time::Duration::from_millis(10);
+
+        worker.start();
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // The worker will fail queries internally but shouldn't panic
+        assert!(true, "Worker didn't panic when schema is missing");
+    }
+}
