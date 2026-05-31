@@ -3,35 +3,67 @@ import { test, expect } from './fixtures';
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
     const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
-    const email = `alex+${Date.now()}@example.com`;
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
+      localStorage.removeItem('onboarding-storage-v3');
     }, id);
     await page.goto('/onboarding');
 
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Online Store/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
-    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Physical Products/).check();
-    await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Custom Print');
-    await page.getByPlaceholder('0.00').fill('49.00');
-    await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Online', exact: true }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Art');
-    await page.getByPlaceholder('you@email.com').fill(email);
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Modern' }).click();
-    await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Publish my business/ }).click();
+    // Step 1: Chat flow
+    await expect(page.getByRole('heading', { name: /Tell us about your business/ })).toBeVisible();
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+    // Chat step 1: Business name
+    await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Alex Art');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Chat step 2: What do you sell
+    await expect(page.getByRole('heading', { name: /What do you sell\?/ })).toBeVisible();
+    await page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...").fill('Original art and prints');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Chat step 3: Location
+    await expect(page.getByRole('heading', { name: /Where are you located\?/ })).toBeVisible();
+    await page.getByPlaceholder("e.g. Portland, OR").fill('San Francisco, CA');
+
+    // Trigger intake API
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    // Step 2: Review Details
+    await expect(page.getByRole('heading', { name: 'Review Details' })).toBeVisible({ timeout: 15000 });
+
+    // Check elements dynamically without nth by finding label siblings
+    await page.locator('input[value="Alex Art"]').waitFor({ state: 'attached' }); // from previous step
+
+    await page.getByRole('combobox').selectOption('Physical Products');
+
+    const categoriesDiv = page.locator('div').filter({ hasText: /^Categories \(Comma separated\)$/ });
+    await categoriesDiv.locator('input').fill('Art');
+
+    const productDiv = page.locator('div').filter({ hasText: /^First Product$/ });
+    await productDiv.locator('input').fill('Custom Print');
+
+    const priceDiv = page.locator('div').filter({ hasText: /^Price$/ });
+    await priceDiv.locator('input').fill('49.00');
+
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    // Step 3: Style & Team
+    await expect(page.getByRole('heading', { name: 'Style & Team' })).toBeVisible();
+
+    // Select agents
+    await page.getByText('Sales Agent').click();
+    await page.getByText('Marketing Agent').click();
+
+    // Launch!
+    await page.getByRole('button', { name: 'Launch Store' }).click();
+
+    // Step 4: Loading
+    await expect(page.getByRole('heading', { name: 'Building Your Business...' })).toBeVisible();
+
+    // Step 5: Live
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('link', { name: 'Go to Dashboard' })).toBeVisible();
   });
 });
