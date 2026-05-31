@@ -93,8 +93,8 @@ mod tests {
 
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::Transient(msg) => assert_eq!(msg, "transient error attempt 2"),
-            _ => panic!("Expected Transient error"),
+            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            _ => panic!("Expected Unexpected error"),
         }
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
         tokio::time::resume();
