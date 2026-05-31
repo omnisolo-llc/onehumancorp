@@ -140,15 +140,3 @@ pub async fn get_capital_advance(
         _ => (StatusCode::NOT_FOUND, "No active advance found").into_response(),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::extract::Path;
-    use axum::Json;
-    use axum::http::StatusCode;
-    use axum::response::IntoResponse;
-    use axum::body::Body;
-    use axum::http::Request;
-
-}
