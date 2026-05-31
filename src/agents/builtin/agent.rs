@@ -2175,6 +2175,10 @@ impl Agent {
             }
 
             let turn_input_tokens = resp.usage.input_tokens;
+            if let Some(cache) = &self.prompt_cache {
+                let prompt_hash = format!("{:?}", req);
+                cache.set(&prompt_hash, &resp.message.content, turn_input_tokens as usize);
+            }
             let output_tokens = resp.usage.output_tokens;
             let total_tokens = (turn_input_tokens + output_tokens) as i64;
             self.progress.add_tokens(total_tokens);
