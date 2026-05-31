@@ -1,7 +1,7 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 use ::server_ohc::app::*;
 use crate::db::DbStore;
-use ::server_auth::AuthInfo;
+
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
@@ -575,10 +575,11 @@ impl DashboardService for MyDashboardService {
     ) -> Result<Response<DeliveryRoute>, Status> {
         let auth_info = request
             .extensions()
-            .get::<AuthInfo>()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication info"))?;
-        let org_id = &auth_info.org_id;
         let req = request.into_inner();
+        let org_id = auth_info.org_id;
 
         let mut route = DeliveryRoute {
             id: req.route_id.clone(),
@@ -660,10 +661,11 @@ impl DashboardService for MyDashboardService {
     ) -> Result<Response<RouteStop>, Status> {
         let auth_info = request
             .extensions()
-            .get::<AuthInfo>()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned()
             .ok_or_else(|| Status::unauthenticated("Missing authentication info"))?;
-        let org_id = &auth_info.org_id;
         let req = request.into_inner();
+        let org_id = auth_info.org_id;
 
         let mut updated_stop = RouteStop {
             id: req.stop_id.clone(),
@@ -700,7 +702,7 @@ impl DashboardService for MyDashboardService {
                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'RouteStatusUpdated', $3, 'PENDING')"
                 )
                 .bind(task_id)
-                .bind(org_id)
+                .bind(&org_id)
                 .bind(payload)
                 .execute(&self.db.pool)
                 .await;
@@ -737,7 +739,7 @@ impl DashboardService for MyDashboardService {
                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'customer_success', 'RouteStatusUpdated', ?, 'PENDING')"
                 )
                 .bind(task_id)
-                .bind(org_id)
+                .bind(&org_id)
                 .bind(payload)
                 .execute(pool)
                 .await;

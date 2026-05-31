@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod tests {
 use ::server_ohc::app::dashboard_service_server::DashboardService;
-use ::server_ohc::app::{GetDeliveryRouteRequest, UpdateRouteStopStatusRequest, AuthInfo};
+use ::server_ohc::app::{GetDeliveryRouteRequest, UpdateRouteStopStatusRequest};
+use ::server_auth::orchestration::AuthInfo;
 use tonic::Request;
 use crate::db::DbStore;
-use super::service::MyDashboardService;
+use super::MyDashboardService;
 
 #[tokio::test]
 async fn test_get_delivery_route() {
