@@ -178,7 +178,7 @@ impl AgentServiceImpl {
             }
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
