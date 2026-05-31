@@ -141,3 +141,4 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+.ohc_jwt_secret
