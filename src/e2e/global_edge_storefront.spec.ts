@@ -29,7 +29,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     });
 
     // 1. Visit the Edge Storefront
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId}/${siteId}`);
 
     // Verify it loads with the premium design system class
     await expect(page.locator('.glass-container')).toBeVisible();
@@ -97,7 +97,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
       });
     });
 
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId}/${siteId}`);
     await expect(page.locator('.glass-container')).toBeVisible();
     await expect(page.locator('.product-card')).toBeVisible();
   });
@@ -123,7 +123,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
       });
     });
 
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId}/${siteId}`);
     await expect(page.locator('.hero-title')).toHaveText('Dynamic Store');
   });
 
@@ -139,9 +139,9 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: `<body><div class="tenant-2">Tenant 2</div></body>` });
     });
 
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId1}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId1}/${siteId}`);
     await expect(page.locator('.tenant-1')).toBeVisible();
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId2}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId2}/${siteId}`);
     await expect(page.locator('.tenant-2')).toBeVisible();
   });
 
@@ -160,7 +160,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
       });
     });
 
-    await page.goto(`http://localhost:8081/api/v1/builder/edge/${tenantId}/${siteId}`);
+    await page.goto(`/api/v1/builder/edge/${tenantId}/${siteId}`);
     await expect(page.locator('.product-price')).toHaveText('$99.99');
 
     // simulate offline update synced
