@@ -259,9 +259,13 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     tonic::transport::Server::builder()
         .add_service(proto::agent_service::agent_service_server::AgentServiceServer::new(service::SharedAgentService(svc)))
-        .serve(addr)
+        .serve_with_shutdown(addr, async {
+            tokio::signal::ctrl_c().await.expect("failed to install CTRL+C signal handler");
+            tracing::info!("Received shutdown signal. Commencing graceful Zero WIP exit...");
+        })
         .await?;
 
+    tracing::info!("Zero WIP exit completed gracefully.");
     Ok(())
 }
 

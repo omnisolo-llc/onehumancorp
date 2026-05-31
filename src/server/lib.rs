@@ -2995,9 +2995,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
-        .serve(addr)
+        .serve_with_shutdown(addr, async {
+            tokio::signal::ctrl_c().await.expect("failed to install CTRL+C signal handler");
+            tracing::info!("Received shutdown signal. Commencing graceful Zero WIP exit...");
+        })
         .await?;
 
+    tracing::info!("Zero WIP exit completed gracefully.");
     Ok(())
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {

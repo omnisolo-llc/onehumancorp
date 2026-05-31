@@ -11,10 +11,24 @@ pub struct LockGuard {
     _local_guard: Option<OwnedMutexGuard<()>>,
     redis_client: Option<redis::Client>,
     redis_key: Option<String>,
+    standalone_map: Option<Arc<std::sync::Mutex<HashMap<String, Arc<Mutex<()>>>>>>,
+    standalone_key: Option<String>,
 }
 
 impl Drop for LockGuard {
     fn drop(&mut self) {
+        // Drop local guard first to free the mutex
+        self._local_guard.take();
+
+        if let (Some(map_arc), Some(key)) = (&self.standalone_map, &self.standalone_key) {
+            if let Ok(mut map) = map_arc.lock() {
+                if let Some(arc_mutex) = map.get(key) {
+                    if Arc::strong_count(arc_mutex) == 1 {
+                        map.remove(key);
+                    }
+                }
+            }
+        }
         if let (Some(client), Some(key)) = (&self.redis_client, &self.redis_key) {
             let mut conn = client.get_connection().unwrap();
             let _: redis::RedisResult<()> = redis::cmd("DEL").arg(key).query(&mut conn);
@@ -23,13 +37,13 @@ impl Drop for LockGuard {
 }
 
 pub struct StandaloneLock {
-    locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    locks: Arc<std::sync::Mutex<HashMap<String, Arc<Mutex<()>>>>>,
 }
 
 impl StandaloneLock {
     pub fn new() -> Self {
         Self {
-            locks: Mutex::new(HashMap::new()),
+            locks: Arc::new(std::sync::Mutex::new(HashMap::new())),
         }
     }
 }
@@ -38,7 +52,7 @@ impl StandaloneLock {
 impl DistributedLock for StandaloneLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
         let task_mutex = {
-            let mut locks = self.locks.lock().await;
+            let mut locks = self.locks.lock().unwrap();
             locks.entry(task_id.to_string())
                 .or_insert_with(|| Arc::new(Mutex::new(())))
                 .clone()
@@ -49,6 +63,8 @@ impl DistributedLock for StandaloneLock {
             _local_guard: Some(guard),
             redis_client: None,
             redis_key: None,
+            standalone_map: Some(self.locks.clone()),
+            standalone_key: Some(task_id.to_string()),
         })
     }
 }
@@ -90,6 +106,8 @@ impl DistributedLock for RedisLock {
             _local_guard: None,
             redis_client: Some(self.client.clone()),
             redis_key: Some(key),
+            standalone_map: None,
+            standalone_key: None,
         })
     }
 }
