@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
+    setupFiles: ['./vitest.setup.ts'],
     environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/e2e/**'],
+    exclude: ['**/node_modules/**', '**/e2e/**', '**/bazel-*/**', '**/verification_tests/**'],
   }
 })
