@@ -185,6 +185,7 @@ SERVER_RS_SRCS = [
     "//src/server/services/growth:referrals.rs",
     "//src/server/services/growth:service.rs",
     "//src/server/services/growth:viral_loop.rs",
+    "//src/server/services/growth:ledger_impl.rs",
     "//src/server/services/integration:mod.rs",
     "//src/server/services/integration:service.rs",
     "//src/server/services/mcp:mod.rs",

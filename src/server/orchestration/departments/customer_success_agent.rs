@@ -27,6 +27,8 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.order.delivered".to_string(),
+            "tenant.service.completed".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -73,6 +75,25 @@ impl Department for CustomerSuccessAgent {
                 metadata: None,
             };
             self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.order.delivered" || event.event_type == "tenant.service.completed" {
+            let action_payload = serde_json::json!({
+                "feature_type": "review_solicitation",
+                "customer_id": event.payload.get("customer_id").unwrap_or(&serde_json::Value::Null),
+                "transaction_id": event.payload.get("transaction_id").unwrap_or(&serde_json::Value::Null),
+            });
+            let description = format!("Draft an SMS review request: How was your recent experience? Reply 1-5 to rate.");
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview, // Always draft for review to prevent sending spam
+                action_payload,
+            ).await.map(|_| ())?;
 
             return Ok(());
         }

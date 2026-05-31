@@ -10,6 +10,21 @@ use sqlx::PgPool;
 use crate::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SmsReplyRequest {
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub transaction_id: String,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApplyReferralRequest {
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub referral_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
     pub content: String,
     pub platforms: Vec<String>,
@@ -76,6 +91,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/sms/reply", post(handle_sms_reply))
+        .route("/referrals/apply", post(handle_apply_referral))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -179,6 +196,110 @@ pub struct TeamInvitesResponse {
 struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
+}
+
+async fn handle_sms_reply(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<SmsReplyRequest>,
+) -> Result<Json<()>, StatusCode> {
+    let rating = req.message.trim().parse::<i32>().unwrap_or(0);
+
+    if rating >= 1 && rating <= 5 {
+        let review_id = uuid::Uuid::new_v4().to_string();
+
+        sqlx::query("INSERT INTO reviews (id, tenant_id, customer_id, transaction_id, rating) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&review_id)
+            .bind(&req.tenant_id)
+            .bind(&req.customer_id)
+            .bind(&req.transaction_id)
+            .bind(rating)
+            .execute(&state.pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let _ = sqlx::query("INSERT INTO reputation_profiles (id, tenant_id, aggregate_rating, review_count) VALUES ($1, $2, $3, 1) ON CONFLICT (id) DO UPDATE SET aggregate_rating = ((reputation_profiles.aggregate_rating * reputation_profiles.review_count) + $3) / (reputation_profiles.review_count + 1), review_count = reputation_profiles.review_count + 1")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&req.tenant_id)
+            .bind(rating as f64)
+            .execute(&state.pool)
+            .await;
+
+        // If rating is 4 or 5, automatically dispatch follow-up SMS with referral
+        if rating >= 4 {
+            let event = crate::hub::HubEvent {
+                r#type: "growth.referral_sms_drafted".to_string(),
+                payload: serde_json::to_string(&serde_json::json!({
+                    "tenant_id": req.tenant_id,
+                    "customer_id": req.customer_id,
+                    "message": "Thanks! Share code FRIEND10 with a friend for $10 off your next order."
+                })).unwrap_or_default(),
+                occurred_at: chrono::Utc::now(),
+            };
+            state.hub.append_recent_event(event);
+        }
+    }
+
+    Ok(Json(()))
+}
+
+async fn handle_apply_referral(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ApplyReferralRequest>,
+) -> Result<Json<()>, StatusCode> {
+    // Basic verification: The code must exist in the referrals table and belong to another user
+    let referrer_user_id: Option<String> = sqlx::query_scalar(
+        "SELECT user_id FROM referrals WHERE tenant_id = $1 AND referral_code = $2"
+    )
+    .bind(&req.tenant_id)
+    .bind(&req.referral_code)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let referrer_user_id = match referrer_user_id {
+        Some(uid) => uid,
+        None => return Err(StatusCode::NOT_FOUND),
+    };
+
+    if referrer_user_id == req.customer_id {
+        // Can't refer yourself
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let ledger = crate::services::growth::ledger_impl::UniversalWalletLedger::new(state.pool.clone());
+
+    // Issue a $10 credit to the referring customer invisibly
+    ledger.issue_credit(
+        &req.tenant_id,
+        &referrer_user_id,
+        10.0,
+        &format!("Referral credit for code {}", req.referral_code),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Log the conversion event
+    sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE tenant_id = $1 AND referral_code = $2")
+        .bind(&req.tenant_id)
+        .bind(&req.referral_code)
+        .execute(&state.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let event = crate::hub::HubEvent {
+        r#type: "growth.referral_used".to_string(),
+        payload: serde_json::to_string(&serde_json::json!({
+            "tenant_id": req.tenant_id,
+            "referring_customer_id": referrer_user_id,
+            "new_customer_id": req.customer_id,
+            "code": req.referral_code,
+            "credit_amount": 10.0,
+        })).unwrap_or_default(),
+        occurred_at: chrono::Utc::now(),
+    };
+    state.hub.append_recent_event(event);
+
+    Ok(Json(()))
 }
 
 async fn handle_social_post(
