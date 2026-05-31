@@ -117,7 +117,7 @@ mod tests {
         assert_eq!(resp_inner.agent_id, "agent_x");
 
         let cost = auditor.get_agent_cost("agent_x");
-        assert_eq!(cost, 2.0); // 1000*0.005/1000000 + 500*15.0/1000000 = 0.005 + 0.0075 = 0.0125
+        assert_eq!(cost, 2.0);
     }
 
     #[tokio::test]
