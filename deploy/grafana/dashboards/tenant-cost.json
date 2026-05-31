@@ -80,8 +80,7 @@
         }
       ],
       "title": "LLM Costs per Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -108,8 +107,7 @@
         }
       ],
       "title": "Storage Savings per Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,
