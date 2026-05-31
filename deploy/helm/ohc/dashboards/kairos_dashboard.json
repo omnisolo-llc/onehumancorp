@@ -166,7 +166,8 @@
           "expr": "sum(ohc_sub_agent_queue_length) by (mode)",
           "legendFormat": "{{mode}}"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -255,7 +256,8 @@
           "expr": "sum(rate(ohc_kairos_transitions_total[1m])) by (mode, status)",
           "legendFormat": "{{mode}} - {{status}}"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -344,7 +346,8 @@
           "expr": "histogram_quantile(0.95, sum(rate(ohc_kairos_transition_duration_seconds_bucket[1m])) by (le, mode))",
           "legendFormat": "{{mode}}"
         }
-      ]
+      ],
+      "transparent": true
     }
   ]
 }
