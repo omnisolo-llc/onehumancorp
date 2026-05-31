@@ -38,4 +38,8 @@ impl EasyPostProvider {
     pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
         self._client.create_shipment(to_address, from_address, parcel_details).await
     }
+
+    pub async fn send_tracking_update(&self, tracking_code: &str) -> Result<(), String> {
+        self._client.send_tracking_update(tracking_code).await
+    }
 }

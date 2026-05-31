@@ -35,6 +35,10 @@ impl CalComProvider {
 }
 
 impl CalComProvider {
+    pub async fn sync_calendar(&self, user_id: &str) -> Result<(), String> {
+        self._client.sync_calendar(user_id).await
+    }
+
     pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
         self._client.get_free_busy(time_min, time_max).await
     }

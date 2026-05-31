@@ -40,4 +40,9 @@ impl EasyPostClient {
             Err(e) => Err(format!("Network error: {}", e)),
         }
     }
+
+    pub async fn send_tracking_update(&self, _tracking_code: &str) -> Result<(), String> {
+        // Mock sending tracking update
+        Ok(())
+    }
 }

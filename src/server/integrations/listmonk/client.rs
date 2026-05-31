@@ -13,4 +13,9 @@ impl ListmonkClient {
         // Mock send campaign
         Ok(())
     }
+
+    pub async fn send_to_segment(&self, _segment: &str, _template_id: &str, _subject: &str, _body: &str) -> Result<(), String> {
+        // Mock send to segment
+        Ok(())
+    }
 }

@@ -38,4 +38,8 @@ impl ListmonkProvider {
     pub async fn send_campaign(&self, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
         self._client.send_campaign(list_id, template_id, subject, body).await
     }
+
+    pub async fn send_to_segment(&self, segment: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
+        self._client.send_to_segment(segment, template_id, subject, body).await
+    }
 }

@@ -388,6 +388,51 @@ impl IntegrationsRegistry {
         Err("issue not found".to_string())
     }
 
+    pub async fn calcom_sync_calendar(&self, integration_id: &str, user_id: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sync_calendar(user_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn easypost_send_tracking_update(&self, integration_id: &str, tracking_code: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "easypost" {
+                let clients = self.easypost_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_tracking_update(tracking_code).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn listmonk_send_to_segment(&self, integration_id: &str, segment: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "listmonk" {
+                let clients = self.listmonk_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_to_segment(segment, template_id, subject, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
         let client = {
             if integration_id == "google_calendar" {
@@ -427,6 +472,32 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client_zoom {
             return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
+        let client_jitsi = {
+            if integration_id == "jitsi" {
+                let clients = self.jitsi_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_jitsi {
+            return c.create_meeting(topic).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn ayrshare_get_messages(&self, integration_id: &str) -> Result<Vec<String>, String> {
+        let client = {
+            if integration_id == "ayrshare" {
+                let clients = self.ayrshare_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.get_messages().await;
         }
         Err("integration not found or not supported".to_string())
     }

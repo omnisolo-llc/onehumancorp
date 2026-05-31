@@ -13,4 +13,9 @@ impl AyrshareClient {
         // Mock sending message to multiple social platforms
         Ok(())
     }
+
+    pub async fn get_messages(&self) -> Result<Vec<String>, String> {
+        // Mock retrieving messages from the unified inbox
+        Ok(vec!["do you do vegan cakes?".to_string(), "is the store open?".to_string()])
+    }
 }

@@ -15,6 +15,11 @@ impl CalComClient {
 }
 
 impl CalComClient {
+    pub async fn sync_calendar(&self, _user_id: &str) -> Result<(), String> {
+        // Mock sync calendar with external provider via Cal.com
+        Ok(())
+    }
+
     pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
         let url = format!("https://api.cal.com/v1/availability");
 
