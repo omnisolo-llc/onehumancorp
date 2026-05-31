@@ -25,7 +25,7 @@ This report outlines the design for a **Standalone Metric Buffer and Cloud Sync*
 
 Competitors force users to choose between unobservable local execution or fully monitored (but less private) cloud execution. OHC will introduce a Hybrid Observability pattern:
 
-1. **Local Buffering**: When operating in `OHC_STANDALONE_MODE=true` mode, all agent execution metrics (token usage, time-to-first-token, tool execution latency) are written to a local SQLite buffer.
+1. **Local Buffering**: When operating in `OHC_STANDALONE=true` mode, all agent execution metrics (token usage, time-to-first-token, tool execution latency) are written to a local SQLite buffer.
 2. **PII Scrubbing**: Before metrics are buffered or synced, they must pass through a strict `telemetry.RedactInterfacePII` filter to ensure data sovereignty.
 3. **Batched Cloud Sync**: A background daemon periodically flushes these scrubbed metrics to the central OHC Cloud, allowing centralized Grafana dashboards to visualize the performance of the entire decentralized swarm.
 

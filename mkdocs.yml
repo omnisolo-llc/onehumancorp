@@ -9,13 +9,41 @@ exclude_docs: |
     /user_guide.md
 theme:
   name: material
+  custom_dir: docs/overrides
+  language: en
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - scheme: slate
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
   features:
+    - navigation.instant
+    - navigation.tracking
     - navigation.sections
     - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
     - content.code.copy
+    - content.tabs.link
+extra_css:
+  - stylesheets/ohc-docs.css
 markdown_extensions:
   - admonition
   - tables
+  - attr_list
+  - md_in_html
   - toc:
       permalink: true
   - pymdownx.superfences:
@@ -26,55 +54,102 @@ validation:
     nav:
         omitted_files: ignore
 nav:
-  - Home: index.md
-  - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
+  - Overview: index.md
+  - Get Started:
+      - Technical Overview: technical/index.md
+      - Developer Setup: technical/developer/setup.md
+      - Developer Guide: technical/developer/developer-guide.md
+      - Day One Onboarding: technical/walkthroughs/day_one_onboarding.md
+      - Interactive Tutorial: technical/developer/interactive-tutorial.md
+  - Build with OHC:
+      - Features Overview: technical/features/index.md
+      - Core Orchestration:
+          - Design: technical/features/core-orchestration/design-doc.md
+          - Interaction Guide: technical/features/core-orchestration/interaction-guide.md
+          - Orchestration Guide: technical/features/core-orchestration/orchestration-guide.md
+      - KAIROS:
+          - KAIROS Orchestration: features/kairos_orchestration.md
+          - Distributed State Machine: features/kairos/distributed_state_machine.md
+          - AutoDream Pipelines: features/kairos/autodream_pipelines.md
+          - Memory Consolidation: features/kairos/memory_consolidation.md
+      - Agent Platform:
+          - Advanced Capabilities: technical/features/advanced-agentic-capabilities/design-doc.md
+          - Tooling MCP: technical/features/tooling-mcp/design-doc.md
+          - Marketplace: technical/features/marketplace/design-doc.md
+          - Modular Plugins: technical/features/modular-plugins/design-doc.md
+      - Business Platform:
+          - Billing and Finance: technical/features/billing-finance/design-doc.md
+          - Identity and Security: technical/features/identity-security/design-doc.md
+          - Persistence and DR: technical/features/persistence-dr/design-doc.md
+          - Storefront Builder: features/storefront_builder_architecture.md
   - Architecture:
-      - KAIROS Master Design: technical/architecture/kairos/master-design-doc.md
-      - Hybrid OS Design: technical/architecture/kairos/hybrid-os-design.md
-      - Shared Task Mesh Architecture: technical/architecture/kairos/shared-task-mesh-architecture.md
-      - Sub-Agent Queue Design: technical/architecture/kairos/sub-agent-queue-design.md
-      - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
-  - Features:
-      - KAIROS Orchestration: features/kairos_orchestration.md
-      - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
-      - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
-      - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
-      - Dynamic Workflows: features/dynamic_workflows.md
-      - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
-      - Storefront Builder Architecture: features/storefront_builder_architecture.md
-  - Technical:
-      - Architecture Overview: technical/architecture/architecture-overview.md
+      - Overview: technical/architecture/index.md
       - System Overview: technical/architecture/system-overview.md
       - System Design: technical/architecture/system-design.md
+      - Architecture Overview: technical/architecture/architecture-overview.md
+      - KAIROS:
+          - Master Design: technical/architecture/kairos/master-design-doc.md
+          - Hybrid OS Design: technical/architecture/kairos/hybrid-os-design.md
+          - Shared Task Mesh: technical/architecture/kairos/shared-task-mesh-architecture.md
+          - Sub-Agent Queue: technical/architecture/kairos/sub-agent-queue-design.md
+          - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
+      - Orchestration:
+          - Hybrid Orchestration Master: technical/architecture/orchestration/hybrid-orchestration-master.md
+          - Hybrid Core Design: technical/architecture/orchestration/hybrid-core-design.md
+          - Implementation Blueprint: technical/architecture/orchestration/implementation-blueprint.md
+      - Reliability and Sync:
+          - Chaos Engineering: technical/architecture/reliability/chaos-engineering.md
+          - CRDT Sync Blueprint: technical/architecture/sync/crdt-sync-blueprint.md
+          - SIP Compliance Design: technical/architecture/security/sip-compliance-design.md
+      - RAG: technical/architecture/rag/oracle-hybrid-rag-master-plan.md
+  - APIs:
+      - API Overview: technical/api/index.md
       - API Reference: technical/api/api-reference.md
-      - KAIROS Master API Guide: technical/api/kairos-master-api-guide.md
-  - Walkthroughs:
+      - API Playbook: api/playbook.md
+      - KAIROS API Guide: technical/api/kairos-master-api-guide.md
+      - KAIROS Orchestration API: technical/api/kairos-orchestration-api.md
+      - Hybrid MCP API: technical/api/hybrid-mcp-api.md
+      - Universal Transport Bridge: technical/api/universal-transport-bridge.md
+      - Edge LLM Offloading API: technical/api/edge-llm-offloading-api.md
+  - Guides:
+      - Walkthroughs Overview: technical/walkthroughs/index.md
       - Sub-Agent Orchestration: walkthroughs/sub_agent_orchestration.md
       - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
       - AutoDream CLI: walkthroughs/autodream_cli_guide.md
       - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
-      - Hybrid FS MCP Architecture Walkthrough: technical/walkthroughs/hybrid_fs_mcp_architecture.md
-      - Scribe Proactive MCP Walkthrough: technical/walkthroughs/scribe_proactive_mcp_walkthrough.md
+      - Hybrid FS MCP Architecture: technical/walkthroughs/hybrid_fs_mcp_architecture.md
+      - Scribe Proactive MCP: technical/walkthroughs/scribe_proactive_mcp_walkthrough.md
+      - Hybrid Troubleshooting: technical/walkthroughs/hybrid_troubleshooting.md
+      - Help Portal: technical/walkthroughs/help_portal.md
   - Operations:
-      - Operations: technical/operations/index.md
+      - Operations Overview: technical/operations/index.md
+      - Task Tracking: technical/operations/task-tracking.md
+      - GitHub Issues Migration: technical/operations/github-issues-migration.md
+      - Release Notes: public/release_notes.md
+      - Release Pipeline: technical/release_pipeline_todo.md
+      - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Business:
+      - Business Overview: business/index.md
       - Roadmap: business/roadmap.md
       - Execution Plan: business/execution-plan.md
+      - Cost Blueprint: business/cost-blueprint.md
+      - Public Docs:
+          - Overview: business/public/index.md
+          - AutoDream: business/public/autodream.md
+          - Teammate Mesh: business/public/teammate-mesh.md
+          - Visual Walkthrough: business/public/visual-walkthrough.md
   - Research:
-      - Research: technical/research/index.md
-  - Reports:
-      - OneHumanCorp (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
-      - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
-      - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
-      - Small Business Platform Strategic Research Report: reports/ohc_small_business_platform_strategic_research_report.md
-      - Market Research Report: reports/ohc_market_research_report.md
-      - OHC Market Dominance & SMB Research Report: reports/ohc_market_dominance_and_smb_research_report.md
-      - Market Dominance & AI Differentiation Strategic Report: reports/ohc_market_dominance_ai_differentiation_strategic_report.md
-      - Market Research & AI Differentiation Report: reports/ohc_market_research_ai_differentiation_report.md
-      - Tool Integration Research Report: reports/tool_integration_research_report.md
-      - Scout Tool Integration Research Report (Q2 2024): reports/scout_tool_integration_research_report_q2_2024.md
-      - Third-Party Integration Research Report (Q3): reports/third_party_integration_research_report_q3.md
-      - Tool Integration Research Report (Q4): reports/tool_integration_research_report_q4.md
-      - OHC Product Research Small Business Platform Dominance: reports/ohc_product_research_small_business_platform_dominance.md
-      - Scout Tool Integration Research Report (Q4): reports/scout_tool_integration_research_report_q4.md
-      - OHC Tool Integration Research Report: reports/ohc_tool_integration_research_report.md
+      - Research Overview: technical/research/index.md
+      - Reports Overview: technical/reports/index.md
+      - Site Audit: technical/reports/site-audit-report.md
+      - Docs Site Audit: technical/reports/docs-site-audit.md
+      - Agent Harness Report: technical/reports/agent-harness-report.md
+      - Risk Assessment: technical/reports/risk-assessment-report.md
+      - SMB Market Research: reports/ohc_smb_market_research_report.md
+      - Global SMB Market Research: reports/ohc_global_smb_market_research_report.md
+      - Tool Integration Research: reports/tool_integration_research_report.md
+      - OHC Tool Integration Research: reports/ohc_tool_integration_research_report.md
+  - Archive:
+      - Archive Overview: technical/archive/index.md
+      - Mission: technical/archive/mission.md
+      - Legacy KAIROS Architecture: technical/archive/design/kairos-hybrid-architecture.md

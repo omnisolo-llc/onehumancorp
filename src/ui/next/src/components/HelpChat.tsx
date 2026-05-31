@@ -46,9 +46,7 @@ export function HelpChat() {
   const nextMessageId = (suffix: string) => `${Date.now()}-${nextIdRef.current++}-${suffix}`;
 
   const scrollToBottom = () => {
-    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -89,7 +87,7 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.OHC_E2E === 'true') {
+  if (process.env.NEXT_PUBLIC_E2E === 'true') {
     return null; // Disable in E2E
   }
 

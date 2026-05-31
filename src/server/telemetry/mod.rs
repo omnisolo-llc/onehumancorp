@@ -940,16 +940,6 @@ pub async fn record_rag_escalation(
     .await
 }
 
-pub async fn buffer_metric_i64(
-    pool: &PgPool,
-    metric_name: &str,
-    metric_type: &str,
-    value: i64,
-    labels: Value,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, metric_name, metric_type, value as f32, labels).await
-}
-
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
@@ -1042,11 +1032,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("ip_address")
         || k.contains("mac_address")
         || k.contains("geolocation")
-        || k.contains("medical")
-        || k.contains("health")
-        || k.contains("salary")
-        || k.contains("tax")
-        || k.contains("social_security")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1275,32 +1260,4 @@ mod additional_tests {
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
     }
-}
-
-pub async fn record_sync_completed_count(
-    pool: &PgPool,
-    count: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_autodream_sync_completed_total",
-        "counter",
-        count,
-        serde_json::json!({}),
-    )
-    .await
-}
-
-pub async fn record_sync_failed_count(
-    pool: &PgPool,
-    count: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_autodream_sync_failed_total",
-        "counter",
-        count,
-        serde_json::json!({}),
-    )
-    .await
 }
