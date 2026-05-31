@@ -276,6 +276,7 @@ rust_library(
         "//src/server/config:server_config",
         "//src/server/harness:server_harness",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",
+        "//src/server/integrations/mcp_config_sync:server_integrations_mcp_config_sync",
         "//src/server/integrations/cal_com:server_integrations_cal_com",
         "//src/server/integrations/calendly:server_integrations_calendly",
         "//src/server/integrations/chromadb:server_integrations_chromadb",
