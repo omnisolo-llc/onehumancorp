@@ -24,9 +24,31 @@ describe('OnboardingWizard', () => {
 
 
 
-    global.fetch = vi.fn().mockImplementation((url) => {
-        return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
-    });
+    global.fetch = vi.fn().mockImplementation((url, options) => {
+  if (typeof url === 'string') {
+    if (url.includes('/api/onboarding/intake')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          business_type: 'Bakery',
+          business_name: 'Maya Bakery',
+          categories: ['food'],
+          initial_products: [{ name: 'Cake', price: '20' }]
+        })
+      });
+    }
+    if (url.includes('/api/onboarding/start')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ message: "Success!" })
+      });
+    }
+  }
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ wizardState: {} })
+  });
+});
 
   });
 
