@@ -63,15 +63,6 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
-
-        // Postgres Parity Audit
-        // The postgres pool in this chaos test is intentionally broken (timeout 50ms with a dummy url) to test graceful degradation.
-        // To test Postgres parity, we should use a valid mock or simply acknowledge that true parity tests run in parity_test.rs
-        // where a real database is provisioned. Since we can't reliably connect to a postgres instance in this chaos sandbox
-        // without it timing out, we simulate the expected parity assertion for the audit rule.
-        // Note: Full parity logic is handled in `src/server/orchestration/state/parity_test.rs`.
-        let mock_pg_null_handling = true;
-        assert!(mock_pg_null_handling, "NULL handling parity must be maintained between SQLite and Postgres");
     }
 
 
