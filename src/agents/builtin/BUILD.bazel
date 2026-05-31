@@ -69,6 +69,7 @@ rust_library(
         "mesh/mod.rs",
         "mesh/transport.rs",
         "observability.rs",
+        "openhands.rs",
         "observation_masking.rs",
         "output_parser.rs",
         "plane.rs",
