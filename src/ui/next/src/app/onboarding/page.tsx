@@ -383,8 +383,8 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
-                    if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
+                    if (businessName.trim().length < 2) {
+                      setValidationError('Business Name must be at least 2 characters.');
                       return;
                     }
                     setValidationError('');
