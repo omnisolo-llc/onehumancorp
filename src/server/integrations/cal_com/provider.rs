@@ -39,9 +39,3 @@ impl CalComProvider {
         self._client.get_booking_link(event_type).await
     }
 }
-
-impl CalComProvider {
-    pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
-        Ok(format!("Mock free busy from {} to {}", time_min, time_max))
-    }
-}
