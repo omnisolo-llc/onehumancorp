@@ -2079,9 +2079,22 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
+    let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
+    let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
+    let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
+    let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
+
     dept_orchestrator.register_department(ops_agent).await;
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
+    dept_orchestrator.register_department(sales_agent).await;
+    dept_orchestrator.register_department(finance_agent).await;
+    dept_orchestrator.register_department(legal_agent).await;
+    dept_orchestrator.register_department(advisory_agent).await;
+
+    let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
+    let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
+    department_service.start().await.expect("Failed to start DepartmentService");
 
     let tm_mesh = handoff_mesh.clone();
     hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
