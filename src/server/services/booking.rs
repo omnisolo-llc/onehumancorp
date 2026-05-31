@@ -1,7 +1,8 @@
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::db::get_pool;
+use crate::db::{DB, DbStore};
+use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -77,7 +78,6 @@ impl BookingService {
         quote.status = "approved".to_string();
         quote.updated_at = Utc::now();
 
-        // Dummy booking time slot - e.g., tomorrow at 10 AM
         let now = Utc::now();
         let start_time = now + chrono::Duration::days(1);
         let end_time = start_time + chrono::Duration::hours(1);
@@ -87,13 +87,11 @@ impl BookingService {
             end_time,
         };
 
-        // Dummy Stripe Link
         let stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", Uuid::new_v4().to_string().replace("-", ""));
 
         Ok((time_slot, stripe_link))
     }
 
-    // Prevents double booking for a given time slot (dummy logic for now, real logic would query DB)
     pub fn prevent_double_booking(
         existing_bookings: &[BookingTimeSlot],
         new_slot: &BookingTimeSlot,
@@ -106,145 +104,274 @@ impl BookingService {
         Ok(())
     }
 
-    pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+    pub async fn list_services(db: &DB, tenant_id: &str) -> Result<Vec<Service>, String> {
+        let mut services;
+        match &db.store {
+            DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+                let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+                services = rows.into_iter().map(|row| Service {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    price_cents: row.get("price_cents"),
+                }).collect();
+            }
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking' AND tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-        let services = rows.into_iter().map(|row| Service {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            price_cents: row.get("price_cents"),
-        }).collect();
-
+                tx.commit().await.map_err(|e| e.to_string())?;
+                services = rows.into_iter().map(|row| Service {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    price_cents: row.get("price_cents"),
+                }).collect();
+            }
+        }
         Ok(services)
     }
 
-    pub async fn upsert_service(service: Service) -> Result<(), String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+    pub async fn upsert_service(db: &DB, service: Service) -> Result<(), String> {
+        match &db.store {
+            DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
 
-        sqlx::query(
-            "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
-             VALUES ($1, $2, $3, $4, $5, 'booking') \
-             ON CONFLICT (id) DO UPDATE SET \
-             title = EXCLUDED.title, \
-             description = EXCLUDED.description, \
-             price_cents = EXCLUDED.price_cents, \
-             updated_at = CURRENT_TIMESTAMP"
-        )
-        .bind(&service.id)
-        .bind(&service.tenant_id)
-        .bind(&service.title)
-        .bind(&service.description)
-        .bind(service.price_cents)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
+                     VALUES ($1, $2, $3, $4, $5, 'booking') \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     updated_at = CURRENT_TIMESTAMP"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
-        // Phase 1 Dual-Write to new unified schema (Offerings table)
-        let metadata = "{}"; // Empty JSONB for service
-        let _ = sqlx::query(
-            "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
-             VALUES ($1, $2, 'service', $3, $4, $5, $6) \
-             ON CONFLICT (id) DO UPDATE SET \
-             title = EXCLUDED.title, \
-             description = EXCLUDED.description, \
-             price_cents = EXCLUDED.price_cents, \
-             metadata = EXCLUDED.metadata"
-        )
-        .bind(&service.id)
-        .bind(&service.tenant_id)
-        .bind(&service.title)
-        .bind(&service.description)
-        .bind(service.price_cents)
-        .bind(metadata)
-        .execute(&mut *tx)
-        .await;
+                let metadata = "{}";
+                let _ = sqlx::query(
+                    "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
+                     VALUES ($1, $2, 'service', $3, $4, $5, $6) \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     metadata = EXCLUDED.metadata"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .bind(metadata)
+                .execute(&mut *tx)
+                .await;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
+                     VALUES ($1, $2, $3, $4, $5, 'booking') \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let metadata = "{}";
+                let _ = sqlx::query(
+                    "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
+                     VALUES ($1, $2, 'service', $3, $4, $5, $6) \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     metadata = EXCLUDED.metadata"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .bind(metadata)
+                .execute(&mut *tx)
+                .await;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 
-    pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+    pub async fn get_bookings(db: &DB, tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
+        let mut bookings;
+        match &db.store {
+            DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
 
-        let bookings = rows.into_iter().map(|row| BookingRecord {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            customer_id: row.get("customer_id"),
-            product_id: row.get("product_id"),
-            start_time: row.get("start_time"),
-            end_time: row.get("end_time"),
-            status: row.get("status"),
-        }).collect();
+                bookings = rows.into_iter().map(|row| BookingRecord {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    customer_id: row.get("customer_id"),
+                    product_id: row.get("product_id"),
+                    start_time: row.get("start_time"),
+                    end_time: row.get("end_time"),
+                    status: row.get("status"),
+                }).collect();
+            }
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                bookings = rows.into_iter().map(|row| BookingRecord {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    customer_id: row.get("customer_id"),
+                    product_id: row.get("product_id"),
+                    start_time: row.get("start_time"),
+                    end_time: row.get("end_time"),
+                    status: row.get("status"),
+                }).collect();
+            }
+        }
         Ok(bookings)
     }
 
-    pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+    pub async fn create_booking(db: &DB, booking: BookingRecord) -> Result<(), String> {
+        match &db.store {
+            DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
 
-        let now = chrono::Utc::now();
-        if booking.start_time.signed_duration_since(now).num_hours() < 48 {
-            tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
-            });
+                let now = chrono::Utc::now();
+                if booking.start_time.signed_duration_since(now).num_hours() < 48 {
+                    tokio::spawn(async move {
+                        let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
+                    });
+                }
+
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.product_id)
+                .bind(booking.start_time)
+                .bind(booking.end_time)
+                .bind(&booking.status)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let amount_cents = 0;
+                let _ = sqlx::query(
+                    "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
+                     VALUES ($1, $2, $3, $4, 'booking', $5, $6) \
+                     ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.product_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.status)
+                .bind(amount_cents)
+                .execute(&mut *tx)
+                .await;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+                let now = chrono::Utc::now();
+                if booking.start_time.signed_duration_since(now).num_hours() < 48 {
+                    tokio::spawn(async move {
+                        let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
+                    });
+                }
+
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.product_id)
+                .bind(booking.start_time)
+                .bind(booking.end_time)
+                .bind(&booking.status)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let amount_cents = 0;
+                let _ = sqlx::query(
+                    "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
+                     VALUES ($1, $2, $3, $4, 'booking', $5, $6) \
+                     ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.product_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.status)
+                .bind(amount_cents)
+                .execute(&mut *tx)
+                .await;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
         }
-
-        sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
-        )
-        .bind(&booking.id)
-        .bind(&booking.tenant_id)
-        .bind(&booking.customer_id)
-        .bind(&booking.product_id)
-        .bind(booking.start_time)
-        .bind(booking.end_time)
-        .bind(&booking.status)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        // Phase 1 Dual-Write to new unified schema (Transaction table)
-        let amount_cents = 0; // Default amount since it's not present in BookingRecord
-        let _ = sqlx::query(
-            "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
-             VALUES ($1, $2, $3, $4, 'booking', $5, $6) \
-             ON CONFLICT (id) DO NOTHING"
-        )
-        .bind(&booking.id)
-        .bind(&booking.tenant_id)
-        .bind(&booking.product_id)
-        .bind(&booking.customer_id)
-        .bind(&booking.status)
-        .bind(amount_cents)
-        .execute(&mut *tx)
-        .await;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -315,5 +442,70 @@ mod tests {
             end_time: now + chrono::Duration::minutes(90),
         };
         assert!(BookingService::prevent_double_booking(&existing, &overlapping_slot).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_db_methods() {
+        // Setup in-memory sqlite for db store
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(database_url).await.unwrap();
+
+        // Run migrations/schema required for booking service testing
+        sqlx::query("CREATE TABLE products (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, price_cents INTEGER, type TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE offerings (id TEXT PRIMARY KEY, tenant_id TEXT, type TEXT, title TEXT, description TEXT, price_cents INTEGER, metadata TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE bookings (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, product_id TEXT, start_time DATETIME, end_time DATETIME, status TEXT)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE transactions (id TEXT PRIMARY KEY, tenant_id TEXT, offering_id TEXT, customer_id TEXT, type TEXT, status TEXT, amount_cents INTEGER)")
+            .execute(&pool).await.unwrap();
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db = DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(pool.clone()),
+        };
+
+        // 1. Upsert a service
+        let service_id = "srv_123".to_string();
+        let new_service = Service {
+            id: service_id.clone(),
+            tenant_id: "tenant_456".to_string(),
+            title: "Test Service".to_string(),
+            description: Some("Test description".to_string()),
+            price_cents: 1000,
+        };
+
+        let upsert_res = BookingService::upsert_service(&db, new_service.clone()).await;
+        assert!(upsert_res.is_ok());
+
+        // 2. List services
+        let services_res = BookingService::list_services(&db, "tenant_456").await.unwrap();
+        assert_eq!(services_res.len(), 1);
+        assert_eq!(services_res[0].id, "srv_123");
+        assert_eq!(services_res[0].price_cents, 1000);
+
+        // 3. Create a booking
+        let booking_id = "bk_789".to_string();
+        let new_booking = BookingRecord {
+            id: booking_id.clone(),
+            tenant_id: "tenant_456".to_string(),
+            customer_id: "cust_321".to_string(),
+            product_id: service_id.clone(),
+            start_time: Utc::now() + chrono::Duration::days(5),
+            end_time: Some(Utc::now() + chrono::Duration::days(5) + chrono::Duration::hours(1)),
+            status: "confirmed".to_string(),
+        };
+
+        let create_booking_res = BookingService::create_booking(&db, new_booking.clone()).await;
+        assert!(create_booking_res.is_ok());
+
+        // 4. Get bookings
+        let bookings_res = BookingService::get_bookings(&db, "tenant_456").await.unwrap();
+        assert_eq!(bookings_res.len(), 1);
+        assert_eq!(bookings_res[0].id, "bk_789");
+        assert_eq!(bookings_res[0].status, "confirmed");
     }
 }
