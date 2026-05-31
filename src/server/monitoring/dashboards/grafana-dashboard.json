@@ -37,7 +37,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -135,7 +135,7 @@
       },
       "id": 3,
       "options": {
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\nOHC Premium Infrastructure Dashboard\n</div>",
+        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
         "mode": "html"
       }
     }
