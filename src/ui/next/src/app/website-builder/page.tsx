@@ -249,7 +249,7 @@ export default function WebsiteBuilderPage() {
               )}
 
               {wizardStep === 2 && (
-                <>
+                <div id="step-2">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
@@ -260,6 +260,14 @@ export default function WebsiteBuilderPage() {
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
+                    <input
+                      type="text"
+                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      style={{ borderRadius: '8px' }}
+                      placeholder="e.g. Maya's Cakes"
+                      value={bio}
+                      onChange={(e) => updateBio(e.target.value)}
+                    />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(3)}
@@ -267,11 +275,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 3 && (
-                <>
+                <div id="step-3">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
@@ -299,11 +307,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 4 && (
-                <>
+                <div id="step-4">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
@@ -329,11 +337,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 5 && (
-                <>
+                <div id="step-5">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <button
@@ -349,11 +357,11 @@ export default function WebsiteBuilderPage() {
                       In Person
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 6 && (
-                <>
+                <div id="step-6">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <input
@@ -387,11 +395,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 7 && (
-                <>
+                <div id="step-7">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
@@ -407,11 +415,11 @@ export default function WebsiteBuilderPage() {
                       Bold
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === '7.5' && (
-                <>
+                <div id="step-7-5">
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
@@ -420,11 +428,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 8 && (
-                <>
+                <div id="step-8">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
@@ -440,11 +448,11 @@ export default function WebsiteBuilderPage() {
                       Connect Custom Domain
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === '8.5' && (
-                <>
+                <div id="step-8-5">
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
@@ -453,11 +461,11 @@ export default function WebsiteBuilderPage() {
                       Next
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 9 && (
-                <>
+                <div id="step-9">
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
@@ -472,7 +480,7 @@ export default function WebsiteBuilderPage() {
                       Publish my business
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {wizardStep === 'instant-build' && (

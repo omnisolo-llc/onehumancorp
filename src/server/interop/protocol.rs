@@ -5,7 +5,7 @@ use crate::msgbus::MemoryBus;
 use tokio::time::{sleep, timeout, Duration};
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+
 pub mod proto {
     pub use ::server_ohc::interop::*;
 }
