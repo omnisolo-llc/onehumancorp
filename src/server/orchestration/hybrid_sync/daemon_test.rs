@@ -6,6 +6,10 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
     use std::time::Duration;
 
+    pub fn clear_semaphore() {
+        // Mock clear semaphore function
+    }
+
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {
         let sqlite_pool = SqlitePoolOptions::new()
@@ -13,7 +17,9 @@ mod tests {
             .await
             .unwrap();
 
-        let database_url = std::env::var("DATABASE_URL")
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pg_pool = match tokio::time::timeout(
@@ -89,6 +95,7 @@ mod tests {
 
         let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.sync_step().await.unwrap();
+        clear_semaphore();
 
         let row = sqlx::query(
             "SELECT sync_status FROM swarm_truth_embeddings WHERE memory_id = 'test_mem_1'",
@@ -121,7 +128,36 @@ mod tests {
         assert!(mission_payload_str.contains("[REDACTED]"));
         assert!(!mission_payload_str.contains("test@example.com"));
         assert!(mission_payload_str.contains("safe_data"));
+
+        // Test sync_cloud_escalations
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_cloud_1', 'CLOUD_ESCALATION', 'payload_data', false)")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        daemon.sync_cloud_escalations().await.unwrap();
+
+        let row_local_mission =
+            sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'test_cloud_1'")
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap();
+        assert_eq!(row_local_mission.get::<bool, _>("synced_to_cloud"), true);
+
+        let row_cloud_mission =
+            sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_cloud_1'")
+                .fetch_one(&pg_pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            row_cloud_mission.get::<String, _>("payload"),
+            "payload_data"
+        );
     }
+}
+
+pub fn clear_semaphore() {
+    // Mock clear semaphore function
 }
 
 #[tokio::test]
@@ -133,7 +169,9 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    let database_url = std::env::var("DATABASE_URL")
+    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+
+    let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
