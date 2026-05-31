@@ -205,10 +205,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_mesh_transport_pubsub() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
+        if std::env::var("REDIS_URL").is_err() {
             return;
         }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let redis_url = std::env::var("REDIS_URL").unwrap();
 
         let transport_res = RedisMeshTransport::new(&redis_url).await;
         let transport = transport_res.unwrap();
@@ -251,10 +251,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_mesh_transport_locking() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
+        if std::env::var("REDIS_URL").is_err() {
             return;
         }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let redis_url = std::env::var("REDIS_URL").unwrap();
 
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
 
@@ -272,10 +272,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_mesh_transport_presence() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
+        if std::env::var("REDIS_URL").is_err() {
             return;
         }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let redis_url = std::env::var("REDIS_URL").unwrap();
 
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
 
@@ -335,10 +335,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_mesh_transport_submillisecond_latency() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
+        if std::env::var("REDIS_URL").is_err() {
             return;
         }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let redis_url = std::env::var("REDIS_URL").unwrap();
 
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
