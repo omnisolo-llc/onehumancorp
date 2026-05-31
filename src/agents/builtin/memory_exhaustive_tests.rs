@@ -15,7 +15,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_0() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_0_1".to_string(),
@@ -53,7 +53,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_1() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_1_1".to_string(),
@@ -91,7 +91,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_2() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_2_1".to_string(),
@@ -129,7 +129,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_3() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_3_1".to_string(),
@@ -167,7 +167,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_4() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_4_1".to_string(),
@@ -205,7 +205,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_5() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_5_1".to_string(),
@@ -243,7 +243,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_6() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_6_1".to_string(),
@@ -281,7 +281,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_7() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_7_1".to_string(),
@@ -319,7 +319,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_8() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_8_1".to_string(),
@@ -357,7 +357,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_9() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_9_1".to_string(),
@@ -395,7 +395,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_10() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_10_1".to_string(),
@@ -433,7 +433,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_11() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_11_1".to_string(),
@@ -471,7 +471,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_12() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_12_1".to_string(),
@@ -509,7 +509,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_13() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_13_1".to_string(),
@@ -547,7 +547,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_14() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_14_1".to_string(),
@@ -585,7 +585,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_15() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_15_1".to_string(),
@@ -623,7 +623,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_16() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_16_1".to_string(),
@@ -661,7 +661,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_17() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_17_1".to_string(),
@@ -699,7 +699,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_18() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_18_1".to_string(),
@@ -737,7 +737,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_19() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_19_1".to_string(),
@@ -775,7 +775,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_20() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_20_1".to_string(),
@@ -813,7 +813,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_21() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_21_1".to_string(),
@@ -851,7 +851,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_22() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_22_1".to_string(),
@@ -889,7 +889,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_23() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_23_1".to_string(),
@@ -927,7 +927,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_24() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_24_1".to_string(),
@@ -965,7 +965,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_25() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_25_1".to_string(),
@@ -1003,7 +1003,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_26() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_26_1".to_string(),
@@ -1041,7 +1041,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_27() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_27_1".to_string(),
@@ -1079,7 +1079,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_28() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_28_1".to_string(),
@@ -1117,7 +1117,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_29() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_29_1".to_string(),
@@ -1155,7 +1155,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_30() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_30_1".to_string(),
@@ -1193,7 +1193,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_31() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_31_1".to_string(),
@@ -1231,7 +1231,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_32() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_32_1".to_string(),
@@ -1269,7 +1269,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_33() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_33_1".to_string(),
@@ -1307,7 +1307,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_34() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_34_1".to_string(),
@@ -1345,7 +1345,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_35() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_35_1".to_string(),
@@ -1383,7 +1383,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_36() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_36_1".to_string(),
@@ -1421,7 +1421,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_37() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_37_1".to_string(),
@@ -1459,7 +1459,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_38() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_38_1".to_string(),
@@ -1497,7 +1497,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_39() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_39_1".to_string(),
@@ -1535,7 +1535,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_40() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_40_1".to_string(),
@@ -1573,7 +1573,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_41() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_41_1".to_string(),
@@ -1611,7 +1611,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_42() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_42_1".to_string(),
@@ -1649,7 +1649,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_43() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_43_1".to_string(),
@@ -1687,7 +1687,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_44() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_44_1".to_string(),
@@ -1725,7 +1725,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_45() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_45_1".to_string(),
@@ -1763,7 +1763,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_46() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_46_1".to_string(),
@@ -1801,7 +1801,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_47() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_47_1".to_string(),
@@ -1839,7 +1839,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_48() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_48_1".to_string(),
@@ -1877,7 +1877,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_49() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_49_1".to_string(),
@@ -1915,7 +1915,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_50() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_50_1".to_string(),
@@ -1953,7 +1953,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_51() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_51_1".to_string(),
@@ -1991,7 +1991,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_52() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_52_1".to_string(),
@@ -2029,7 +2029,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_53() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_53_1".to_string(),
@@ -2067,7 +2067,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_54() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_54_1".to_string(),
@@ -2105,7 +2105,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_55() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_55_1".to_string(),
@@ -2143,7 +2143,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_56() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_56_1".to_string(),
@@ -2181,7 +2181,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_57() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_57_1".to_string(),
@@ -2219,7 +2219,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_58() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_58_1".to_string(),
@@ -2257,7 +2257,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_59() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_59_1".to_string(),
@@ -2295,7 +2295,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_60() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_60_1".to_string(),
@@ -2333,7 +2333,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_61() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_61_1".to_string(),
@@ -2371,7 +2371,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_62() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_62_1".to_string(),
@@ -2409,7 +2409,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_63() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_63_1".to_string(),
@@ -2447,7 +2447,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_64() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_64_1".to_string(),
@@ -2485,7 +2485,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_65() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_65_1".to_string(),
@@ -2523,7 +2523,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_66() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_66_1".to_string(),
@@ -2561,7 +2561,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_67() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_67_1".to_string(),
@@ -2599,7 +2599,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_68() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_68_1".to_string(),
@@ -2637,7 +2637,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_69() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_69_1".to_string(),
@@ -2675,7 +2675,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_70() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_70_1".to_string(),
@@ -2713,7 +2713,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_71() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_71_1".to_string(),
@@ -2751,7 +2751,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_72() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_72_1".to_string(),
@@ -2789,7 +2789,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_73() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_73_1".to_string(),
@@ -2827,7 +2827,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_74() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_74_1".to_string(),
@@ -2865,7 +2865,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_75() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_75_1".to_string(),
@@ -2903,7 +2903,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_76() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_76_1".to_string(),
@@ -2941,7 +2941,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_77() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_77_1".to_string(),
@@ -2979,7 +2979,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_78() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_78_1".to_string(),
@@ -3017,7 +3017,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_79() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_79_1".to_string(),
@@ -3055,7 +3055,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_80() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_80_1".to_string(),
@@ -3093,7 +3093,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_81() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_81_1".to_string(),
@@ -3131,7 +3131,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_82() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_82_1".to_string(),
@@ -3169,7 +3169,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_83() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_83_1".to_string(),
@@ -3207,7 +3207,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_84() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_84_1".to_string(),
@@ -3245,7 +3245,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_85() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_85_1".to_string(),
@@ -3283,7 +3283,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_86() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_86_1".to_string(),
@@ -3321,7 +3321,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_87() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_87_1".to_string(),
@@ -3359,7 +3359,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_88() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_88_1".to_string(),
@@ -3397,7 +3397,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_89() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_89_1".to_string(),
@@ -3435,7 +3435,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_90() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_90_1".to_string(),
@@ -3473,7 +3473,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_91() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_91_1".to_string(),
@@ -3511,7 +3511,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_92() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_92_1".to_string(),
@@ -3549,7 +3549,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_93() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_93_1".to_string(),
@@ -3587,7 +3587,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_94() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_94_1".to_string(),
@@ -3625,7 +3625,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_95() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_95_1".to_string(),
@@ -3663,7 +3663,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_96() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_96_1".to_string(),
@@ -3701,7 +3701,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_97() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_97_1".to_string(),
@@ -3739,7 +3739,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_98() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_98_1".to_string(),
@@ -3777,7 +3777,7 @@ mod exhaustive_tests {
 
     #[tokio::test]
     async fn test_conflict_scenario_99() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let rec1 = EmbeddingRecord {
             id: "rec_99_1".to_string(),
@@ -3832,7 +3832,7 @@ mod tests_added_for_coverage {
 
     #[tokio::test]
     async fn test_pruning_varying_reliability() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
         let old_time = now - chrono::Duration::days(181);
 
@@ -3901,7 +3901,7 @@ mod tests_added_for_coverage {
 
     #[tokio::test]
     async fn test_conflict_winner_scenarios() {
-        let repo = setup_repo().await;
+        #[allow(unused_variables)] let repo = setup_repo().await;
         let now = Utc::now();
 
         // Testing owner_override
@@ -3935,10 +3935,10 @@ mod tests_added_for_coverage {
             metadata: None,
         };
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing reliability_score
@@ -3946,9 +3946,9 @@ mod tests_added_for_coverage {
         rec_a.reliability_score = 60;
         rec_b.reliability_score = 50;
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing recency
@@ -3956,14 +3956,14 @@ mod tests_added_for_coverage {
         rec_a.created_at = now;
         rec_b.created_at = now - chrono::Duration::days(1);
 
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
 
         // Testing fallback
         rec_b.created_at = now;
-        let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        #[allow(unused_variables)] let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
     }
 }
