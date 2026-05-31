@@ -6,6 +6,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -38,6 +40,12 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+
+  // Growth Loop: Post-Purchase Social Share State
+  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
+  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
+  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
@@ -47,7 +55,12 @@ export default function Dashboard() {
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
-  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before theyre gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+
+  // Growth Loop: Wall of Love Generator State
+  const [showWallOfLoveModal, setShowWallOfLoveModal] = useState<boolean>(false);
+  const [isGeneratingWallOfLove, setIsGeneratingWallOfLove] = useState<boolean>(false);
+  const [wallOfLoveCopied, setWallOfLoveCopied] = useState<boolean>(false);
 
   // Growth Loop: Automated Review Request State
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
@@ -106,6 +119,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function checkMilestones() {
+      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
+      try {
+        const res = await fetch("/api/v1/growth/milestones/check");
+        const data = await res.json();
+        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          if (orderMilestone) {
+            setCurrentMilestone(orderMilestone);
+            setShowMilestoneModal(true);
+            localStorage.setItem("10th_order_milestone_shown", "true");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check milestones", e);
+      }
+    }
+    checkMilestones();
+  }, []);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
         const res = await fetch('/api/v1/growth/milestones/check');
@@ -139,6 +174,56 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
+
+    const updateOfflineStatus = () => {
+      setIsOffline(!navigator.onLine);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        setOfflineQueueCount(queue.length);
+      } catch(e) {}
+    };
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        if (queue.length > 0) {
+          const res = await fetch("/api/v1/sync/offline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mutations: queue })
+          });
+          if (res.ok) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            setOfflineQueueCount(0);
+          }
+        }
+      } catch (e) { console.error("Sync failed", e); }
+    };
+
+    const handleStorage = (e: any) => {
+      if (e.key === "ohc_offline_queue") {
+        try {
+          const queue = JSON.parse(e.newValue || "[]");
+          setOfflineQueueCount(queue.length);
+        } catch(e) {}
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("storage", handleStorage);
+    updateOfflineStatus();
+
+    // Setup interval to check queue dynamically (useful for offline writes in same tab)
+    const queueCheckInterval = setInterval(() => {
+      if (!navigator.onLine) {
+         try {
+           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           if (queue.length !== offlineQueueCount) setOfflineQueueCount(queue.length);
+         } catch(e) {}
+      }
+    }, 1000);
 
     const connectSwarmMesh = () => {
         try {
@@ -222,6 +307,11 @@ export default function Dashboard() {
     };
 
     fetchMetrics();
+
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", updateOfflineStatus);
+        window.removeEventListener("storage", handleStorage);
+        clearInterval(queueCheckInterval);
 
     return () => {
         if (ws) ws.close();
@@ -337,20 +427,20 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
+          <div className="flex items-center">
+            <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
+              {offlineQueueCount} Payments Pending Sync
+            </div>
+            <div id="network-status-indicator" className={`${isOffline ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(255, 193, 7, 0.2)", color: "#B28200", border: "1px solid rgba(255, 193, 7, 0.3)" }}>
+              Offline - Changes saved locally
+            </div>
           </div>
         </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
-        </div>
+
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -371,9 +461,11 @@ export default function Dashboard() {
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
-             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
-               <span>⚡️</span> KAIROS
-             </Link>
+             <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
+               <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+                 <span>⚡️</span> KAIROS
+               </Link>
+             </WithTooltip>
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
@@ -383,7 +475,53 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Business Analytics Widget */}
+         <section className="mb-6 animate-fade-in">
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+               <div className="flex items-center gap-4">
+                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
+               </div>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+               </div>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
+               </div>
+           </div>
+
+           {/* Advanced AI Insights Soft Paywall */}
+           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
+               <div className="filter blur-sm select-none opacity-50">
+                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
+                   <div className="flex gap-4">
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                   </div>
+               </div>
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
+                       Unlock predictive analytics to foresee trends and boost your revenue.
+                   </p>
+                   <button
+                       onClick={() => {
+                           if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+                               window.location.href = '/pricing';
+                           }
+                       }}
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                       Upgrade to Pro
+                   </button>
+               </div>
+           </div>
+         </section>
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
@@ -426,11 +564,11 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Action Required (Approvals) */}
+         {/* Agent Updates (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -479,7 +617,7 @@ export default function Dashboard() {
                                             className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
-                                            Approve
+                                            Review & Send
                                         </button>
                                     </div>
                                 </div>
@@ -562,6 +700,36 @@ export default function Dashboard() {
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
                    </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Wall of Love Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Wall of Love Widget</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Trust Building Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
+                    <button
+                        onClick={() => setShowWallOfLoveModal(true)}
+                        className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
+                    >
+                        Generate Widget
+                    </button>
+                </div>
+                <div className="w-full md:w-1/3 bg-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px] relative overflow-hidden">
+                    <div className="absolute top-2 right-2 text-3xl opacity-20">⭐⭐⭐⭐⭐</div>
+                    <div className="absolute bottom-2 left-2 text-3xl opacity-20">💖</div>
+                    <div className="text-4xl mb-3 z-10">🌟</div>
+                    <span className="text-sm font-medium text-purple-800 text-center z-10">Preview: Wall of Love</span>
                 </div>
             </div>
          </section>
@@ -953,6 +1121,56 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Post-Purchase Social Share */}
+         {showSaleCelebration && (
+         <section className="mb-8 mt-8">
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
+                        🎉
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">New Order Received!</h3>
+                        <p className="text-sm text-gray-800 font-medium">Alex just bought "Premium Coffee Beans" for $24.99</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => {
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            navigator.clipboard.writeText(message);
+                            setSaleShareCopied(true);
+                            setTimeout(() => setSaleShareCopied(false), 2000);
+                        }}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                    >
+                        {saleShareCopied ? (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                Copy Share Message
+                            </>
+                        )}
+                    </button>
+                    <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        onClick={() => setShowSaleCelebration(false)}
+                    >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                        Share on X
+                    </a>
+                </div>
+            </div>
+         </section>
+         )}
+
          {/* Growth Loop: Milestone Celebration */}
          {showMilestoneBanner && (
            <section className="mb-8 animate-fade-in">
@@ -1025,26 +1243,16 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Items</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        if (productCount >= 10) {
-                            setShowPaywallModal(true);
-                        } else {
-                            setProductCount(prev => prev + 1);
-                            if (!productAdded) {
-                                setProductAdded(true);
-                                setTrialDaysLeft(prev => prev + 7);
-                            }
-                        }
-                    }}
+                    onClick={() => setShowAddItemModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
                 >
-                    <span>+ Add Product</span>
+                    <span>+ Add Item</span>
                 </button>
             </div>
          </section>
@@ -1287,6 +1495,80 @@ export default function Dashboard() {
                  </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+                <button onClick={() => setNewItemType('product')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'product' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Physical Product</button>
+                <button onClick={() => setNewItemType('service')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'service' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Service</button>
+                <button onClick={() => setNewItemType('digital')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'digital' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Digital Good</button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                </div>
+
+                {newItemType === 'product' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="10" />
+                    </div>
+                )}
+
+                {newItemType === 'service' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="60" />
+                    </div>
+                )}
+
+                {newItemType === 'digital' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
+                        <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                    </div>
+                )}
+            </div>
+
+            <button
+                onClick={() => {
+                    setShowAddItemModal(false);
+                    if (productCount >= 10) {
+                        setShowPaywallModal(true);
+                    } else {
+                        setProductCount(prev => prev + 1);
+                        if (!productAdded) {
+                            setProductAdded(true);
+                            setTrialDaysLeft(prev => prev + 7);
+                        }
+                    }
+                }}
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
+            >
+                Save {newItemType === 'product' ? 'Product' : newItemType === 'service' ? 'Service' : 'Digital Good'}
+            </button>
           </div>
         </div>
       )}
@@ -1609,11 +1891,16 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    await fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ data: { tenant_id: tenant } })
+                                    });
+                                } catch (e) { console.error(e); }
                                 setCustomerReferralSent(true);
-                                setTimeout(() => {
-                                    setShowCustomerReferralModal(false);
-                                }, 3000);
+                                setShowCustomerReferralModal(false);
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
@@ -1622,6 +1909,92 @@ export default function Dashboard() {
                     )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wall of Love Modal */}
+      {showWallOfLoveModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-2xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-purple-100/50 to-transparent rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600 border border-purple-200">
+                    🌟
+                  </div>
+                  <div>
+                      <h2 className="text-2xl font-bold font-outfit text-gray-900">Your Wall of Love</h2>
+                      <p className="text-sm text-gray-500 font-medium">Embed this on your website</p>
+                  </div>
+              </div>
+              <button
+                onClick={() => setShowWallOfLoveModal(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Preview</h3>
+                  <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                      <div className="flex gap-4">
+                          <div className="flex-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
+                              <div className="flex text-yellow-400 text-xs mb-1">★★★★★</div>
+                              <p className="text-xs text-gray-700 italic">"Absolutely amazing product! Changed my life."</p>
+                              <p className="text-[10px] text-gray-500 mt-2 font-medium">— Sarah M.</p>
+                          </div>
+                          <div className="flex-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
+                              <div className="flex text-yellow-400 text-xs mb-1">★★★★★</div>
+                              <p className="text-xs text-gray-700 italic">"Best customer service and top quality."</p>
+                              <p className="text-[10px] text-gray-500 mt-2 font-medium">— Alex J.</p>
+                          </div>
+                      </div>
+                      <div className="text-center mt-3">
+                          <a href="#" className="text-[10px] text-gray-400 hover:text-gray-600 font-semibold uppercase tracking-wider transition-colors">⚡ Powered by OHC</a>
+                      </div>
+                  </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">Embed Code (HTML)</label>
+                <div className="relative">
+                  <textarea
+                    readOnly
+                    className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-xl h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
+                    value={`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`}
+                  />
+                  <div className="absolute top-3 right-3 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setIsGeneratingWallOfLove(true);
+                        setTimeout(() => {
+                           setIsGeneratingWallOfLove(false);
+                        }, 800);
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition-colors shadow-sm"
+                    >
+                      {isGeneratingWallOfLove ? "Refreshing..." : "Refresh"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`);
+                        setWallOfLoveCopied(true);
+                        setTimeout(() => setWallOfLoveCopied(false), 2000);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm ${wallOfLoveCopied ? 'bg-green-500 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                    >
+                      {wallOfLoveCopied ? 'Copied!' : 'Copy Code'}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 font-medium">Paste this code anywhere in your website's HTML to display your top reviews.</p>
+              </div>
             </div>
           </div>
         </div>

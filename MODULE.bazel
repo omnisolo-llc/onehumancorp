@@ -55,6 +55,19 @@ use_repo(go_sdk, "go_sdk")
 
 register_toolchains("@go_sdk//:all")
 
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.12.12",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "docs_pip",
+    python_version = "3.12.12",
+    requirements_lock = "//:docs/requirements_lock.txt",
+)
+use_repo(pip, "docs_pip")
+
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
 single_version_override(
@@ -71,7 +84,9 @@ rust.toolchain(
     edition = "2024",
     extra_target_triples = [
         "aarch64-pc-windows-gnullvm",
+        "aarch64-pc-windows-msvc",
         "x86_64-pc-windows-gnullvm",
+        "x86_64-pc-windows-msvc",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
         "x86_64-apple-darwin",
@@ -112,11 +127,13 @@ crate.from_cargo(
     supported_platform_triples = [
         "aarch64-apple-darwin",
         "aarch64-pc-windows-gnullvm",
+        "aarch64-pc-windows-msvc",
         "aarch64-unknown-linux-gnu",
         "wasm32-unknown-unknown",
         "wasm32-wasip1",
         "x86_64-apple-darwin",
         "x86_64-pc-windows-gnullvm",
+        "x86_64-pc-windows-msvc",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-nixos-gnu",
     ],

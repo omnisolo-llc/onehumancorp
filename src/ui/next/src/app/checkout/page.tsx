@@ -65,7 +65,7 @@ export default function CheckoutPage() {
                 if (!amount) return;
 
                 if (navigator.onLine) {
-                  alert(`Payment of $${amount} successful!`);
+                  alert(`Payment of ${amount} successful!`);
                   router.push('/dashboard');
                 } else {
                   let queue = [];
@@ -81,13 +81,25 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of $${amount} saved locally and will process when reconnected.`);
+                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
                   router.push('/dashboard');
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
               Tap to Pay (Stripe Terminal)
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={() => {
+                alert("Redirecting to Mercado Pago...");
+                setShowSuccessModal(true);
+              }}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              Pay with Mercado Pago
             </button>
           </WithTooltip>
 

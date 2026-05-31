@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: ${{ github.ref_name != 'main' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -23,44 +23,58 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6.0.0
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
+
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}
           repository-cache: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
-            build --color=yes
             build --show_timestamps
 
       - name: Build docs site
         run: bazelisk run //:docs_build
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5.0.0
         with:
           path: site
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5.0.0

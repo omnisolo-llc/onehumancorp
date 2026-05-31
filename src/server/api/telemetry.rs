@@ -44,6 +44,40 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .unwrap_or(item.value as i64);
 
                 crate::telemetry::record_token_usage(agent_id, role, model, t_type, count);
+
+                // Track cost dynamically
+                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                if is_telemetry_enabled {
+                    let cost_per_1k = match model {
+                        "claude-3-opus" => 15.0,
+                        "claude-3-sonnet" => 3.0,
+                        "claude-3-haiku" => 0.25,
+                        "gpt-4" => 30.0,
+                        "gpt-4o" => 5.0,
+                        "gpt-3.5-turbo" => 0.5,
+                        _ => 1.0,
+                    };
+                    let cost_usd = (count as f64 / 1000.0) * cost_per_1k;
+
+                    let model_string = model.to_string();
+                    let tenant_id = item
+                        .labels
+                        .get("tenant_id")
+                        .or_else(|| item.labels.get("organization_id"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown_tenant")
+                        .to_string();
+                    tokio::spawn(async move {
+                        let pool = crate::db::get_pool();
+                        let _ = crate::telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
+                        let cost_cents = (cost_usd * 100.0).round() as i64;
+                        let labels_cents = serde_json::json!({
+                            "tenant_id": tenant_id.clone(),
+                            "model": model_string.clone()
+                        });
+                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                    });
+                }
             }
             "agent_api_call" => {
                 let agent_id = item
@@ -58,6 +92,29 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .unwrap_or("");
                 let api = item.labels.get("api").and_then(Value::as_str).unwrap_or("");
                 crate::telemetry::record_agent_api_call(agent_id, role, api);
+
+                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                if is_telemetry_enabled {
+                    let cost_usd = 0.001; // Example fixed cost for external API call
+                    let api_string = api.to_string();
+                    let tenant_id = item
+                        .labels
+                        .get("tenant_id")
+                        .or_else(|| item.labels.get("organization_id"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown_tenant")
+                        .to_string();
+                    tokio::spawn(async move {
+                        let pool = crate::db::get_pool();
+                        let _ = crate::telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
+                        let cost_cents = (cost_usd * 100.0).round() as i64;
+                        let labels_cents = serde_json::json!({
+                            "tenant_id": tenant_id.clone(),
+                            "api": api_string.clone()
+                        });
+                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                    });
+                }
             }
             "agent_api_error" => {
                 let agent_id = item

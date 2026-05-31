@@ -4,11 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AgentsPage() {
-  const [activeTab, setActiveTab] = useState<'departments' | 'feed' | 'approvals'>('departments');
+  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
   const [feed, setFeed] = useState<any[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [workflowName, setWorkflowName] = useState('Branch review');
+  const [workflowTask, setWorkflowTask] = useState('Review the current branch for correctness, security, deployment, and test coverage issues.');
+  const [workflowError, setWorkflowError] = useState('');
+  const [workflowLoading, setWorkflowLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -40,10 +45,56 @@ export default function AgentsPage() {
     setLoading(false);
   };
 
+  const fetchWorkflows = async () => {
+    try {
+      const res = await fetch('/api/agents/workflows');
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflows(data.workflows || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch workflows:', e);
+    }
+  };
+
   useEffect(() => {
     fetchApprovals();
     fetchFeed();
+    fetchWorkflows();
   }, []);
+
+  const createWorkflow = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setWorkflowError('');
+    setWorkflowLoading(true);
+
+    try {
+      const res = await fetch('/api/agents/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: workflowName,
+          workflow: 'ohc_review_branch',
+          task: workflowTask,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setWorkflowError(data.error || 'Workflow could not be created');
+        return;
+      }
+
+      setWorkflows((current) => [data.workflow, ...current.filter((item) => item.id !== data.workflow.id)]);
+      setWorkflowName('Branch review');
+      setWorkflowTask('Review the current branch for correctness, security, deployment, and test coverage issues.');
+      setActiveTab('workflows');
+    } catch (e) {
+      setWorkflowError('Workflow service is unavailable');
+    } finally {
+      setWorkflowLoading(false);
+    }
+  };
 
   const handleDecision = async (id: string, approved: boolean) => {
     setActionLoading(id);
@@ -112,6 +163,12 @@ export default function AgentsPage() {
             My Team
           </button>
           <button
+            onClick={() => setActiveTab('workflows')}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'workflows' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Workflows
+          </button>
+          <button
             onClick={() => setActiveTab('feed')}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'feed' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
@@ -158,6 +215,81 @@ export default function AgentsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+          ) : activeTab === 'workflows' ? (
+            <div className="space-y-4 pb-8">
+              <form onSubmit={createWorkflow} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <div>
+                    <h2 className="font-bold text-gray-900 font-outfit text-xl">Create Workflow</h2>
+                    <p className="text-sm text-gray-500 mt-1">Send a multi-agent workflow to the backend agent CLI.</p>
+                  </div>
+                  <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap">RunWorkflow</span>
+                </div>
+
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2" htmlFor="workflow-name">
+                  Name
+                </label>
+                <input
+                  id="workflow-name"
+                  value={workflowName}
+                  onChange={(event) => setWorkflowName(event.target.value)}
+                  className="w-full min-h-[44px] rounded-xl border border-gray-200 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Branch review"
+                />
+
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mt-4 mb-2" htmlFor="workflow-task">
+                  Task
+                </label>
+                <textarea
+                  id="workflow-task"
+                  value={workflowTask}
+                  onChange={(event) => setWorkflowTask(event.target.value)}
+                  className="w-full min-h-[112px] rounded-xl border border-gray-200 p-3 text-sm text-gray-900 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="Describe what the workflow should review"
+                />
+
+                {workflowError && (
+                  <p className="mt-3 text-sm font-medium text-red-600">{workflowError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={workflowLoading}
+                  className={`mt-4 w-full min-h-[44px] rounded-xl font-semibold text-sm transition-colors shadow-sm ${workflowLoading ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                >
+                  {workflowLoading ? 'Creating...' : 'Create & Run Workflow'}
+                </button>
+              </form>
+
+              {workflows.length === 0 ? (
+                <div className="bg-white rounded-[16px] border border-dashed border-gray-300 p-5 text-center">
+                  <p className="text-gray-500 text-sm">No workflows yet.</p>
+                </div>
+              ) : (
+                workflows.map((workflow) => (
+                  <div key={workflow.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-bold text-gray-900 font-outfit text-lg">{workflow.name}</h3>
+                        <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mt-1">{workflow.workflow}</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide ${workflow.status === 'failed' ? 'bg-red-100 text-red-700' : workflow.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {workflow.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 mt-3 leading-relaxed">{workflow.task}</p>
+                    <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Backend CLI</p>
+                      <p className="text-xs text-gray-700 break-words">{workflow.command || 'Preparing command...'}</p>
+                    </div>
+                    {workflow.error && (
+                      <p className="mt-3 text-sm font-medium text-red-600">{workflow.error}</p>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
           ) : activeTab === 'feed' ? (
@@ -223,16 +355,16 @@ export default function AgentsPage() {
                         <button
                           onClick={() => handleDecision(req.id, false)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                         >
-                          {actionLoading === req.id ? '...' : 'Reject'}
+                          {actionLoading === req.id ? '...' : 'Edit Draft'}
                         </button>
                         <button
                           onClick={() => handleDecision(req.id, true)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                         >
-                          {actionLoading === req.id ? '...' : 'Approve'}
+                          {actionLoading === req.id ? '...' : 'Approve & Send'}
                         </button>
                       </div>
                     </div>

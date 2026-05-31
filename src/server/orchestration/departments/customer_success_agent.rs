@@ -44,9 +44,36 @@ impl Department for CustomerSuccessAgent {
         };
 
         if event.event_type == "agent:customer_success:approved" {
-            // Actual logic to send the message when approved.
-            // For now, we simulate sending the message.
-            tracing::info!("Simulating sending approved message for tenant");
+            let payload = &event.payload;
+            let original = payload.get("original_payload");
+            let message = if let Some(orig) = original {
+                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
+            } else {
+                "Unknown response"
+            };
+            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+
+            let content = format!("Sent response to customer: {}", message);
+
+            // Log the action in the agent's memory, handling errors and using proper defaults
+            // Assuming we don't have an embedding service here, we use a zero vector
+            // but properly await and map the error.
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                agent_id: "customer_success_agent".to_string(),
+                content,
+                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
+                source_type: "AGENT_ACTION".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: false,
+                metadata: None,
+            };
+            self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
             return Ok(());
         }
 

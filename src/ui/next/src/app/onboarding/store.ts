@@ -11,8 +11,11 @@ interface OnboardingState {
   businessType: string;
   categories: string[];
   websiteTemplate: string;
+  domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
+  aiAgents: string[];
+  aiAutoRespond: boolean;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -25,8 +28,11 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
+  setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setAiAgents: (agents: string[]) => void;
+  setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
@@ -44,8 +50,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
+  domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
+      aiAgents: [],
+      aiAutoRespond: true,
       isLoading: false,
       error: '',
       startResult: null,
@@ -58,8 +67,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
+  setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setAiAgents: (aiAgents) => set({ aiAgents }),
+      setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),

@@ -1,49 +1,29 @@
 import React from 'react';
-import fs from 'fs';
-import path from 'path';
+import Link from 'next/link';
 
 export default function ChangelogPage() {
-  // Fix the path to point to root correctly
-  const changelogPath = path.join(process.cwd(), '..', '..', '..', 'CHANGELOG.md');
-  let changelogContent = '';
-  try {
-    changelogContent = fs.readFileSync(changelogPath, 'utf8');
-  } catch (err) {
-    changelogContent = "";
-  }
-
-  // Very basic markdown parsing for display
-  let sections = changelogContent.split('## ').filter(Boolean).map(section => {
-    const lines = section.split('\n');
-    const version = lines[0].trim();
-    const contentLines = lines.slice(1).filter(l => l.trim().length > 0);
-    return { version, contentLines };
-  });
-
-  if (sections.length === 0 || sections[0].version === "No changelog found.") {
-    sections = [
-      {
-        version: "Version 1.0 (Latest)",
-        contentLines: [
-          "### 🌟 New Features",
-          "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
-          "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
-          "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
-          "### 🛠️ Improvements",
-          "- Faster loading times for product images.",
-          "- Simplified checkout process for your customers."
-        ]
-      }
-    ];
-  }
+  const sections = [
+    {
+      version: "Version 1.0 (Latest)",
+      contentLines: [
+        "### 🌟 New Features",
+        "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
+        "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
+        "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
+        "### 🛠️ Improvements",
+        "- Faster loading times for product images.",
+        "- Simplified checkout process for your customers."
+      ]
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit">Release Notes & Changelog</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center">Release Notes & Changelog</h1>
         <div className="space-y-8">
           {sections.map((section, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-xl shadow-sm border border-gray-100/50 transition-all">
               <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">{section.version}</h2>
               <div className="space-y-2">
                 {section.contentLines.map((line, lidx) => {
@@ -57,10 +37,16 @@ export default function ChangelogPage() {
                 })}
               </div>
               {idx === 0 && (
-                <img src="/dashboard_with_charts.png" alt="Screenshot" className="rounded-xl mt-4 max-w-full" />
+                <img src="/dashboard_with_charts.png" alt="Screenshot" className="rounded-xl mt-4 max-w-full shadow-lg border border-gray-200/50" />
               )}
             </div>
           ))}
+
+          <div className="mt-8 text-center">
+            <a href="https://onehumancorp.com/changelog" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline bg-blue-50/80 backdrop-blur-md px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm">
+              Read the full technical changelog on our website →
+            </a>
+          </div>
         </div>
       </div>
     </div>

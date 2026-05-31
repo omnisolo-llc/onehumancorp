@@ -12,6 +12,55 @@ type Step = {
   message: string;
 };
 
+type HelpArticle = { title: string; desc: string; link?: string };
+type HelpVideo = { id: number; title: string; duration: string };
+type HelpTab = "center" | "chat" | "videos" | "whatsnew";
+type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
+
+const helpTabs = [
+  { id: "center", label: "Help" },
+  { id: "chat", label: "Ask AI" },
+  { id: "videos", label: "Videos" },
+  { id: "whatsnew", label: "New" }
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isSafeLink(url: unknown): url is string {
+  return typeof url === "string" && (url.startsWith("/") || url.startsWith("https://") || url.startsWith("http://"));
+}
+
+function normalizeArticles(data: unknown): HelpArticle[] {
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((item) => {
+    if (!isRecord(item) || typeof item.title !== "string" || typeof item.desc !== "string") return [];
+    return [{ title: item.title, desc: item.desc, link: isSafeLink(item.link) ? item.link : undefined }];
+  });
+}
+
+function normalizeVideos(data: unknown): HelpVideo[] {
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((item) => {
+    if (!isRecord(item) || typeof item.id !== "number" || typeof item.title !== "string" || typeof item.duration !== "string") return [];
+    return [{ id: item.id, title: item.title, duration: item.duration }];
+  });
+}
+
+function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
+  if (!isRecord(data) || typeof data.reply !== "string" || !data.reply.trim()) {
+    throw new Error("Invalid chat reply");
+  }
+
+  const link = isRecord(data.link) ? data.link : undefined;
+  return {
+    text: data.reply,
+    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
+    linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
+  };
+}
+
 type WalkthroughContextType = {
   startWalkthrough: (steps: Step[]) => void;
   nextStep: () => void;
@@ -97,20 +146,24 @@ export function HelpWidget() {
   const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
-    { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+  const [tab, setTab] = useState<HelpTab>("center");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const nextMessageId = useRef(1);
 
-  const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
+  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
 
   useEffect(() => {
     fetch("/api/help")
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load help articles");
+        return res.json();
+      })
       .then(data => {
-        if (data && data.length > 0) setHelpArticles(data);
+        setHelpArticles(normalizeArticles(data));
       })
       .catch(() => {});
   }, []);
@@ -119,30 +172,37 @@ export function HelpWidget() {
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [videos, setVideos] = useState<HelpVideo[]>([]);
+  const [activeVideo, setActiveVideo] = useState<HelpVideo | null>(null);
 
   useEffect(() => {
     fetch("/api/videos")
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load videos");
+        return res.json();
+      })
       .then(data => {
-        if (data && data.length > 0) setVideos(data);
+        setVideos(normalizeVideos(data));
       })
       .catch(() => {});
   }, []);
 
-  const handleChatSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && chatInput.trim()) {
-      const val = chatInput.trim();
-      setChatInput("");
-      setChatMessages(prev => [...prev, { role: "user", text: val }]);
+  const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const val = chatInput.trim();
+    if (!val) return;
 
-      try {
-        const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-        const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, linkUrl: data.link?.url, linkTitle: data.link?.title }]);
-      } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
-      }
+    setChatInput("");
+    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
+
+    try {
+      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
+      if (!response.ok) throw new Error("Failed to fetch chat reply");
+      const data = await response.json();
+      const reply = normalizeChatReply(data);
+      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
     }
   };
 
@@ -152,7 +212,7 @@ export function HelpWidget() {
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-md text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all"
             aria-label="Help"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -163,20 +223,16 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
-          <div className="flex border-b border-gray-200">
-            {[
-              { id: "center", label: "Help" },
-              { id: "chat", label: "Ask AI" },
-              { id: "videos", label: "Videos" },
-              { id: "whatsnew", label: "New" }
-            ].map((t) => (
+        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
+          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md">
+            {helpTabs.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id as any)}
+                onClick={() => setTab(t.id)}
                 className={`flex-1 py-3 text-sm font-bold transition-all ${
-                  tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"
+                  tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"
                 }`}
+                aria-pressed={tab === t.id}
               >
                 {t.label}
               </button>
@@ -232,14 +288,14 @@ export function HelpWidget() {
             {tab === "chat" && (
               <div className="flex flex-col h-full">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
-                  {chatMessages.map((msg, idx) => {
+                  {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
                         ? "bg-blue-50 text-blue-900 rounded-tl-none"
                         : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
-                      <div key={idx} className={className}>
+                      <div key={msg.id} className={className}>
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
                         {msg.linkUrl && msg.linkTitle && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
@@ -248,23 +304,22 @@ export function HelpWidget() {
                         )}
                       </div>
                     ) : (
-                      <div key={idx} className={className}>{msg.text}</div>
+                      <div key={msg.id} className={className}>{msg.text}</div>
                     );
                   })}
                 </div>
-                <div className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
+                <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
                   <input
                     type="text"
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleChatSubmit}
                     className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
+                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
-                </div>
+                </form>
               </div>
             )}
 
@@ -273,7 +328,7 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -306,6 +361,50 @@ export function HelpWidget() {
                 </WithTooltip>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-[20px] saturate-200 p-4">
+          <div className="bg-black/90 backdrop-blur-md rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start">
+              <h3 className="text-white font-bold text-sm line-clamp-2 drop-shadow-md">{activeVideo.title}</h3>
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 backdrop-blur-md border border-white/10 rounded-full p-1.5 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Fake Video Player area */}
+            <div className="flex-1 flex items-center justify-center relative bg-gradient-to-br from-gray-800 to-black">
+               {/* Simulating a video placeholder background */}
+               <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full scale-150 mix-blend-screen pointer-events-none"></div>
+               <button className="w-16 h-16 bg-white/20 hover:bg-white/30 backdrop-blur-[20px] saturate-200 border border-white/30 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95 group z-20">
+                  <svg className="w-8 h-8 text-white ml-1 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+               </button>
+            </div>
+
+            {/* Controls */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <button className="text-white/80 hover:text-white transition-colors">
+                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                </button>
+                <div className="h-1.5 flex-1 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden cursor-pointer relative group">
+                  <div className="h-full bg-blue-500 w-1/3 relative shadow-[0_0_10px_rgba(59,130,246,0.8)]">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full scale-0 group-hover:scale-100 transition-transform shadow-md"></div>
+                  </div>
+                </div>
+                <div className="text-white/80 text-[10px] font-medium font-inter tabular-nums">
+                  0:00 / {activeVideo.duration}
+                </div>
+                <button className="text-white/80 hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

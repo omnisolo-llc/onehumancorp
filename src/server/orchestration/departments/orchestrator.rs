@@ -117,6 +117,7 @@ pub struct DepartmentOrchestrator {
     memory_repo: Arc<VectorRepository>,
     mesh: Arc<dyn TeammateMesh>,
     action_counter: Counter<u64>,
+    approval_counter: Counter<u64>,
 }
 
 impl DepartmentOrchestrator {
@@ -127,6 +128,7 @@ impl DepartmentOrchestrator {
         };
         let meter = global::meter("ohc.orchestrator");
         let action_counter = meter.u64_counter("agent.actions.total").build();
+        let approval_counter = meter.u64_counter("agent.actions.approvals").build();
         Self {
             db,
             departments: RwLock::new(HashMap::new()),
@@ -135,6 +137,7 @@ impl DepartmentOrchestrator {
             memory_repo,
             mesh,
             action_counter,
+            approval_counter,
         }
     }
 
@@ -197,7 +200,8 @@ impl DepartmentOrchestrator {
                         if !success {
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
-                            let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
+                            let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
+                            let dl_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
                             match &self.db.store {
                                 DbStore::Postgres => {
@@ -319,7 +323,11 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
+                .bind({
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                })
                 .bind(now)
                 .bind(now)
                 .execute(&self.db.pool)
@@ -335,7 +343,11 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
+                .bind({
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                })
                 .bind(now)
                 .bind(now)
                 .execute(pool)
@@ -546,12 +558,24 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
+        let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
+
+        let lock_acquired = self.mesh.acquire_lock(&lock_key, "orchestrator", 60).await;
+        if let Ok(acquired) = lock_acquired {
+            if !acquired {
+                return Err("Failed to acquire lock for approval decision".to_string());
+            }
+        } else {
+            return Err("Error communicating with lock service".to_string());
+        }
+
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
-        let opt_department = match &self.db.store {
+        let mut error_response = None;
+        let opt_dept_payload = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -561,14 +585,28 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let dep = r.get::<String, _>("department");
+                        let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
+                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
+                        Some((dep, payload_val))
                     }
-                    Ok(None) => return Err("Unauthorized".to_string()),
-                    Err(e) => return Err(e.to_string()),
+                    Ok(None) => {
+                        error_response = Some("Unauthorized".to_string());
+                        None
+                    }
+                    Err(e) => {
+                        error_response = Some(e.to_string());
+                        None
+                    }
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -578,19 +616,41 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let dep = r.get::<String, _>("department");
+                        let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
+                        let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        Some((dep, payload_val))
                     }
-                    Ok(None) => return Err("Unauthorized".to_string()),
-                    Err(e) => return Err(e.to_string()),
+                    Ok(None) => {
+                        error_response = Some("Unauthorized".to_string());
+                        None
+                    }
+                    Err(e) => {
+                        error_response = Some(e.to_string());
+                        None
+                    }
                 }
             }
         };
 
-        if approved {
-            if let Some(dep) = opt_department {
+        if let Some(err) = error_response {
+            let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+            return Err(err);
+        }
+
+        if let Some((dep, original_payload)) = opt_dept_payload {
+            let decision_str = if approved { "approved" } else { "rejected" };
+            self.approval_counter.add(1, &[
+                KeyValue::new("tenant_id", tenant_id.to_string()),
+                KeyValue::new("decision", decision_str),
+                KeyValue::new("department", dep.to_string())
+            ]);
+
+            if approved {
                 let payload = serde_json::json!({
                     "request_id": request_id,
-                    "tenant_id": tenant_id
+                    "tenant_id": tenant_id,
+                    "original_payload": original_payload,
                 });
                 let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
                 let topic = format!("agent:{}:approved", dep);
@@ -598,6 +658,7 @@ impl DepartmentOrchestrator {
             }
         }
 
+        let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
         Ok(())
     }
 
@@ -607,6 +668,96 @@ impl DepartmentOrchestrator {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
+
+
+    pub async fn append_to_timeline(&self, event: crate::orchestration::departments::types::TimelineEvent) -> Result<(), String> {
+        let meta_str = event.metadata.map(|v| v.to_string()).unwrap_or_else(|| "{}".to_string());
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_customer_timeline(&self, tenant_id: &str, customer_id: &str, limit: i64) -> Result<Vec<crate::orchestration::departments::types::TimelineEvent>, String> {
+        let mut results = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT $3")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(row.get("created_at")),
+                    });
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(created_at),
+                    });
+                }
+            }
+        }
+        results.reverse();
+        Ok(results)
+    }
 
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())

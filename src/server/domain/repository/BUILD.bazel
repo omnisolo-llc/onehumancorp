@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -61,6 +61,7 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
+        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
@@ -108,4 +109,10 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_domain_repository_unit_test",
+    crate = ":server_domain_repository",
+    edition = "2024",
 )

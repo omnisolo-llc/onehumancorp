@@ -6,6 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
+        "acon_context.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",
@@ -71,12 +72,14 @@ rust_library(
         "observation_masking.rs",
         "output_parser.rs",
         "plane.rs",
+        "plugins.rs",
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",
         "registry.rs",
         "ruflo.rs",
+    "ruflo_plugins.rs",
         "scalable_multi_agent.rs",
         "service.rs",
         "sona_patterns.rs",
@@ -210,6 +213,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "memory_exhaustive_tests",
     "consolidation_worker",
     "ruflo",
+    "ruflo_plugins",
     "observability",
     "output_parser",
     "pubsub",
@@ -301,3 +305,18 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "tool_executor_engine_tests",
+    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin/tools:tools",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde_json",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)

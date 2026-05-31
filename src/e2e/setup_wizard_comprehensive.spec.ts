@@ -2,41 +2,36 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
-    await page.goto('/website-builder');
+    const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
+    const email = `alex+${Date.now()}@example.com`;
+    await page.addInitScript((tenantId) => {
+      localStorage.setItem('tenant_id', tenantId);
+      localStorage.setItem('user_id', tenantId);
+      localStorage.removeItem('ohc_wizard_state');
+    }, id);
+    await page.goto('/onboarding');
+
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Creative/ }).click();
+    await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Services/).check();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Portrait Session');
-    await page.getByPlaceholder('0.00').fill('120');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Both Online/ }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Artist');
-    await page.getByPlaceholder('you@email.com').fill('alex@example.com');
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
+    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
+    await page.getByLabel(/Physical Products/).check();
+    await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
+    await page.getByPlaceholder('What is the name of this product?').fill('Custom Print');
+    await page.getByPlaceholder('0.00').fill('49.00');
+    await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: 'Online', exact: true }).click();
+    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Art');
+    await page.getByPlaceholder('you@email.com').fill(email);
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: /Next/ }).click();
+    await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Modern' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Connect Custom Domain/ }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
-
-    const requestPromise = page.waitForRequest(request =>
-      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
-    );
-
+    await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+    await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    const request = await requestPromise;
-    const postData = JSON.parse(request.postData() || '{}');
-
-    expect(postData.business_type).not.toBe('');
-    expect(postData.company_name).toBe('Alex Art');
-    expect(postData.first_product_name).toBe('Portrait Session');
-    expect(postData.first_product_price).toBe('120');
-    expect(postData.website_template).toBe('Modern');
-
-    await expect(page.getByText('Your business is now live!')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
   });
 });

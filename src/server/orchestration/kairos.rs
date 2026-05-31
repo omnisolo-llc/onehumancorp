@@ -54,21 +54,45 @@ pub struct SharedTask {
     pub updated_at: Option<chrono::DateTime<Utc>>,
 }
 
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::{Counter, Histogram};
+use std::time::Instant;
+
 pub struct KairosOrchestrator {
     pub db: Arc<DB>,
     pub sqlite_mutex: Mutex<()>,
+    transitions_total: Counter<u64>,
+    transition_duration: Histogram<f64>,
 }
 
 impl KairosOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
+        let meter = global::meter("orchestration.kairos");
+        let transitions_total = meter.u64_counter("ohc_kairos_transitions_total").build();
+        let transition_duration = meter.f64_histogram("ohc_kairos_transition_duration_seconds").build();
+
         Self {
             db,
             sqlite_mutex: Mutex::new(()),
+            transitions_total,
+            transition_duration,
+        }
+    }
+
+    fn get_mode(&self) -> &'static str {
+        if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" {
+            "cloud"
+        } else if std::env::var("OHC_HEADLESS").unwrap_or_default() == "true" {
+            "headless"
+        } else {
+            "standalone"
         }
     }
 
 
     pub async fn complete_task(&self, task_id: &str, task_type: &str, agent_id: &str) -> Result<(), KairosError> {
+        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -125,6 +149,14 @@ impl KairosOrchestrator {
                             .await
                             .map_err(KairosError::Database)?;
                     }
+
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "COMPLETED"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;
@@ -181,6 +213,14 @@ impl KairosOrchestrator {
                             .await
                             .map_err(KairosError::Database)?;
                     }
+
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "COMPLETED"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;
@@ -189,6 +229,7 @@ impl KairosOrchestrator {
         }
     }
     pub async fn claim_swarm_task(&self, agent_id: &str) -> Result<Option<SwarmTask>, KairosError> {
+        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -242,6 +283,14 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
+
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "IN_PROGRESS"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
 
                     Ok(Some(SwarmTask {
                         id: id_str,
@@ -310,6 +359,15 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
+
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "IN_PROGRESS"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
+
                     Ok(Some(task))
                 } else {
                     tx.commit().await.map_err(KairosError::Database)?;
@@ -321,6 +379,7 @@ impl KairosOrchestrator {
 
 
     pub async fn submit_for_approval(&self, task_id: &str, tenant_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), KairosError> {
+        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -466,6 +525,7 @@ impl KairosOrchestrator {
     }
 
     pub async fn claim_shared_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, KairosError> {
+        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -476,6 +536,7 @@ impl KairosOrchestrator {
                     SELECT t.id, t.organization_id, t.parent_plan_id, t.title, t.description, t.status, t.assigned_agent_id, t.dependencies::text, t.created_at, t.updated_at
                     FROM shared_tasks t
                     WHERE t.status = 'PENDING' AND t.organization_id = $1
+                    AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                     AND NOT EXISTS (
                         SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) AS dep_id
                         JOIN shared_tasks parent ON parent.id::text = dep_id
@@ -520,6 +581,14 @@ impl KairosOrchestrator {
 
                     tx.commit().await.map_err(KairosError::Database)?;
 
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "IN_PROGRESS"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
+
                     Ok(Some(SharedTask {
                         id,
                         organization_id: r.get("organization_id"),
@@ -549,6 +618,7 @@ impl KairosOrchestrator {
                         SELECT t.id
                         FROM shared_tasks t
                         WHERE t.status = 'PENDING' AND t.organization_id = ?
+                        AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                         AND NOT EXISTS (
                             SELECT 1 FROM json_each(t.dependencies) AS dep_id
                             JOIN shared_tasks parent ON parent.id = dep_id.value
@@ -603,11 +673,109 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
+
+                    self.transitions_total.add(1, &[
+                        KeyValue::new("mode", self.get_mode()),
+                        KeyValue::new("status", "IN_PROGRESS"),
+                    ]);
+                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
+                        KeyValue::new("mode", self.get_mode()),
+                    ]);
+
                     Ok(Some(task))
                 } else {
                     tx.commit().await.map_err(KairosError::Database)?;
                     Ok(None)
                 }
+            }
+        }
+    }
+
+    pub async fn submit_for_approval(&self, task_id: &str, tenant_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), KairosError> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = 'PENDING', proposed_content = $1, action_risk = $2, updated_at = $3 WHERE id = $4 AND organization_id = $5"
+                )
+                .bind(proposed_content)
+                .bind(action_risk)
+                .bind(now)
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = 'PENDING', proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                )
+                .bind(proposed_content)
+                .bind(action_risk)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn approve_task(&self, task_id: &str, tenant_id: &str, approved: bool) -> Result<(), KairosError> {
+        let now = Utc::now();
+        let new_approval_status = if approved { "APPROVED" } else { "REJECTED" };
+        let new_status = if approved { "PENDING" } else { "COMPLETED" };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = $1, status = $2, updated_at = $3 WHERE id = $4 AND organization_id = $5"
+                )
+                .bind(new_approval_status)
+                .bind(new_status)
+                .bind(now)
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = ?, status = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                )
+                .bind(new_approval_status)
+                .bind(new_status)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
             }
         }
     }
@@ -710,6 +878,78 @@ mod tests {
     }
 
     #[tokio::test]
+
+    #[tokio::test]
+    async fn test_kairos_orchestrator_approval_workflow() {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                parent_plan_id TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                assigned_agent_id TEXT,
+                dependencies JSONB DEFAULT '[]',
+                created_at TEXT,
+                updated_at TEXT,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                task_id TEXT,
+                from_state TEXT,
+                to_state TEXT,
+                agent_id TEXT,
+                transitioned_at TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(pool.clone()),
+        });
+
+        let orchestrator = KairosOrchestrator::new(db);
+
+        // Insert task
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('1', 'tenant1', 'Task 1', 'PENDING', '[]')")
+            .execute(&pool).await.unwrap();
+
+        // Submit for approval
+        orchestrator.submit_for_approval("1", "tenant1", "Email content", "HIGH").await.unwrap();
+
+        // Verify task is not claimable while pending
+        let task_blocked = orchestrator.claim_shared_task("tenant1", "agent1").await.unwrap();
+        assert!(task_blocked.is_none());
+
+        // Approve task
+        orchestrator.approve_task("1", "tenant1", true).await.unwrap();
+
+        // Verify state
+        let row: (String, String) = sqlx::query_as("SELECT approval_status, status FROM shared_tasks WHERE id = '1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "APPROVED");
+        assert_eq!(row.1, "PENDING");
+    }
+
+    #[tokio::test]
     async fn test_kairos_orchestrator_sqlite_shared_tasks() {
         let pool = SqlitePoolOptions::new()
             .connect("sqlite::memory:")
@@ -774,77 +1014,7 @@ mod tests {
         assert_eq!(trans.2, "COMPLETED");
     }
 
-    #[tokio::test]
-    async fn test_kairos_orchestrator_approval_workflow() {
-        let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
 
-        sqlx::query(
-            "CREATE TABLE shared_tasks (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT,
-                status TEXT NOT NULL DEFAULT 'PENDING',
-                epic_id TEXT,
-                parent_id TEXT,
-                assigned_agent TEXT,
-                payload TEXT,
-                dependencies TEXT NOT NULL DEFAULT '[]',
-                created_at TEXT,
-                updated_at TEXT,
-                action_risk TEXT,
-                approval_status TEXT,
-                proposed_content TEXT
-            )"
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
-                id TEXT PRIMARY KEY,
-                task_id TEXT,
-                from_state TEXT,
-                to_state TEXT,
-                agent_id TEXT,
-                transitioned_at TEXT
-            )"
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-
-        let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-            store: DbStore::Sqlite(pool.clone()),
-        });
-
-        let orchestrator = KairosOrchestrator::new(db);
-
-        // Insert task
-        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, status, dependencies) VALUES ('1', 'tenant1', 'Task 1', 'PENDING', '[]')")
-            .execute(&pool).await.unwrap();
-
-        // Submit for approval
-        orchestrator.submit_for_approval("1", "tenant1", "Email content", "HIGH").await.unwrap();
-
-        // Verify task is not claimable while pending
-        let task_blocked = orchestrator.claim_shared_task("tenant1", "agent1").await.unwrap();
-        assert!(task_blocked.is_none());
-
-        // Approve task
-        orchestrator.approve_task("1", "tenant1", true).await.unwrap();
-
-        // Verify state
-        let row: (String, String) = sqlx::query_as("SELECT approval_status, status FROM shared_tasks WHERE id = '1'")
-            .fetch_one(&pool).await.unwrap();
-        assert_eq!(row.0, "APPROVED");
-        assert_eq!(row.1, "IN_PROGRESS");
-    }
 
     #[tokio::test]
     async fn test_kairos_orchestrator_pg_paths() {

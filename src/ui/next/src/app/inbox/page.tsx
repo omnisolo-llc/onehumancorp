@@ -44,10 +44,22 @@ export default function InboxPage() {
   ]);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [postContent, setPostContent] = useState('');
+  const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
 
   const generateDraft = () => {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [channelError, setChannelError] = useState<string | null>(null);
+  const [twilioChannels, setTwilioChannels] = useState({
+    whatsapp: true,
+    instagram: true,
+    facebook: true,
+    sms: true,
+  });
 
   const sendReply = (msgId?: number) => {
     let contentToSend = replyInput;
@@ -66,6 +78,21 @@ export default function InboxPage() {
     setEditingId(null);
   };
 
+  const toggleChannel = (key: keyof typeof twilioChannels) => {
+
+    setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSchedulePost = () => {
+    if (!postContent.trim()) return;
+    setScheduledPosts([
+      ...scheduledPosts,
+      { id: Date.now(), content: postContent, date: 'Tomorrow 9:00 AM' }
+    ]);
+    setPostContent('');
+    setShowScheduler(false);
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -73,12 +100,116 @@ export default function InboxPage() {
           &lt; Back
         </Link>
         <h1 className="text-2xl font-bold">Customer Inbox</h1>
-        <div className="ml-auto">
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black inline-block">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
+            title="Channel Settings"
+          >
+            ⚙️
+          </button>
+          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
             Audit Dashboard
           </Link>
         </div>
       </div>
+
+      <button
+        onClick={() => setShowScheduler(true)}
+        className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors mb-4"
+      >
+        Schedule Outbound Post
+      </button>
+
+      {/* Scheduler Modal */}
+      {showScheduler && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Schedule Post</h2>
+              <button
+                onClick={() => setShowScheduler(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <textarea
+              id="post-content"
+              value={postContent}
+              onChange={e => setPostContent(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] mb-4"
+              rows={4}
+              placeholder="What do you want to post?"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowScheduler(false)}
+                className="text-sm font-semibold text-gray-500 hover:text-gray-700 px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSchedulePost}
+                className="bg-[#0066FF] text-white text-sm font-bold px-6 py-2 rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors"
+              >
+                Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scheduledPosts.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Scheduled Posts</h2>
+          {scheduledPosts.map(post => (
+            <div key={post.id} className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-2">
+               <p className="text-sm text-gray-800 mb-1">{post.content}</p>
+               <span className="text-xs font-semibold text-blue-600">📅 {post.date}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
+
+            {channelError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                {channelError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {Object.entries(twilioChannels).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
+                  <button
+                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
         {messages.map(msg => (

@@ -70,8 +70,10 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     onClose();
   };
 
+  if (!targetRect) return null; // Enforce requirement: no generic popups/modals without target
+
   // Calculate bubble position based on targetRect
-  let bubbleStyle: React.CSSProperties = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }; // fallback center
+  let bubbleStyle: React.CSSProperties = {};
   let arrowClass = "";
 
   if (targetRect) {
@@ -131,29 +133,29 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       {/* Speech Bubble */}
       <div
-        className="fixed z-[1000] bg-white rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/50 rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass}`}></div>
+           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white', 'white/80')}`}></div>
         )}
 
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-bold font-outfit text-gray-900 text-lg">{currentStep.title}</h3>
-          <button onClick={handleSkip} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleSkip} className="text-gray-500 hover:text-gray-900 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <p className="text-sm text-gray-600 mb-4 leading-relaxed">{currentStep.content}</p>
+        <p className="text-sm text-gray-700 mb-4 leading-relaxed">{currentStep.content}</p>
 
         <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-400">
+          <span className="text-xs font-medium text-gray-500">
             Step {currentStepIndex + 1} of {steps.length}
           </span>
           <button
             onClick={handleNext}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-transform"
+            className="bg-blue-600/90 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-transform"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>

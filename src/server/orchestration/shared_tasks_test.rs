@@ -38,6 +38,9 @@ async fn test_shared_task_orchestrator() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     let result = orchestrator.create_task(task).await;
@@ -83,7 +86,10 @@ async fn test_shared_task_orchestrator_sqlite() {
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -121,6 +127,9 @@ async fn test_shared_task_orchestrator_sqlite() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     let created_task = orchestrator.create_task(task).await.unwrap();
@@ -155,7 +164,10 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -192,6 +204,9 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
     orchestrator.create_task(task1).await.unwrap();
 
@@ -209,6 +224,9 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
         dependencies: "[\"task_1\"]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
     orchestrator.create_task(task2).await.unwrap();
 
@@ -221,6 +239,103 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
     // After Task 1 is claimed, there are no more tasks to claim (Task 2 is blocked)
     let claimed_none = orchestrator.claim_task("org_123", "agent_2").await.unwrap();
     assert!(claimed_none.is_none());
+}
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_update_and_list_sqlite() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            transitioned_at TEXT
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+
+    let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
+    let db = Arc::new(db);
+    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+
+    let task1 = SharedTaskV4 {
+        id: "task_list_1".to_string(),
+        organization_id: "org_list".to_string(),
+        title: "Test Task List 1".to_string(),
+        description: Some("Description".to_string()),
+        status: "PENDING".to_string(),
+        agent_id: None,
+        priority: "P1".to_string(),
+        payload: Some("{}".to_string()),
+        parent_plan_id: None,
+        dependencies: "[]".to_string(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
+    };
+    orchestrator.create_task(task1).await.unwrap();
+
+    let task2 = SharedTaskV4 {
+        id: "task_list_2".to_string(),
+        organization_id: "org_list".to_string(),
+        title: "Test Task List 2".to_string(),
+        description: Some("Description".to_string()),
+        status: "PENDING".to_string(),
+        agent_id: None,
+        priority: "P1".to_string(),
+        payload: Some("{}".to_string()),
+        parent_plan_id: None,
+        dependencies: "[]".to_string(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
+    };
+    orchestrator.create_task(task2).await.unwrap();
+
+    let tasks = orchestrator.list_tasks("org_list").await.unwrap();
+    assert_eq!(tasks.len(), 2);
+
+    orchestrator.update_task_status("task_list_1", "IN_PROGRESS", Some("agent_list")).await.unwrap();
+    let updated_task = orchestrator.get_task("task_list_1").await.unwrap();
+    assert_eq!(updated_task.status, "IN_PROGRESS");
+
+    orchestrator.complete_task("task_list_2", Some("agent_list")).await.unwrap();
+    let completed_task = orchestrator.get_task("task_list_2").await.unwrap();
+    assert_eq!(completed_task.status, "COMPLETED");
 }
 
 #[tokio::test]
@@ -258,6 +373,9 @@ async fn test_shared_task_orchestrator_dependencies() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     // Test compilation and basic structure. Like `test_shared_task_orchestrator`,
@@ -279,6 +397,9 @@ async fn test_shared_task_orchestrator_dependencies() {
             dependencies: "[\"task_1_pg\"]".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
         };
         orchestrator.create_task(task2).await.unwrap();
 

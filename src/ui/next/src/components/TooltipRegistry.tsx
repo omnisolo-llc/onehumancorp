@@ -21,7 +21,20 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {});
+    fetch("/api/tooltips")
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to load tooltips");
+        return r.json();
+      })
+      .then(data => {
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const safeTooltips = Object.fromEntries(
+            Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+          );
+          setTooltips(safeTooltips);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -29,7 +42,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-gray-900 text-white text-sm font-inter p-3 rounded-lg shadow-xl pointer-events-none w-64 text-center leading-relaxed backdrop-blur-md bg-opacity-95 border border-gray-700 animate-fade-in-up"
+          className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-xl pointer-events-none w-64 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-gray-700/50 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: tooltipRect.left + tooltipRect.width / 2,
@@ -37,7 +50,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-gray-900 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-gray-900/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `
@@ -76,19 +89,26 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   };
 
   // Mobile support: Long press
-  let timer: NodeJS.Timeout;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleTouchStart = () => {
-    timer = setTimeout(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
       handleMouseEnter();
     }, 500); // 500ms for long press
   };
 
   const handleTouchEnd = () => {
-    clearTimeout(timer);
+    if (timerRef.current) clearTimeout(timerRef.current);
     setTimeout(() => {
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
   };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
     <div
@@ -98,6 +118,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onContextMenu={(e) => e.preventDefault()}
       className="inline-block relative cursor-help"
     >
       {children}

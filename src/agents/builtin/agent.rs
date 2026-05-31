@@ -109,6 +109,7 @@ pub struct AgentRunConfig {
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
+    pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
@@ -166,6 +167,7 @@ impl Default for AgentRunConfig {
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
+            acon_config: None,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             enable_observation_masking: true,
@@ -362,12 +364,17 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str(&self.user_instructions);
         }
 
-        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
+        // 5. Conversation History (happens at run loop outside this builder)
+
+        // Lost in the Middle prevention: High-signal context at the very beginning and very end
+        if self.enable_lost_in_the_middle_prevention {
+            if !self.server_system_message.is_empty() {
+                if !combined_system.is_empty() {
+                    combined_system.push_str("\n\n");
+                }
+                combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
+                combined_system.push_str(&self.server_system_message);
             }
-            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-            combined_system.push_str(&self.server_system_message);
         }
 
         combined_system
@@ -1185,6 +1192,7 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                    continue;
                 }
             }
         }
@@ -1309,10 +1317,15 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
+            let llm_clone = self.llm.clone();
+            let model_clone = cfg.model.clone();
+
             read_only_futures.push(async move {
                 let mut retry_count = 0;
+                let mut current_tc = tc_clone.clone();
+                let mut llm_recovery_attempts = 0;
                 loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
+                    match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1325,6 +1338,36 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            if llm_recovery_attempts < max_retries {
+                                llm_recovery_attempts += 1;
+
+                                // Error Handling (Compounding Error Prevention): LLM-recoverable
+                                // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                                let recovery_system = format!(
+                                    "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
+                                    current_tc.name, msg, current_tc.arguments
+                                );
+
+                                let recovery_req = ChatRequest {
+                                    model: model_clone.clone(),
+                                    system: recovery_system,
+                                    messages: vec![Message::user("Please fix the JSON arguments.")],
+                                    tools: vec![],
+                                    max_tokens: 1000,
+                                    temperature: 0.0,
+                                };
+
+                                match llm_clone.chat(recovery_req).await {
+                                    Ok(resp) => {
+                                        let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                                        if let Ok(fixed_args) = serde_json::from_str(json_text) {
+                                            current_tc.arguments = fixed_args;
+                                            continue; // Retry with fixed args
+                                        }
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
                             break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
                         }
                         Err(e) => {
@@ -1388,8 +1431,10 @@ impl Agent {
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
+            let mut current_tc = tc.clone();
+            let mut llm_recovery_attempts = 0;
             let result = loop {
-                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
+                match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1402,6 +1447,36 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        if llm_recovery_attempts < max_retries {
+                            llm_recovery_attempts += 1;
+
+                            // Error Handling (Compounding Error Prevention): LLM-recoverable
+                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let recovery_system = format!(
+                                "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
+                                current_tc.name, msg, current_tc.arguments
+                            );
+
+                            let recovery_req = ChatRequest {
+                                model: cfg.model.clone(),
+                                system: recovery_system,
+                                messages: vec![Message::user("Please fix the JSON arguments.")],
+                                tools: vec![],
+                                max_tokens: 1000,
+                                temperature: 0.0,
+                            };
+
+                            match self.llm.chat(recovery_req).await {
+                                Ok(resp) => {
+                                    let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                                    if let Ok(fixed_args) = serde_json::from_str(json_text) {
+                                        current_tc.arguments = fixed_args;
+                                        continue; // Retry with fixed args
+                                    }
+                                }
+                                Err(_) => {}
+                            }
+                        }
                         break format!("Error executing planned step (LlmRecoverable): {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -1529,6 +1604,7 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                    continue;
                 }
             }
         }
@@ -1641,7 +1717,6 @@ impl Agent {
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
-
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1668,6 +1743,7 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                    continue;
                 }
             }
         }
@@ -1933,21 +2009,8 @@ impl Agent {
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
-                let msg_count = final_messages.len();
-                if msg_count > 3 {
-                    // We preserve the last 2 messages (usually assistant + tool results)
-                    // For older Tool role messages, we strip the raw tool output but keep reasoning
-                    let threshold = msg_count - 2;
-                    for i in 0..threshold {
-                        if final_messages[i].role == Role::Tool {
-                            for tr in &mut final_messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
-                                    tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
-                                }
-                            }
-                        }
-                    }
-                }
+                let acon_cfg = final_cfg.acon_config.clone().unwrap_or_default();
+                crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
@@ -2020,7 +2083,7 @@ impl Agent {
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
-                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Business owner has been notified. Please try again later.".to_string();
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         return Err(err_msg.into());
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {
@@ -2904,7 +2967,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
         }
 
         let mut modified_tc = tc.clone();

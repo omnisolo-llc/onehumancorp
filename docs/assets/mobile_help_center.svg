@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280" role="img" aria-labelledby="title desc">
+  <title id="title">Mobile help center search view</title>
+  <desc id="desc">A mobile layout showing a help center search interface optimized for one-handed use.</desc>
+  <rect width="720" height="1280" fill="#f6f7f9"/>
+  <rect x="120" y="56" width="480" height="1168" rx="48" fill="#263238"/>
+  <rect x="148" y="104" width="424" height="1072" rx="34" fill="#ffffff"/>
+  <rect x="196" y="132" width="328" height="12" rx="6" fill="#52616d"/>
+  <text x="196" y="214" font-family="Arial, sans-serif" font-size="34" fill="#263238">Help Center</text>
+  <rect x="196" y="264" width="328" height="72" rx="18" fill="#eef2f5" stroke="#c9d2da"/>
+  <text x="224" y="309" font-family="Arial, sans-serif" font-size="22" fill="#53616d">Search docs...</text>
+  <rect x="196" y="368" width="328" height="72" rx="18" fill="#0f766e"/>
+  <text x="318" y="413" font-family="Arial, sans-serif" font-size="24" fill="#ffffff">Search</text>
+  <rect x="196" y="500" width="328" height="116" rx="18" fill="#e0f2f1"/>
+  <text x="224" y="548" font-family="Arial, sans-serif" font-size="24" fill="#0f766e">Local documents</text>
+  <text x="224" y="586" font-family="Arial, sans-serif" font-size="20" fill="#53616d">Available offline</text>
+  <rect x="196" y="656" width="328" height="248" rx="18" fill="#ffffff" stroke="#d7dce2"/>
+  <text x="224" y="708" font-family="Arial, sans-serif" font-size="24" fill="#263238">Best match</text>
+  <text x="224" y="756" font-family="Arial, sans-serif" font-size="22" fill="#0f766e">Vanilla cake recipe</text>
+  <rect x="224" y="806" width="252" height="14" rx="7" fill="#d7dce2"/>
+  <rect x="224" y="842" width="220" height="14" rx="7" fill="#d7dce2"/>
+  <rect x="224" y="878" width="188" height="14" rx="7" fill="#d7dce2"/>
+</svg>
