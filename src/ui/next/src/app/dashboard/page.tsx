@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
+import { useWalkthrough } from "../../components/help";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -115,15 +117,13 @@ export default function Dashboard() {
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
   useEffect(() => {
     async function checkMilestones() {
       if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+        if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
@@ -678,9 +678,11 @@ export default function Dashboard() {
                      </div>
                  </div>
                  <WithTooltip id="stripe-setup-tooltip" defaultText="Connect your bank account securely with Stripe to start getting paid.">
+                     <WalkthroughTarget id="stripe-setup-btn">
                      <button id="stripe-setup-btn" className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
                          Complete Stripe Setup
                      </button>
+                     </WalkthroughTarget>
                  </WithTooltip>
              </div>
          </section>

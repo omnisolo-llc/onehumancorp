@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
+import { WalkthroughTarget } from '../../components/Walkthrough';
+import { useWalkthrough } from '../../components/help';
 import ApprovalInbox from './components/ApprovalInbox';
 
 export type ApprovalRequest = {
@@ -29,6 +31,13 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { startWalkthrough } = useWalkthrough();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("walkthrough=activate-agent")) {
+      startWalkthrough([{ targetId: "agent-activity-feed", message: "Here you can monitor and activate your AI Support Agents as they work." }]);
+    }
+  }, [startWalkthrough]);
 
   const fetchApprovals = async () => {
     try {
@@ -114,7 +123,7 @@ export default function TeamPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
+        <WalkthroughTarget id="agent-activity-feed" className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
           {loading ? (
              <div className="flex justify-center py-10">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -132,7 +141,7 @@ export default function TeamPage() {
               );
             })
           )}
-        </div>
+        </WalkthroughTarget>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

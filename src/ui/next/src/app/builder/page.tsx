@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { useBuilderStore } from "./store";
 
 export default function BuilderPage() {
@@ -408,6 +409,7 @@ export default function BuilderPage() {
                     Back
                   </button>
                   <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                    <WalkthroughTarget id="generate-btn">
                     <button
                       id="generate-btn"
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
@@ -421,6 +423,7 @@ export default function BuilderPage() {
                     >
                       Build Store
                     </button>
+                    </WalkthroughTarget>
                   </WithTooltip>
                 </div>
               </div>
