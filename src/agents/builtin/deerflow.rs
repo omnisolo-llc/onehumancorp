@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentRunConfig};
-use crate::types::{ChatRequest, Message, ToolError};
+use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 use std::sync::Arc;
 
@@ -27,13 +27,19 @@ impl ObservabilityBackend for LangfuseMock {
 /// Lead agent decomposes tasks, spawns parallel sub-agents, synthesizes results.
 pub struct DeerFlowOrchestrator {
     pub lead_agent: Arc<Agent>,
+    pub sub_agent_factory: Option<Box<dyn Fn(String) -> Arc<Agent> + Send + Sync>>,
     pub config: AgentRunConfig,
     pub observability: Vec<Arc<dyn ObservabilityBackend>>,
 }
 
 impl DeerFlowOrchestrator {
     pub fn new(lead_agent: Arc<Agent>, config: AgentRunConfig) -> Self {
-        Self { lead_agent, config, observability: vec![] }
+        Self { lead_agent, sub_agent_factory: None, config, observability: vec![] }
+    }
+
+    pub fn with_factory(mut self, factory: impl Fn(String) -> Arc<Agent> + Send + Sync + 'static) -> Self {
+        self.sub_agent_factory = Some(Box::new(factory));
+        self
     }
 
     pub fn with_observability(mut self, backend: Arc<dyn ObservabilityBackend>) -> Self {
@@ -46,7 +52,7 @@ impl DeerFlowOrchestrator {
 
         // Step 1: Decompose task
         let decompose_prompt = format!(
-            "You are the lead agent. Decompose the following task into independent sub-tasks that can be executed in parallel. \n\
+            "You are the lead agent. Decompose the following task into independent sub-tasks that can be executed in parallel.\n\
             Return a JSON array of strings, where each string is a sub-task description.\n\nTask: {}",
             task
         );
@@ -54,10 +60,19 @@ impl DeerFlowOrchestrator {
         let mut on_event = |_| {};
         let subtasks_json = self.lead_agent.run(&self.config, &decompose_prompt, &mut on_event).await?;
 
-        let subtasks: Vec<String> = serde_json::from_str(&subtasks_json).unwrap_or_else(|_| {
-            // Fallback if not valid JSON
-            vec![task.to_string()]
-        });
+        // Extract json array if it's wrapped in markdown
+        let mut clean_json = subtasks_json.trim();
+        if clean_json.starts_with("```json") {
+            clean_json = clean_json.trim_start_matches("```json");
+        } else if clean_json.starts_with("```") {
+            clean_json = clean_json.trim_start_matches("```");
+        }
+        clean_json = clean_json.trim_end_matches("```").trim();
+
+        let subtasks: Vec<String> = match serde_json::from_str(clean_json) {
+            Ok(t) => t,
+            Err(_) => vec![task.to_string()], // Fallback if not valid JSON
+        };
 
         if subtasks.is_empty() {
             return Ok("No subtasks generated.".to_string());
@@ -65,8 +80,13 @@ impl DeerFlowOrchestrator {
 
         // Step 2: Spawn parallel sub-agents
         let mut futures = Vec::new();
-        for subtask in subtasks {
-            let agent_clone = self.lead_agent.clone();
+        for (i, subtask) in subtasks.into_iter().enumerate() {
+            let agent_clone = if let Some(factory) = &self.sub_agent_factory {
+                (factory)(format!("SubAgent-{}", i))
+            } else {
+                self.lead_agent.clone()
+            };
+
             let config_clone = self.config.clone();
 
             futures.push(tokio::spawn(async move {
@@ -180,5 +200,24 @@ mod tests {
 
         let was_recorded = *recorded_flag.lock().unwrap();
         assert!(was_recorded, "Observability backend should have been called");
+    }
+
+    #[tokio::test]
+    async fn test_deerflow_subagent_factory() {
+        let llm = Arc::new(MockDeerFlowLlm { call_count: Mutex::new(0) });
+        let lead_agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let factory = |_name: String| {
+            let sub_llm = Arc::new(MockDeerFlowLlm {
+                call_count: Mutex::new(2), // Force to return "Subagent executed subtask"
+            });
+            Arc::new(Agent::new(sub_llm as Arc<dyn LlmClient>, vec![]))
+        };
+
+        let orchestrator = DeerFlowOrchestrator::new(lead_agent, config).with_factory(factory);
+        let result = orchestrator.orchestrate("Test factory task").await.unwrap();
+
+        assert_eq!(result, "Final synthesized result");
     }
 }
