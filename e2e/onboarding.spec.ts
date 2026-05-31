@@ -79,7 +79,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     // Click generate, expect validation failure message
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await generateBtn.click();
-    await expect(page.getByText('Business name must be at least 3 characters')).toBeVisible();
+    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
   });
 
   // Test 3: Validate missing location blocks progression
