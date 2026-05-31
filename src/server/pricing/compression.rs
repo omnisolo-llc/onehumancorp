@@ -31,17 +31,24 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
+use std::sync::OnceLock;
+
+static STOP_WORDS: OnceLock<std::collections::HashSet<&'static str>> = OnceLock::new();
+
 pub fn reduce_tokens(data: &str) -> String {
-    let stop_words = [
-        "a", "an", "the", "is", "are",
-        "and", "or", "but", "in", "on",
-        "at", "to", "for", "with", "by",
-        "about", "as", "of",
-    ];
+    let stop_words = STOP_WORDS.get_or_init(|| {
+        [
+            "a", "an", "the", "is", "are",
+            "and", "or", "but", "in", "on",
+            "at", "to", "for", "with", "by",
+            "about", "as", "of",
+        ].iter().cloned().collect()
+    });
 
     data.split_whitespace()
         .filter(|word| {
-            !stop_words.iter().any(|&sw| word.eq_ignore_ascii_case(sw))
+            let clean_word = word.to_lowercase();
+            !stop_words.contains(clean_word.as_str())
         })
         .collect::<Vec<&str>>()
         .join(" ")
@@ -52,17 +59,11 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     if max_words == 0 {
         return "".to_string();
     }
-    let mut words = data.split_whitespace();
-    let mut count = 0;
-    while let Some(word) = words.next() {
-        count += 1;
-        let word_start = word.as_ptr() as usize - data.as_ptr() as usize;
-        let end_idx = word_start + word.len();
-        if count == max_words {
-            return data[..end_idx].to_string();
-        }
+    let words: Vec<&str> = data.split_whitespace().collect();
+    if words.len() <= max_words {
+        return data.to_string();
     }
-    data.to_string()
+    words[..max_words].join(" ")
 }
 
 pub fn minify_json_prompt(data: &str) -> String {
