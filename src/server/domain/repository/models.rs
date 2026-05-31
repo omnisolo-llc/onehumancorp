@@ -87,6 +87,21 @@ pub struct Product {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProductVariant {
+    pub id: String,
+    pub product_id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub sku: Option<String>,
+    pub price_cents: Option<i64>,
+    pub inventory_count: Option<i32>,
+    pub options: Option<sqlx::types::Json<serde_json::Value>>,
+    pub is_active: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Order {
     pub id: String,
     pub tenant_id: String,
