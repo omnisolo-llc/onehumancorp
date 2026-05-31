@@ -101,9 +101,9 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json, COALESCE(is_subscription, FALSE) as is_subscription, COALESCE(subscription_interval, '') as subscription_interval FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
-                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata, COALESCE(is_subscription, FALSE) as is_subscription, COALESCE(subscription_interval, '') as subscription_interval FROM products WHERE organization_id = $1 LIMIT 10"
                 };
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -129,6 +129,8 @@ impl DashboardService for MyDashboardService {
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                         }
                                     },
+                                    is_subscription: r.try_get("is_subscription").unwrap_or(false),
+                                    subscription_interval: r.try_get("subscription_interval").unwrap_or_default(),
                                 };
                                 results.push(p);
                             }
@@ -155,6 +157,8 @@ impl DashboardService for MyDashboardService {
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                         }
                                     },
+                                    is_subscription: r.try_get("is_subscription").unwrap_or(false),
+                                    subscription_interval: r.try_get("subscription_interval").unwrap_or_default(),
                                 };
                                 results.push(p);
                             }
@@ -303,6 +307,8 @@ impl DashboardService for MyDashboardService {
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
                     currency: String::new(),
+                    is_subscription: p.is_subscription,
+                    subscription_interval: p.subscription_interval.clone(),
                     ..p
                 })
                 .collect()

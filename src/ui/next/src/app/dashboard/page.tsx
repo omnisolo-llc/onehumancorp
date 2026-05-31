@@ -46,6 +46,8 @@ export default function Dashboard() {
   const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
   const [newItemType, setNewItemType] = useState<string>('product');
+  const [isSubscription, setIsSubscription] = useState<boolean>(false);
+  const [subscriptionInterval, setSubscriptionInterval] = useState<string>('month');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
@@ -115,28 +117,6 @@ export default function Dashboard() {
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
-  useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
-      try {
-        const res = await fetch("/api/v1/growth/milestones/check");
-        const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem("10th_order_milestone_shown", "true");
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-  }, []);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
@@ -1257,6 +1237,41 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Active Subscribers Snapshot */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Active Subscribers</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                        <span className="text-xs font-medium text-blue-600">MRR: $450.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm rounded-xl flex items-center justify-between transition-all hover:bg-white/80">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">JD</div>
+                        <div>
+                            <p className="font-semibold text-gray-900">Jane Doe</p>
+                            <p className="text-sm text-gray-500">Premium Plan • $45/mo</p>
+                        </div>
+                    </div>
+                    <button className="px-3 py-1.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">Pause Subscription</button>
+                </div>
+                <div className="p-4 bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm rounded-xl flex items-center justify-between transition-all hover:bg-white/80">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">MS</div>
+                        <div>
+                            <p className="font-semibold text-gray-900">Michael Smith</p>
+                            <p className="text-sm text-gray-500">Starter Box • $15/mo</p>
+                        </div>
+                    </div>
+                    <button className="px-3 py-1.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">Pause Subscription</button>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Interactive Trial Extension */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1550,6 +1565,32 @@ export default function Dashboard() {
                         <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
                     </div>
                 )}
+
+                <div className="pt-4 border-t border-gray-100">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={isSubscription}
+                            onChange={(e) => setIsSubscription(e.target.checked)}
+                            className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm font-medium text-gray-900">Offer as Subscription</span>
+                    </label>
+                    {isSubscription && (
+                        <div className="mt-3 ml-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Billing Frequency</label>
+                            <select
+                                value={subscriptionInterval}
+                                onChange={(e) => setSubscriptionInterval(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            >
+                                <option value="week">Weekly</option>
+                                <option value="month">Monthly</option>
+                                <option value="year">Yearly</option>
+                            </select>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <button

@@ -389,7 +389,18 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        is_subscription BOOLEAN DEFAULT FALSE,
+                        subscription_interval TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS subscriptions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        customer_id TEXT,
+                        product_id TEXT,
+                        status TEXT,
+                        current_period_end BIGINT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,

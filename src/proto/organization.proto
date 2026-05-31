@@ -47,6 +47,8 @@ message Product {
   string currency = 6;
   string fulfillment_strategy = 7;
   string metadata_json = 8;
+  bool is_subscription = 9;
+  string subscription_interval = 10;
 }
 
 message OnboardingRequest {

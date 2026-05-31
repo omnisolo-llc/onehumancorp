@@ -31,6 +31,14 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        self.create_checkout_session_internal(_price_id, customer_id, amount_usd, false).await
+    }
+
+    pub async fn create_subscription_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        self.create_checkout_session_internal(_price_id, customer_id, amount_usd, true).await
+    }
+
+    async fn create_checkout_session_internal(&self, _price_id: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
@@ -41,12 +49,14 @@ impl StripeClient {
         // Use PaymentRouter to optimize method
         let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
 
+        let sub_suffix = if is_subscription { "_subscription" } else { "" };
+
         match pm {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
-                Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
+                Ok(format!("https://checkout.stripe.com/c/pay/cs_test_ach...{}", sub_suffix))
             },
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
-                Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+                Ok(format!("https://checkout.stripe.com/c/pay/cs_test_...{}", sub_suffix))
             },
             crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
                 // Return razorpay checkout dummy link here since routing was updated

@@ -152,10 +152,51 @@ pub async fn stripe_webhook_handler(
             let tenant_id_opt = obj.get("customer")
                 .and_then(|id| id.as_str());
 
-            if let Some(_tenant_id) = tenant_id_opt {
+            if let Some(tenant_id) = tenant_id_opt {
                 // Trigger SMS notification
+                let t_id = tenant_id.to_string();
                 tokio::spawn(async move {
                     let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
+                });
+
+                // Trigger Customer Success Agent Dunning flow via inbox
+                let t_id2 = tenant_id.to_string();
+                let webhook_state_clone = webhook_state.clone();
+                tokio::spawn(async move {
+                    let msg_id = uuid::Uuid::new_v4().to_string();
+                    let content = "System alert: A recurring payment has failed. Please contact the customer and request updated payment details to avoid subscription cancellation.";
+                    match &webhook_state_clone.db.store {
+                        DbStore::Sqlite(pool) => {
+                            if let Err(e) = sqlx::query(
+                                r#"
+                                INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                                VALUES ('customer_success', ?, ?, 'system', 'customer_success', 'dunning_flow', ?)
+                                "#
+                            )
+                            .bind(&t_id2)
+                            .bind(msg_id)
+                            .bind(content)
+                            .execute(pool)
+                            .await {
+                                tracing::error!("Failed to trigger dunning flow: {:?}", e);
+                            }
+                        }
+                        DbStore::Postgres => {
+                            if let Err(e) = sqlx::query(
+                                r#"
+                                INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                                VALUES ('customer_success', $1, $2, 'system', 'customer_success', 'dunning_flow', $3)
+                                "#
+                            )
+                            .bind(&t_id2)
+                            .bind(msg_id)
+                            .bind(content)
+                            .execute(&webhook_state_clone.db.pool)
+                            .await {
+                                tracing::error!("Failed to trigger dunning flow: {:?}", e);
+                            }
+                        }
+                    }
                 });
             }
             StatusCode::OK.into_response()
