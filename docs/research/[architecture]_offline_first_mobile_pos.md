@@ -28,22 +28,16 @@ erDiagram
 ### UI Wireframes & Mobile UX Flow (375px)
 *   **Customer/Merchant View (OHC Mobile App - 375px):**
     *   **Action:** Fatima is at a festival, offline. A customer taps their card on her phone.
-    *   **Payment Screen:** A clean, Unifi-style screen showing the amount. Upon tap, a large, satisfying green checkmark appears instantly. No loading spinners.
-    *   **Offline Indicator:** A subtle Translucent Glass pill at the top: "Saved offline. Will sync when connected." (Passes the Grandmother Test - completely reassuring).
-    *   **Background Sync:** When she gets home, the app silently syncs the transactions in the background.
-
-### Key Design Decisions
-*   **Offline-First Paradigm:** The UI must always assume success for reads and writes. Network requests are an asynchronous side-effect, not a blocker for the UI.
-*   **Secure Local Storage:** Offline transactions must be encrypted locally using hardware-backed keystores on the device before being placed in the local queue.
-*   **Idempotent Sync:** The sync engine must ensure transactions are idempotent to prevent double-charging if a network drop occurs during sync.
-*   **Zero Trust & Multi-Tenancy:** The sync engine authenticates via SPIFFE/SPIRE identity, ensuring the offline transactions are strictly bound to the specific merchant's tenant ID and cannot cross boundaries.
+    *   **Feedback:** An immediate, satisfying haptic vibration and a large green checkmark appear.
+    *   **Offline Indicator:** A subtle, non-alarming indicator (e.g., a small grey sync icon) shows that the transaction is queued locally. No technical errors are shown.
+    *   **Reconnect:** Once service returns, the sync icon disappears, and the Finance Agent sends a silent push notification confirming the batch sync.
 
 ### AI Agent Integration Points
-*   **Finance Agent:** Monitors synced batches, reconciles offline transactions with the payment processor, and sends a daily summary ("You processed 45 offline payments yesterday successfully").
-*   **Operations Agent:** If an offline transaction fails to authorize upon syncing (e.g., card declined later), the Operations Agent attempts to recover funds or notifies the merchant cleanly without technical jargon.
+*   **Finance & Payments Agent:** Reconciles offline transactions with the central ledger once synced. If an offline payment is later declined (a known risk of offline POS), the Finance Agent proactively messages the merchant with a clear, jargon-free explanation and automatically initiates the retry/recovery flow.
 
 ## Implementation Prompt
-Implement the Offline-First Mobile POS & Tap-to-Pay Engine for OneHumanCorp. The system must allow merchants to seamlessly accept NFC Tap-to-Pay transactions directly on their mobile devices (iOS/Android) even without an active internet connection. Focus on building a highly resilient local queuing mechanism that encrypts and stores transactions securely on the device, and an intelligent sync engine that automatically batches and transmits these transactions to the core ledger once connectivity is restored. Ensure strict multi-tenant isolation and idempotent processing to guarantee zero double-charges. The user experience must be instantaneous and completely mask network latency or drops from the merchant. Acceptance criteria include zero lost offline transactions across device reboots and successful background sync upon network recovery.
+**To Implementer Agent:**
+Implement the offline-first Tap-to-Pay engine for the OHC mobile app. Integrate with Apple/Android native NFC payment APIs. Build a robust local SQLite/IndexedDB queue to securely store encrypted transaction data when offline. Develop the background synchronization worker that automatically flushes the queue to the OHC API Gateway upon network reconnection. Implement idempotent processing on the backend to prevent duplicate charges. Ensure the UI provides immediate optimistic feedback (haptics, visual success) regardless of network state.
 
 ## Priority
 P0

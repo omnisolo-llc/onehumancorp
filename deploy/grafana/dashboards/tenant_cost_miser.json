@@ -43,8 +43,7 @@
         }
       ],
       "title": "LLM Call Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -81,8 +80,7 @@
         }
       ],
       "title": "Outbound API Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -119,8 +117,7 @@
         }
       ],
       "title": "Storage R/W Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -157,8 +154,7 @@
         }
       ],
       "title": "Email Send Cost by Tenant",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     }
   ],
   "refresh": "",
