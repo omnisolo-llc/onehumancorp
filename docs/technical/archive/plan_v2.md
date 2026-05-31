@@ -95,7 +95,7 @@
    import "os"
 
    func NewBlobProvider() BlobProvider {
-       if os.Getenv("OHC_STANDALONE_MODE") == "true" {
+       if os.Getenv("OHC_STANDALONE") == "true" {
            return NewLocalBlobProvider()
        }
        return NewS3BlobProvider()
@@ -134,13 +134,13 @@
    )
 
    func TestFactory(t *testing.T) {
-       os.Setenv("OHC_STANDALONE_MODE", "true")
+       os.Setenv("OHC_STANDALONE", "true")
        provider := NewBlobProvider()
        if _, ok := provider.(*LocalBlobProvider); !ok {
            t.Errorf("expected LocalBlobProvider")
        }
 
-       os.Unsetenv("OHC_STANDALONE_MODE")
+       os.Unsetenv("OHC_STANDALONE")
        os.Setenv("OHC_MULTITENANT", "true")
        provider2 := NewBlobProvider()
        if _, ok := provider2.(*S3BlobProvider); !ok {

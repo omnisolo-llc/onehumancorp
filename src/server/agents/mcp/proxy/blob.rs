@@ -58,7 +58,7 @@ pub struct S3BlobProvider {
 
 impl S3BlobProvider {
     pub fn new() -> Self {
-        let endpoint = env::var("OHC_S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
+        let endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
         Self {
             bucket: "ohc-multi-tenant-blobs".to_string(),
             endpoint,
@@ -96,7 +96,7 @@ impl BlobProvider for S3BlobProvider {
 }
 
 pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
-    let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+    let is_standalone = env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
     let is_multitenant = env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
 
     if is_multitenant && !is_standalone {
@@ -193,7 +193,7 @@ mod tests {
     fn test_create_blob_provider() {
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", None::<&str>),
+                ("OHC_STANDALONE", None::<&str>),
                 ("OHC_MULTITENANT", None::<&str>),
             ],
             || {
@@ -203,7 +203,7 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", None::<&str>),
+                ("OHC_STANDALONE", None::<&str>),
                 ("OHC_MULTITENANT", Some("true")),
             ],
             || {
@@ -213,7 +213,7 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_STANDALONE", Some("true")),
                 ("OHC_MULTITENANT", Some("true")),
             ],
             || {

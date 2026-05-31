@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_buffer_metric_respects_standalone() {
-        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+        temp_env::with_vars(vec![("STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
@@ -250,7 +250,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        // Ensure OHC_STANDALONE_MODE is true. Telemetry should be ignored
+        // Ensure STANDALONE_MODE is true. Telemetry should be ignored
 
         let labels = json!({"user_id": "standalone_test"});
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
@@ -278,7 +278,8 @@ mod tests {
     fn test_init_telemetry_standalone_opt_out() {
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_STANDALONE", Some("true")),
+                ("STANDALONE_MODE", Some("true")),
                 ("OHC_TELEMETRY_ENABLED", Some("false")),
                 ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
                 ("OHC_SQLITE_KEY", Some("test-key")),
@@ -287,7 +288,7 @@ mod tests {
                 let config = ::server_config::load().unwrap();
 
                 // Assert that the config logic matches the policy:
-                // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
+                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
                 let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, false);
@@ -299,7 +300,8 @@ mod tests {
     fn test_init_telemetry_standalone_opt_in() {
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_STANDALONE", Some("true")),
+                ("STANDALONE_MODE", Some("true")),
                 ("OHC_TELEMETRY_ENABLED", Some("true")),
                 ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
                 ("OHC_SQLITE_KEY", Some("test-key")),
@@ -307,7 +309,7 @@ mod tests {
             || {
                 let config = ::server_config::load().unwrap();
 
-                // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
+                // If STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = config.telemetry_enabled;
 
                 assert_eq!(should_start_telemetry, true);
