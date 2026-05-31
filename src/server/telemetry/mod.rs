@@ -247,6 +247,8 @@ static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static OHC_SYNC_LATENCY_SECONDS: OnceLock<Histogram<f64>> = OnceLock::new();
+static OHC_SYNC_PAYLOAD_BYTES: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -284,6 +286,27 @@ pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
             .build()
     })
 }
+
+pub fn get_sync_latency_histogram() -> &'static Histogram<f64> {
+    OHC_SYNC_LATENCY_SECONDS.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .f64_histogram("ohc_sync_latency_seconds")
+            .with_description("Latency for OHC Hybrid Architecture sync operations in seconds")
+            .build()
+    })
+}
+
+pub fn get_sync_payload_size_histogram() -> &'static Histogram<f64> {
+    OHC_SYNC_PAYLOAD_BYTES.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .f64_histogram("ohc_sync_payload_bytes")
+            .with_description("Payload size for OHC Hybrid Architecture sync operations in bytes")
+            .build()
+    })
+}
+
 
 pub fn get_agent_execution_traces_total() -> &'static Counter<u64> {
     AGENT_EXECUTION_TRACES_TOTAL.get_or_init(|| {
@@ -641,11 +664,19 @@ pub async fn record_sync_latency(
     latency_ms: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let latency_s = latency_ms / 1000.0;
+
+    let histogram = get_sync_latency_histogram();
+    histogram.record(
+        latency_s as f64,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
+
     buffer_metric(
         pool,
-        "sync_latency_ms",
+        "ohc_sync_latency_seconds",
         "histogram",
-        latency_ms,
+        latency_s,
         serde_json::json!({ "mode": mode }),
     )
     .await
@@ -656,9 +687,15 @@ pub async fn record_sync_payload_size(
     size_bytes: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let histogram = get_sync_payload_size_histogram();
+    histogram.record(
+        size_bytes as f64,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
+
     buffer_metric(
         pool,
-        "sync_payload_size_bytes",
+        "ohc_sync_payload_bytes",
         "histogram",
         size_bytes,
         serde_json::json!({ "mode": mode }),

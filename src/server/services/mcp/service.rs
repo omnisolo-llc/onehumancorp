@@ -1,4 +1,5 @@
 use tonic::{Request, Response, Status};
+use ::server_telemetry::{record_sync_latency, record_sync_payload_size};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
@@ -275,6 +276,7 @@ impl McpService for MyMcpService {
         &self,
         request: Request<SyncContextRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
+        let start = std::time::Instant::now();
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
@@ -284,7 +286,10 @@ impl McpService for MyMcpService {
         }
 
         let req = request.into_inner();
+        let payload_size = req.context.len() as f32 + req.vector_embedding.len() as f32;
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let mode = if is_standalone { "Standalone" } else { "Cloud" };
+
         let _permit = if is_standalone {
             Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
         } else {
@@ -312,6 +317,11 @@ impl McpService for MyMcpService {
             .map_err(|e| Status::internal(e.to_string()))?;
             
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let latency = start.elapsed().as_secs_f32() * 1000.0;
+        let _ = record_sync_latency(&self.hub.pool, latency, mode).await;
+        let _ = record_sync_payload_size(&self.hub.pool, payload_size, mode).await;
+
         Ok(Response::new(EmptyResponse {}))
     }
 }

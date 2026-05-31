@@ -152,7 +152,7 @@ impl TelemetrySyncDaemon {
             .await;
 
         let latency = start.elapsed().as_secs_f32();
-        let _ = record_sync_latency(&self.pool, latency, "telemetry_sync").await;
+        let _ = record_sync_latency(&self.pool, latency * 1000.0, "telemetry_sync").await;
 
         match res {
             Ok(response) => {

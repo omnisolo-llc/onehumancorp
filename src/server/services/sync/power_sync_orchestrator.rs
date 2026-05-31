@@ -105,7 +105,7 @@ impl PowerSyncOrchestrator {
         let res = client.power_sync_push(req).await.map_err(|e| e.to_string())?;
 
         let latency = start.elapsed().as_secs_f32();
-        let _ = record_sync_latency(pg_pool, latency, mode).await;
+        let _ = record_sync_latency(pg_pool, latency * 1000.0, mode).await;
 
         if res.into_inner().status == "ok" {
             // Update _sync_status to synced
