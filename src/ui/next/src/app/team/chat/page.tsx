@@ -46,7 +46,7 @@ export default function TeamChatPage() {
           // Assuming authorization is handled by Next.js API routes / middleware in reality
           // 'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ message: userMsg })
+        body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });
       if (response.ok) {
         const data = await response.json();
