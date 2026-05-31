@@ -9,7 +9,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
     localStorage.removeItem('ohc_wizard_state');
   }, id);
 
-  await page.goto('/onboarding');
+  await page.goto('/website-builder');
 
   await page.getByRole('button', { name: /Start My Business Next/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
@@ -36,7 +36,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByRole('button', { name: /Publish my business/ }).click();
 
   await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
-  await page.getByRole('button', { name: /Launch My Business/ }).click();
+  await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 });
