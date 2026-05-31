@@ -3901,7 +3901,7 @@ mod tests_added_for_coverage {
 
     #[tokio::test]
     async fn test_conflict_winner_scenarios() {
-        let repo = setup_repo().await;
+        let _repo = setup_repo().await;
         let now = Utc::now();
 
         // Testing owner_override
