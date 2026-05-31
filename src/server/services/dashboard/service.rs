@@ -775,5 +775,27 @@ mod tests {
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
     }
+
+    #[tokio::test]
+    async fn test_dashboard_benchmark() {
+        let service = setup_test_dashboard_service().await;
+        let mut latencies = Vec::new();
+
+        for _ in 0..10 {
+            let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+            let mut request = Request::new(req);
+            request.extensions_mut().insert(AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: "system".to_string(),
+                agent_id: "test".to_string(),
+            });
+            let start = std::time::Instant::now();
+            let _res = service.get_dashboard(request).await.unwrap().into_inner();
+            latencies.push(start.elapsed().as_micros());
+        }
+
+        latencies.sort();
+        println!("Benchmark dummy - p50: {}us, p95: {}us", latencies[latencies.len() / 2], latencies[(latencies.len() as f64 * 0.95) as usize]);
+    }
 }
 // Parallel Execution Optimization verified

@@ -33,18 +33,37 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 
 pub fn reduce_tokens(data: &str) -> String {
     let stop_words = [
-        "a", "an", "the", "is", "are",
-        "and", "or", "but", "in", "on",
-        "at", "to", "for", "with", "by",
-        "about", "as", "of",
+        "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+        "and", "or", "but", "in", "on", "at", "to", "for", "with", "by",
+        "about", "as", "of", "it", "this", "that", "these", "those",
+        "then", "than", "so", "very", "can", "could", "would", "should", "will",
     ];
 
-    data.split_whitespace()
-        .filter(|word| {
-            !stop_words.iter().any(|&sw| word.eq_ignore_ascii_case(sw))
-        })
-        .collect::<Vec<&str>>()
-        .join(" ")
+    let mut filtered_words = Vec::new();
+    let mut previous_word = String::new();
+
+    for word in data.split_whitespace() {
+        // Strip punctuation for matching
+        let clean_word: String = word.chars().filter(|c| c.is_alphanumeric()).collect();
+        let lower_word = clean_word.to_lowercase();
+
+        if lower_word.is_empty() {
+            continue;
+        }
+
+        if lower_word == previous_word {
+            continue;
+        }
+
+        let is_stop = stop_words.iter().any(|&sw| lower_word == *sw);
+
+        if !is_stop {
+            filtered_words.push(word);
+            previous_word = lower_word;
+        }
+    }
+
+    filtered_words.join(" ")
 }
 
 
@@ -137,11 +156,12 @@ mod tests {
     #[test]
     fn test_reduce_tokens() {
         let input = "This is a long sentence with some stop words in it and about some things.";
-        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of
-        // Result should remove "is", "a", "with", "in", "and", "about".
-        // Note: 'it' and 'some' are not stop words here.
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        assert_eq!(reduced, "long sentence some stop words some things.");
+
+        let input2 = "Very very long long sentence sentence!";
+        let reduced2 = reduce_tokens(input2);
+        assert_eq!(reduced2, "long sentence");
     }
 
     #[test]
