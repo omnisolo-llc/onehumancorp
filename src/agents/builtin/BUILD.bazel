@@ -52,7 +52,6 @@ rust_library(
         "checkpointer.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
-        "deerflow_subagents.rs",
         "departments.rs",
         "gpt_researcher.rs",
         "guardrails.rs",
