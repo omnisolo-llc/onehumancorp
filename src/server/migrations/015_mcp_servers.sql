@@ -10,4 +10,4 @@ CREATE INDEX IF NOT EXISTS idx_mcp_servers_tenant_id ON mcp_servers(tenant_id);
 
 ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_mcp_servers ON mcp_servers;
-CREATE POLICY tenant_isolation_mcp_servers ON mcp_servers USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_mcp_servers ON mcp_servers USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
