@@ -293,7 +293,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -326,7 +326,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_revoke_token_uses_transaction_and_tenant_context() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
