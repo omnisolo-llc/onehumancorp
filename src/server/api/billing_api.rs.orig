@@ -128,7 +128,6 @@ pub async fn cost_dashboard_handler(
     // Proper concurrent execution combining spawn_blocking for CPU/sync methods
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
-    let config = auditor.get_config().clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
         (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue())
     });
@@ -142,7 +141,7 @@ pub async fn cost_dashboard_handler(
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
 
-    let storage_cost_f64 = ::server_pricing::calculator::calculate_storage_cost(storage_bytes, &config);
+    let storage_cost_f64 = ::server_pricing::calculator::calculate_storage_cost(storage_bytes, auditor.get_config());
 
     let payment_fees_f64 = total_revenue_f64 * 0.029;
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
