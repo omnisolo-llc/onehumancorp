@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -8,6 +8,8 @@ exports_files(
         "queue_test.rs",
         "redis_queue.rs",
         "sqlite_queue.rs",
+        "worker.rs",
+        "worker_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -22,6 +24,8 @@ rust_library(
         "queue_test.rs",
         "redis_queue.rs",
         "sqlite_queue.rs",
+        "worker.rs",
+        "worker_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -114,5 +118,13 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:walkdir",
+    ],
+)
+
+rust_test(
+    name = "server_orchestration_queue_test",
+    crate = ":server_orchestration_queue",
+    deps = [
+        "@crates//:tokio",
     ],
 )
