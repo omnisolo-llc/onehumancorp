@@ -19,9 +19,9 @@ pub struct IntegrationsRegistry {
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
-    pub meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
-    pub cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
@@ -34,8 +34,8 @@ pub struct IntegrationsRegistry {
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
-    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
+    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -75,8 +75,8 @@ impl IntegrationsRegistry {
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -275,14 +275,14 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
 
-        if integration_id == "sendgrid" {
-            let mut clients = self.sendgrid_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
-        }
-
         if integration_id == "resend" {
             let mut clients = self.resend_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "sendgrid" {
+            let mut clients = self.sendgrid_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)
@@ -596,7 +596,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str, address_to: serde_json::Value, address_from: serde_json::Value) -> Result<Vec<String>, String> {
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -606,7 +606,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.fetch_rates(weight, dimensions, address_to, address_from).await;
+            return c.fetch_rates(weight, dimensions).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -757,37 +757,14 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn meta_send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "meta" {
-                let clients = self.meta_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.send_message(platform, to, body).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn cal_com_get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "cal_com" {
-                let clients = self.cal_com_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.get_free_busy(time_min, time_max).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "sendgrid" {
                 let clients = self.sendgrid_clients.read().unwrap();
@@ -798,13 +775,6 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.send_email(to, subject, body).await;
-        }
-
-        if integration_id == "resend" {
-            let clients = self.resend_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.send_email(to, "noreply@onehumancorp.com", subject, body).await;
-            }
         }
         Err("integration not found or not supported".to_string())
     }
@@ -858,62 +828,6 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_meta_send_message_via_registry() {
-        let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-            integration_id: "meta".to_string(),
-            base_url: "https://graph.facebook.com".to_string(),
-            bot_token: "".to_string(),
-            chat_id: "".to_string(),
-            webhook_url: "".to_string(),
-            api_token: "test_token".to_string(),
-            from_phone: "".to_string(),
-        };
-        registry.connect("meta", "https://graph.facebook.com", creds).unwrap();
-
-        // This will mock send and return Ok(())
-        let _res = registry.meta_send_message("meta", "whatsapp", "+123", "hello").await;
-         // Real client might return error without net access, but we ensure it routes
-    }
-
-    #[tokio::test]
-    async fn test_cal_com_get_free_busy_via_registry() {
-        let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-            integration_id: "cal_com".to_string(),
-            base_url: "".to_string(),
-            bot_token: "".to_string(),
-            chat_id: "".to_string(),
-            webhook_url: "".to_string(),
-            api_token: "test_token".to_string(),
-            from_phone: "".to_string(),
-        };
-        registry.connect("cal_com", "", creds).unwrap();
-
-        let _res = registry.cal_com_get_free_busy("cal_com", "2023", "2024").await;
-
-    }
-
-    #[tokio::test]
-    async fn test_resend_integration() {
-        let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-            integration_id: "resend".to_string(),
-            base_url: "".to_string(),
-            bot_token: "".to_string(),
-            chat_id: "".to_string(),
-            webhook_url: "".to_string(),
-            api_token: "test_token".to_string(),
-            from_phone: "".to_string(),
-        };
-        registry.connect("resend", "", creds).unwrap();
-
-        let _res = registry.send_email("resend", "test@test.com", "sub", "body").await;
-
-    }
-
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();

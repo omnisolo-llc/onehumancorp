@@ -16,11 +16,6 @@ pub struct SocialPostRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateTeamInviteResponse {
-    pub invite_link: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostResponse {
     pub posted: bool,
     pub post_id: String,
@@ -683,7 +678,7 @@ async fn handle_team_invite_accept(
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
-) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
+) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -697,9 +692,7 @@ async fn handle_create_team_invite(
                 };
                 state.hub.append_recent_event(msg);
             }
-            Ok(Json(CreateTeamInviteResponse {
-                invite_link: format!("https://ohc.app/invite/{}/{}", req.team_id, req.invitee_id),
-            }))
+            Ok(Json(()))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -715,7 +708,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_db() -> PgPool {
-        let database_url = std::env::var("DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(500))
