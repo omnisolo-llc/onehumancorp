@@ -76,6 +76,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/widgets/wall-of-love.js", get(handle_wall_of_love_js))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -1010,4 +1011,124 @@ async fn handle_aggregated_team_invites_metrics(
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+
+use axum::extract::Query;
+
+#[derive(serde::Deserialize)]
+pub struct WallOfLoveQuery {
+    pub store: Option<String>,
+}
+
+async fn handle_wall_of_love_js(
+    Query(query): Query<WallOfLoveQuery>,
+) -> impl IntoResponse {
+    let store = query.store.unwrap_or_else(|| "my-store".to_string());
+    // Basic protection against XSS in store name (js string context)
+    let safe_store = store.replace("'", "\'").replace("<", "\<").replace(">", "\>");
+
+    let js = format!(
+        r#"
+(function() {{
+    const container = document.getElementById('ohc-wall-of-love');
+    if (!container) return;
+
+    const storeName = '{safe_store}';
+    const storeParam = encodeURIComponent(storeName);
+
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .ohc-wol-widget {{
+            font-family: 'Outfit', 'Inter', sans-serif;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            max-width: 400px;
+            margin: 0 auto;
+            color: #1D1D1F;
+        }}
+        .ohc-wol-header {{
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }}
+        .ohc-wol-review {{
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }}
+        .ohc-wol-stars {{
+            color: #F59E0B;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }}
+        .ohc-wol-text {{
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #374151;
+            margin-bottom: 8px;
+        }}
+        .ohc-wol-author {{
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #6B7280;
+        }}
+        .ohc-wol-footer {{
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }}
+        .ohc-wol-footer a {{
+            color: #1D1D1F;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.2s;
+        }}
+        .ohc-wol-footer a:hover {{
+            opacity: 0.7;
+        }}
+    `;
+    document.head.appendChild(style);
+
+    const widget = document.createElement('div');
+    widget.className = 'ohc-wol-widget';
+    widget.innerHTML = `
+        <div class="ohc-wol-header">Loved by Customers</div>
+        <div class="ohc-wol-review">
+            <div class="ohc-wol-stars">★★★★★</div>
+            <div class="ohc-wol-text">"Absolutely amazing service. Highly recommended!"</div>
+            <div class="ohc-wol-author">— Sarah M.</div>
+        </div>
+        <div class="ohc-wol-review">
+            <div class="ohc-wol-stars">★★★★★</div>
+            <div class="ohc-wol-text">"The best experience I've had. Will definitely buy again."</div>
+            <div class="ohc-wol-author">— David K.</div>
+        </div>
+        <div class="ohc-wol-footer">
+            <a href="ohc://join?ref=${{storeParam}}" target="_blank" rel="noopener noreferrer">
+                ⚡ Powered by OHC
+            </a>
+        </div>
+    `;
+
+    container.appendChild(widget);
+}})();
+"#,
+        safe_store = safe_store
+    );
+
+    ([(axum::http::header::CONTENT_TYPE, "application/javascript")], js)
 }
