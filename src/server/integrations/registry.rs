@@ -97,6 +97,21 @@ impl IntegrationsRegistry {
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
+    pub fn receive_chat_message(&self, integration_id: &str, channel: &str, from_customer: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
+        let msg = ::server_ohc::orchestration::ChatMessage {
+            id: format!("msg-{}", Utc::now().timestamp()),
+            channel: channel.to_string(),
+            from_agent: from_customer.to_string(),
+            content: content.to_string(),
+            thread_id: thread_id.to_string(),
+            timestamp_unix: Utc::now().timestamp(),
+        };
+
+        let mut msgs = self.messages.write().unwrap();
+        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
+        Ok(msg)
+    }
+
     pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
         let msg = ::server_ohc::orchestration::ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
@@ -882,5 +897,23 @@ mod tests {
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+    }
+}
+
+#[cfg(test)]
+mod tests2 {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_receive_chat_message() {
+        let registry = IntegrationsRegistry::new();
+
+        let msg = registry.receive_chat_message("meta", "whatsapp", "customer1", "Hello there!", "thread1").unwrap();
+        assert_eq!(msg.content, "Hello there!");
+        assert_eq!(msg.from_agent, "customer1");
+
+        let msgs = registry.chat_messages("meta");
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].content, "Hello there!");
     }
 }
