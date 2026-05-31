@@ -8,35 +8,27 @@ BLUE="\033[38;5;39m"
 CYAN="\033[38;5;87m"
 GREEN="\033[38;5;120m"
 PURPLE="\033[38;5;141m"
-WHITE="\033[38;5;231m"
-BG_GLASS="\033[48;5;236m" # Dark gray for glassmorphism
-ACCENT="\033[38;5;33m" # Apple Blue
-BORDER="\033[38;5;240m" # Border color
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-clear
-echo -e "${BORDER}╭────────────────────────────────────────────────────────╮${RESET}"
-echo -e "${BORDER}│${RESET}   ${BOLD}${ACCENT}OHC Hybrid Agentic OS${RESET}                              ${BORDER}│${RESET}"
-echo -e "${BORDER}│${RESET}   ${DIM}${WHITE}Master CLI • System Console${RESET}                        ${BORDER}│${RESET}"
-echo -e "${BORDER}╰────────────────────────────────────────────────────────╯${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo -e "${BOLD}${CYAN}      OHC Hybrid Agentic OS - Master CLI              ${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
 
 while true; do
-    echo -e "\n${BORDER}╭─ ${BOLD}Select an action${RESET} ${BORDER}─────────────────────────────────────╮${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}1)${RESET} ${WHITE}Run Developer Setup${RESET}                               ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}2)${RESET} ${WHITE}Configure Environment (.env)${RESET}                      ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}3)${RESET} ${WHITE}Run Diagnostics${RESET}                                   ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}4)${RESET} ${WHITE}Launch Quick Start (Standalone)${RESET}                   ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}5)${RESET} ${WHITE}Provision AI Agent${RESET}                                ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}6)${RESET} ${WHITE}Standalone DB Health Check${RESET}                        ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}7)${RESET} ${WHITE}Launch Cloud Start${RESET}                                ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}8)${RESET} ${WHITE}Seed Database with Mock Data${RESET}                      ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}9)${RESET} ${WHITE}Check Swarm Status${RESET}                                ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET} ${DIM}10)${RESET} ${WHITE}Verify Setup${RESET}                                      ${BORDER}│${RESET}"
-    echo -e "${BORDER}│${RESET}  ${DIM}0)${RESET} ${WHITE}Exit${RESET}                                              ${BORDER}│${RESET}"
-    echo -e "${BORDER}╰────────────────────────────────────────────────────────╯${RESET}"
-    echo -e -n "  ${ACCENT}▶${RESET} Choice: "
-    read choice
+    echo -e "\n${BOLD}Select an action:${RESET}"
+    echo -e "  1) Run Developer Setup"
+    echo -e "  2) Configure Environment (.env)"
+    echo -e "  3) Run Diagnostics"
+    echo -e "  4) Launch Quick Start (Standalone)"
+    echo -e "  5) Provision AI Agent"
+    echo -e "  6) Standalone DB Health Check"
+    echo -e "  7) Launch Cloud Start"
+    echo -e "  8) Seed Database with Mock Data"
+    echo -e "  9) Check Swarm Status"
+    echo -e "  10) Verify Setup"
+    echo -e "  0) Exit"
+    read -p "Choice: " choice
 
     case $choice in
         1) (set -e; bash "$SCRIPT_DIR/ohc-setup.sh") || echo -e "${PURPLE}Developer Setup returned non-zero exit status ($?).${RESET}" ;;
@@ -58,7 +50,8 @@ while true; do
         8) (set -e; bash "$SCRIPT_DIR/ohc-seed-data.sh") || echo -e "${PURPLE}Data Seeder returned non-zero exit status ($?).${RESET}" ;;
         9) (set -e; bash "$SCRIPT_DIR/ohc-swarm-status.sh") || echo -e "${PURPLE}Swarm Status returned non-zero exit status ($?).${RESET}" ;;
         10) (set -e; bash "$SCRIPT_DIR/ohc-verify-setup.sh") || echo -e "${PURPLE}Verify Setup returned non-zero exit status ($?).${RESET}" ;;
-        0) echo -e "\n${DIM}Exiting OHC CLI...${RESET}\n"; exit 0 ;;
+        0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
 done
+# Trivial comment to generate diff
