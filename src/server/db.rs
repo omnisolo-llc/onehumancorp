@@ -1583,7 +1583,6 @@ mod e2e_tenant_isolation_tests {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_swarm_tasks_tests {
-    use std::sync::Arc;
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
         if std::env::var("DATABASE_URL").is_err() {
