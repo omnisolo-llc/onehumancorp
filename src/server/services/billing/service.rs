@@ -96,7 +96,7 @@ mod tests {
         let req = TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 1000,
             completion_tokens: 500,
             cost_usd: 0.0,
@@ -117,7 +117,7 @@ mod tests {
         assert_eq!(resp_inner.agent_id, "agent_x");
 
         let cost = auditor.get_agent_cost("agent_x");
-        assert!((cost - 0.0105).abs() < 1e-4); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
+        assert!((cost - 0.0125).abs() < 1e-4); // 1000*0.005/1000000 + 500*15.0/1000000 = 0.005 + 0.0075 = 0.0125
     }
 
     #[tokio::test]
@@ -134,7 +134,7 @@ mod tests {
         let req = TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 1000,
             completion_tokens: 500,
             cost_usd: 0.0,
@@ -152,7 +152,7 @@ mod tests {
         let req_summary = TokenUsage {
             agent_id: "".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 0,
             completion_tokens: 0,
             cost_usd: 0.0,
@@ -165,13 +165,13 @@ mod tests {
         let summary = response.unwrap().into_inner();
 
         assert_eq!(summary.organization_id, "org_y");
-        assert!((summary.total_cost_usd - 0.0105).abs() < 1e-4);
+        assert!((summary.total_cost_usd - 0.0125).abs() < 1e-4);
         assert_eq!(summary.total_tokens, 500); // 500 completion tokens
         assert_eq!(summary.agents.len(), 1);
 
         let agent_summary = &summary.agents[0];
         assert_eq!(agent_summary.agent_id, "agent_x");
-        assert!((agent_summary.cost_usd - 0.0105).abs() < 1e-4);
+        assert!((agent_summary.cost_usd - 0.0125).abs() < 1e-4);
         assert_eq!(agent_summary.token_used, 500);
         assert_eq!(agent_summary.pct, 1.0);
     }

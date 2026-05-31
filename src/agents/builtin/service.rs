@@ -178,7 +178,7 @@ impl AgentServiceImpl {
             }
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
@@ -299,13 +299,13 @@ impl AgentServiceImpl {
 
     fn default_model_for_provider(provider: &str) -> String {
         match provider {
-            "anthropic" => std::env::var("OHC_ANTHROPIC_MODEL")
+            "anthropic" => std::env::var("ANTHROPIC_MODEL")
                 .unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string()),
             "minimax" => {
-                std::env::var("OHC_MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
             }
             "openai" | "openai-compatible" | "openai_compatible" => {
-                Self::first_non_empty_env(&["OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
+                Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
             }
             _ => String::new(),
@@ -339,14 +339,15 @@ impl AgentServiceImpl {
 
         match provider.as_str() {
             "anthropic" => {
-                let key = std::env::var("OHC_ANTHROPIC_API_KEY").unwrap_or_default();
+                let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
                 Arc::new(AnthropicClient::new(key))
             }
             "openai" => {
-                let key = self.configured_api_key(&["OHC_OPENAI_API_KEY", "OHC_LLM_API_KEY"]);
+                let key = self.configured_api_key(&["OPENAI_API_KEY", "OHC_LLM_API_KEY"]);
                 let endpoint = self.effective_endpoint(
                     req_endpoint,
                     &[
+                        "OPENAI_BASE_URL",
                         "OHC_OPENAI_BASE_URL",
                         "OHC_LLM_BASE_URL",
                         "OHC_LLM_ENDPOINT",
@@ -361,13 +362,14 @@ impl AgentServiceImpl {
                 Arc::new(OpenAIClient::from_config(config))
             }
             "openai-compatible" | "openai_compatible" => {
-                let key = self.configured_api_key(&["OHC_LLM_API_KEY", "OHC_OPENAI_API_KEY"]);
+                let key = self.configured_api_key(&["OHC_LLM_API_KEY", "OPENAI_API_KEY"]);
                 let endpoint = self
                     .effective_endpoint(
                         req_endpoint,
                         &[
                             "OHC_LLM_BASE_URL",
                             "OHC_LLM_ENDPOINT",
+                            "OPENAI_BASE_URL",
                             "OHC_OPENAI_BASE_URL",
                         ],
                     )
@@ -379,12 +381,12 @@ impl AgentServiceImpl {
                 )))
             }
             "minimax" => {
-                let key = self.configured_api_key(&["OHC_MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
+                let key = self.configured_api_key(&["MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
                 let endpoint = self.effective_endpoint(
                     req_endpoint,
                     &[
-                        "OHC_MINIMAX_BASE_URL",
-                        "OHC_MINIMAX_API_BASE_URL",
+                        "MINIMAX_BASE_URL",
+                        "MINIMAX_API_BASE_URL",
                         "OHC_LLM_BASE_URL",
                         "OHC_LLM_ENDPOINT",
                     ],
@@ -403,12 +405,12 @@ impl AgentServiceImpl {
             }
             _ => {
                 // Auto-detect from env vars
-                if let Ok(key) = std::env::var("OHC_ANTHROPIC_API_KEY") {
+                if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
                     if !key.is_empty() {
                         return Arc::new(AnthropicClient::new(key));
                     }
                 }
-                if let Ok(key) = std::env::var("OHC_OPENAI_API_KEY") {
+                if let Ok(key) = std::env::var("OPENAI_API_KEY") {
                     if !key.is_empty() {
                         let model = self.resolve_model_for_request("openai", req_model);
                         let mut config = OpenAIClientConfig::openai(key);
@@ -416,13 +418,13 @@ impl AgentServiceImpl {
                         return Arc::new(OpenAIClient::from_config(config));
                     }
                 }
-                if let Ok(key) = std::env::var("OHC_MINIMAX_API_KEY") {
+                if let Ok(key) = std::env::var("MINIMAX_API_KEY") {
                     if !key.is_empty() {
                         return Arc::new(OpenAIClient::minimax(
                             key,
                             Self::first_non_empty_env(&[
-                                "OHC_MINIMAX_BASE_URL",
-                                "OHC_MINIMAX_API_BASE_URL",
+                                "MINIMAX_BASE_URL",
+                                "MINIMAX_API_BASE_URL",
                             ]),
                         ));
                     }

@@ -4,7 +4,14 @@ test.describe('CUJ: Billing Cost Tracking', () => {
   test('should display cost breakdown on dashboard locally', async ({ page }) => {
     // Basic test to avoid flakes in docker overlayfs. Just making sure
     // the system has the appropriate routing in place.
-    await page.goto('/plan');
+    await page.goto('/');
+
+    // Go to My Plan first to fulfill the CUJ requirement
+    await expect(page.getByText('My Plan')).toBeVisible();
+    await page.getByText('My Plan').click();
+
+    await expect(page).toHaveURL(/\/plan/);
+
     await expect(page.getByText('View Cost Details')).toBeVisible();
     await page.getByText('View Cost Details').click();
 

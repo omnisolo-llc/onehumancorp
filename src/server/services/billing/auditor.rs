@@ -78,7 +78,17 @@ impl CostAuditor {
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
         let cost = if let Some(model) = &event.model {
-            calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+            if model == "" {
+                calculator::calculate_cost_with_config(
+                    event.input_tokens,
+                    event.output_tokens,
+                    event.cached_input_tokens,
+                    event.local_embedding_tokens,
+                    &self.config,
+                )
+            } else {
+                calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+            }
         } else {
             calculator::calculate_cost_with_config(
                 event.input_tokens,
@@ -132,7 +142,17 @@ impl CostAuditor {
 
     pub fn record_cache_hit(&self, event: AuditEvent) -> f64 {
         let actual_cost = if let Some(model) = &event.model {
-            calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+            if model == "" {
+                calculator::calculate_cost_with_config(
+                    event.input_tokens,
+                    event.output_tokens,
+                    event.cached_input_tokens,
+                    event.local_embedding_tokens,
+                    &self.config,
+                )
+            } else {
+                calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+            }
         } else {
             calculator::calculate_cost_with_config(
                 event.input_tokens,
