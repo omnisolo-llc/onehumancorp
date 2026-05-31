@@ -295,33 +295,23 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let products = if req.mobile_optimized {
-            products
-                .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
-                })
-                .collect()
+        let (products, orders) = if req.mobile_optimized {
+            let p_iter = products.into_iter().map(|p| ::server_ohc::organization::Product {
+                description: String::new(),
+                metadata_json: String::new(),
+                fulfillment_strategy: String::new(),
+                currency: String::new(),
+                ..p
+            }).collect::<Vec<_>>();
+            let o_iter = orders.into_iter().map(|o| ::server_ohc::app::Order {
+                product_id: String::new(),
+                status: String::new(),
+                organization_id: String::new(),
+                ..o
+            }).collect::<Vec<_>>();
+            (p_iter, o_iter)
         } else {
-            products
-        };
-
-        let orders = if req.mobile_optimized {
-            orders
-                .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
-                })
-                .collect()
-        } else {
-            orders
+            (products, orders)
         };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
@@ -437,10 +427,7 @@ impl DashboardService for MyDashboardService {
                         compressed_prompts_len += compressed_len;
                     } else {
                         let c = ::server_pricing::compression::reduce_tokens(prompt);
-                        let c_len = c.len();
-                        if c_len > 0 {
-                            compressed_prompts_len += c_len;
-                        }
+                        compressed_prompts_len += c.len();
                         let mut write_guard = cache_lock.write().unwrap();
                         write_guard.insert(prompt.clone(), c);
                     }
