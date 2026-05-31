@@ -34,8 +34,8 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    expect(screen.getByText("Hi there! I'm your OHC Advisor. Let's get your business up and running in a few minutes.")).toBeInTheDocument();
+    const button = screen.getByRole('button');
     expect(button).toBeDisabled();
   });
 
@@ -70,21 +70,21 @@ describe('OnboardingWizard', () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole('button');
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole('button');
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Generate/i });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -133,28 +133,28 @@ describe('OnboardingWizard', () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole('button');
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole('button');
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Generate/i });
 
     await user.click(button);
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Awesome. Lastly, where are you located? (This helps with tax and shipping settings)")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
