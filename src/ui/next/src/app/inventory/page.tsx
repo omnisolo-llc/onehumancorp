@@ -2,139 +2,128 @@
 
 import React, { useState, useEffect } from 'react';
 
-interface RawMaterial {
+interface MaterialAlert {
   id: string;
   name: string;
-  current_quantity: number;
-  reorder_threshold: number;
-}
-
-interface PurchaseOrder {
-  id: string;
-  vendor_id: string;
-  status: string;
-  total_cost: number;
+  current_stock: number;
+  threshold: number;
+  unit: string;
+  suggested_order_qty: number;
+  supplier_name: string;
+  estimated_cost: number;
 }
 
 export default function InventoryDashboard() {
-  const [lowStockMaterials, setLowStockMaterials] = useState<RawMaterial[]>([]);
+  const [alerts, setAlerts] = useState<MaterialAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLowStockAlerts();
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('/api/v1/ops/inventory/alerts', {
+           headers: { 'X-Tenant-ID': 'tenant1' }
+        });
+        if (!res.ok) {
+           throw new Error('Failed to fetch inventory alerts');
+        }
+        const data = await res.json();
+        setAlerts(data.alerts || []);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAlerts();
   }, []);
 
-  const fetchLowStockAlerts = async () => {
+  const handleApprovePO = async (materialId: string) => {
+    setError(null);
+    setSuccessMsg(null);
     try {
-      const res = await fetch('/api/v1/supply-chain/low-stock?tenant_id=tenant1');
-      if (!res.ok) {
-         setError('Failed to fetch low stock alerts.');
-         setLoading(false);
-         return;
-      }
-      const data = await res.json();
-      setLowStockMaterials(data.low_stock_materials || []);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const approveAndPay = async (materialId: string) => {
-    setProcessingId(materialId);
-    setSuccessMsg('');
-    setError('');
-
-    try {
-      const res = await fetch('/api/v1/supply-chain/approve-po', {
+      const res = await fetch('/api/v1/ops/inventory/purchase-orders/approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           tenant_id: 'tenant1',
-          purchase_order_id: \`po_for_\${materialId}\`, // Simulated ID mapping
+          purchase_order_id: `po_for_${materialId}`, // Simulated ID mapping
         }),
       });
 
       if (!res.ok) {
          setError('Failed to approve PO');
-      } else {
-          setSuccessMsg(\`Approved Purchase Order for \${materialId}\`);
-          setLowStockMaterials(lowStockMaterials.filter(m => m.id !== materialId));
+         return;
       }
-    } catch (e: any) {
-      setError('Failed to approve PO');
-    } finally {
-      setProcessingId(null);
+      setSuccessMsg(`Approved Purchase Order for ${materialId}`);
+      // Remove alert from list optimistically
+      setAlerts(alerts.filter(a => a.id !== materialId));
+    } catch (err) {
+      setError('An error occurred');
     }
   };
 
-  if (loading) return <div className="p-4 text-white">Loading inventory...</div>;
+  if (loading) {
+     return <div className="p-8 text-center"><div className="w-10 h-10 border-4 border-[#0066FF] border-t-transparent rounded-full animate-spin mx-auto"></div></div>;
+  }
 
   return (
-    <div className="p-4 w-full max-w-[375px] mx-auto min-h-screen bg-[#111116] text-[#F5F5F7]">
-      <h1 className="text-2xl font-bold font-outfit mb-6">Inventory</h1>
-
-      {successMsg && (
-        <div className="mb-4 p-3 rounded-lg bg-[rgba(52,199,89,0.2)] border border-[rgba(52,199,89,0.4)] text-[#34C759] text-sm font-inter" data-testid="success-msg">
-          {successMsg}
+    <div className="p-8 font-inter min-h-screen text-[#1D1D1F] dark:text-[#F5F5F7]">
+      <header className="mb-8 flex justify-between items-end border-b border-gray-200 dark:border-white/10 pb-4">
+        <div>
+          <h1 className="text-3xl font-bold font-outfit tracking-tight">Inventory & Alerts</h1>
+          <p className="text-gray-500 dark:text-[#A1A1A6]">Manage your raw materials and stock.</p>
         </div>
-      )}
+      </header>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-[rgba(255,59,48,0.2)] border border-[rgba(255,59,48,0.4)] text-[#FF3B30] text-sm font-inter">
+        <div className="mb-6 p-4 bg-red-100/80 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-[8px] border border-red-200 dark:border-red-800 backdrop-blur-md">
           {error}
         </div>
       )}
 
-      {lowStockMaterials.length === 0 ? (
-        <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] text-center text-sm font-inter">
-          All stock levels are looking good!
+      {successMsg && (
+        <div className="mb-6 p-4 bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-[8px] border border-green-200 dark:border-green-800 backdrop-blur-md">
+          {successMsg}
+        </div>
+      )}
+
+      {alerts.length === 0 ? (
+        <div className="text-center p-12 mac-glass-container">
+           <h3 className="text-lg font-bold">All Good!</h3>
+           <p className="text-gray-500 dark:text-gray-400 mt-2">Your inventory levels are healthy.</p>
         </div>
       ) : (
-        <div className="space-y-4 flex flex-col gap-4">
-          <h2 className="text-lg font-outfit text-[#FF9500]">Low Stock Alerts</h2>
-          {lowStockMaterials.map(mat => (
-            <div key={mat.id} className="mac-glass-container p-5 shadow-lg flex flex-col" data-testid={\`alert-card-\${mat.id}\`}>
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-outfit font-semibold text-lg">{mat.name}</h3>
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B30] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#FF3B30]"></span>
-                </span>
-              </div>
-              <p className="font-inter text-sm text-[rgba(255,255,255,0.7)] mb-4">
-                Based on your recent sales, you need more {mat.name} by Thursday.
-              </p>
-
-              <div className="p-3 mb-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.05)]">
-                <div className="flex justify-between text-sm font-inter mb-1">
-                  <span className="text-[rgba(255,255,255,0.6)]">Vendor</span>
-                  <span className="font-medium">Acme Supply</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {alerts.map(mat => (
+            <div key={mat.id} className="mac-glass-container p-5 shadow-lg flex flex-col" data-testid={`alert-card-${mat.id}`}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-bold text-lg">{mat.name}</h3>
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 text-xs rounded-full font-semibold">Low Stock</span>
                 </div>
-                <div className="flex justify-between text-sm font-inter mb-1">
-                  <span className="text-[rgba(255,255,255,0.6)]">Quantity</span>
-                  <span className="font-medium">50 units</span>
-                </div>
-                <div className="flex justify-between text-sm font-inter">
-                  <span className="text-[rgba(255,255,255,0.6)]">Cost</span>
-                  <span className="font-medium text-[#0071E3]">$45.00</span>
+                <div className="text-right">
+                  <div className="text-2xl font-black text-red-600 dark:text-red-400">{mat.current_stock} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{mat.unit}</span></div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Threshold: {mat.threshold}</div>
                 </div>
               </div>
 
-              <button
-                data-testid={\`approve-btn-\${mat.id}\`}
-                onClick={() => approveAndPay(mat.id)}
-                disabled={processingId === mat.id}
-                className="w-full py-3 px-4 bg-[#0071E3] hover:bg-[#005bb5] active:scale-95 transition-all text-white font-inter font-medium rounded-xl shadow-[0_0_15px_rgba(0,113,227,0.4)] disabled:opacity-50"
-              >
-                {processingId === mat.id ? 'Processing...' : 'Approve & Pay'}
-              </button>
+              <div className="bg-white/40 dark:bg-black/20 rounded-[8px] p-4 mt-auto border border-white/50 dark:border-white/10">
+                 <p className="text-sm font-semibold mb-2">AI Suggested Action:</p>
+                 <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                    Order <strong>{mat.suggested_order_qty} {mat.unit}</strong> from {mat.supplier_name} for ~${mat.estimated_cost}.
+                 </p>
+                 <button
+                    onClick={() => handleApprovePO(mat.id)}
+                    className="w-full bg-[#1D1D1F] dark:bg-[#F5F5F7] text-white dark:text-[#1D1D1F] font-bold py-2.5 rounded-[8px] shadow-md hover:scale-[1.02] transition-transform active:scale-95"
+                    data-testid={`approve-btn-${mat.id}`}
+                 >
+                    Approve Order
+                 </button>
+              </div>
             </div>
           ))}
         </div>
