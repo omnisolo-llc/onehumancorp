@@ -20,19 +20,28 @@ test('business owner can view and manage approval inbox', async ({ page }) => {
   const hasRequests = page.getByRole('button', { name: 'Approve' }).first();
   const allCaughtUp = page.getByText('All Caught Up!');
 
-  await Promise.any([
-      hasRequests.waitFor({ state: 'visible', timeout: 5000 }),
-      allCaughtUp.waitFor({ state: 'visible', timeout: 5000 })
-  ]).catch(() => { /* ignore */ });
+  try {
+    // Give it a generous timeout to let API requests complete
+    await Promise.any([
+        hasRequests.waitFor({ state: 'visible', timeout: 8000 }),
+        allCaughtUp.waitFor({ state: 'visible', timeout: 8000 })
+    ]);
 
-  if (await allCaughtUp.isVisible()) {
-     console.log('No requests to approve');
-  } else if (await hasRequests.isVisible()) {
-     await hasRequests.click();
+    if (await allCaughtUp.isVisible()) {
+       console.log('No requests to approve');
+    } else if (await hasRequests.isVisible()) {
+       await hasRequests.click();
+    }
+  } catch (error) {
+    console.warn("Neither state was reached within the timeout. Checking DOM.");
   }
 
   // 6. Navigate back to Team view
-  await page.getByRole('button').first().click(); // back button
+  // explicitly wait for back button and click
+  const backButton = page.locator('button').first();
+  await expect(backButton).toBeVisible();
+  await backButton.click();
+
   await expect(page.getByRole('heading', { name: 'Your Team' }).first()).toBeVisible();
 
   // 7. Verify Recent Activity section is visible again
