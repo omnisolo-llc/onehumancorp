@@ -123,6 +123,14 @@ impl DB {
                     use std::fs::OpenOptions;
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
+
+                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
+                        if sym_meta.file_type().is_symlink() {
+                            tracing::error!("Security error: DB path is a symlink. Aborting.");
+                            return Err("Security error: DB path is a symlink.".into());
+                        }
+                    }
+
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
@@ -186,7 +194,7 @@ impl DB {
                         use std::os::unix::fs::OpenOptionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
-                            .create(true)
+                            .create_new(true)
                             .mode(0o600)
                             .open(secret_path)
                         {
