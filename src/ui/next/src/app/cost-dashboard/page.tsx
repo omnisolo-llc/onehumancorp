@@ -11,12 +11,50 @@ interface CostDashboardData {
   payment_fees: number;
   period_start: string;
   period_end: string;
+  projected_monthly_usd: number;
 }
 
 export default function CostDashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<CostDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [alertThreshold, setAlertThreshold] = useState<string>('');
+  const [alertSuccess, setAlertSuccess] = useState<string>('');
+  const [alertError, setAlertError] = useState<string>('');
+
+  const handleSetAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAlertSuccess('');
+    setAlertError('');
+
+    const threshold = parseFloat(alertThreshold);
+    if (isNaN(threshold) || threshold <= 0) {
+      setAlertError('Please enter a valid threshold amount.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token') || 'test-token';
+      const res = await fetch('/api/billing/budget-alerts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ threshold_usd: threshold })
+      });
+
+      if (res.ok) {
+        setAlertSuccess('Budget alert successfully set!');
+        setAlertThreshold('');
+      } else {
+        setAlertError('Failed to set budget alert. Please try again.');
+      }
+    } catch (err) {
+      setAlertError('An error occurred. Please try again later.');
+    }
+  };
 
   useEffect(() => {
     async function fetchCostData() {
@@ -45,6 +83,7 @@ export default function CostDashboardPage() {
                 payment_fees: 0,
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
+                projected_monthly_usd: 0,
             });
         }
       } catch (err) {
@@ -60,6 +99,7 @@ export default function CostDashboardPage() {
             payment_fees: 0,
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
+            projected_monthly_usd: 0,
         });
       } finally {
         setLoading(false);
@@ -106,12 +146,62 @@ export default function CostDashboardPage() {
                <span className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
+                    <p className="text-3xl font-bold font-outfit text-indigo-600">{formatCurrency(data?.projected_monthly_usd || 0)}</p>
+                </div>
             </div>
+        </section>
+
+        {/* Budget & Forecasting Section */}
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Set Budget Alert</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Get notified when your projected spend hits your budget threshold.
+            </p>
+
+            <form onSubmit={handleSetAlert} className="flex flex-col gap-4 max-w-sm">
+              <div>
+                <label htmlFor="threshold" className="block text-sm font-medium text-gray-700 mb-1">Budget Threshold (USD)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm">$</span>
+                  </div>
+                  <input
+                    type="number"
+                    id="threshold"
+                    min="1"
+                    step="0.01"
+                    value={alertThreshold}
+                    onChange={(e) => setAlertThreshold(e.target.value)}
+                    className="pl-7 w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    placeholder="500.00"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              >
+                Set Alert
+              </button>
+            </form>
+
+            {alertSuccess && (
+              <div className="mt-4 p-3 bg-green-50 text-green-800 text-sm rounded-md border border-green-200">
+                {alertSuccess}
+              </div>
+            )}
+            {alertError && (
+              <div className="mt-4 p-3 bg-red-50 text-red-800 text-sm rounded-md border border-red-200">
+                {alertError}
+              </div>
+            )}
         </section>
 
         {/* Breakdown Section */}

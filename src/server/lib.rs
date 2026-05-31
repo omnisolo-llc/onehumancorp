@@ -5003,8 +5003,61 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <strong>Total Revenue</strong>
                                     <strong id="cost-dashboard-revenue">$0.00</strong>
                                 </li>
+                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-purple);">
+                                    <strong>Projected Monthly Cost</strong>
+                                    <strong id="cost-dashboard-projected">$0.00</strong>
+                                </li>
                             </ul>
                         </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h2>Set Budget Alert</h2>
+                            <p style="font-size: 14px; margin-bottom: 12px;">Get notified when your projected spend hits your budget threshold.</p>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" id="budget-threshold-input" placeholder="500" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border);" />
+                                <button onclick="handleSetBudgetAlert()">Set Alert</button>
+                            </div>
+                            <p id="budget-alert-message" style="margin-top: 12px; font-size: 14px; display: none;"></p>
+                        </div>
+
+                        <script>
+                            async function handleSetBudgetAlert() {
+                                const val = parseFloat(document.getElementById('budget-threshold-input').value);
+                                const msgEl = document.getElementById('budget-alert-message');
+                                if (isNaN(val) || val <= 0) {
+                                    msgEl.style.display = 'block';
+                                    msgEl.style.color = 'var(--accent-red)';
+                                    msgEl.textContent = 'Please enter a valid threshold.';
+                                    return;
+                                }
+
+                                try {
+                                    const token = localStorage.getItem('token') || 'test-token';
+                                    const res = await fetch('/api/billing/budget-alerts', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': 'Bearer ' + token
+                                        },
+                                        body: JSON.stringify({ threshold_usd: val })
+                                    });
+                                    if (res.ok) {
+                                        msgEl.style.display = 'block';
+                                        msgEl.style.color = 'var(--accent-green)';
+                                        msgEl.textContent = 'Budget alert successfully set!';
+                                    } else {
+                                        msgEl.style.display = 'block';
+                                        msgEl.style.color = 'var(--accent-red)';
+                                        msgEl.textContent = 'Failed to set budget alert.';
+                                    }
+                                } catch (e) {
+                                    msgEl.style.display = 'block';
+                                    msgEl.style.color = 'var(--accent-red)';
+                                    msgEl.textContent = 'Error setting budget alert.';
+                                }
+                            }
+                        </script>
+
                         <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
                     </div>
 
@@ -6566,6 +6619,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .then(data => {
                                         document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-projected').textContent = '$' + (data.projected_monthly_usd / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);

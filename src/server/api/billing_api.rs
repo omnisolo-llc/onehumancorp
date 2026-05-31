@@ -22,12 +22,19 @@ pub struct CostDashboardResponse {
     pub payment_fees: i64,
     pub period_start: String,
     pub period_end: String,
+    pub projected_monthly_usd: i64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateBudgetAlertRequest {
+    pub threshold_usd: f64,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/budget-alerts", axum::routing::post(create_budget_alert_handler))
         .with_state(hub)
 }
 
@@ -112,7 +119,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), projected_monthly_usd: 0 })
     };
 
     let now = chrono::Utc::now();
@@ -147,6 +154,14 @@ pub async fn cost_dashboard_handler(
     let payment_fees_f64 = total_revenue_f64 * 0.029;
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
+    let days_elapsed = now.day() as u32;
+    let total_days = 30; // Approx
+    let projected_cost = ::server_pricing::calculator::calculate_projected_monthly_cost(
+        total_costs_f64,
+        days_elapsed,
+        total_days
+    );
+
     Json(CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0) as i64,
         total_costs: (total_costs_f64 * 100.0) as i64,
@@ -155,5 +170,44 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+        projected_monthly_usd: (projected_cost * 100.0) as i64,
     })
+}
+
+pub async fn create_budget_alert_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Err(axum::http::StatusCode::UNAUTHORIZED)
+    };
+
+    let req_body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
+        .await
+        .map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+
+    let payload: CreateBudgetAlertRequest = serde_json::from_slice(&req_body_bytes)
+        .map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+
+    // We store ai_budget in the tenants table. If it doesn't exist for a test, we handle it gracefully or do an upsert if needed.
+    // However, tenants table exists. So we just update.
+    let _ = sqlx::query("UPDATE tenants SET ai_budget = $1 WHERE tenant_id = $2")
+        .bind(payload.threshold_usd as i32)
+        .bind(&tenant_id)
+        .execute(&hub.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update ai_budget: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(serde_json::json!({ "success": true, "threshold_usd": payload.threshold_usd })))
 }
