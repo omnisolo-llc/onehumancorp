@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -33,7 +33,7 @@ pub async fn bench_queue_latency() {
 
 pub async fn bench_db_query_time() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let iterations = 1000;
 
@@ -41,7 +41,6 @@ pub async fn bench_db_query_time() {
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
@@ -50,20 +49,6 @@ pub async fn bench_db_query_time() {
         }
         pg_times.sort();
         println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
-
-        let mut pg_parallel_times = Vec::new();
-        for _ in 0..iterations {
-            let start = Instant::now();
-            let p1 = pg_pool.clone();
-            let p2 = pg_pool.clone();
-            let _ = tokio::join!(
-                sqlx::query("SELECT 1").execute(&p1),
-                sqlx::query("SELECT 1").execute(&p2)
-            );
-            pg_parallel_times.push(start.elapsed().as_micros());
-        }
-        pg_parallel_times.sort();
-        println!("Database Query Time Cloud Mode (Postgres) Parallel Simulation: p50: {} us, p95: {} us, p99: {} us", pg_parallel_times[iterations / 2], pg_parallel_times[(iterations as f32 * 0.95) as usize], pg_parallel_times[(iterations as f32 * 0.99) as usize]);
     }
 
     // Standalone Mode (SQLite)
@@ -76,25 +61,11 @@ pub async fn bench_db_query_time() {
     }
     sqlite_times.sort();
     println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
-
-    let mut sqlite_parallel_times = Vec::new();
-    for _ in 0..iterations {
-        let start = Instant::now();
-        let p1 = sqlite_pool.clone();
-        let p2 = sqlite_pool.clone();
-        let _ = tokio::join!(
-            sqlx::query("SELECT 1").execute(&p1),
-            sqlx::query("SELECT 1").execute(&p2)
-        );
-        sqlite_parallel_times.push(start.elapsed().as_micros());
-    }
-    sqlite_parallel_times.sort();
-    println!("Database Query Time Standalone Mode (SQLite) Parallel Simulation: p50: {} us, p95: {} us, p99: {} us", sqlite_parallel_times[iterations / 2], sqlite_parallel_times[(iterations as f32 * 0.95) as usize], sqlite_parallel_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_api_response_time() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 100;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -164,7 +135,7 @@ pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
 
     let db = if database_url.starts_with("sqlite") {
@@ -248,9 +219,6 @@ pub async fn bench_dashboard_snapshot() {
 
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-
-    // Hybrid Latency Benchmarking Comparison (Cached vs Uncached Dashboard load speeds measured)
-
 
 
     let db_arc = std::sync::Arc::new(db.clone());
@@ -373,7 +341,7 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
@@ -416,7 +384,7 @@ mod tests {
 }
 
 pub async fn bench_advisory_insights_latency() {
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 10; // Few iterations due to Minimax API
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {

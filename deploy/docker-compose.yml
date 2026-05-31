@@ -28,11 +28,11 @@ services:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
     environment:
-      LOG_FORMAT: "json"
-      LOG_LEVEL: "info"
-      LISTEN_ADDR: "0.0.0.0:18789"
-      DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      OHC_LOG_FORMAT: "json"
+      OHC_LOG_LEVEL: "info"
+      OHC_LISTEN_ADDR: "0.0.0.0:18789"
+      OHC_DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      OHC_REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,15 +57,15 @@ services:
           memory: 64M
     image: onehumancorp/server:latest
     environment:
-      LOG_FORMAT: "json"
-      LOG_LEVEL: "info"
-      REDIS_ADDR: redis:6379
-      DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      CHATWOOT_URL: http://chatwoot:3000
-      CHATWOOT_ADMIN_EMAIL: admin@ohc.local
-      CHATWOOT_ADMIN_PASSWORD: changeme
-      CHATWOOT_ENABLED: "true"
-      MANIMAX_API_KEY: ${MANIMAX_API_KEY}
+      OHC_LOG_FORMAT: "json"
+      OHC_LOG_LEVEL: "info"
+      OHC_REDIS_ADDR: redis:6379
+      OHC_DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      OHC_CHATWOOT_URL: http://chatwoot:3000
+      OHC_CHATWOOT_ADMIN_EMAIL: admin@ohc.local
+      OHC_CHATWOOT_ADMIN_PASSWORD: changeme
+      OHC_CHATWOOT_ENABLED: "true"
+      OHC_MINIMAX_API_KEY: ${OHC_MINIMAX_API_KEY}
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
@@ -74,8 +74,8 @@ services:
       # Rust core sidecar address.
       OHC_CORE_URL: http://ohc-core:18789
       # Initial admin credentials read by the one-time bootstrap script.
-      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
-      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
+      OHC_SETUP_ADMIN_INIT_USERNAME: ${OHC_SETUP_ADMIN_INIT_USERNAME:-admin}
+      OHC_SETUP_ADMIN_INIT_PASSWORD: ${OHC_SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
       ohc-core:
         condition: service_started
@@ -90,7 +90,7 @@ services:
 
   # ─── One-time admin bootstrap ─────────────────────────────────────────────
   # Runs once at install time: waits for `server` to be healthy, then creates
-  # the initial admin account from SETUP_ADMIN_INIT_USERNAME / _PASSWORD.
+  # the initial admin account from OHC_SETUP_ADMIN_INIT_USERNAME / _PASSWORD.
   # A marker file written to the `server-init-data` volume prevents it from
   # repeating even if the container is restarted.
   server-init:
@@ -105,9 +105,9 @@ services:
       - ./docker/server-init/bootstrap-admin.sh:/scripts/bootstrap-admin.sh:ro
       - server-init-data:/data
     environment:
-      SERVER_URL: http://server:8080
-      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
-      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
+      OHC_SERVER_URL: http://server:8080
+      OHC_SETUP_ADMIN_INIT_USERNAME: ${OHC_SETUP_ADMIN_INIT_USERNAME:-admin}
+      OHC_SETUP_ADMIN_INIT_PASSWORD: ${OHC_SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
       server:
         condition: service_started

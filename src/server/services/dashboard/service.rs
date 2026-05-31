@@ -295,23 +295,33 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let (products, orders) = if req.mobile_optimized {
-            let p_iter = products.into_iter().map(|p| ::server_ohc::organization::Product {
-                description: String::new(),
-                metadata_json: String::new(),
-                fulfillment_strategy: String::new(),
-                currency: String::new(),
-                ..p
-            }).collect::<Vec<_>>();
-            let o_iter = orders.into_iter().map(|o| ::server_ohc::app::Order {
-                product_id: String::new(),
-                status: String::new(),
-                organization_id: String::new(),
-                ..o
-            }).collect::<Vec<_>>();
-            (p_iter, o_iter)
+        let products = if req.mobile_optimized {
+            products
+                .into_iter()
+                .map(|p| ::server_ohc::organization::Product {
+                    description: String::new(),
+                    metadata_json: String::new(),
+                    fulfillment_strategy: String::new(),
+                    currency: String::new(),
+                    ..p
+                })
+                .collect()
         } else {
-            (products, orders)
+            products
+        };
+
+        let orders = if req.mobile_optimized {
+            orders
+                .into_iter()
+                .map(|o| ::server_ohc::app::Order {
+                    product_id: String::new(),
+                    status: String::new(),
+                    organization_id: String::new(),
+                    ..o
+                })
+                .collect()
+        } else {
+            orders
         };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
@@ -405,35 +415,15 @@ impl DashboardService for MyDashboardService {
                 })
                 .collect();
 
-            static PROMPT_CACHE: std::sync::OnceLock<std::sync::RwLock<std::collections::HashMap<String, String>>> = std::sync::OnceLock::new();
-            let cache_lock = PROMPT_CACHE.get_or_init(|| std::sync::RwLock::new(std::collections::HashMap::new()));
-
             for agent in org_agents {
                 let prompt = &agent.name;
                 let orig_len = prompt.len();
                 if orig_len > 0 {
                     original_prompts_len += orig_len;
 
-                    let compressed_len = {
-                        let read_guard = cache_lock.read().unwrap();
-                        if let Some(c) = read_guard.get(prompt) {
-                            c.len()
-                        } else {
-                            0
-                        }
-                    };
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
 
-                    if compressed_len > 0 {
-                        compressed_prompts_len += compressed_len;
-                    } else {
-                        let c = ::server_pricing::compression::reduce_tokens(prompt);
-                        let c_len = c.len();
-                        if c_len > 0 {
-                            compressed_prompts_len += c_len;
-                        }
-                        let mut write_guard = cache_lock.write().unwrap();
-                        write_guard.insert(prompt.clone(), c);
-                    }
+                    compressed_prompts_len += compressed.len();
                 }
             }
 
