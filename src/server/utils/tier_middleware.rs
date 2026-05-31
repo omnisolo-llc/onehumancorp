@@ -78,7 +78,7 @@ mod tests {
         // struct uses a concrete `redis::Client`, we'll assume testing the core limits
         // logic via the struct directly or via axum test utilities if redis is present.
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+        let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             // Check if redis server is actually responding before attempting to test
             if client.get_multiplexed_async_connection().await.is_ok() {
