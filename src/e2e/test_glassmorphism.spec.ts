@@ -16,7 +16,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
 
     // WebKit often returns normalized values, so we check if it includes the 30px blur
     if (style.backdropFilter && style.backdropFilter !== 'none') {
-        expect(style.backdropFilter).toContain('blur(20px)');
+        expect(style.backdropFilter).toContain('blur(30px)');
     }
   });
 
@@ -44,7 +44,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
           };
       });
       if (style.backdropFilter && style.backdropFilter !== 'none') {
-          expect(style.backdropFilter).toContain('blur(20px)');
+          expect(style.backdropFilter).toContain('blur(30px)');
       }
   });
 
@@ -55,7 +55,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
       await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
       await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 
-      // 2. Wait for dashboard and verify "Agent Updates"
+      // 2. Wait for dashboard and verify "Action Required"
       await page.waitForURL('**/*');
 
       const advancedSettingsSpan = page.locator('span', { hasText: 'Advanced Settings' }).first();

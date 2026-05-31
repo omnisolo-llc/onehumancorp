@@ -6,17 +6,17 @@ test.describe('Viral Growth Loops', () => {
     // 1. Navigate to dashboard
     await page.goto('/dashboard');
 
-    // 2. Verify Agent Updates is present and the specific automated review request is loaded from DB
-    await expect(page.getByText("Agent Updates")).toBeVisible({ timeout: 10000 });
+    // 2. Verify Action Required is present and the specific automated review request is loaded from DB
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
 
     const reviewRequestApproval = page.locator('div.p-5').filter({ hasText: "3 customers haven't reviewed their orders. Request reviews?" });
     await expect(reviewRequestApproval).toBeVisible();
 
     // 3. Approve the review request
-    const approveBtn = reviewRequestApproval.getByRole('button', { name: 'Review & Send' });
+    const approveBtn = reviewRequestApproval.getByRole('button', { name: 'Approve' });
     await approveBtn.click();
 
-    // 4. Verify the item is removed from the Agent Updates list
+    // 4. Verify the item is removed from the Action Required list
     await expect(reviewRequestApproval).not.toBeVisible();
 
     // 5. Verify the AI Review Request modal is opened

@@ -17,7 +17,7 @@ test.describe("AI Agent Department UI Mocks", () => {
     await expect(page.locator("h1")).toContainText("The Ambassador");
     await expect(page.getByText("Draft email for review")).toBeVisible();
 
-    await page.getByRole("button", { name: "Review & Send" }).click();
+    await page.getByRole("button", { name: "Approve" }).click();
 
     await expect(page.getByText("All Caught Up!")).toBeVisible();
   });
@@ -76,7 +76,7 @@ test.describe("AI Agent Department UI Mocks", () => {
       ),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Review & Send" }).click();
+    await page.getByRole("button", { name: "Approve" }).click();
 
     await expect(page.getByText("All Caught Up!")).toBeVisible();
   });
@@ -163,7 +163,7 @@ test.describe("AI Agent Department UI Mocks", () => {
       .first();
     await expect(approvalCard).toBeVisible();
 
-    await approvalCard.getByRole("button", { name: "Review & Send" }).click();
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
     await expect(page.getByText("All Caught Up!")).toBeVisible({
       timeout: 5000,
     });
@@ -225,7 +225,7 @@ test.describe("AI Agent Department UI Mocks", () => {
     await page.goto("/team");
     const promoterCard = page.locator("button", { hasText: "The Promoter" });
     await promoterCard.click();
-    await page.getByRole("button", { name: "Review & Send" }).click();
+    await page.getByRole("button", { name: "Approve" }).click();
     await expect(
       page.getByText(
         "Generated 7-day social media plan for Vegan Celebration Cake",
