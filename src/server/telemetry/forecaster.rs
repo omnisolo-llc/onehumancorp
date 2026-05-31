@@ -39,7 +39,14 @@ impl Forecaster {
             let mut lr = self.last_run_time.write().unwrap();
             let val = *lr;
             *lr = now;
-            val
+
+            // Limit lookback to a maximum of 1 hour to prevent excessive memory usage
+            let one_hour_ago = now - chrono::Duration::hours(1);
+            if val < one_hour_ago {
+                one_hour_ago
+            } else {
+                val
+            }
         };
 
         // 1. Fetch recent token usage from telemetry_buffer
