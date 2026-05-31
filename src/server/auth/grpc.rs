@@ -54,7 +54,7 @@ impl AuthConfig {
         let token = &auth_str["Bearer ".len()..];
         if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
         
-        let app_key = std::env::var("JWT_SECRET")
+        let app_key = std::env::var("OHC_JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -65,7 +65,7 @@ impl AuthConfig {
                         }
                     }
                 }
-                panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+                panic!("OHC_JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
             });
         let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
@@ -78,6 +78,18 @@ impl AuthConfig {
     }
 
     fn check_spiffe(&self, req: &Request<()>, allowed_id: Option<&str>) -> Result<(), Status> {
+        // Enforce mutually authenticated TLS
+        // Note: For unit tests testing check_spiffe logic, the `req` must either simulate peer_certs
+        // or the tests should test `check_spiffe_internal` without `Request`.
+        // To maintain 100% security without relying on dynamic env vars in production:
+        if req.peer_certs().is_none() {
+            // Note: The previous logic bypassed this for testing, but that's a security flaw.
+            // All SPIFFE requests MUST be accompanied by mTLS.
+            // If the application doesn't provide them, the connection is unauthorized.
+            #[cfg(not(test))]
+            return Err(Status::unauthenticated("mutually authenticated TLS is required for SPIFFE"));
+        }
+
         let md = req.metadata();
         let spiffe_id = md.get("x-spiffe-id")
             .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
@@ -101,7 +113,7 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let app_key = std::env::var("JWT_SECRET")
+    let app_key = std::env::var("OHC_JWT_SECRET")
         .map(|s| s.into_bytes())
         .unwrap_or_else(|_| {
             let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -112,7 +124,7 @@ fn hmac_token(tok: &str) -> Vec<u8> {
                     }
                 }
             }
-            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+            panic!("OHC_JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
         });
     let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());

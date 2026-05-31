@@ -14,13 +14,13 @@ exports_files([
 # Package backend binary
 pkg_tar(
     name = "backend_pkg",
-    srcs = ["//src/server:server"],
+    srcs = ["//src/server"],
     package_dir = "/usr/local/bin",
 )
 
 pkg_tar(
     name = "server_migrations_pkg",
-    srcs = ["//src/server/migrations:migrations"],
+    srcs = ["//src/server/migrations"],
     package_dir = "/src/server/migrations",
     strip_prefix = "src/server/migrations",
 )
@@ -31,14 +31,14 @@ oci_image(
     name = "server_image",
     base = "@distroless_cc",
     entrypoint = ["/usr/local/bin/server"],
-    tars = [
-        ":backend_pkg",
-        ":server_migrations_pkg",
-    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    tars = [
+        ":backend_pkg",
+        ":server_migrations_pkg",
+    ],
 )
 
 oci_load(
@@ -114,13 +114,13 @@ oci_image(
     name = "agent_image",
     base = "@distroless_cc",
     entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
-    tars = [
-        ":agent_pkg",
-    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    tars = [
+        ":agent_pkg",
+    ],
 )
 
 oci_load(
@@ -138,13 +138,13 @@ oci_image(
     name = "default_agent_image",
     base = "@distroless_cc",
     entrypoint = ["/usr/local/bin/ohc-builtin-agent"],
-    tars = [
-        ":agent_pkg",
-    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    tars = [
+        ":agent_pkg",
+    ],
 )
 
 oci_load(
@@ -185,6 +185,7 @@ sh_test(
     size = "small",
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = [
+        "docker-compose.yml",
         "helm/ohc/Chart.yaml",
         "helm/ohc/dashboards/agent_audit_dashboard.json",
         "helm/ohc/dashboards/database_metrics.json",
@@ -197,15 +198,15 @@ sh_test(
         "helm/ohc/dashboards/ohc-hybrid.json",
         "helm/ohc/dashboards/ohc_infra.json",
         "helm/ohc/dashboards/token-forecast.json",
+        "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/backend-deployment.yaml",
         "helm/ohc/templates/backend-service.yaml",
-        "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/chatwoot.yaml",
-        "helm/ohc/templates/fluent-bit-config.yaml",
+        "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/fluent-bit.yaml",
+        "helm/ohc/templates/fluent-bit-config.yaml",
         "helm/ohc/templates/grafana-custom-css-configmap.yaml",
         "helm/ohc/templates/grafana-dashboard-configmap.yaml",
-        "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/hpa.yaml",
         "helm/ohc/templates/network-policy.yaml",
         "helm/ohc/templates/ohc-core-deployment.yaml",
@@ -216,7 +217,6 @@ sh_test(
         "helm/ohc/templates/servicemonitor.yaml",
         "helm/ohc/templates/vpa.yaml",
         "helm/ohc/values.yaml",
-        "docker-compose.yml",
     ] + ["BUILD.bazel"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -233,6 +233,7 @@ sh_test(
     timeout = "long",
     srcs = ["tests/kind_e2e_test.sh"],
     data = [
+        "docker-compose.yml",
         "helm/ohc/Chart.yaml",
         "helm/ohc/dashboards/agent_audit_dashboard.json",
         "helm/ohc/dashboards/database_metrics.json",
@@ -245,15 +246,15 @@ sh_test(
         "helm/ohc/dashboards/ohc-hybrid.json",
         "helm/ohc/dashboards/ohc_infra.json",
         "helm/ohc/dashboards/token-forecast.json",
+        "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/backend-deployment.yaml",
         "helm/ohc/templates/backend-service.yaml",
-        "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/chatwoot.yaml",
-        "helm/ohc/templates/fluent-bit-config.yaml",
+        "helm/ohc/templates/chatwoot-service.yaml",
         "helm/ohc/templates/fluent-bit.yaml",
+        "helm/ohc/templates/fluent-bit-config.yaml",
         "helm/ohc/templates/grafana-custom-css-configmap.yaml",
         "helm/ohc/templates/grafana-dashboard-configmap.yaml",
-        "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/hpa.yaml",
         "helm/ohc/templates/network-policy.yaml",
         "helm/ohc/templates/ohc-core-deployment.yaml",
@@ -264,16 +265,15 @@ sh_test(
         "helm/ohc/templates/servicemonitor.yaml",
         "helm/ohc/templates/vpa.yaml",
         "helm/ohc/values.yaml",
-        "docker-compose.yml",
     ] + [
         ":server_load",
-        "//src/server:server",
+        "//src/server",
     ],
     tags = [
-        "manual",
         "e2e",
         "large",
         "local",
+        "manual",
         "no-remote-exec",
         "no-sandbox",
         "requires-docker",
