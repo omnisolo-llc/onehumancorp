@@ -522,6 +522,33 @@ impl DB {
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
+                        delivery_address TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS drivers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        name TEXT,
+                        current_location TEXT,
+                        is_active BOOLEAN DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS delivery_tasks (
+                        task_id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        order_id TEXT,
+                        driver_id TEXT,
+                        status TEXT DEFAULT 'pending',
+                        estimated_eta TEXT,
+                        proof_of_delivery_url TEXT,
+                        route_poly TEXT,
+                        stop_order INTEGER,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',

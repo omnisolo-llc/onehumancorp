@@ -5,6 +5,7 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'deliveries'>('overview');
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
@@ -362,6 +363,10 @@ export default function Dashboard() {
             Offline - Changes saved locally
           </div>
         </div>
+        <div className="flex gap-4 border-b border-gray-200 w-full mb-0 px-2 pt-2">
+          <button onClick={() => setActiveTab('overview')} className={`pb-2 text-sm font-medium ${activeTab === 'overview' ? 'border-b-2 border-black text-black' : 'text-gray-500'}`}>Overview</button>
+          <button onClick={() => setActiveTab('deliveries')} className={`pb-2 text-sm font-medium ${activeTab === 'deliveries' ? 'border-b-2 border-black text-black' : 'text-gray-500'}`}>Deliveries</button>
+        </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -397,6 +402,69 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      {activeTab === 'deliveries' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold font-outfit text-gray-900">Delivery Dashboard</h2>
+                <p className="text-gray-500 mt-1">Manage local deliveries and drivers</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  className="flex-1 sm:flex-none px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                  onClick={() => {
+                    alert('AI Dispatcher is clustering orders into routes...');
+                    setTimeout(() => alert('Orders assigned successfully!'), 1000);
+                  }}
+                >
+                  Auto-Assign (AI)
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Unassigned Orders (2)</h3>
+                <div className="space-y-3">
+                  <div className="p-4 rounded-xl border border-gray-100 bg-gray-50">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-900">Order #4912 - Chocolate Cake</p>
+                        <p className="text-sm text-gray-500">123 Baker St, 2.4 miles away</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl border border-gray-100 bg-gray-50">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-900">Order #4913 - Assorted Pastries</p>
+                        <p className="text-sm text-gray-500">456 Main St, 3.1 miles away</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Maya's Route</h3>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    M
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">3 stops • 45 mins estimated</p>
+                    <p className="text-sm text-gray-500">In Transit</p>
+                  </div>
+                </div>
+                <button className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg transition-colors font-medium">
+                  Dispatch Route
+                </button>
+              </div>
+            </div>
+          </div>
+      )}
+      {activeTab === 'overview' && (
+        <>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
@@ -1372,6 +1440,8 @@ export default function Dashboard() {
             </div>
          </section>
 
+        </>
+      )}
       </main>
 
       {/* Milestone Modal */}

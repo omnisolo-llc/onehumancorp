@@ -23,6 +23,164 @@ impl MyDashboardService {
 
 #[tonic::async_trait]
 impl DashboardService for MyDashboardService {
+    async fn get_delivery_dashboard(
+        &self,
+        request: Request<GetDeliveryDashboardRequest>,
+    ) -> Result<Response<GetDeliveryDashboardResponse>, Status> {
+        let req = request.into_inner();
+        let unassigned_records = sqlx::query("SELECT task_id, tenant_id, order_id, driver_id, status, estimated_eta, proof_of_delivery_url, route_poly, stop_order FROM delivery_tasks WHERE tenant_id = $1 AND status = 'pending'")
+            .bind(&req.organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut unassigned_tasks = Vec::new();
+        for r in unassigned_records {
+            use sqlx::Row;
+            unassigned_tasks.push(DeliveryTask {
+                task_id: r.try_get("task_id").unwrap_or_default(),
+                tenant_id: r.try_get("tenant_id").unwrap_or_default(),
+                order_id: r.try_get("order_id").unwrap_or_default(),
+                driver_id: r.try_get("driver_id").unwrap_or_default(),
+                status: r.try_get("status").unwrap_or_default(),
+                estimated_eta: r.try_get("estimated_eta").unwrap_or_default(),
+                proof_of_delivery_url: r.try_get("proof_of_delivery_url").unwrap_or_default(),
+                route_poly: r.try_get("route_poly").unwrap_or_default(),
+                stop_order: r.try_get::<i32, _>("stop_order").unwrap_or_default(),
+                order: None,
+            });
+        }
+
+        let assigned_records = sqlx::query("SELECT task_id, tenant_id, order_id, driver_id, status, estimated_eta, proof_of_delivery_url, route_poly, stop_order FROM delivery_tasks WHERE tenant_id = $1 AND status != 'pending'")
+            .bind(&req.organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut assigned_tasks = Vec::new();
+        for r in assigned_records {
+            use sqlx::Row;
+            assigned_tasks.push(DeliveryTask {
+                task_id: r.try_get("task_id").unwrap_or_default(),
+                tenant_id: r.try_get("tenant_id").unwrap_or_default(),
+                order_id: r.try_get("order_id").unwrap_or_default(),
+                driver_id: r.try_get("driver_id").unwrap_or_default(),
+                status: r.try_get("status").unwrap_or_default(),
+                estimated_eta: r.try_get("estimated_eta").unwrap_or_default(),
+                proof_of_delivery_url: r.try_get("proof_of_delivery_url").unwrap_or_default(),
+                route_poly: r.try_get("route_poly").unwrap_or_default(),
+                stop_order: r.try_get::<i32, _>("stop_order").unwrap_or_default(),
+                order: None,
+            });
+        }
+
+        let driver_records = sqlx::query("SELECT id as driver_id, tenant_id, name, current_location, is_active FROM drivers WHERE tenant_id = $1")
+            .bind(&req.organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut drivers = Vec::new();
+        for r in driver_records {
+            use sqlx::Row;
+            drivers.push(Driver {
+                driver_id: r.try_get("driver_id").unwrap_or_default(),
+                tenant_id: r.try_get("tenant_id").unwrap_or_default(),
+                name: r.try_get("name").unwrap_or_default(),
+                current_location: r.try_get("current_location").unwrap_or_default(),
+                is_active: r.try_get("is_active").unwrap_or_default(),
+            });
+        }
+
+        Ok(Response::new(GetDeliveryDashboardResponse {
+            unassigned_tasks,
+            assigned_tasks,
+            drivers,
+        }))
+    }
+
+    async fn auto_assign_routes(
+        &self,
+        request: Request<AutoAssignRoutesRequest>,
+    ) -> Result<Response<AutoAssignRoutesResponse>, Status> {
+        let req = request.into_inner();
+        // Note: AI logic handled by dispatcher agent, but we simulate some clustering
+        let drivers: Vec<(String,)> = sqlx::query_as("SELECT id FROM drivers WHERE tenant_id = $1 AND is_active = true")
+            .bind(&req.organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if drivers.is_empty() {
+            return Err(Status::failed_precondition("No active drivers available"));
+        }
+
+        let unassigned_tasks: Vec<(String, String)> = sqlx::query_as("SELECT task_id, order_id FROM delivery_tasks WHERE tenant_id = $1 AND status = 'pending'")
+            .bind(&req.organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        for (i, task) in unassigned_tasks.iter().enumerate() {
+            let driver_id = &drivers[i % drivers.len()].0;
+            sqlx::query("UPDATE delivery_tasks SET status = 'assigned', driver_id = $1, stop_order = $2 WHERE tenant_id = $3 AND task_id = $4")
+                .bind(driver_id)
+                .bind(i as i32)
+                .bind(&req.organization_id)
+                .bind(&task.0)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+        }
+
+        Ok(Response::new(AutoAssignRoutesResponse { success: true }))
+    }
+
+    async fn dispatch_route(
+        &self,
+        request: Request<DispatchRouteRequest>,
+    ) -> Result<Response<DispatchRouteResponse>, Status> {
+        let req = request.into_inner();
+        sqlx::query("UPDATE delivery_tasks SET status = 'in_transit' WHERE tenant_id = $1 AND driver_id = $2 AND status = 'assigned'")
+            .bind(&req.organization_id)
+            .bind(&req.driver_id)
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(DispatchRouteResponse { success: true }))
+    }
+
+    async fn update_delivery_task_status(
+        &self,
+        request: Request<UpdateDeliveryTaskStatusRequest>,
+    ) -> Result<Response<UpdateDeliveryTaskStatusResponse>, Status> {
+        let req = request.into_inner();
+        sqlx::query("UPDATE delivery_tasks SET status = $1, proof_of_delivery_url = $2 WHERE tenant_id = $3 AND task_id = $4")
+            .bind(&req.status)
+            .bind(&req.proof_of_delivery_url)
+            .bind(&req.organization_id)
+            .bind(&req.task_id)
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if req.status == "delivered" {
+           let task: (String,) = sqlx::query_as("SELECT order_id FROM delivery_tasks WHERE task_id = $1")
+               .bind(&req.task_id)
+               .fetch_one(&self.db.pool)
+               .await
+               .map_err(|e| Status::internal(e.to_string()))?;
+           sqlx::query("UPDATE orders SET status = 'delivered' WHERE id = $1 AND tenant_id = $2")
+               .bind(&task.0)
+               .bind(&req.organization_id)
+               .execute(&self.db.pool)
+               .await
+               .map_err(|e| Status::internal(e.to_string()))?;
+        }
+
+        Ok(Response::new(UpdateDeliveryTaskStatusResponse { success: true }))
+    }
     async fn get_dashboard(
         &self,
         request: Request<GetDashboardRequest>,
@@ -186,7 +344,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = ::server_ohc::app::Order { delivery_address: "".to_string(),
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),
@@ -202,7 +360,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = ::server_ohc::app::Order { delivery_address: "".to_string(),
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),

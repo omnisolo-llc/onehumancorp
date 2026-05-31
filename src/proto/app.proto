@@ -27,6 +27,34 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+  string delivery_address = 7;
+}
+
+message RouteSegment {
+  string segment_id = 1;
+  int32 stop_order = 2;
+  string polyline = 3;
+}
+
+message Driver {
+  string driver_id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string current_location = 4;
+  bool is_active = 5;
+}
+
+message DeliveryTask {
+  string task_id = 1;
+  string tenant_id = 2;
+  string order_id = 3;
+  string driver_id = 4;
+  string status = 5;
+  string estimated_eta = 6;
+  string proof_of_delivery_url = 7;
+  string route_poly = 8;
+  int32 stop_order = 9;
+  Order order = 10;
 }
 
 message DashboardSnapshot {
@@ -115,11 +143,55 @@ message PipelinePromoteRequest {
   string approved_by = 2;
 }
 
+message GetDeliveryDashboardRequest {
+  string organization_id = 1;
+}
+
+message GetDeliveryDashboardResponse {
+  repeated DeliveryTask unassigned_tasks = 1;
+  repeated DeliveryTask assigned_tasks = 2;
+  repeated Driver drivers = 3;
+}
+
+message AutoAssignRoutesRequest {
+  string organization_id = 1;
+}
+
+message AutoAssignRoutesResponse {
+  bool success = 1;
+}
+
+message DispatchRouteRequest {
+  string organization_id = 1;
+  string driver_id = 2;
+}
+
+message DispatchRouteResponse {
+  bool success = 1;
+}
+
+message UpdateDeliveryTaskStatusRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string status = 3;
+  string proof_of_delivery_url = 4;
+}
+
+message UpdateDeliveryTaskStatusResponse {
+  bool success = 1;
+}
+
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+
+  // Delivery Mesh
+  rpc GetDeliveryDashboard(GetDeliveryDashboardRequest) returns (GetDeliveryDashboardResponse);
+  rpc AutoAssignRoutes(AutoAssignRoutesRequest) returns (AutoAssignRoutesResponse);
+  rpc DispatchRoute(DispatchRouteRequest) returns (DispatchRouteResponse);
+  rpc UpdateDeliveryTaskStatus(UpdateDeliveryTaskStatusRequest) returns (UpdateDeliveryTaskStatusResponse);
 }
 
 // Onboarding State

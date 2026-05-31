@@ -37,8 +37,14 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let is_local_delivery = event.payload.get("delivery_address").is_some() && event.payload.get("delivery_address").unwrap().as_str().unwrap_or_default() != "";
+
         let action_description = if event.event_type == "tenant.order.created" {
-            "Process Order & Update Inventory".to_string()
+            if is_local_delivery {
+                "Process Local Delivery Order & Group into Dispatch Routes".to_string()
+            } else {
+                "Process Order & Update Inventory".to_string()
+            }
         } else {
             "Create order and booking".to_string()
         };
@@ -50,6 +56,35 @@ impl Department for OperationsAgent {
             risk,
             event.payload.clone(),
         ).await?;
+
+        if is_local_delivery {
+            let pool = self.orchestrator.db_pool();
+            let drivers: Vec<(String,)> = sqlx::query_as("SELECT id FROM drivers WHERE tenant_id = $1 AND is_active = true")
+                .bind(&event.tenant_id)
+                .fetch_all(&pool)
+                .await
+                .unwrap_or_default();
+
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown_order");
+            let task_id = format!("task_{}", uuid::Uuid::new_v4().to_string());
+
+            if !drivers.is_empty() {
+                let _ = sqlx::query("INSERT INTO delivery_tasks (task_id, tenant_id, order_id, driver_id, status) VALUES ($1, $2, $3, $4, 'assigned')")
+                    .bind(&task_id)
+                    .bind(&event.tenant_id)
+                    .bind(order_id)
+                    .bind(&drivers[0].0)
+                    .execute(&pool)
+                    .await;
+            } else {
+                let _ = sqlx::query("INSERT INTO delivery_tasks (task_id, tenant_id, order_id, status) VALUES ($1, $2, $3, 'pending')")
+                    .bind(&task_id)
+                    .bind(&event.tenant_id)
+                    .bind(order_id)
+                    .execute(&pool)
+                    .await;
+            }
+        }
 
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {
