@@ -36,17 +36,17 @@ pub struct CostAuditor {
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
-    llm_cost_counter: Counter<u64>,
-    storage_savings_counter: Counter<u64>,
-    compute_cost_counter: Counter<u64>,
+    llm_cost_counter: Counter<f64>,
+    storage_savings_counter: Counter<f64>,
+    compute_cost_counter: Counter<f64>,
 }
 
 impl CostAuditor {
     pub fn new(config: CostConfig) -> Self {
         let meter = global::meter("ohc.billing");
-        let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
-        let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
-        let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
+        let llm_cost_counter = meter.f64_counter("ohc_llm_cost_total").build();
+        let storage_savings_counter = meter.f64_counter("ohc_storage_savings_total").build();
+        let compute_cost_counter = meter.f64_counter("ohc_compute_cost_total").build();
 
         CostAuditor {
             config,
@@ -106,8 +106,7 @@ impl CostAuditor {
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
-        let cost_cents = (cost * 100.0).round() as u64;
-        self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -155,8 +154,7 @@ impl CostAuditor {
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
-        let savings_cents = (savings * 100.0).round() as u64;
-        self.storage_savings_counter.add(savings_cents, &[]);
+        self.storage_savings_counter.add(savings, &[]);
 
         savings
     }
@@ -245,8 +243,7 @@ impl CostAuditor {
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
 
-        let total_cents = (total * 100.0).round() as u64;
-        self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.compute_cost_counter.add(total, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }

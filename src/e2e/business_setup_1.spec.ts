@@ -2,12 +2,6 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard', () => {
   test.beforeEach(async ({ page }) => {
-    const id = `business-setup-${Date.now()}-${Math.random()}`;
-    await page.addInitScript((tenantId) => {
-      localStorage.setItem('tenant_id', tenantId);
-      localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
-    }, id);
     await page.goto('/website-builder');
     await expect(page.locator('#setup-screen')).toBeVisible();
   });
@@ -25,36 +19,33 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Online Store/ }).click();
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
-    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
 
   test('completes the publish path to the checklist', async ({ page }) => {
-    const email = `maya+${Date.now()}@example.com`;
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
-    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
-    await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByPlaceholder('What is the name of this product?').fill('Custom Cookies');
     await page.getByPlaceholder('0.00').fill('24.99');
-    await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible();
     await page.getByRole('button', { name: 'Online', exact: true }).click();
     await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Smith');
-    await page.getByPlaceholder('you@email.com').fill(email);
+    await page.getByPlaceholder('you@email.com').fill('maya@example.com');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Modern' }).click();
-    await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible();
     await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });
