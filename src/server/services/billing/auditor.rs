@@ -13,6 +13,7 @@ pub struct AuditEvent {
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
     pub local_embedding_tokens: i64,
+    pub model: Option<String>,
 }
 
 pub struct ComputeEvent {
@@ -25,6 +26,7 @@ pub struct CostAuditor {
     config: CostConfig,
     agent_costs: Mutex<HashMap<String, f64>>,
     tenant_costs: Mutex<HashMap<String, f64>>,
+    tenant_model_costs: Mutex<HashMap<String, HashMap<String, f64>>>,
     agent_budgets: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
     caching_savings: Mutex<f64>,
@@ -52,6 +54,7 @@ impl CostAuditor {
             config,
             agent_costs: Mutex::new(HashMap::new()),
             tenant_costs: Mutex::new(HashMap::new()),
+            tenant_model_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
             caching_savings: Mutex::new(0.0),
@@ -74,13 +77,17 @@ impl CostAuditor {
     }
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
-        let cost = calculator::calculate_cost_with_config(
-            event.input_tokens,
-            event.output_tokens,
-            event.cached_input_tokens,
-            event.local_embedding_tokens,
-            &self.config,
-        );
+        let cost = if let Some(model) = &event.model {
+            calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+        } else {
+            calculator::calculate_cost_with_config(
+                event.input_tokens,
+                event.output_tokens,
+                event.cached_input_tokens,
+                event.local_embedding_tokens,
+                &self.config,
+            )
+        };
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
@@ -91,6 +98,13 @@ impl CostAuditor {
         let mut tenant_costs = self.tenant_costs.lock().unwrap();
         let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
         *current_tenant_cost += cost;
+
+        if let Some(model) = event.model.clone() {
+            let mut tenant_model_costs = self.tenant_model_costs.lock().unwrap();
+            let tenant_models = tenant_model_costs.entry(event.tenant_id.clone()).or_insert_with(HashMap::new);
+            let current_model_cost = tenant_models.entry(model).or_insert(0.0);
+            *current_model_cost += cost;
+        }
 
         // Detect anomalies (simple threshold check)
         if cost > 10.0 {
@@ -117,13 +131,17 @@ impl CostAuditor {
     }
 
     pub fn record_cache_hit(&self, event: AuditEvent) -> f64 {
-        let actual_cost = calculator::calculate_cost_with_config(
-            event.input_tokens,
-            event.output_tokens,
-            event.cached_input_tokens,
-            event.local_embedding_tokens,
-            &self.config,
-        );
+        let actual_cost = if let Some(model) = &event.model {
+            calculator::calculate_cost(model, event.input_tokens, event.output_tokens, event.cached_input_tokens)
+        } else {
+            calculator::calculate_cost_with_config(
+                event.input_tokens,
+                event.output_tokens,
+                event.cached_input_tokens,
+                event.local_embedding_tokens,
+                &self.config,
+            )
+        };
         let uncached_cost = calculator::calculate_cost_with_config(
             event.input_tokens + event.cached_input_tokens,
             event.output_tokens,
@@ -208,6 +226,11 @@ impl CostAuditor {
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_costs_by_model(&self, tenant_id: &str) -> HashMap<String, f64> {
+        let tenant_model_costs = self.tenant_model_costs.lock().unwrap();
+        tenant_model_costs.get(tenant_id).cloned().unwrap_or_else(HashMap::new)
     }
 
     pub fn get_total_revenue(&self) -> f64 {
@@ -344,6 +367,7 @@ mod tests {
             output_tokens: 500,
             cached_input_tokens: 0,
             local_embedding_tokens: 0,
+            model: None,
         };
         
 
@@ -378,6 +402,7 @@ mod tests {
             output_tokens: 50,
             cached_input_tokens: 100,
             local_embedding_tokens: 0,
+            model: None,
         };
 
         let savings = auditor.record_cache_hit(event);

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface CostDashboardData {
+  model_costs: Record<string, number>;
   total_revenue: number;
   total_costs: number;
   llm_cost: number;
@@ -43,6 +44,7 @@ export default function CostDashboardPage() {
                 llm_cost: 0,
                 storage_cost: 0,
                 payment_fees: 0,
+                model_costs: {},
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
             });
@@ -58,6 +60,7 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
+                model_costs: {},
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
@@ -120,11 +123,28 @@ export default function CostDashboardPage() {
 
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-                    <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
+                    <div className="w-full">
+                        <div className="flex justify-between items-center mb-2">
+                            <div>
+                                <span className="font-medium text-gray-900">LLM Usage</span>
+                                <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
+                            </div>
+                            <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
+                        </div>
+                        {data?.model_costs && Object.keys(data.model_costs).length > 0 && (
+                            <div className="mt-4 border-t pt-4">
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Cost by Model</h4>
+                                <ul className="space-y-2">
+                                    {Object.entries(data.model_costs).map(([model, cost]) => (
+                                        <li key={model} className="flex justify-between text-sm">
+                                            <span className="text-gray-600">{model}</span>
+                                            <span className="text-gray-800 font-medium">{formatCurrency(cost)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
-                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">

@@ -2598,12 +2598,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
         )
         .route(
-            "/api/costs",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
-            }),
-        )
-        .route(
             "/api/approvals/request",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))

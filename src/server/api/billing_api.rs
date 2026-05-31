@@ -1,5 +1,6 @@
 use axum::{extract::State, Json};
 use std::sync::Arc;
+use std::collections::HashMap;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
 
@@ -15,6 +16,7 @@ pub struct MyPlanResponse {
 
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
+    pub model_costs: HashMap<String, i64>,
     pub total_revenue: i64,
     pub total_costs: i64,
     pub llm_cost: i64,
@@ -112,7 +114,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), model_costs: HashMap::new() })
     };
 
     let now = chrono::Utc::now();
@@ -129,7 +131,7 @@ pub async fn cost_dashboard_handler(
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
-        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue())
+        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue(), auditor.get_tenant_costs_by_model(&tenant_id_clone_2))
     });
 
     let storage_future = tokio::task::spawn(async move {
@@ -139,7 +141,12 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
+    let (llm_cost_f64, total_revenue_f64, tenant_model_costs_f64) = auditor_res.unwrap_or((0.0, 0.0, HashMap::new()));
+
+    let mut model_costs = HashMap::new();
+    for (model, cost) in tenant_model_costs_f64 {
+        model_costs.insert(model, (cost * 100.0) as i64);
+    }
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
@@ -155,5 +162,6 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+        model_costs,
     })
 }
