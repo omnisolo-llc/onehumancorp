@@ -75,3 +75,24 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });
+
+test.describe('Help Center Widget', () => {
+  test('should display and search help articles', async ({ page }) => {
+    await page.goto('/');
+
+    // Open Help Widget
+    await page.getByRole('button', { name: /Help Center & Guides/i }).click();
+
+    // Look for articles
+    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
+
+    // Search
+    const searchInput = page.getByPlaceholder('Search for help articles...');
+    await searchInput.fill('Finding Customers');
+
+    // The search filter should show "Finding Customers"
+    await expect(page.getByRole('heading', { name: 'Finding Customers' })).toBeVisible();
+    // And "Getting Started" should be hidden
+    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeHidden();
+  });
+});
