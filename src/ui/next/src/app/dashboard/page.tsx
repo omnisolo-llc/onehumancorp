@@ -47,6 +47,8 @@ export default function Dashboard() {
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
+  const [messageContent, setMessageContent] = useState<string>('');
+  const [meetingTranscript, setMeetingTranscript] = useState<{id: string, role: 'user'|'system', content: string}[]>([]);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
@@ -123,34 +125,12 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem("10th_order_milestone_shown", "true");
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-  }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
-  useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
-      try {
-        const res = await fetch('/api/v1/growth/milestones/check');
-        const data = await res.json();
         if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
+            localStorage.setItem("10th_order_milestone_shown", "true");
           }
         }
       } catch (e) {
@@ -338,6 +318,36 @@ export default function Dashboard() {
     setShowSoftPaywall(false);
     alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
     handleSendCampaign();
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageContent.trim()) return;
+    const userMsg = messageContent;
+    setMessageContent('');
+
+    const userMsgId = Date.now().toString() + '-user';
+    setMeetingTranscript(prev => [...prev, {id: userMsgId, role: 'user', content: userMsg}]);
+
+    try {
+      const response = await fetch('/api/agents/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMsg })
+      });
+      if (response.ok) {
+        setMeetingTranscript(prev => [...prev, {
+          id: Date.now().toString() + '-system',
+          role: 'system',
+          content: "I've drafted an action for your approval.",
+        }]);
+      } else {
+        setMeetingTranscript(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Failed to process your request."}]);
+      }
+    } catch (e) {
+      setMeetingTranscript(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Error connecting to the team."}]);
+    }
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -563,6 +573,43 @@ export default function Dashboard() {
              </div>
            </section>
          )}
+
+         {/* Send Message Panel */}
+         <section className="mb-6">
+           <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Send Message</h2>
+           <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+             {meetingTranscript.length > 0 && (
+               <div className="flex flex-col gap-3 mb-2 max-h-60 overflow-y-auto">
+                 {meetingTranscript.map(msg => (
+                   <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                     <div className={`p-3 rounded-lg max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-[#0066FF] text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
+                       {msg.content}
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+             <div className="flex gap-2">
+               <input
+                 type="text"
+                 value={messageContent}
+                 onChange={(e) => setMessageContent(e.target.value)}
+                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                 placeholder="Content"
+                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                 aria-label="Content"
+               />
+               <button
+                 onClick={handleSendMessage}
+                 disabled={!messageContent.trim()}
+                 className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90 disabled:opacity-50"
+                 style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
+               >
+                 Send Message
+               </button>
+             </div>
+           </div>
+         </section>
 
          {/* Agent Updates (Approvals) */}
          {(approvals.length > 0) && (
