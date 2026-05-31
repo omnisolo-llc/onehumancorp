@@ -8,13 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+    { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Instagram and Facebook Inbox." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "Transactional and Marketing Emails." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Global SMS Notifications and Order Alerts." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -35,8 +35,8 @@ export default function Integrations() {
       ));
       router.push("/dashboard");
     }
-    if (id === 'ayrshare') {
-      alert("Connecting Ayrshare via OAuth...");
+    if (id === 'meta') {
+      alert("Connecting Meta via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
