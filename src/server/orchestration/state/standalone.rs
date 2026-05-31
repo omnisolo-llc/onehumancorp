@@ -14,7 +14,7 @@ fn state_manager_timeout() -> std::time::Duration {
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())
         .map(std::time::Duration::from_millis)
-        .unwrap_or_else(|| std::time::Duration::from_secs(2))
+        .unwrap_or_else(|| std::time::Duration::from_secs(60))
 }
 
 pub struct StandaloneStateManager {

@@ -257,19 +257,6 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-        let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_missions").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
-                }
-            }
-        } else {
-            None
-        };
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -299,13 +286,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "sync_context").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
-                }
-            }
+            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };
@@ -346,7 +327,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -364,7 +345,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -387,7 +368,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -407,7 +388,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));

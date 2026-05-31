@@ -1,4 +1,4 @@
-
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
@@ -29,7 +29,7 @@ impl ToolExecutionEngine {
                         continue;
                     } else {
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
-                        return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                        return Err(ToolError::Transient(msg));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
