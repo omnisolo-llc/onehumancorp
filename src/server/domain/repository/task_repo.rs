@@ -2,6 +2,7 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use super::models::{Task, TaskDependency};
 use chrono::Utc;
+use ::server_common::auth_utils::set_org_context;
 
 use tokio::sync::Mutex;
 
@@ -21,6 +22,8 @@ impl TaskRepository {
     pub async fn create_task(&self, task: Task) -> Result<Task, String> {
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, &task.organization_id).await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
@@ -38,9 +41,10 @@ impl TaskRepository {
                 .bind(&task.assigned_agent_role)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -71,7 +75,9 @@ impl TaskRepository {
     pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
             DbStore::Postgres => {
-                sqlx::query_as::<_, Task>(
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
+                let result = sqlx::query_as::<_, Task>(
                     r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
@@ -80,9 +86,11 @@ impl TaskRepository {
                     "#
                 )
                 .bind(organization_id)
-                .fetch_all(&self.db.pool)
+                .fetch_all(&mut *tx)
                 .await
-                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+                result
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
@@ -106,6 +114,8 @@ impl TaskRepository {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
                 let result = sqlx::query(
                     r#"
                     UPDATE tasks
@@ -118,9 +128,10 @@ impl TaskRepository {
                 .bind(now)
                 .bind(task_id)
                 .bind(organization_id)
-                .fetch_optional(&self.db.pool)
+                .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
 
                 if result.is_none() {
                     return Err("Task not found or does not belong to organization".to_string());
@@ -222,6 +233,7 @@ impl TaskRepository {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, organization_id).await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
                     r#"

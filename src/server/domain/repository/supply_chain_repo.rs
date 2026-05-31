@@ -3,6 +3,7 @@ use crate::db::{DB, DbStore};
 use super::models::{RawMaterial, BOMItem, Vendor, PurchaseOrder, POLineItem, DepletionLog};
 use chrono::Utc;
 use uuid::Uuid;
+use ::server_common::auth_utils::set_org_context;
 
 pub struct SupplyChainRepo {
     db: Arc<DB>,
@@ -19,12 +20,16 @@ impl SupplyChainRepo {
         // 1. Get BOM items for the finished good
         let bom_items: Vec<BOMItem> = match &self.db.store {
             DbStore::Postgres => {
-                sqlx::query_as("SELECT * FROM bom_items WHERE tenant_id = $1 AND finished_good_id = $2")
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                let result = sqlx::query_as("SELECT * FROM bom_items WHERE tenant_id = $1 AND finished_good_id = $2")
                     .bind(tenant_id)
                     .bind(product_id)
-                    .fetch_all(&self.db.pool)
+                    .fetch_all(&mut *tx)
                     .await
-                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+                result
             },
             DbStore::Sqlite(pool) => {
                 sqlx::query_as("SELECT * FROM bom_items WHERE tenant_id = ? AND finished_good_id = ?")
@@ -44,6 +49,7 @@ impl SupplyChainRepo {
             match &self.db.store {
                 DbStore::Postgres => {
                     let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
                     sqlx::query("UPDATE raw_materials SET current_quantity = current_quantity - $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
                         .bind(qty_to_deduct)
@@ -101,11 +107,15 @@ impl SupplyChainRepo {
     pub async fn get_low_stock_materials(&self, tenant_id: &str) -> Result<Vec<RawMaterial>, String> {
         match &self.db.store {
             DbStore::Postgres => {
-                sqlx::query_as("SELECT * FROM raw_materials WHERE tenant_id = $1 AND current_quantity <= reorder_threshold")
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                let result = sqlx::query_as("SELECT * FROM raw_materials WHERE tenant_id = $1 AND current_quantity <= reorder_threshold")
                     .bind(tenant_id)
-                    .fetch_all(&self.db.pool)
+                    .fetch_all(&mut *tx)
                     .await
-                    .map_err(|e| e.to_string())
+                    .map_err(|e| e.to_string());
+                let _ = tx.commit().await;
+                result
             },
             DbStore::Sqlite(pool) => {
                 sqlx::query_as("SELECT * FROM raw_materials WHERE tenant_id = ? AND current_quantity <= reorder_threshold")
