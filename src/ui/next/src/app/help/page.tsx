@@ -40,7 +40,7 @@ export default function HelpCenterPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredArticles.map((article, idx) => (
               <Link key={idx} href={article.link}>
-                <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer h-full">
+                <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-2xl border border-white/50 hover:border-blue-300 transition-all cursor-pointer h-full">
                   <h2 className="text-xl font-bold text-blue-600 mb-2">{article.title}</h2>
                   <p className="text-gray-600">{article.desc}</p>
                 </div>

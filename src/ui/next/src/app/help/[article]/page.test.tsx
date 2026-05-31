@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import HelpArticlePage from './page';
-import { useRouter, useParams } from 'next/navigation';
+import * as navigation from 'next/navigation';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
@@ -11,8 +11,8 @@ vi.mock('next/navigation', () => ({
 
 describe('HelpArticlePage', () => {
   it('renders getting-started article correctly', () => {
-    (useParams as any).mockReturnValue({ article: 'getting-started' });
-    (useRouter as any).mockReturnValue({ push: vi.fn() });
+    vi.spyOn(navigation, 'useParams').mockReturnValue({ article: 'getting-started' });
+    vi.spyOn(navigation, 'useRouter').mockReturnValue({ push: vi.fn() } as any);
 
     render(<HelpArticlePage />);
 
@@ -21,8 +21,8 @@ describe('HelpArticlePage', () => {
   });
 
   it('renders "Article Not Found" for an unknown article', () => {
-    (useParams as any).mockReturnValue({ article: 'unknown-article' });
-    (useRouter as any).mockReturnValue({ push: vi.fn() });
+    vi.spyOn(navigation, 'useParams').mockReturnValue({ article: 'unknown-article' });
+    vi.spyOn(navigation, 'useRouter').mockReturnValue({ push: vi.fn() } as any);
 
     render(<HelpArticlePage />);
 
