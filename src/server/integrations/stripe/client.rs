@@ -53,7 +53,7 @@ impl StripeClient {
                 Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
             },
             crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
-                if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
+                if let Ok(token) = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN") {
                     let mp_client = crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
                     mp_client.create_checkout_preference(_price_id, customer_id).await
                 } else {

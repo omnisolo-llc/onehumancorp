@@ -15,20 +15,21 @@ case $MODE in
     export OHC_MULTITENANT=true
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=cloud
-    export LOG_FORMAT="json"
-    export LOG_LEVEL="info"
+    export OHC_STANDALONE_MODE=false
+    export OHC_LOG_FORMAT="json"
+    export OHC_LOG_LEVEL="info"
     echo "Configured for Cloud-Native Multi-Tenant Mode."
     ;;
   standalone)
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=standalone
+    export OHC_STANDALONE_MODE=true
     export TOKIO_WORKER_THREADS=2
     export RAYON_NUM_THREADS=2
-    export OHC_STANDALONE=true
     mkdir -p .ohc/memory/auto/ .ohc/memory/team/
-    export LOG_FORMAT="json"
-    export LOG_LEVEL="info"
+    export OHC_LOG_FORMAT="json"
+    export OHC_LOG_LEVEL="info"
     if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
       export OHC_TELEMETRY_ENABLED=false
     fi
@@ -38,8 +39,9 @@ case $MODE in
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=true
     export OHC_SOURCE_MODE=cloud
-    export LOG_FORMAT="json"
-    export LOG_LEVEL="info"
+    export OHC_STANDALONE_MODE=false
+    export OHC_LOG_FORMAT="json"
+    export OHC_LOG_LEVEL="info"
     echo "Configured for Headless API Mode."
     ;;
   *)
