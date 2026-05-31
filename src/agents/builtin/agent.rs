@@ -925,12 +925,6 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(msg)) => {
                             return Err(format!("Fatal tool error: {}", msg));
                         }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                        }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
                             return Err(format!("Handoff requested to {}", target));
                         }
@@ -971,8 +965,6 @@ impl Agent {
                         Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
                             Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
-                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
                         continue;
@@ -1054,9 +1046,6 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
-                            }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::HandoffRequested(target)) => {
                                 return Err(format!("Handoff requested to {}", target));
@@ -1516,9 +1505,6 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::Fatal(msg)) => {
                         return Err(format!("Fatal tool error: {}", msg).into());
-                    }
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Unexpected tool error: {}", msg).into());
                     }
                     Err(e) => {
                         return Err(format!("Fatal tool error: {:?}", e).into());
@@ -2542,8 +2528,6 @@ impl Agent {
                     }
                 }
 
-                let mut retry_count = 0;
-                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -2576,17 +2560,6 @@ impl Agent {
                                 iteration,
                             });
                             content = r;
-                            break;
-                        }
-                        Err(ToolError::Transient(msg)) => {
-                            let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            error = err;
                             break;
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
@@ -6413,7 +6386,6 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: std::sync::Arc::new(tokio::sync::Mutex::new(0)) });
         let tool = Tool {
             name: "test_tool".to_string(),
