@@ -95,7 +95,7 @@ sequenceDiagram
 
 ## 4. Troubleshooting
 
-- **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `OHC_DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
+- **Redis Connections in Standalone Mode**: In Standalone mode, OHC falls back gracefully to SQLite. Ensure your `DATABASE_URL` is configured for your local sqlite database rather than a remote Postgres instance.
 - **Teammate Mesh Not Syncing**: Verify the connection to the Centrifuge realtime pub/sub system and ensure your client is subscribed to the `mesh:tasks` channels. Check the network logs for any 401 Unauthorized errors indicating token expiration.
 
 ## 5. Advanced KAIROS Orchestration

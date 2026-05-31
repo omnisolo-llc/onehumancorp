@@ -10,7 +10,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     }, id);
     await page.goto('/onboarding');
 
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Alex Art');
     await page.getByRole('button', { name: /Next/ }).click();
 

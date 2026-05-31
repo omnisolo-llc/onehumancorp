@@ -97,17 +97,17 @@ COMMON_HELM_SMOKE_ARGS=(
 CLOUD_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=true
-  --set-string backend.env.OHC_DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
-  --set-string backend.env.OHC_REDIS_URL=redis://redis-master:6379
-  --set-string backend.env.OHC_REDIS_ADDR=redis-master:6379
+  --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
+  --set-string backend.env.REDIS_URL=redis://redis-master:6379
+  --set-string backend.env.REDIS_ADDR=redis-master:6379
   --set-string backend.env.OHC_STANDALONE_MODE=false
-  --set-string backend.env.OHC_JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
+  --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
 )
 
 STANDALONE_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=false
-  --set-string backend.env.OHC_DATABASE_URL=sqlite:///tmp/ohc-standalone/standalone.db
+  --set-string backend.env.DATABASE_URL=sqlite:///tmp/ohc-standalone/standalone.db
   --set-string backend.env.OHC_SQLITE_KEY=kind-e2e-standalone-sqlite-key
   --set-string backend.env.OHC_STANDALONE_MODE=true
   --set-string backend.env.OHC_TELEMETRY_ENABLED=false

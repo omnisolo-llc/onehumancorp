@@ -13,7 +13,8 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await expect(page.getByRole('button', { name: /Next/ })).toBeVisible();
   });
 
@@ -26,6 +27,7 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('completes the publish path to the checklist', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Test Company');
     await page.getByRole('button', { name: /Next/ }).click();
 

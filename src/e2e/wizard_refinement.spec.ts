@@ -3,7 +3,8 @@ import { test, expect } from './fixtures';
 test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language and reversible', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Test Company');
     await page.getByRole('button', { name: /Next/ }).click();
