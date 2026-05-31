@@ -485,11 +485,11 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Action Required (Approvals) */}
+         {/* Agent Updates (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -538,7 +538,7 @@ export default function Dashboard() {
                                             className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
-                                            Approve
+                                            Review & Send
                                         </button>
                                     </div>
                                 </div>
