@@ -5799,6 +5799,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#main-nav a').forEach((link, index) => {
                                 if (labels[index]) link.textContent = labels[index];
                             });
+
+                            const footer = document.createElement('div');
+                            footer.className = 'builder-block powered-by-footer';
+                            footer.style.textAlign = 'center';
+                            footer.style.padding = '16px';
+                            footer.style.marginTop = '24px';
+                            footer.style.backgroundColor = 'transparent';
+                            footer.style.border = 'none';
+                            footer.style.boxShadow = 'none';
+                            const tenant = localStorage.getItem('tenant_id') || 'storefront';
+                            footer.innerHTML = \`<a href="ohc://join?ref=\${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>\`;
+                            container.appendChild(footer);
                         }
 
                         function generateSeasonalPromo() {
