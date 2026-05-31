@@ -210,6 +210,31 @@ describe('OnboardingWizard', () => {
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
 
+  it('Step 2: Proceeds to Step 3 when validation passes', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Set initial state to Step 2
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Bakery',
+        categories: ['food'],
+        firstProductName: 'Cake',
+        firstProductPrice: '20'
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+
+    await user.click(continueButton);
+
+    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
+    expect(screen.getByText('Style & Team')).toBeInTheDocument();
+  });
+
   it('Step 3: Can select AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
