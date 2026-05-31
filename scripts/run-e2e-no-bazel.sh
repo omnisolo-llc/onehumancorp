@@ -47,7 +47,7 @@ wait_for_port 6379 "Redis"
 echo "[e2e-no-bazel] Starting server..."
 export DATABASE_URL="postgres://ohc:ohc@localhost:5432/ohc"
 export REDIS_URL="redis://localhost:6379"
-export STANDALONE_MODE="true"
+export OHC_STANDALONE_MODE="true"
 
 ./target/debug/server &
 SERVER_PID=$!

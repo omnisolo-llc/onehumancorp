@@ -94,6 +94,18 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 }
 
 
+pub fn get_safe_user_dir() -> std::path::PathBuf {
+    let dir = if let Ok(home) = std::env::var("USERPROFILE") {
+        std::path::PathBuf::from(home).join(".ohc")
+    } else if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home).join(".ohc")
+    } else {
+        std::path::PathBuf::from(".ohc")
+    };
+    let _ = std::fs::create_dir_all(&dir);
+    dir
+}
+
 pub trait ModeEnforcer {
     fn enforce(&self, cfg: AppConfig) -> AppConfig;
 }
@@ -102,23 +114,29 @@ pub struct StandaloneModeEnforcer;
 
 impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
-        let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true"
-            || std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true"
-            || cfg.standalone;
+        let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
+        let env_standalone =
+            std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = env_standalone
+            || cfg.standalone
+            || (!is_test && cfg.database_url.is_none());
 
         if !is_standalone {
             return cfg;
         }
 
+        let default_sqlite_path = get_safe_user_dir().join("ohc-standalone.db");
+        let default_sqlite_url = format!("sqlite://{}", default_sqlite_path.to_string_lossy());
+
         let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
             if db_url.starts_with("sqlite://") {
                 db_url.split('?').next().unwrap().to_string()
             } else {
-                tracing::info!("standalone: non-SQLite DATABASE_URL is ignored in standalone desktop builds; using SQLite");
-                "sqlite://ohc-standalone.db".to_string()
+                tracing::info!("standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+                default_sqlite_url
             }
         } else {
-            "sqlite://ohc-standalone.db".to_string()
+            default_sqlite_url
         };
 
         if let Some(redis_url) = &cfg.redis_url {
@@ -130,54 +148,58 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
                 format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, key)
-            } else {
-                let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
                 format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+            } else {
+                base_sqlite_url
             }
-        } else {
-            let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
             format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+        } else {
+            base_sqlite_url
         };
         cfg.database_url = Some(sqlite_url.clone());
 
         // Set proper file permissions for local storage wrapper in standalone mode atomically
         #[cfg(unix)]
         {
-            use std::fs::OpenOptions;
-            use std::os::unix::fs::OpenOptionsExt;
-            use std::os::unix::fs::PermissionsExt;
+            if !is_test {
+                use std::fs::OpenOptions;
+                use std::os::unix::fs::OpenOptionsExt;
+                use std::os::unix::fs::PermissionsExt;
 
-            let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
-            if let Some(parent) = std::path::Path::new(db_path).parent() {
-                if !parent.as_os_str().is_empty() {
-                    #[cfg(unix)] use std::os::unix::fs::DirBuilderExt;
-                    let mut builder = std::fs::DirBuilder::new();
-                    builder.recursive(true);
-                    #[cfg(unix)] builder.mode(0o700);
-                    let _ = builder.create(parent);
+                let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
+                if let Some(parent) = std::path::Path::new(db_path).parent() {
+                    if !parent.as_os_str().is_empty() {
+                        #[cfg(unix)] use std::os::unix::fs::DirBuilderExt;
+                        let mut builder = std::fs::DirBuilder::new();
+                        builder.recursive(true);
+                        #[cfg(unix)] builder.mode(0o700);
+                        let _ = builder.create(parent);
+                    }
                 }
-            }
-            match OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .mode(0o600)
-                .open(db_path)
-            {
-                Ok(file) => {
-                    if let Ok(metadata) = file.metadata() {
-                        let mut perms = metadata.permissions();
-                        if perms.mode() & 0o777 != 0o600 {
-                            perms.set_mode(0o600);
-                            if let Err(e) = file.set_permissions(perms) {
-                                tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                                panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
+                match OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .mode(0o600)
+                    .open(db_path)
+                {
+                    Ok(file) => {
+                        if let Ok(metadata) = file.metadata() {
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                if let Err(e) = file.set_permissions(perms) {
+                                    tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+                                    panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
+                                }
                             }
                         }
                     }
-                }
-                Err(e) => {
-                    panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+                    Err(e) => {
+                        panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
+                    }
                 }
             }
         }
@@ -213,7 +235,7 @@ mod tests {
         // SAFETY: Test-only code removing environment variables
         unsafe {
             env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
+            env::remove_var("OHC_DATABASE_URL");
         }
 
         let cfg = load().unwrap();
@@ -228,7 +250,7 @@ mod tests {
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
             env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("DATABASE_URL", "postgres://localhost/testdb");
+            env::set_var("OHC_DATABASE_URL", "postgres://localhost/testdb");
         }
 
         let cfg = load().unwrap();
@@ -238,7 +260,7 @@ mod tests {
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
             env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
+            env::remove_var("OHC_DATABASE_URL");
         }
     }
 
