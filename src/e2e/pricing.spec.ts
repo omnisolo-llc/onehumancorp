@@ -23,5 +23,12 @@ test.describe('CUJ: Pricing Page Verification', () => {
     // Verify Business Tier
     await expect(page.getByRole('heading', { name: 'Business' }).first()).toBeVisible();
     await expect(page.getByText('$299 / month').first()).toBeVisible();
+
+    // Verify deployment modes block
+    await expect(page.getByRole('heading', { name: 'Deployment Modes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Standalone (Local-First)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cloud-Native (Team)' })).toBeVisible();
+    await expect(page.getByText('Zero Data Leakage:')).toBeVisible();
+    await expect(page.getByText('Multi-tenant Scaling:')).toBeVisible();
   });
 });

@@ -57,14 +57,14 @@ export default function InventoryDashboard() {
         },
         body: JSON.stringify({
           tenant_id: 'tenant1',
-          purchase_order_id: \`po_for_\${materialId}\`, // Simulated ID mapping
+          purchase_order_id: `po_for_${materialId}`, // Simulated ID mapping
         }),
       });
 
       if (!res.ok) {
          setError('Failed to approve PO');
       } else {
-          setSuccessMsg(\`Approved Purchase Order for \${materialId}\`);
+          setSuccessMsg(`Approved Purchase Order for ${materialId}`);
           setLowStockMaterials(lowStockMaterials.filter(m => m.id !== materialId));
       }
     } catch (e: any) {
@@ -100,7 +100,7 @@ export default function InventoryDashboard() {
         <div className="space-y-4 flex flex-col gap-4">
           <h2 className="text-lg font-outfit text-[#FF9500]">Low Stock Alerts</h2>
           {lowStockMaterials.map(mat => (
-            <div key={mat.id} className="mac-glass-container p-5 shadow-lg flex flex-col" data-testid={\`alert-card-\${mat.id}\`}>
+            <div key={mat.id} className="mac-glass-container p-5 shadow-lg flex flex-col" data-testid={`alert-card-${mat.id}`}>
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-outfit font-semibold text-lg">{mat.name}</h3>
                 <span className="flex h-3 w-3 relative">
@@ -128,7 +128,7 @@ export default function InventoryDashboard() {
               </div>
 
               <button
-                data-testid={\`approve-btn-\${mat.id}\`}
+                data-testid={`approve-btn-${mat.id}`}
                 onClick={() => approveAndPay(mat.id)}
                 disabled={processingId === mat.id}
                 className="w-full py-3 px-4 bg-[#0071E3] hover:bg-[#005bb5] active:scale-95 transition-all text-white font-inter font-medium rounded-xl shadow-[0_0_15px_rgba(0,113,227,0.4)] disabled:opacity-50"

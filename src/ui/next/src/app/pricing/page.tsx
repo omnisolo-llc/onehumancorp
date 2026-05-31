@@ -27,6 +27,31 @@ export default function PricingPage() {
           <p className="text-lg" style={{ color: '#86868B' }}>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
 
+        {/* Architecture Comparison */}
+        <div className="mb-8 p-6 shadow-sm text-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <h2 className="text-2xl font-bold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Deployment Modes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6 text-left">
+            <div className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Standalone (Local-First)</h3>
+              <p className="text-sm text-gray-600 mb-4">Run entirely on your machine via our desktop app.</p>
+              <ul className="text-sm text-gray-700 space-y-2">
+                <li className="flex items-center gap-2"><span>🛡️</span> <strong>Zero Data Leakage:</strong> All data stored locally in SQLite</li>
+                <li className="flex items-center gap-2"><span>🔌</span> <strong>Air-Gapped Autonomy:</strong> Works completely offline</li>
+                <li className="flex items-center gap-2"><span>🔒</span> <strong>Maximum Privacy:</strong> BYOK or local LLM compatibility</li>
+              </ul>
+            </div>
+            <div className="p-5 rounded-xl border border-indigo-200 bg-indigo-50/50 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xl font-bold font-outfit text-indigo-900 mb-2">Cloud-Native (Team)</h3>
+              <p className="text-sm text-gray-600 mb-4">Hosted on our secure cloud for ultimate collaboration.</p>
+              <ul className="text-sm text-gray-700 space-y-2">
+                <li className="flex items-center gap-2"><span>☁️</span> <strong>Multi-tenant Scaling:</strong> Access from anywhere</li>
+                <li className="flex items-center gap-2"><span>🤝</span> <strong>Team Collaboration:</strong> Invite members with granular roles</li>
+                <li className="flex items-center gap-2"><span>🚀</span> <strong>Managed Infrastructure:</strong> We handle backups and uptime</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Free Tier */}
           <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
