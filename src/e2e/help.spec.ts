@@ -78,10 +78,7 @@ test.describe('Dashboard', () => {
 
 test.describe('Help Center Widget', () => {
   test('should display and search help articles', async ({ page }) => {
-    await page.goto('/');
-
-    // Open Help Widget
-    await page.getByRole('button', { name: /Help Center & Guides/i }).click();
+    await page.goto('/help');
 
     // Look for articles
     await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
@@ -94,5 +91,13 @@ test.describe('Help Center Widget', () => {
     await expect(page.getByRole('heading', { name: 'Finding Customers' })).toBeVisible();
     // And "Getting Started" should be hidden
     await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeHidden();
+  });
+
+  test('should display release notes and changelog link', async ({ page }) => {
+    await page.goto('/changelog');
+
+    // Check for release notes content
+    await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' }).first()).toBeVisible();
+    await expect(page.getByText('Interactive AI Store Builder:')).toBeVisible();
   });
 });
