@@ -353,7 +353,7 @@ export default function Dashboard() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
           <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <WithTooltip id="nav-dashboard-tooltip" defaultText="Check your sales, recent orders, and how your store is doing."><h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1></WithTooltip>
           <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
             Offline - Changes saved locally
           </div>
@@ -379,9 +379,11 @@ export default function Dashboard() {
                Seasonal Promos ✨
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-               <span>🤖</span> AI Departments
-             </Link>
+             <WithTooltip id="nav-agents-tooltip" defaultText="See your AI team, give them tasks, or hire new helpers.">
+               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+                 <span>🤖</span> AI Departments
+               </Link>
+             </WithTooltip>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                  <span>⚡️</span> KAIROS
@@ -390,9 +392,11 @@ export default function Dashboard() {
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
+             <WithTooltip id="nav-setup-tooltip" defaultText="Set up your business info, logo, and how you get paid.">
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
+             </WithTooltip>
          </nav>
       </header>
 
