@@ -9,60 +9,8 @@ import { InteractiveWalkthrough } from './Walkthrough';
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
-  title?: string;
-  message?: string;
-  content?: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  message: string;
 };
-
-type HelpArticle = { title: string; desc: string; link?: string };
-type HelpVideo = { id: number; title: string; duration: string };
-type HelpTab = "center" | "chat" | "videos" | "whatsnew";
-type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
-
-const helpTabs = [
-  { id: "center", label: "Help" },
-  { id: "chat", label: "Ask AI" },
-  { id: "videos", label: "Videos" },
-  { id: "whatsnew", label: "New" }
-] as const;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function isSafeLink(url: unknown): url is string {
-  return typeof url === "string" && (url.startsWith("/") || url.startsWith("https://") || url.startsWith("http://"));
-}
-
-function normalizeArticles(data: unknown): HelpArticle[] {
-  if (!Array.isArray(data)) return [];
-  return data.flatMap((item) => {
-    if (!isRecord(item) || typeof item.title !== "string" || typeof item.desc !== "string") return [];
-    return [{ title: item.title, desc: item.desc, link: isSafeLink(item.link) ? item.link : undefined }];
-  });
-}
-
-function normalizeVideos(data: unknown): HelpVideo[] {
-  if (!Array.isArray(data)) return [];
-  return data.flatMap((item) => {
-    if (!isRecord(item) || typeof item.id !== "number" || typeof item.title !== "string" || typeof item.duration !== "string") return [];
-    return [{ id: item.id, title: item.title, duration: item.duration }];
-  });
-}
-
-function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
-  if (!isRecord(data) || typeof data.reply !== "string" || !data.reply.trim()) {
-    throw new Error("Invalid chat reply");
-  }
-
-  const link = isRecord(data.link) ? data.link : undefined;
-  return {
-    text: data.reply,
-    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
-    linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
-  };
-}
 
 type WalkthroughContextType = {
   startWalkthrough: (steps: Step[]) => void;
@@ -128,7 +76,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: s.title || "Quick Guide", content: s.content || s.message || "", position: s.position || "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -149,24 +97,20 @@ export function HelpWidget() {
   const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<HelpTab>("center");
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+  const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
+    { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const nextMessageId = useRef(1);
 
-  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
+  const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
 
   useEffect(() => {
     fetch("/api/help")
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to load help articles");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        setHelpArticles(normalizeArticles(data));
+        if (data && data.length > 0) setHelpArticles(data);
       })
       .catch(() => {});
   }, []);
@@ -175,37 +119,31 @@ export function HelpWidget() {
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<HelpVideo[]>([]);
-  const [activeVideo, setActiveVideo] = useState<HelpVideo | null>(null);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [activeVideo, setActiveVideo] = useState<{id: number, title: string, duration: string} | null>(null);
 
   useEffect(() => {
     fetch("/api/videos")
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to load videos");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        setVideos(normalizeVideos(data));
+        if (data && data.length > 0) setVideos(data);
       })
       .catch(() => {});
   }, []);
 
-  const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const val = chatInput.trim();
-    if (!val) return;
+  const handleChatSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && chatInput.trim()) {
+      const val = chatInput.trim();
+      setChatInput("");
+      setChatMessages(prev => [...prev, { role: "user", text: val }]);
 
-    setChatInput("");
-    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
-
-    try {
-      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-      if (!response.ok) throw new Error("Failed to fetch chat reply");
-      const data = await response.json();
-      const reply = normalizeChatReply(data);
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+      try {
+        const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
+        const data = await response.json();
+        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, linkUrl: data.link?.url, linkTitle: data.link?.title }]);
+      } catch (err) {
+        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+      }
     }
   };
 
@@ -228,14 +166,18 @@ export function HelpWidget() {
       {open && (
         <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md">
-            {helpTabs.map((t) => (
+            {[
+              { id: "center", label: "Help" },
+              { id: "chat", label: "Ask AI" },
+              { id: "videos", label: "Videos" },
+              { id: "whatsnew", label: "New" }
+            ].map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(t.id as any)}
                 className={`flex-1 py-3 text-sm font-bold transition-all ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"
                 }`}
-                aria-pressed={tab === t.id}
               >
                 {t.label}
               </button>
@@ -262,16 +204,16 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn", title: "Generate", content: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", title: "Accept Payments", content: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "workflow-name", title: "AI Agent", content: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", title: "Debate", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Consensus", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button
@@ -291,14 +233,14 @@ export function HelpWidget() {
             {tab === "chat" && (
               <div className="flex flex-col h-full">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
-                  {chatMessages.map((msg) => {
+                  {chatMessages.map((msg, idx) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
                         ? "bg-blue-50 text-blue-900 rounded-tl-none"
                         : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
-                      <div key={msg.id} className={className}>
+                      <div key={idx} className={className}>
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
                         {msg.linkUrl && msg.linkTitle && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
@@ -307,22 +249,23 @@ export function HelpWidget() {
                         )}
                       </div>
                     ) : (
-                      <div key={msg.id} className={className}>{msg.text}</div>
+                      <div key={idx} className={className}>{msg.text}</div>
                     );
                   })}
                 </div>
-                <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
+                <div className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
                   <input
                     type="text"
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={handleChatSubmit}
                     className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Send message">
+                  <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
-                </form>
+                </div>
               </div>
             )}
 
