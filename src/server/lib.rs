@@ -30,6 +30,37 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
+static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
+
+pub fn is_standalone_runtime() -> bool {
+    fn parse_bool(value: &str) -> Option<bool> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "y" | "on" => Some(true),
+            "0" | "false" | "no" | "n" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
+    if let Ok(value) = std::env::var("STANDALONE_MODE") {
+        if let Some(parsed) = parse_bool(&value) {
+            return parsed;
+        }
+    }
+    if let Ok(value) = std::env::var("OHC_STANDALONE") {
+        if let Some(parsed) = parse_bool(&value) {
+            return parsed;
+        }
+    }
+    if let Ok(value) = std::env::var("OHC_SOURCE_MODE") {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "standalone" | "desktop" => return true,
+            "cloud" | "cluster" | "headless" => return false,
+            _ => {}
+        }
+    }
+
+    true
+}
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -61,7 +92,26 @@ fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
 fn workflow_agent_binary() -> String {
     std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
-        .unwrap_or_else(|_| "ohc_builtin_agent".to_string())
+        .unwrap_or_else(|_| {
+            if is_standalone_runtime() {
+                if let Ok(exe_path) = std::env::current_exe() {
+                    return exe_path.to_string_lossy().to_string();
+                }
+            }
+            if let Ok(exe_path) = std::env::current_exe() {
+                let agent_name = if cfg!(windows) {
+                    "ohc-builtin-agent.exe"
+                } else {
+                    "ohc-builtin-agent"
+                };
+                let agent_path = exe_path.with_file_name(agent_name);
+                agent_path.to_string_lossy().to_string()
+            } else if cfg!(windows) {
+                "ohc-builtin-agent.exe".to_string()
+            } else {
+                "ohc-builtin-agent".to_string()
+            }
+        })
 }
 
 fn workflow_agent_task(task: &str) -> String {
@@ -92,6 +142,32 @@ fn dispatch_workflow(record: WorkflowRecord) {
     let task = workflow_agent_task(&record.task);
 
     tokio::spawn(async move {
+        if is_standalone_runtime() {
+            if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
+                use ohc_builtin_agent::proto::agent_service::agent_service_server::AgentService;
+                let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
+                    task: task.clone(),
+                    working_dir: String::new(),
+                    parent_context_json: String::new(),
+                    ..Default::default()
+                };
+                match svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                    Ok(resp) => {
+                        let inner = resp.into_inner();
+                        if !inner.error.is_empty() {
+                            set_workflow_result(&id, "failed", Some(inner.result), Some(inner.error));
+                        } else {
+                            set_workflow_result(&id, "completed", Some(inner.result), None);
+                        }
+                    }
+                    Err(e) => {
+                        set_workflow_result(&id, "failed", None, Some(format!("In-process agent error: {}", e)));
+                    }
+                }
+                return;
+            }
+        }
+
         let output = tokio::process::Command::new(&binary)
             .arg("--task")
             .arg(task)
@@ -2004,7 +2080,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Ensure local database permissions are secure in standalone mode
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if is_standalone_runtime() {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -2070,7 +2146,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+    let is_cloud = !is_standalone_runtime();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
@@ -2139,62 +2215,97 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             monitor_mesh,
             monitor_hub,
             is_cloud,
-            std::time::Duration::from_secs(30)
-        ).await;
+            std::time::Duration::from_secs(30),
+        )
+        .await;
     });
 
-    // Start Builtin Agent
-    let builtin_transport = mesh_transport.clone();
-    let builtin_mesh = handoff_mesh.clone();
-    tokio::spawn(async move {
-        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
-
-        // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
-        let heartbeat_transport = builtin_transport.clone();
-        let heartbeat_agent_id = agent_id.clone();
+    // In standalone desktop mode the agent is bundled into the local server
+    // process. Cluster/cloud deployments run the agent as a separate binary.
+    if is_standalone_runtime() {
+        let builtin_transport = mesh_transport.clone();
+        let builtin_mesh = handoff_mesh.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
-            loop {
-                interval.tick().await;
-                if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "online", 60).await {
-                    tracing::error!("Failed to register builtin agent presence: {}", e);
+            let agent_id = std::env::var("OHC_AGENT_ID")
+                .unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+
+            // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
+            let heartbeat_transport = builtin_transport.clone();
+            let heartbeat_agent_id = agent_id.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+                loop {
+                    interval.tick().await;
+                    if let Err(e) = heartbeat_transport
+                        .register_presence(&heartbeat_agent_id, "online", 60)
+                        .await
+                    {
+                        tracing::error!("Failed to register builtin agent presence: {}", e);
+                    }
                 }
-            }
-        });
+            });
 
-        let _health_cancel = builtin_mesh.start_health_responder().await;
+            let _health_cancel = builtin_mesh.start_health_responder().await;
 
-        let cfg = ohc_builtin_agent::service::AgentConfig {
-            llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
-            model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
-            llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
-            system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
-            max_tokens: {
-                let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
-                if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
-            },
-            temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
-            max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
-            max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
-        };
-        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
-        let agent_id_clone = agent_id.clone();
-        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
-        svc_impl.init_memory().await;
-        let svc = std::sync::Arc::new(svc_impl);
+            let cfg = ohc_builtin_agent::service::AgentConfig {
+                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+                model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
+                llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+                system_prompt: ::server_pricing::compression::reduce_tokens(
+                    &std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+                ),
+                max_tokens: {
+                    let parsed = std::env::var("OHC_MAX_TOKENS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(2048);
+                    if parsed > 4096 {
+                        4096
+                    } else if parsed == 0 {
+                        2048
+                    } else {
+                        parsed
+                    }
+                },
+                temperature: std::env::var("OHC_TEMPERATURE")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0.0),
+                max_iterations: std::env::var("OHC_MAX_ITERATIONS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(100),
+                max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(80),
+            };
+            let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+            let agent_id_clone = agent_id.clone();
+            let mut svc_impl =
+                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+            svc_impl.init_memory().await;
+            let svc = std::sync::Arc::new(svc_impl);
+            let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());
 
-        let heartbeat_transport = builtin_transport.clone();
-        tokio::spawn(async move {
-            loop {
-                if let Err(e) = heartbeat_transport.register_presence(&agent_id_clone, "active", 30).await {
-                    tracing::error!("Failed to register presence: {}", e);
+            let heartbeat_transport = builtin_transport.clone();
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) = heartbeat_transport
+                        .register_presence(&agent_id_clone, "active", 30)
+                        .await
+                    {
+                        tracing::error!("Failed to register presence: {}", e);
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(15)).await;
                 }
-                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
-            }
-        });
+            });
 
-        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
-    });
+            ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+        });
+    } else {
+        tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
+    }
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
@@ -2281,7 +2392,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let is_standalone = is_standalone_runtime();
     let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {
