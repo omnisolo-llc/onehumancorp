@@ -139,8 +139,8 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let domain = parts[0];
     
     match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
-        _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
+        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
+        _ if domain.ends_with(".ohc.global") => {}
         _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
     }
     
