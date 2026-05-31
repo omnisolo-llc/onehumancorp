@@ -111,6 +111,10 @@ export default function CostDashboardPage() {
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_revenue || 0)}</p>
+                </div>
             </div>
         </section>
 
