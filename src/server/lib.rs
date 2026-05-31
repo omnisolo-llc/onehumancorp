@@ -2120,7 +2120,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Start AutoDream worker
+    // Start AutoDream worker (legacy pruning and searching tasks)
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
@@ -2240,6 +2240,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+
+    // Start AutoDream pipeline
+    let llm_client = Arc::new(crate::minimax::LocalLLMClient::new());
+    let pipeline = autodream_pipeline::pipeline::AutoDreamPipeline::new_with_cache(
+        db.clone(),
+        llm_client,
+        Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(3600)))
+    ).with_mesh(handoff_mesh.clone());
+    pipeline.start_worker();
+
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));

@@ -3,26 +3,34 @@ use std::sync::Arc;
 use sqlx::Row;
 use super::llm_client::LLMClient;
 use tokio::time::{sleep, Duration};
+use crate::orchestration::mesh::TeammateMesh;
 
 pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
     pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
+    mesh: Option<Arc<dyn TeammateMesh>>,
 }
 
 impl AutoDreamPipeline {
     pub fn new(db: Arc<DB>, llm_client: Arc<dyn LLMClient>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: None }
+        AutoDreamPipeline { db, llm_client, cache: None, mesh: None }
     }
 
     pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: Some(cache) }
+        AutoDreamPipeline { db, llm_client, cache: Some(cache), mesh: None }
+    }
+
+    pub fn with_mesh(mut self, mesh: Arc<dyn TeammateMesh>) -> Self {
+        self.mesh = Some(mesh);
+        self
     }
 
     pub fn start_worker(&self) {
         let db = self.db.clone();
         let llm_client = self.llm_client.clone();
         let cache = self.cache.clone();
+        let mesh = self.mesh.clone();
 
         tokio::spawn(async move {
             loop {
@@ -30,6 +38,7 @@ impl AutoDreamPipeline {
                     db: db.clone(),
                     llm_client: llm_client.clone(),
                     cache: cache.clone(),
+                    mesh: mesh.clone(),
                 };
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
@@ -64,17 +73,31 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in autodream_memories
-        let query = "
+        let is_sqlite = self.db.is_sqlite();
+
+        let query = if is_sqlite {
+            "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
-        ";
+            "
+        } else {
+            "
+            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
+            FROM shared_tasks t
+            LEFT JOIN autodream_memories m ON t.id = m.task_id
+            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            FOR UPDATE SKIP LOCKED
+            LIMIT 100
+            "
+        };
+
+        let mut tx = self.db.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
+            .fetch_all(&mut *tx)
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -137,7 +160,19 @@ impl AutoDreamPipeline {
                 }
             }
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
+
+            if let Some(mesh) = &self.mesh {
+                let payload = serde_json::json!({
+                    "task_id": task_id,
+                    "status": "CONSOLIDATED"
+                }).to_string().into_bytes();
+                if let Err(e) = mesh.publish("system:autodream:consolidated", payload).await {
+                    tracing::error!("AutoDreamPipeline: Failed to broadcast CONSOLIDATED event for task {}: {}", task_id, e);
+                }
+            }
         }
+
+        tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         Ok(())
     }
