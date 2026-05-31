@@ -2,41 +2,38 @@
 
 import React, { useState, useEffect } from 'react';
 
-interface RawMaterial {
+interface ApprovalRequest {
   id: string;
-  name: string;
-  current_quantity: number;
-  reorder_threshold: number;
-}
-
-interface PurchaseOrder {
-  id: string;
-  vendor_id: string;
+  tenant_id: string;
+  department: string;
+  description: string;
   status: string;
-  total_cost: number;
+  action_risk: string;
+  payload: any;
 }
 
 export default function InventoryDashboard() {
-  const [lowStockMaterials, setLowStockMaterials] = useState<RawMaterial[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLowStockAlerts();
+    fetchPendingApprovals();
   }, []);
 
-  const fetchLowStockAlerts = async () => {
+  const fetchPendingApprovals = async () => {
     try {
-      const res = await fetch('/api/v1/supply-chain/low-stock?tenant_id=tenant1');
+      const res = await fetch('/api/agents/approvals');
       if (!res.ok) {
-         setError('Failed to fetch low stock alerts.');
+         setError('Failed to fetch pending approvals.');
          setLoading(false);
          return;
       }
       const data = await res.json();
-      setLowStockMaterials(data.low_stock_materials || []);
+      const operationsApprovals = (data.pending_approvals || []).filter((a: ApprovalRequest) => a.department === 'Operations' || a.department === 'operations');
+      setPendingApprovals(operationsApprovals);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -44,28 +41,27 @@ export default function InventoryDashboard() {
     }
   };
 
-  const approveAndPay = async (materialId: string) => {
-    setProcessingId(materialId);
+  const approveAndPay = async (approvalId: string) => {
+    setProcessingId(approvalId);
     setSuccessMsg('');
     setError('');
 
     try {
-      const res = await fetch('/api/v1/supply-chain/approve-po', {
+      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tenant_id: 'tenant1',
-          purchase_order_id: \`po_for_\${materialId}\`, // Simulated ID mapping
+          approved: true,
         }),
       });
 
       if (!res.ok) {
          setError('Failed to approve PO');
       } else {
-          setSuccessMsg(\`Approved Purchase Order for \${materialId}\`);
-          setLowStockMaterials(lowStockMaterials.filter(m => m.id !== materialId));
+          setSuccessMsg(`Approved Purchase Order for ${approvalId}`);
+          setPendingApprovals(pendingApprovals.filter(m => m.id !== approvalId));
       }
     } catch (e: any) {
       setError('Failed to approve PO');
@@ -92,24 +88,24 @@ export default function InventoryDashboard() {
         </div>
       )}
 
-      {lowStockMaterials.length === 0 ? (
+      {pendingApprovals.length === 0 ? (
         <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] text-center text-sm font-inter">
           All stock levels are looking good!
         </div>
       ) : (
         <div className="space-y-4 flex flex-col gap-4">
           <h2 className="text-lg font-outfit text-[#FF9500]">Low Stock Alerts</h2>
-          {lowStockMaterials.map(mat => (
+          {pendingApprovals.map(mat => (
             <div key={mat.id} className="mac-glass-container p-5 shadow-lg flex flex-col" data-testid={\`alert-card-\${mat.id}\`}>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-outfit font-semibold text-lg">{mat.name}</h3>
+                <h3 className="font-outfit font-semibold text-lg">{mat.description.split('.')[0] || 'Unknown Item'}</h3>
                 <span className="flex h-3 w-3 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B30] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-[#FF3B30]"></span>
                 </span>
               </div>
               <p className="font-inter text-sm text-[rgba(255,255,255,0.7)] mb-4">
-                Based on your recent sales, you need more {mat.name} by Thursday.
+                {mat.description}
               </p>
 
               <div className="p-3 mb-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.05)]">

@@ -15,16 +15,19 @@ test.describe('Autonomous Supply Chain', () => {
         CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY);
         INSERT INTO tenants (id) VALUES ('tenant1') ON CONFLICT DO NOTHING;
 
-        CREATE TABLE IF NOT EXISTS raw_materials (
+        CREATE TABLE IF NOT EXISTS shared_tasks (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT,
-            name TEXT NOT NULL,
-            current_quantity INT DEFAULT 0,
-            reorder_threshold INT DEFAULT 0
+            organization_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            approval_status TEXT,
+            action_risk TEXT,
+            payload TEXT
         );
-        INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold)
-        VALUES ('mat1', 'tenant1', 'Cocoa Powder', 3, 10)
-        ON CONFLICT (id) DO UPDATE SET current_quantity = 3, reorder_threshold = 10;
+        INSERT INTO shared_tasks (id, organization_id, title, description, status, approval_status, action_risk, payload)
+        VALUES ('mat1', 'tenant1', 'Operations', 'Cocoa Powder', 'PENDING', 'PENDING', 'HIGH', '{}')
+        ON CONFLICT (id) DO UPDATE SET status = 'PENDING', approval_status = 'PENDING';
       `);
     } catch (e) {
       pool = null;
@@ -33,7 +36,7 @@ test.describe('Autonomous Supply Chain', () => {
 
   test.afterAll(async () => {
     if (pool) {
-      await pool.query(`DELETE FROM raw_materials WHERE id IN ('mat1');`);
+      await pool.query(`DELETE FROM shared_tasks WHERE id IN ('mat1');`);
       await pool.end();
     }
   });

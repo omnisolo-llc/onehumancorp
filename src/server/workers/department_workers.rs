@@ -6,6 +6,8 @@ use uuid::Uuid;
 use sqlx::Row;
 use serde_json::json;
 
+const LOCK_DURATION_MINUTES: i64 = 5;
+
 pub struct OperationsWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
@@ -59,7 +61,7 @@ impl OperationsWorker {
                     RETURNING id, tenant_id, payload
                     "#
                 )
-                .bind(Utc::now() + chrono::Duration::minutes(5))
+            .bind(Utc::now() + chrono::Duration::minutes(LOCK_DURATION_MINUTES))
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -92,7 +94,7 @@ impl OperationsWorker {
                     sqlx::query(
                         "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
                     )
-                    .bind((Utc::now() + chrono::Duration::minutes(5)).to_rfc3339())
+                    .bind((Utc::now() + chrono::Duration::minutes(LOCK_DURATION_MINUTES)).to_rfc3339())
                     .bind(&id)
                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
