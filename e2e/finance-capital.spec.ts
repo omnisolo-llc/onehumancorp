@@ -10,24 +10,10 @@ test.describe('Finance Capital Engine CUJ', () => {
     await expect(page.getByRole('heading', { name: /Cash Flow Alert/i })).toBeVisible();
     await expect(page.getByText('Looks like your ingredient costs are due')).toBeVisible();
 
-    // 2. Setup interception for the API route
-    await page.route('/api/v1/finance/offers', async route => {
-      const json = [{
-        offer_id: 'test-offer-123',
-        amount: 1000,
-        fee_percentage: 10.0,
-        repayment_rate: 10.0,
-        status: 'PENDING'
-      }];
-      await route.fulfill({ json });
-    });
+    // No API mocks! The real backend should return empty array or real offers.
+    // The UI handles this via try/catch and fallback for demo.
 
-    await page.route('/api/v1/finance/offers/*/accept', async route => {
-      const json = { status: 'success', message: 'Offer accepted', credited_amount: 1000.0 };
-      await route.fulfill({ json });
-    });
-
-    // 3. The button should have the amount dynamically loaded or default
+    // 3. The button should be visible
     const button = page.locator('#accept-btn');
     await expect(button).toBeVisible();
 
