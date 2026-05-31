@@ -22,6 +22,10 @@ test.describe('Viral Wall of Love Widget', () => {
         });
 
 
+
+
+
+/*
         await page.route('**/api/v1/growth/widgets/wall-of-love.js*', async route => {
             await route.fulfill({
                 contentType: 'application/javascript',
@@ -37,6 +41,7 @@ test.describe('Viral Wall of Love Widget', () => {
                 `
             });
         });
+*/
 
         await page.goto('http://localhost:3000/test-wall-of-love');
 

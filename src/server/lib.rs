@@ -2029,22 +2029,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
     
-    // Start Edge Cache Invalidation Listener
-    let listener_pool = db.pool.clone();
-    tokio::spawn(async move {
-        if let Ok(mut listener) = sqlx::postgres::PgListener::connect_with(&listener_pool).await {
-            if let Ok(_) = listener.listen("edge_cache_invalidation").await {
-                tracing::info!("Listening for edge_cache_invalidation events");
-                while let Ok(notification) = listener.recv().await {
-                    let payload = notification.payload();
-                    tracing::info!("Received edge cache invalidation for key: {}", payload);
-                    let cache = crate::builder::edge::get_edge_cache();
-                    cache.invalidate(payload).await;
-                }
-            }
-        }
-    });
-
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
