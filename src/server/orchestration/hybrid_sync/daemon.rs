@@ -1,9 +1,9 @@
-use chrono::Utc;
-use serde_json::{json, Value};
-use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
-use tracing::{error, info, warn};
+use sqlx::{SqlitePool, PgPool, Row};
+use serde_json::{Value, json};
+use tracing::{info, error, warn};
 use uuid::Uuid;
+use chrono::Utc;
 
 pub struct HybridSyncDaemon {
     sqlite_pool: SqlitePool,
@@ -12,19 +12,13 @@ pub struct HybridSyncDaemon {
 
 impl HybridSyncDaemon {
     pub fn new(sqlite_pool: SqlitePool, pg_pool: PgPool) -> Self {
-        Self {
-            sqlite_pool,
-            pg_pool,
-        }
+        Self { sqlite_pool, pg_pool }
     }
 
     pub async fn run(&self) {
         loop {
             if let Err(e) = self.sync_step().await {
                 error!("Hybrid sync daemon error: {}", e);
-            }
-            if let Err(e) = self.sync_cloud_escalations().await {
-                error!("Hybrid sync cloud escalations error: {}", e);
             }
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
@@ -91,70 +85,6 @@ impl HybridSyncDaemon {
         }
 
         info!("Successfully synced telemetry batch");
-
-        Ok(())
-    }
-
-    pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
-            .fetch_all(&self.sqlite_pool)
-            .await?;
-
-        for row in rows {
-            let id: String = row.get("id");
-            let payload: String = row.get("payload");
-
-            let mut tx = match self.pg_pool.begin().await {
-                Ok(t) => t,
-                Err(e) => {
-                    warn!("Failed to begin pg transaction: {}", e);
-                    continue;
-                }
-            };
-
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system') ON CONFLICT (id) DO UPDATE SET payload = $2")
-                .bind(&id)
-                .bind(&payload)
-                .execute(&mut *tx)
-                .await;
-
-            match res {
-                Ok(_) => {
-                    if let Err(e) = tx.commit().await {
-                        warn!("Failed to commit pg transaction for mission {}: {}", id, e);
-                        continue;
-                    }
-
-                    let update_res = sqlx::query(
-                        "UPDATE agent_missions SET synced_to_cloud = true WHERE id = ?",
-                    )
-                    .bind(&id)
-                    .execute(&self.sqlite_pool)
-                    .await;
-
-                    match update_res {
-                        Ok(_) => {
-                            info!(
-                                "sync_daemon: successfully synced agent_missions for id {}",
-                                id
-                            );
-                        }
-                        Err(e) => {
-                            warn!(
-                                "Failed to update local sync status for mission {}: {}",
-                                id, e
-                            );
-                        }
-                    }
-                }
-                Err(e) => {
-                    let _ = tx.rollback().await;
-                    warn!("Failed to sync agent_mission to pg: {}", e);
-                    continue;
-                }
-            }
-        }
 
         Ok(())
     }
@@ -243,15 +173,10 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await?;
-                    info!(
-                        "Successfully escalated memory_id: {} to cloud queue: {}",
-                        id, queue_id
-                    );
+                    info!("Successfully escalated memory_id: {} to cloud queue: {}", id, queue_id);
                     success_count += 1;
 
-                    if let Err(e) =
-                        ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await
-                    {
+                    if let Err(e) = ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await {
                         warn!("Failed to record RAG escalation telemetry: {}", e);
                     }
                 }
@@ -268,13 +193,7 @@ impl HybridSyncDaemon {
         }
 
         if success_count > 0 {
-            if let Err(e) = ::server_telemetry::record_sync_escalation(
-                &self.pg_pool,
-                success_count as f32,
-                ::server_telemetry::get_deployment_mode(),
-            )
-            .await
-            {
+            if let Err(e) = ::server_telemetry::record_sync_escalation(&self.pg_pool, success_count as f32, ::server_telemetry::get_deployment_mode()).await {
                 warn!("Failed to record sync escalation telemetry: {}", e);
             }
         }
