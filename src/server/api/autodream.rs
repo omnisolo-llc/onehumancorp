@@ -82,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_endpoint() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 

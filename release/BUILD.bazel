@@ -85,11 +85,9 @@ selects.config_setting_group(
 pkg_files(
     name = "ohc_unix_files",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
         "//src/server",
     ],
     renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "bin/ohc-builtin-agent",
         "//src/server:server": "bin/ohc-server",
     },
     strip_prefix = strip_prefix.from_pkg(),
@@ -103,11 +101,9 @@ pkg_files(
 pkg_files(
     name = "ohc_windows_files",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
         "//src/server",
     ],
     renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "ohc-builtin-agent.exe",
         "//src/server:server": "ohc-server.exe",
     },
     strip_prefix = strip_prefix.from_pkg(),
