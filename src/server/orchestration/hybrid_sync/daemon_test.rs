@@ -135,6 +135,12 @@ mod tests {
             .await
             .unwrap();
 
+        // Test BURSTING sync
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', 'burst_data', false)")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
         daemon.sync_cloud_escalations().await.unwrap();
 
         let row_local_mission =
@@ -152,6 +158,23 @@ mod tests {
         assert_eq!(
             row_cloud_mission.get::<String, _>("payload"),
             "payload_data"
+        );
+
+        let row_local_burst =
+            sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'test_burst_1'")
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap();
+        assert_eq!(row_local_burst.get::<bool, _>("synced_to_cloud"), true);
+
+        let row_cloud_burst =
+            sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_burst_1'")
+                .fetch_one(&pg_pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            row_cloud_burst.get::<String, _>("payload"),
+            "burst_data"
         );
     }
 }
@@ -211,11 +234,11 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     // The async env issue... temp_env is synchronous
     let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
-    let _old_standalone = std::env::var("STANDALONE_MODE");
+    let _old_standalone = std::env::var("OHC_STANDALONE_MODE");
 
     unsafe {
         std::env::set_var("OHC_TELEMETRY_ENABLED", "false");
-        std::env::set_var("STANDALONE_MODE", "true");
+        std::env::set_var("OHC_STANDALONE_MODE", "true");
     }
 
     // We also need to reload config somehow... or actually our change reads ::server_config::get().
@@ -240,9 +263,9 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         }
 
         if let Ok(val) = _old_standalone {
-            std::env::set_var("STANDALONE_MODE", val);
+            std::env::set_var("OHC_STANDALONE_MODE", val);
         } else {
-            std::env::remove_var("STANDALONE_MODE");
+            std::env::remove_var("OHC_STANDALONE_MODE");
         }
     }
 }

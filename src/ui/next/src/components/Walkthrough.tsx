@@ -52,7 +52,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   }, [isOpen, currentStepIndex, steps]);
 
   if (!isOpen || steps.length === 0) return null;
-  if (process.env.NEXT_PUBLIC_E2E === 'true') return null;
+  if (process.env.OHC_E2E === 'true') return null;
 
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
