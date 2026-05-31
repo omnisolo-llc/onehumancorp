@@ -75,7 +75,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "model": model_string.clone()
                         });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }
@@ -112,7 +112,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "api": api_string.clone()
                         });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }
@@ -128,7 +128,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .and_then(Value::as_str)
                     .unwrap_or("");
                 let api = item.labels.get("api").and_then(Value::as_str).unwrap_or("");
-                crate::telemetry::record_agent_api_error(agent_id, role, api);
+                ::server_telemetry::record_agent_api_error(agent_id, role, api);
             }
             "human_interaction" => {
                 let i_type = item
@@ -136,7 +136,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .get("type")
                     .and_then(Value::as_str)
                     .unwrap_or("");
-                crate::telemetry::record_human_interaction(i_type);
+                ::server_telemetry::record_human_interaction(i_type);
             }
             "meeting_event" => {
                 let e_type = item
@@ -145,7 +145,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .or_else(|| item.labels.get("type"))
                     .and_then(Value::as_str)
                     .unwrap_or("");
-                crate::telemetry::record_meeting_event(e_type);
+                ::server_telemetry::record_meeting_event(e_type);
             }
             "swarm_task_completed" => {
                 let mission_id = item
@@ -153,13 +153,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .get("mission_id")
                     .and_then(Value::as_str)
                     .unwrap_or("");
-                crate::telemetry::record_swarm_task_completed(mission_id);
+                ::server_telemetry::record_swarm_task_completed(mission_id);
             }
             _ => {
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
                     let pool = crate::db::get_pool();
-                    let _ = crate::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                    let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(

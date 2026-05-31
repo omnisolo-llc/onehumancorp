@@ -1,11 +1,9 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
 #[cfg(test)]
-use crate::msgbus::MemoryBus;
 
 use tokio::time::{sleep, timeout, Duration};
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 pub mod proto {
     pub use ::server_ohc::interop::*;
 }
@@ -173,7 +171,6 @@ impl InteropProtocol {
     /// Health monitor across the swarm using protobuf
     pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -219,7 +216,6 @@ impl InteropProtocol {
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
 
         tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
 
@@ -455,8 +451,6 @@ impl InteropProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msgbus::MemoryBus;
-    use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {

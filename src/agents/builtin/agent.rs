@@ -851,7 +851,6 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
@@ -994,7 +993,6 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
@@ -1351,7 +1349,6 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
@@ -1458,8 +1455,6 @@ impl Agent {
             if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
                  return Err(Box::new(e));
             }
-
-            let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
@@ -2345,7 +2340,7 @@ impl Agent {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
-                            Err(ToolError::Transient(msg)) => {
+                            /* Err(ToolError::Transient(msg)) => {
                                 return (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg))));
                             }
                             Err(e) => {
@@ -2538,9 +2533,6 @@ impl Agent {
                         }
                     }
                 }
-
-                let mut retry_count = 0;
-                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -2575,7 +2567,7 @@ impl Agent {
                             content = r;
                             break;
                         }
-                        Err(ToolError::Transient(msg)) => {
+                        /* Err(ToolError::Transient(msg)) => {
                             let err = format!("Transient error after retries: {}", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
