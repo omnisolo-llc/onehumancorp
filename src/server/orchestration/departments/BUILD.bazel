@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 exports_files(
     [
         "approvals_test.rs",
+        "agents_test.rs",
         "business_advisory_agent.rs",
         "customer_success_agent.rs",
         "finance_agent.rs",
@@ -24,6 +25,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "approvals_test.rs",
+        "agents_test.rs",
         "business_advisory_agent.rs",
         "customer_success_agent.rs",
         "finance_agent.rs",
