@@ -3,10 +3,7 @@ import { E2E_ADMIN_USER } from './fixtures';
 
 test.describe('Department Orchestration - AI Agent Approvals', () => {
   test('Test 1: Inbox navigation', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
-    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
-    await page.locator('button:has-text("Login")').click();
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     await page.goto('/team');
@@ -16,10 +13,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
   });
 
   test('Test 2: Customer Success default state', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
-    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
-    await page.locator('button:has-text("Login")').click();
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     await page.goto('/team');
@@ -29,10 +23,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
   });
 
   test('Test 3: Operations default state', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
-    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
-    await page.locator('button:has-text("Login")').click();
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     await page.goto('/team');
@@ -42,10 +33,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
   });
 
   test('Test 4: Trigger CUJ Webhook & Flow', async ({ page, request }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
-    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
-    await page.locator('button:has-text("Login")').click();
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     const response = await request.post('/api/agents/webhook', {
@@ -69,10 +57,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
   });
 
   test('Test 5: Approve Draft', async ({ page, request }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
-    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
-    await page.locator('button:has-text("Login")').click();
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     const response = await request.post('/api/agents/webhook', {
