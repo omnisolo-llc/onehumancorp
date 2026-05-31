@@ -131,9 +131,16 @@ impl IntegrationsRegistry {
                          let clients = self.twilio_clients.read().unwrap();
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
+                             let is_whatsapp = channel.starts_with("whatsapp:") || from.starts_with("whatsapp:");
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     tracing::error!("Failed to send Twilio SMS: {}", e);
+                                 if is_whatsapp {
+                                     if let Err(e) = client.send_whatsapp(&to, &from, &text).await {
+                                         tracing::error!("Failed to send Twilio WhatsApp: {}", e);
+                                     }
+                                 } else {
+                                     if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                         tracing::error!("Failed to send Twilio SMS: {}", e);
+                                     }
                                  }
                              });
                          }
@@ -757,6 +764,21 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn send_whatsapp_message(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "twilio" {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_whatsapp(to, from, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
         if integration_id == "resend" {
             let clients = self.resend_clients.read().unwrap();
@@ -840,10 +862,19 @@ mod tests {
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
         };
-        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
+        registry.connect("twilio", "https://api.twilio.com", creds.clone()).unwrap();
 
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+        let msg_whatsapp = registry.send_chat_message("twilio", "whatsapp:+0987654321", "agent1", "Hello WhatsApp", "thread1").unwrap();
+        assert_eq!(msg_whatsapp.content, "Hello WhatsApp");
+
+        let mut creds_whatsapp = creds.clone();
+        creds_whatsapp.from_phone = "whatsapp:+1234567890".to_string();
+        registry.connect("twilio", "https://api.twilio.com", creds_whatsapp).unwrap();
+
+        let msg_whatsapp2 = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello WhatsApp 2", "thread1").unwrap();
+        assert_eq!(msg_whatsapp2.content, "Hello WhatsApp 2");
     }
 }

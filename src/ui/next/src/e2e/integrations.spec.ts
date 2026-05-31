@@ -48,4 +48,25 @@ test.describe('Integrations Loop', () => {
         const joinMeetingButton = page.locator('a:has-text("Join Meeting")');
         await expect(joinMeetingButton).toBeVisible();
     });
+
+    test('Integrations loop connects Twilio WhatsApp', async ({ page }) => {
+        await page.goto('http://localhost:3000/integrations');
+
+        const twilioCard = page.locator('div').filter({ hasText: 'Twilio Conversations' }).first();
+        const connectTwilioButton = twilioCard.locator('button:has-text("Connect")');
+        await connectTwilioButton.click();
+
+        // Modal should appear
+        await expect(page.locator('h2:has-text("Connect Twilio Conversations")')).toBeVisible();
+
+        // Verify WhatsApp option is visible
+        await expect(page.locator('span:has-text("WhatsApp Business API")')).toBeVisible();
+
+        // Save & Connect
+        await page.locator('button:has-text("Save & Connect")').click();
+
+        // Should redirect to inbox
+        await page.waitForURL('**/inbox');
+        await expect(page.locator('h1:has-text("Customer Inbox")')).toBeVisible();
+    });
 });
