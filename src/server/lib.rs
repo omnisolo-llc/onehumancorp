@@ -2104,22 +2104,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
     
-    // Start Edge Cache Invalidation Listener
-    let listener_pool = db.pool.clone();
-    tokio::spawn(async move {
-        if let Ok(mut listener) = sqlx::postgres::PgListener::connect_with(&listener_pool).await {
-            if let Ok(_) = listener.listen("edge_cache_invalidation").await {
-                tracing::info!("Listening for edge_cache_invalidation events");
-                while let Ok(notification) = listener.recv().await {
-                    let payload = notification.payload();
-                    tracing::info!("Received edge cache invalidation for key: {}", payload);
-                    let cache = crate::builder::edge::get_edge_cache();
-                    cache.invalidate(payload).await;
-                }
-            }
-        }
-    });
-
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
@@ -2519,11 +2503,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
+        .route("/api/billing/my-plan", axum::routing::get(|| async { axum::Json(serde_json::json!({ "current_plan": "Starter", "ai_actions_used": 150, "ai_actions_limit": 1000, "storage_used_bytes": 250 * 1024 * 1024, "storage_limit_bytes": 5 * 1024 * 1024 * 1024u64, "next_bill_estimated": 29.00 })) }))
+        .route("/api/billing/cost-dashboard", axum::routing::get(|| async { axum::Json(serde_json::json!({ "total_revenue": 0, "total_costs": 1450, "llm_cost": 450, "storage_cost": 100, "payment_fees": 900, "period_start": "2024-06-01", "period_end": "2024-06-30" })) }))
         .route("/api/billing/checkout", axum::routing::post(|| async { axum::Json(serde_json::json!({ "url": "https://checkout.stripe.com/pay/test" })) }))
-        .route("/api/billing/cost-dashboard", axum::routing::get(|| async { axum::Json(serde_json::json!({ "total_revenue": 0, "total_costs": 1450, "llm_cost": 450, "storage_cost": 100, "payment_fees": 900, "period_start": "2024-06-01", "period_end": "2024-06-30" })) }))
-        .route("/api/billing/my-plan", axum::routing::get(|| async { axum::Json(serde_json::json!({ "current_plan": "Starter", "ai_actions_used": 150, "ai_actions_limit": 1000, "storage_used_bytes": 250 * 1024 * 1024, "storage_limit_bytes": 5 * 1024 * 1024 * 1024u64, "next_bill_estimated": 29.00 })) }))
-        .route("/api/billing/my-plan", axum::routing::get(|| async { axum::Json(serde_json::json!({ "current_plan": "Starter", "ai_actions_used": 150, "ai_actions_limit": 1000, "storage_used_bytes": 250 * 1024 * 1024, "storage_limit_bytes": 5 * 1024 * 1024 * 1024u64, "next_bill_estimated": 29.00 })) }))
-        .route("/api/billing/cost-dashboard", axum::routing::get(|| async { axum::Json(serde_json::json!({ "total_revenue": 0, "total_costs": 1450, "llm_cost": 450, "storage_cost": 100, "payment_fees": 900, "period_start": "2024-06-01", "period_end": "2024-06-30" })) }))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 

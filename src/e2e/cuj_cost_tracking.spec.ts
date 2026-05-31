@@ -1,9 +1,8 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('CUJ: Billing Cost Tracking', () => {
-  test('should display cost breakdown on dashboard locally', async ({ page }) => {
-    // Basic test to avoid flakes in docker overlayfs. Just making sure
-    // the system has the appropriate routing in place.
+  test('should pass placeholder locally', async ({ page }) => {
+    // Basic test
     expect(true).toBe(true);
   });
 });
