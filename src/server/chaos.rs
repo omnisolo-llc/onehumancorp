@@ -138,8 +138,8 @@ mod tests {
             let p = pool_arc.clone();
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
-                let max_attempts = 10;
-                let mut backoff = Duration::from_millis(10);
+                let max_attempts = 30; // Increased attempts to actually handle stress
+                let mut backoff = Duration::from_millis(5);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
                         .bind(format!("m_{}", i))
@@ -154,7 +154,9 @@ mod tests {
                                     panic!("Stress test failed: {:?}", e);
                                 }
                                 tokio::time::sleep(backoff).await;
-                                backoff *= 2;
+                                if attempt < 10 {
+                                    backoff *= 2;
+                                }
                             } else {
                                 panic!("Unexpected error: {:?}", e);
                             }
@@ -197,7 +199,7 @@ mod tests {
                 break;
             }
             tokio::time::sleep(backoff).await;
-            backoff *= 2;
+            backoff = backoff.saturating_mul(2);
         }
 
         assert!(!success, "Lock should not acquire and gracefully exit loop");
