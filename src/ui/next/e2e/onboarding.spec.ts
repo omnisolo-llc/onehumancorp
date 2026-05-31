@@ -21,6 +21,17 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
 
     // Click Generate
+    // NOTE: Mock the intake endpoint here so it responds correctly during tests
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    }));
+
     await page.locator('button:has-text("Generate My Business")').click();
 
     // 2. Wait for Review Details Step
@@ -34,6 +45,17 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Select Template and Launch
     await page.locator('text="Classic"').click();
+
+    await page.route('**/api/onboarding/start', async route => {
+        // give it a short delay so the loading screen appears
+        await new Promise(r => setTimeout(r, 1000));
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: "Your business has been successfully launched." })
+        });
+    });
+
     await page.locator('button:has-text("Launch Store")').click();
 
     // 4. Loading screen
@@ -98,6 +120,16 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
 
     // Click Generate
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    }));
+
     await page.locator('button:has-text("Generate My Business")').click();
 
     // Review Details Step
@@ -120,5 +152,14 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Verify template selection
     await page.locator('text="Minimal"').click();
+
+    // Verify domain choice selection
+    const customDomain = page.locator('text="Connect Custom Domain"');
+    await expect(customDomain).toBeVisible();
+    await customDomain.click();
+
+    const subdomain = page.locator('text="Free OHC Subdomain"');
+    await expect(subdomain).toBeVisible();
+    await subdomain.click();
   });
 });

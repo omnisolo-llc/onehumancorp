@@ -271,6 +271,39 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Step 3: Can select domain choice', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, domainChoice: 'subdomain' });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Check that both options exist
+    const customDomainOption = screen.getByText('Connect Custom Domain');
+    expect(customDomainOption).toBeInTheDocument();
+
+    const subdomainOption = screen.getByText('Free OHC Subdomain');
+    expect(subdomainOption).toBeInTheDocument();
+
+    // Click custom domain
+    await user.click(customDomainOption);
+
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.domainChoice).toBe('custom');
+    });
+
+    // Click subdomain again
+    await user.click(subdomainOption);
+
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.domainChoice).toBe('subdomain');
+    });
+  });
+
   it('Step 5: Shows Live Screen with correct links', async () => {
     act(() => {
       useOnboardingStore.setState({

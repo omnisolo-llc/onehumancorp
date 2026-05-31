@@ -426,6 +426,24 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Domain Choice</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'subdomain', label: 'Free OHC Subdomain' },
+                      { id: 'custom', label: 'Connect Custom Domain' }
+                    ].map(domain => (
+                      <div
+                        key={domain.id}
+                        onClick={() => setDomainChoice(domain.id)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === domain.id ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                      >
+                        <div className="font-semibold text-sm text-center">{domain.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
                   <div className="space-y-2">
                     {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
