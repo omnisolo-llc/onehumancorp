@@ -1,3 +1,4 @@
+#![allow(unused_variables, unused_mut, unreachable_patterns, unused_imports)]
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
