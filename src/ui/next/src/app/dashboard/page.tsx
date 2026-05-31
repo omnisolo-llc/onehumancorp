@@ -393,7 +393,17 @@ export default function Dashboard() {
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
-         </nav>
+
+            <Link href="/help" className="px-4 py-2 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-100 shadow-sm flex items-center gap-1">
+              <span>❓</span> Help Center
+            </Link>
+            <Link href="/api-docs" className="px-4 py-2 bg-gray-50 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors border border-gray-100 shadow-sm flex items-center gap-1">
+              <span>📖</span> API Docs
+            </Link>
+            <Link href="/changelog" className="px-4 py-2 bg-green-50 text-green-700 rounded-md text-sm font-medium hover:bg-green-100 transition-colors border border-green-100 shadow-sm flex items-center gap-1">
+              <span>📝</span> Changelog
+            </Link>
+</nav>
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
