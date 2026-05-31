@@ -22,7 +22,6 @@ done
 grep -q "oci_image" "$build_file"
 grep -q "server_image" "$build_file"
 grep -q "default_agent_image" "$build_file"
-grep -q "ohc-builtin-agent" "$build_file"
 grep -q "distroless" "$build_file"
 grep -q "internal-default-agent:bazel" "$build_file"
 

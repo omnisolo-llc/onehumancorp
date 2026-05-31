@@ -99,46 +99,11 @@ pkg_files(
 )
 
 pkg_files(
-    name = "ohc_cluster_unix_files",
-    srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
-    ],
-    renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "bin/ohc-builtin-agent",
-        "//src/server:server": "bin/ohc-server",
-    },
-    strip_prefix = strip_prefix.from_pkg(),
-    target_compatible_with = select({
-        "//:linux": [],
-        "//:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-pkg_files(
     name = "ohc_windows_files",
     srcs = [
         "//src/server",
     ],
     renames = {
-        "//src/server:server": "ohc-server.exe",
-    },
-    strip_prefix = strip_prefix.from_pkg(),
-    target_compatible_with = select({
-        "//:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-pkg_files(
-    name = "ohc_cluster_windows_files",
-    srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
-    ],
-    renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "ohc-builtin-agent.exe",
         "//src/server:server": "ohc-server.exe",
     },
     strip_prefix = strip_prefix.from_pkg(),
@@ -160,32 +125,10 @@ pkg_tar(
     }),
 )
 
-pkg_tar(
-    name = "ohc_cluster_unix_archive",
-    srcs = [":ohc_cluster_unix_files"],
-    extension = "tar.gz",
-    package_file_name = "ohc-cluster.tar.gz",
-    target_compatible_with = select({
-        "//:linux": [],
-        "//:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
 pkg_zip(
     name = "ohc_windows_archive",
     srcs = [":ohc_windows_files"],
     package_file_name = OHC_WINDOWS_ARCHIVE_NAME,
-    target_compatible_with = select({
-        "//:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-pkg_zip(
-    name = "ohc_cluster_windows_archive",
-    srcs = [":ohc_cluster_windows_files"],
-    package_file_name = "ohc-cluster.zip",
     target_compatible_with = select({
         "//:windows": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -241,35 +184,16 @@ filegroup(
 )
 
 filegroup(
-    name = "cluster_release_archive",
-    srcs = select({
-        "//:linux": [
-            ":ohc_cluster_unix_archive",
-        ],
-        "//:macos": [
-            ":ohc_cluster_unix_archive",
-        ],
-        "//:windows": [
-            ":ohc_cluster_windows_archive",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-filegroup(
     name = "all_release_artifacts",
     srcs = select({
         "//:linux": [
-            ":ohc_cluster_unix_archive",
             ":ohc_deb",
             ":ohc_unix_archive",
         ],
         "//:macos": [
-            ":ohc_cluster_unix_archive",
             ":ohc_unix_archive",
         ],
         "//:windows": [
-            ":ohc_cluster_windows_archive",
             ":ohc_windows_archive",
         ],
         "//conditions:default": [],

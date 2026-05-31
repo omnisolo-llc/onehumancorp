@@ -38,7 +38,6 @@ test.describe('Invisible Storefront Generator Flow', () => {
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
     await expect(page.getByRole('button', { name: /View Welcome Checklist/ })).toBeVisible();
   });
-});
 
   test('handles errors from the intake API gracefully', async ({ page }) => {
     await page.route('**/api/onboarding/intake', route => route.fulfill({
@@ -105,3 +104,5 @@ test.describe('Invisible Storefront Generator Flow', () => {
     await page.getByPlaceholder('e.g. I run a local bakery').fill('Test');
     await expect(genButton).toBeEnabled();
   });
+
+});
