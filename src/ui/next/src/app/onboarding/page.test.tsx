@@ -12,8 +12,7 @@ describe('OnboardingWizard', () => {
       step: 1,
       chatStep: 1,
       businessName: '',
-      whatYouSell: '',
-      location: '',
+            location: '',
       businessDescription: '',
       aiAgents: [],
       aiAutoRespond: true,
@@ -35,6 +34,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    expect(screen.getByText("What's your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -66,21 +66,18 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
+    // Chat Step 1: Select persona
+    const bakerType = screen.getByText('Baker');
+    await user.click(bakerType);
+
+    // Chat Step 2: Name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
     await user.click(nextBtn1);
 
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
+    // Chat Step 3: Location
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
@@ -129,21 +126,18 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
+    // Chat Step 1: Select persona
+    const bakerType = screen.getByText('Baker');
+    await user.click(bakerType);
+
+    // Chat Step 2: Name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
     await user.click(nextBtn1);
 
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
+    // Chat Step 3: Location
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
@@ -251,7 +245,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
+    const salesAgent = screen.getByText('Sales & Acquisition');
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
@@ -266,7 +260,7 @@ describe('OnboardingWizard', () => {
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAgents).toContain('Sales & Acquisition');
       expect(state.aiAutoRespond).toBe(false);
     });
   });

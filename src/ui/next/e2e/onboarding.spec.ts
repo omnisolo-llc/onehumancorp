@@ -5,15 +5,14 @@ test.describe('Onboarding Wizard Flow', () => {
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
-    // Step 1: Business Name
+    // Step 1: Business Type
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+    await expect(page.locator('text="What\'s your business?"')).toBeVisible();
+    await page.locator('text="Baker"').click();
+
+    // Step 2: Business Name
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-    await page.locator('button:has-text("Next")').click();
-
-    // Step 2: What do you sell
-    await expect(page.locator('text="What do you sell?"')).toBeVisible();
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom vegan cakes in Portland, OR...');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
@@ -64,12 +63,11 @@ test.describe('Onboarding Wizard Flow', () => {
 
     await page.goto('http://localhost:3000/onboarding');
 
-    // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-    await page.locator('button:has-text("Next")').click();
+    // Step 1: Business Type
+    await page.locator('text="Baker"').click();
 
-    // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    // Step 2: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
@@ -86,12 +84,11 @@ test.describe('Onboarding Wizard Flow', () => {
   test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
     await page.goto('http://localhost:3000/onboarding');
 
-    // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-    await page.locator('button:has-text("Next")').click();
+    // Step 1: Business Type
+    await page.locator('text="Baker"').click();
 
-    // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    // Step 2: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
@@ -108,7 +105,7 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
 
     // Ensure Sales Agent is selectable
-    const salesAgent = page.locator('text="Sales Agent"');
+    const salesAgent = page.locator('text="Sales & Acquisition"');
     await expect(salesAgent).toBeVisible();
     await salesAgent.click();
 
