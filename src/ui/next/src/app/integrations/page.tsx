@@ -90,13 +90,8 @@ export default function Integrations() {
 
             <div className="space-y-4 mb-6">
               {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className={`flex items-center justify-between p-3 rounded-xl border ${key === 'whatsapp' ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex items-center gap-2">
-                    {key === 'whatsapp' && <span className="text-green-600 text-lg">💬</span>}
-                    <span className={`text-sm font-semibold capitalize ${key === 'whatsapp' ? 'text-green-900' : 'text-gray-800'}`}>
-                      {key === 'whatsapp' ? 'WhatsApp Business API' : key}
-                    </span>
-                  </div>
+                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
                   <button
                     onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
                     className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}

@@ -26,7 +26,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "e2e",
         "no-remote-exec",
         "requires-docker",
-        "no-sandbox", "local",
+        "no-sandbox",
     ]
     if manual:
         tags.append("manual")
