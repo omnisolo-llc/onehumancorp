@@ -219,7 +219,7 @@ impl AutoDreamWorker {
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
 
             let embedding_vec: Vec<f32> = serde_json::from_str(&embedding).unwrap_or_else(|_| vec![0.0; 1536]);
-            if let Err(e) = vector_store.store(&mem_id, &summary, &embedding_vec, serde_json::json!({"source_type": source_type})).await {
+            if let Err(e) = vector_store.store(&mem_id, &org_id, &summary, &embedding_vec, serde_json::json!({"source_type": source_type})).await {
                 debug!("AutoDreamWorker: failed to store embedding in VectorStore: {}", e);
             }
 

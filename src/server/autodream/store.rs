@@ -2,8 +2,8 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait VectorStore {
-    async fn store(&self, id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn search(&self, embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn store(&self, id: &str, tenant_id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn search(&self, tenant_id: &str, embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub struct PGVectorStore {
@@ -18,14 +18,14 @@ impl PGVectorStore {
 
 #[async_trait]
 impl VectorStore for PGVectorStore {
-    async fn store(&self, id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store(&self, id: &str, tenant_id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
 
         sqlx::query(
             "INSERT INTO knowledge_base (id, tenant_id, content, metadata, embedding) VALUES ($1, $2, $3, $4, $5::vector) ON CONFLICT (id) DO UPDATE SET content = $3, metadata = $4, embedding = $5::vector"
         )
         .bind(id)
-        .bind("system")
+        .bind(tenant_id)
         .bind(content)
         .bind(metadata)
         .bind(&emb_str)
@@ -35,14 +35,15 @@ impl VectorStore for PGVectorStore {
         Ok(())
     }
 
-    async fn search(&self, embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn search(&self, tenant_id: &str, embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>> {
         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
 
         let rows = sqlx::query(
-            "SELECT id, 1 - (embedding <=> $2::vector) AS similarity FROM knowledge_base ORDER BY embedding <=> $2::vector LIMIT $1"
+            "SELECT id, 1 - (embedding <=> $2::vector) AS similarity FROM knowledge_base WHERE tenant_id = $3 ORDER BY embedding <=> $2::vector LIMIT $1"
         )
         .bind(limit as i64)
         .bind(&emb_str)
+        .bind(tenant_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -70,14 +71,14 @@ impl SQLiteVectorStore {
 
 #[async_trait]
 impl VectorStore for SQLiteVectorStore {
-    async fn store(&self, id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store(&self, id: &str, tenant_id: &str, content: &str, embedding: &[f32], metadata: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let emb_json = serde_json::to_string(embedding)?;
 
         sqlx::query(
             "INSERT INTO knowledge_base (id, tenant_id, content, metadata, embedding) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET content = excluded.content, metadata = excluded.metadata, embedding = excluded.embedding"
         )
         .bind(id)
-        .bind("system")
+        .bind(tenant_id)
         .bind(content)
         .bind(serde_json::to_string(&metadata)?)
         .bind(emb_json)
@@ -87,9 +88,10 @@ impl VectorStore for SQLiteVectorStore {
         Ok(())
     }
 
-    async fn search(&self, search_embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn search(&self, tenant_id: &str, search_embedding: &[f32], limit: usize) -> Result<Vec<(String, f32)>, Box<dyn std::error::Error + Send + Sync>> {
         // Fetch all rows and calculate cosine similarity in rust
-        let rows = sqlx::query("SELECT id, embedding FROM knowledge_base")
+        let rows = sqlx::query("SELECT id, embedding FROM knowledge_base WHERE tenant_id = ?")
+            .bind(tenant_id)
             .fetch_all(&self.pool)
             .await?;
 
@@ -161,15 +163,15 @@ mod tests {
         let embedding2 = vec![0.1, 0.8, 0.1];
 
         // Test Store
-        store.store(id1, content1, &embedding1, metadata.clone()).await.unwrap();
-        store.store(id2, content2, &embedding2, metadata.clone()).await.unwrap();
+        store.store(id1, "org_test", content1, &embedding1, metadata.clone()).await.unwrap();
+        store.store(id2, "org_test", content2, &embedding2, metadata.clone()).await.unwrap();
 
         // Update test
-        store.store(id2, "This is about wild dogs", &embedding2, metadata.clone()).await.unwrap();
+        store.store(id2, "org_test", "This is about wild dogs", &embedding2, metadata.clone()).await.unwrap();
 
         // Test Search - find something close to dogs
         let search_vec = vec![0.0, 0.9, 0.1];
-        let results = store.search(&search_vec, 1).await.unwrap();
+        let results = store.search("org_test", &search_vec, 1).await.unwrap();
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "mem2");
@@ -200,10 +202,10 @@ mod tests {
         let embedding1 = vec![0.8, 0.1, 0.1];
         let metadata = serde_json::json!({"type": "test"});
 
-        let res = store.store(&id1, "Test content PG", &embedding1, metadata.clone()).await;
+        let res = store.store(&id1, "org_test", "Test content PG", &embedding1, metadata.clone()).await;
         // The table might not exist in the test DB context if it's not fully migrated, but we ensure it doesn't panic.
         if res.is_ok() {
-            let search_res = store.search(&embedding1, 1).await;
+            let search_res = store.search("org_test", &embedding1, 1).await;
             assert!(search_res.is_ok());
 
             // Clean up
