@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS businesses (
 
 -- Enable RLS on businesses
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_businesses ON businesses USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_businesses ON businesses USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- Add business_id to agent_memories
 ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS business_id TEXT REFERENCES businesses(id) ON DELETE CASCADE;
@@ -23,7 +23,7 @@ ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS business_id TEXT REFERENCES 
 -- Ensure RLS on agent_memories (redundant but safe per instruction)
 ALTER TABLE agent_memories ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_agent_memories ON agent_memories;
-CREATE POLICY tenant_isolation_agent_memories ON agent_memories USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_agent_memories ON agent_memories USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- Ensure vector index exists for agent_memories
 CREATE INDEX IF NOT EXISTS agent_memories_embedding_hnsw_idx ON agent_memories USING hnsw (embedding vector_cosine_ops);
