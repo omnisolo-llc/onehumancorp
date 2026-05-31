@@ -1042,11 +1042,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("ip_address")
         || k.contains("mac_address")
         || k.contains("geolocation")
-        || k.contains("medical")
-        || k.contains("health")
-        || k.contains("salary")
-        || k.contains("tax")
-        || k.contains("social_security")
 }
 
 pub fn is_email(s: &str) -> bool {
