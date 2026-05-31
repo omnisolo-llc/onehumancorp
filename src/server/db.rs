@@ -902,7 +902,16 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let (shared_res, swarm_res) = tokio::join!(
+                    async {
+                        sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await
+                    },
+                    async {
+                        sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await
+                    }
+                );
+
+                let shared_rows = shared_res?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -910,7 +919,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let swarm_rows = swarm_res?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -919,9 +928,24 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let (shared_res, swarm_res) = tokio::join!(
+                    async {
+                        let mut tx = self.pool.begin().await?;
+                        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                        let res = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                        tx.commit().await?;
+                        Ok::<_, sqlx::Error>(res)
+                    },
+                    async {
+                        let mut tx = self.pool.begin().await?;
+                        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                        let res = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                        tx.commit().await?;
+                        Ok::<_, sqlx::Error>(res)
+                    }
+                );
+
+                let shared_rows = shared_res?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -929,8 +953,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                tx.commit().await?;
+                let swarm_rows = swarm_res?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");

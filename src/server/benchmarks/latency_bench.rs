@@ -381,6 +381,51 @@ mod tests {
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
     }
+
+    #[tokio::test]
+    async fn test_run_bench_get_completed_tasks_latency() {
+        bench_get_completed_tasks_latency().await;
+    }
+}
+
+pub async fn bench_get_completed_tasks_latency() {
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = 100;
+
+    let pool = if database_url.starts_with("postgres") {
+        sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e))
+    } else {
+        // Fallback to postgres for DB struct, but we will test actual sqlite store
+        sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap()
+    };
+
+    let store = if database_url.starts_with("postgres") {
+        crate::db::DbStore::Postgres
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+        // Setup minimal schema for sqlite
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed BOOLEAN)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed BOOLEAN)").execute(&sqlite_pool).await;
+        crate::db::DbStore::Sqlite(sqlite_pool)
+    };
+
+    let db = std::sync::Arc::new(crate::db::DB { pool, store });
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+        let _ = db.get_completed_tasks().await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    let mode = if database_url.starts_with("postgres") { "Postgres" } else { "SQLite" };
+    println!("Get Completed Tasks (Parallel {}): p50: {} us, p95: {} us, p99: {} us",
+        mode,
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
 }
 
 pub async fn bench_advisory_insights_latency() {
