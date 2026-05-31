@@ -19,6 +19,8 @@ pub fn get_pool() -> PgPool {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
+                    // Prevent Tenant Leakage by ensuring every leased connection starts with an empty tenant context,
+                    // enforcing an explicit opt-in for Row-Level Security via set_org_context before any reads/writes.
                     conn.execute("SET app.current_tenant = ''").await?;
                     Ok(true)
                 })
