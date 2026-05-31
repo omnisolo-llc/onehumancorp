@@ -13,15 +13,14 @@ vi.mock('next/server', () => {
   };
 });
 
-describe('API help route', () => {
-  it('returns a list of help articles', async () => {
+describe('API tooltips route', () => {
+  it('returns a dictionary of tooltips', async () => {
     const response = await GET() as any;
     const data = await response.json();
     expect(response.status).toBe(200);
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBeGreaterThan(0);
-    expect(data[0]).toHaveProperty('title');
-    expect(data[0]).toHaveProperty('desc');
-    expect(data[0]).toHaveProperty('link');
+    expect(typeof data).toBe('object');
+    expect(Object.keys(data).length).toBeGreaterThan(0);
+    expect(data).toHaveProperty('bio-input-tooltip');
+    expect(typeof data['bio-input-tooltip']).toBe('string');
   });
 });
