@@ -194,7 +194,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-[375px] max-w-[100vw] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -225,6 +225,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        inputMode="text"
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
@@ -332,6 +333,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
+                    inputMode="text"
                     autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
@@ -361,6 +363,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
+                        inputMode="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"

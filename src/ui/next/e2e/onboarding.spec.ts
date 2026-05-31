@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
   test('completes full onboarding flow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
@@ -25,6 +26,11 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // 2. Wait for Review Details Step
     await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+
+    // Assert that the input attributes have the correct input modes mapped
+    await expect(page.locator('input').nth(0)).toHaveAttribute('inputMode', 'text');
+    await expect(page.locator('input').nth(1)).toHaveAttribute('inputMode', 'text');
+    await expect(page.locator('input').nth(3)).toHaveAttribute('inputMode', 'decimal');
 
     // Continue to next step
     await page.locator('button:has-text("Continue")').click();
@@ -56,6 +62,7 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('fails gracefully when intake API returns error', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     // Mock intake API to return 500 error
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 500,
@@ -84,6 +91,7 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
