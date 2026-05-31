@@ -13,10 +13,10 @@ impl MaintenanceWorker {
 
     pub fn start(self: Arc<Self>) {
         tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(300)); // Every 5 minutes
+            let mut interval = interval(Duration::from_secs(60)); // Check every minute
             loop {
                 interval.tick().await;
-                if let Err(e) = self.db.cleanup_stagnant_missions(3600).await { // 1 hour timeout
+                if let Err(e) = self.db.cleanup_stagnant_missions(60).await { // 60s timeout
                     tracing::error!("MaintenanceWorker: Failed to cleanup stagnant missions: {}", e);
                 }
             }

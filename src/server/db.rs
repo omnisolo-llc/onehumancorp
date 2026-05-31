@@ -1097,28 +1097,58 @@ impl DB {
         &self,
         timeout_secs: i64,
     ) -> Result<u64, Box<dyn std::error::Error>> {
-        let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        // We implement exponential backoff based on retry_count:
+        // delay = timeout_secs * (2 ^ retry_count).
+        // For simplicity in SQL we check if `now() - updated_at > timeout_secs * POWER(2, coalesce(retry_count, 0))`
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
-                    .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
+                let mut tx = sqlite_pool.begin().await?;
+                let mut total_affected = 0;
+
+                // In SQLite, POWER is not built-in by default, so we approximate with CAST(1 << coalesce(retry_count, 0) AS INTEGER)
+                // Retry logic:
+                let retried = sqlx::query("UPDATE agent_missions SET status = 'PENDING', retry_count = coalesce(retry_count, 0) + 1, updated_at = CURRENT_TIMESTAMP WHERE status IN ('PENDING', 'RUNNING') AND coalesce(retry_count, 0) < 3 AND (strftime('%s', 'now') - strftime('%s', updated_at)) > (? * (1 << coalesce(retry_count, 0)))")
+                    .bind(timeout_secs)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                total_affected += retried;
+
+                // Fail logic:
+                let failed = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR (status IN ('PENDING', 'RUNNING') AND coalesce(retry_count, 0) >= 3 AND (strftime('%s', 'now') - strftime('%s', updated_at)) > (? * (1 << coalesce(retry_count, 0))))")
+                    .bind(timeout_secs)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                total_affected += failed;
+
+                tx.commit().await?;
+                total_affected
             },
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1)")
-                    .bind(threshold)
+                let mut total_affected = 0;
+
+                // Retry logic:
+                let retried = sqlx::query("UPDATE agent_missions SET status = 'PENDING', retry_count = coalesce(retry_count, 0) + 1, updated_at = CURRENT_TIMESTAMP WHERE status IN ('PENDING', 'RUNNING') AND coalesce(retry_count, 0) < 3 AND EXTRACT(EPOCH FROM (NOW() - updated_at)) > ($1 * POWER(2, coalesce(retry_count, 0)))")
+                    .bind(timeout_secs as f64)
                     .execute(&mut *tx)
                     .await?.rows_affected();
+                total_affected += retried;
+
+                // Fail logic:
+                let failed = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR (status IN ('PENDING', 'RUNNING') AND coalesce(retry_count, 0) >= 3 AND EXTRACT(EPOCH FROM (NOW() - updated_at)) > ($1 * POWER(2, coalesce(retry_count, 0))))")
+                    .bind(timeout_secs as f64)
+                    .execute(&mut *tx)
+                    .await?.rows_affected();
+                total_affected += failed;
+
                 tx.commit().await?;
-                affected
+                total_affected
             }
         };
         if affected > 0 {
             tracing::debug!(
-                "Cleaned up {} stagnant missions older than {} seconds",
+                "Cleaned up {} stagnant missions older than {} seconds (with exponential backoff retries)",
                 affected,
                 timeout_secs
             );
