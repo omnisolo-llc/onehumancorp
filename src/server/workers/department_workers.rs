@@ -50,13 +50,13 @@ impl OperationsWorker {
                     SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                     WHERE id = (
                         SELECT id FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'CalculateDailyRoute')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
-                    RETURNING id, tenant_id, payload
+                    RETURNING id, tenant_id, payload, event_type
                     "#
                 )
                 .bind(Utc::now() + chrono::Duration::minutes(5))
@@ -64,7 +64,7 @@ impl OperationsWorker {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
             },
@@ -73,7 +73,7 @@ impl OperationsWorker {
                 let row = sqlx::query(
                     r#"
                     SELECT id, tenant_id, payload FROM department_tasks
-                    WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                    WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'CalculateDailyRoute')
                     AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                     ORDER BY created_at ASC
                     LIMIT 1
@@ -87,6 +87,7 @@ impl OperationsWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
+                    let event_type: String = r.get("event_type");
                     let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                     sqlx::query(
@@ -96,7 +97,7 @@ impl OperationsWorker {
                     .bind(&id)
                     .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    Some((id, tenant_id, payload, event_type))
                 } else {
                     None
                 };
@@ -106,7 +107,62 @@ impl OperationsWorker {
         };
 
         let processed = task.is_some();
-        if let Some((id, tenant_id, payload)) = task {
+        if let Some((id, tenant_id, payload, event_type)) = task {
+            if event_type == "CalculateDailyRoute" {
+                // Group pending orders that need delivery
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let orders_rows = sqlx::query("SELECT id, shipping_address FROM orders WHERE tenant_id = $1::uuid AND status = 'PENDING' AND shipping_address IS NOT NULL LIMIT 20")
+                            .bind(&tenant_id)
+                            .fetch_all(&db.pool)
+                            .await
+                            .unwrap_or_default();
+
+                        if !orders_rows.is_empty() {
+                            let route_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query("INSERT INTO delivery_routes (id, organization_id, driver_id, status) VALUES ($1, $2, 'auto_driver', 'planning')")
+                                .bind(&route_id).bind(&tenant_id).execute(&db.pool).await;
+
+                            for (i, order_row) in orders_rows.iter().enumerate() {
+                                let order_id: String = sqlx::Row::try_get(order_row, "id").unwrap_or_default();
+                                let address: String = sqlx::Row::try_get(order_row, "shipping_address").unwrap_or_else(|_| "Unknown Address".to_string());
+                                let stop_id = uuid::Uuid::new_v4().to_string();
+                                let eta = (Utc::now() + chrono::Duration::minutes(30 * (i as i64 + 1))).timestamp_millis();
+                                let _ = sqlx::query("INSERT INTO route_stops (id, route_id, organization_id, order_id, address, status, sort_order, eta_ms) VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)")
+                                    .bind(&stop_id).bind(&route_id).bind(&tenant_id).bind(&order_id).bind(&address).bind((i + 1) as i32).bind(eta).execute(&db.pool).await;
+                            }
+                        }
+                        let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                            .bind(&id).execute(&db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let orders_rows = sqlx::query("SELECT id, shipping_address FROM orders WHERE tenant_id = ? AND status = 'PENDING' AND shipping_address IS NOT NULL LIMIT 20")
+                            .bind(&tenant_id)
+                            .fetch_all(pool)
+                            .await
+                            .unwrap_or_default();
+
+                        if !orders_rows.is_empty() {
+                            let route_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query("INSERT INTO delivery_routes (id, organization_id, driver_id, status) VALUES (?, ?, 'auto_driver', 'planning')")
+                                .bind(&route_id).bind(&tenant_id).execute(pool).await;
+
+                            for (i, order_row) in orders_rows.iter().enumerate() {
+                                let order_id: String = sqlx::Row::try_get(order_row, "id").unwrap_or_default();
+                                let address: String = sqlx::Row::try_get(order_row, "shipping_address").unwrap_or_else(|_| "Unknown Address".to_string());
+                                let stop_id = uuid::Uuid::new_v4().to_string();
+                                let eta = (Utc::now() + chrono::Duration::minutes(30 * (i as i64 + 1))).timestamp_millis();
+                                let _ = sqlx::query("INSERT INTO route_stops (id, route_id, organization_id, order_id, address, status, sort_order, eta_ms) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)")
+                                    .bind(&stop_id).bind(&route_id).bind(&tenant_id).bind(&order_id).bind(&address).bind((i + 1) as i32).bind(eta).execute(pool).await;
+                            }
+                        }
+                        let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&id).execute(pool).await;
+                    }
+                }
+                return Ok(true);
+            }
+
             // Check inventory levels
             let items = payload.get("items").and_then(|v| v.as_array());
             if let Some(items) = items {
@@ -670,7 +726,7 @@ impl CustomerSuccessWorker {
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
-                    RETURNING id, tenant_id, payload, event_type
+                    RETURNING id, tenant_id, payload, event_type, event_type
                     "#
                 )
                 .bind(Utc::now() + chrono::Duration::minutes(5))

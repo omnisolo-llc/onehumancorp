@@ -567,6 +567,184 @@ impl DashboardService for MyDashboardService {
         Ok(Response::new(GetVideoTutorialsResponse { videos }))
     }
 
+    async fn get_delivery_route(
+        &self,
+        request: Request<GetDeliveryRouteRequest>,
+    ) -> Result<Response<DeliveryRoute>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication info"))?;
+        let org_id = &auth_info.org_id;
+        let req = request.into_inner();
+
+        let mut route = DeliveryRoute {
+            id: req.route_id.clone(),
+            organization_id: org_id.clone(),
+            driver_id: "".to_string(),
+            status: "planning".to_string(),
+            stops: vec![],
+        };
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT driver_id, status FROM delivery_routes WHERE id = $1 AND organization_id = $2")
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                if let Some(r) = row {
+                    route.driver_id = sqlx::Row::try_get(&r, "driver_id").unwrap_or_default();
+                    route.status = sqlx::Row::try_get(&r, "status").unwrap_or_default();
+                }
+
+                let stops_rows = sqlx::query("SELECT id, order_id, address, status, eta_ms FROM route_stops WHERE route_id = $1 AND organization_id = $2 ORDER BY sort_order ASC")
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                for stop_row in stops_rows {
+                    route.stops.push(RouteStop {
+                        id: sqlx::Row::try_get(&stop_row, "id").unwrap_or_default(),
+                        order_id: sqlx::Row::try_get(&stop_row, "order_id").unwrap_or_default(),
+                        address: sqlx::Row::try_get(&stop_row, "address").unwrap_or_default(),
+                        status: sqlx::Row::try_get(&stop_row, "status").unwrap_or_default(),
+                        eta_ms: sqlx::Row::try_get(&stop_row, "eta_ms").unwrap_or_default(),
+                    });
+                }
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT driver_id, status FROM delivery_routes WHERE id = ? AND organization_id = ?")
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                if let Some(r) = row {
+                    route.driver_id = sqlx::Row::try_get(&r, "driver_id").unwrap_or_default();
+                    route.status = sqlx::Row::try_get(&r, "status").unwrap_or_default();
+                }
+
+                let stops_rows = sqlx::query("SELECT id, order_id, address, status, eta_ms FROM route_stops WHERE route_id = ? AND organization_id = ? ORDER BY sort_order ASC")
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                for stop_row in stops_rows {
+                    route.stops.push(RouteStop {
+                        id: sqlx::Row::try_get(&stop_row, "id").unwrap_or_default(),
+                        order_id: sqlx::Row::try_get(&stop_row, "order_id").unwrap_or_default(),
+                        address: sqlx::Row::try_get(&stop_row, "address").unwrap_or_default(),
+                        status: sqlx::Row::try_get(&stop_row, "status").unwrap_or_default(),
+                        eta_ms: sqlx::Row::try_get(&stop_row, "eta_ms").unwrap_or_default(),
+                    });
+                }
+            }
+        }
+
+        Ok(Response::new(route))
+    }
+
+    async fn update_route_stop_status(
+        &self,
+        request: Request<UpdateRouteStopStatusRequest>,
+    ) -> Result<Response<RouteStop>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication info"))?;
+        let org_id = &auth_info.org_id;
+        let req = request.into_inner();
+
+        let mut updated_stop = RouteStop {
+            id: req.stop_id.clone(),
+            order_id: "".to_string(),
+            address: "".to_string(),
+            status: req.status.clone(),
+            eta_ms: 0,
+        };
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("UPDATE route_stops SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND route_id = $3 AND organization_id = $4 RETURNING order_id, address, eta_ms")
+                    .bind(&req.status)
+                    .bind(&req.stop_id)
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .fetch_one(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                updated_stop.order_id = sqlx::Row::try_get(&row, "order_id").unwrap_or_default();
+                updated_stop.address = sqlx::Row::try_get(&row, "address").unwrap_or_default();
+                updated_stop.eta_ms = sqlx::Row::try_get(&row, "eta_ms").unwrap_or_default();
+
+                let task_id = uuid::Uuid::new_v4().to_string();
+                let payload = serde_json::json!({
+                    "route_id": req.route_id,
+                    "stop_id": req.stop_id,
+                    "new_status": req.status,
+                    "order_id": updated_stop.order_id
+                });
+
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'RouteStatusUpdated', $3, 'PENDING')"
+                )
+                .bind(task_id)
+                .bind(org_id)
+                .bind(payload)
+                .execute(&self.db.pool)
+                .await;
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE route_stops SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND route_id = ? AND organization_id = ?")
+                    .bind(&req.status)
+                    .bind(&req.stop_id)
+                    .bind(&req.route_id)
+                    .bind(&org_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                let row = sqlx::query("SELECT order_id, address, eta_ms FROM route_stops WHERE id = ?")
+                    .bind(&req.stop_id)
+                    .fetch_one(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                updated_stop.order_id = sqlx::Row::try_get(&row, "order_id").unwrap_or_default();
+                updated_stop.address = sqlx::Row::try_get(&row, "address").unwrap_or_default();
+                updated_stop.eta_ms = sqlx::Row::try_get(&row, "eta_ms").unwrap_or_default();
+
+                let task_id = uuid::Uuid::new_v4().to_string();
+                let payload = serde_json::json!({
+                    "route_id": req.route_id,
+                    "stop_id": req.stop_id,
+                    "new_status": req.status,
+                    "order_id": updated_stop.order_id
+                }).to_string();
+
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'customer_success', 'RouteStatusUpdated', ?, 'PENDING')"
+                )
+                .bind(task_id)
+                .bind(org_id)
+                .bind(payload)
+                .execute(pool)
+                .await;
+            }
+        }
+
+        Ok(Response::new(updated_stop))
+    }
+
     async fn update_onboarding_state(
         &self,
         request: Request<UpdateOnboardingStateRequest>,

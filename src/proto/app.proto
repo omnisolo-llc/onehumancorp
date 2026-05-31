@@ -115,11 +115,40 @@ message PipelinePromoteRequest {
   string approved_by = 2;
 }
 
+
+message RouteStop {
+  string id = 1;
+  string order_id = 2;
+  string address = 3;
+  string status = 4;
+  int64 eta_ms = 5;
+}
+
+message DeliveryRoute {
+  string id = 1;
+  string organization_id = 2;
+  string driver_id = 3;
+  string status = 4;
+  repeated RouteStop stops = 5;
+}
+
+message GetDeliveryRouteRequest {
+  string route_id = 1;
+}
+
+message UpdateRouteStopStatusRequest {
+  string route_id = 1;
+  string stop_id = 2;
+  string status = 3;
+}
+
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+  rpc GetDeliveryRoute(GetDeliveryRouteRequest) returns (DeliveryRoute);
+  rpc UpdateRouteStopStatus(UpdateRouteStopStatusRequest) returns (RouteStop);
 }
 
 // Onboarding State
