@@ -32,7 +32,7 @@ pub async fn handle_mcp_webhook(
     // Basic Bearer token verification.
     // In a real implementation, you would check against a specific integration token
     // or verify an HMAC signature of the payload.
-    let expected_token = std::env::var("MCP_WEBHOOK_SECRET").unwrap_or_else(|_| "secret-token".to_string());
+    let expected_token = std::env::var("OHC_MCP_WEBHOOK_SECRET").unwrap_or_else(|_| "secret-token".to_string());
 
     let auth_header = headers.get("Authorization").and_then(|v| v.to_str().ok());
 
