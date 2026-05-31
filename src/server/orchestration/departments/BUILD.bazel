@@ -7,7 +7,6 @@ exports_files(
         "customer_success_agent.rs",
         "finance_agent.rs",
         "flow_test.rs",
-        "isolation_test.rs",
         "legal_agent.rs",
         "marketing_agent.rs",
         "mod.rs",

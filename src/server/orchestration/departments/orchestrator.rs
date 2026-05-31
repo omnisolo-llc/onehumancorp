@@ -56,9 +56,7 @@ impl DummyDepartment {
             received_events: Mutex::new(Vec::new()),
         }
     }
-
 }
-
 
 #[async_trait::async_trait]
 impl Department for DummyDepartment {
@@ -78,7 +76,6 @@ impl Department for DummyDepartment {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
-        // Dummy implementation
         Ok(vec![])
     }
 
@@ -106,9 +103,7 @@ impl Department for DummyDepartment {
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
         self.configs.insert(tenant_id, config);
     }
-
 }
-
 
 pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
@@ -142,7 +137,7 @@ impl DepartmentOrchestrator {
         }
     }
 
-        pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
+    pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
         let agent_id = agent.read().await.agent_id();
         self.agents.write().await.insert(agent_id, agent.clone());
     }
@@ -206,7 +201,7 @@ impl DepartmentOrchestrator {
                             match &self.db.store {
                                 DbStore::Postgres => {
                                     let res = sqlx::query(
-                                        "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)"
+                                            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)"
                                     )
                                     .bind(&dl_id)
                                     .bind(&event.tenant_id)
@@ -238,7 +233,6 @@ impl DepartmentOrchestrator {
                                 }
                             }
                         }
-
                         let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                     }
                 }
@@ -248,11 +242,8 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
-
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
-
         throttler.check_and_consume_budget(tenant_id, points).await
-
     }
 
     pub async fn execute_action(
@@ -268,7 +259,14 @@ impl DepartmentOrchestrator {
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
         }
 
-        match risk {
+        let config = self.load_department_config(&tenant_id, department).await.unwrap_or_default();
+        let effective_risk = if config.auto_execute_enabled {
+            ActionRisk::AutoExecute
+        } else {
+            risk
+        };
+
+        match effective_risk {
             ActionRisk::AutoExecute => {
                 let req_id = Uuid::new_v4().to_string();
                 let req = ApprovalRequest {
@@ -282,7 +280,6 @@ impl DepartmentOrchestrator {
                 };
                 self.add_approval_request(req.clone()).await;
 
-                // Immediately trigger execution for AutoExecute
                 let payload = serde_json::json!({
                     "request_id": req_id,
                     "tenant_id": tenant_id,
@@ -292,7 +289,7 @@ impl DepartmentOrchestrator {
                 let topic = format!("agent:{}:approved", department);
                 let _ = self.mesh.publish(&topic, payload_bytes).await;
 
-                Ok(req.clone())
+                Ok(req)
             }
             ActionRisk::DraftForReview => {
                 let req = ApprovalRequest {
@@ -311,7 +308,7 @@ impl DepartmentOrchestrator {
                     &format!("{} requires your approval: {}", department, description)
                 ).await;
 
-                Ok(req.clone())
+                Ok(req)
             }
         }
     }
@@ -380,7 +377,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -428,7 +424,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -460,7 +455,6 @@ impl DepartmentOrchestrator {
         results
     }
 
-
     pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
@@ -481,7 +475,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -529,7 +522,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -588,7 +580,6 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
-                        use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
                             Ok(p) => serde_json::from_str(&p).unwrap_or(None),
@@ -619,7 +610,6 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
-                        use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
                         let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
@@ -666,19 +656,17 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
-
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
         let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
-
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 
-    pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
-        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+    pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: DepartmentConfig) -> Result<(), String> {
+        let dep_type = DepartmentType::from_str(department)?;
         let config_json = serde_json::to_string(&config).map_err(|e| e.to_string())?;
         let now = Utc::now();
         let id = Uuid::new_v4().to_string();
@@ -722,13 +710,11 @@ impl DepartmentOrchestrator {
         if let Some(dep_lock) = deps.get(&dep_type) {
             let mut dep = dep_lock.write().await;
             dep.set_config(tenant_id.to_string(), config);
-            Ok(())
-        } else {
-            Ok(()) // Persisted in DB, but agent not currently registered in-memory
         }
+        Ok(())
     }
 
-    pub async fn load_department_config(&self, tenant_id: &str, dep_type: DepartmentType) -> Result<crate::orchestration::departments::types::DepartmentConfig, String> {
+    pub async fn load_department_config(&self, tenant_id: &str, dep_type: DepartmentType) -> Result<DepartmentConfig, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = $1 AND department_type = $2")
@@ -739,11 +725,11 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
 
                 if let Some(r) = row {
-                    let cfg_val: serde_json::Value = r.get("config");
-                    let cfg: crate::orchestration::departments::types::DepartmentConfig = serde_json::from_value(cfg_val).map_err(|e| e.to_string())?;
+                    let cfg_str: String = r.get("config");
+                    let cfg: DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
                     Ok(cfg)
                 } else {
-                    Ok(crate::orchestration::departments::types::DepartmentConfig::default())
+                    Ok(DepartmentConfig::default())
                 }
             }
             DbStore::Sqlite(pool) => {
@@ -756,21 +742,14 @@ impl DepartmentOrchestrator {
 
                 if let Some(r) = row {
                     let cfg_str: String = r.get("config");
-                    let cfg: crate::orchestration::departments::types::DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
+                    let cfg: DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
                     Ok(cfg)
                 } else {
-                    Ok(crate::orchestration::departments::types::DepartmentConfig::default())
+                    Ok(DepartmentConfig::default())
                 }
             }
         }
     }
-
-
-
-
-
-
-
 }
 
 
@@ -799,9 +778,4 @@ mod tests {
         let _ = dummy;
         assert!(true);
     }
-
 }
-
-// Resolves #13871
-// Resolves #15384
-// Resolves #15195

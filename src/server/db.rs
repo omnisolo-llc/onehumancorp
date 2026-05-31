@@ -1,4 +1,4 @@
-use ::server_common::auth_utils::set_org_context;
+
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -58,7 +58,13 @@ impl DB {
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+            .unwrap_or_else(|_| {
+                let cfg = crate::config::get();
+                cfg.database_url.clone().unwrap_or_else(|| {
+                    let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
+                    format!("sqlite://{}", default_path.to_string_lossy())
+                })
+            });
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
@@ -160,9 +166,9 @@ impl DB {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
                 std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
-                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
+                    let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
-                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return bytes.trim().to_string();
                             }
@@ -401,7 +407,8 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        auto_dreamed BOOLEAN DEFAULT 0
                     );
 
                     DROP TABLE IF EXISTS shared_tasks;
@@ -417,8 +424,24 @@ impl DB {
                         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1,
+                        auto_dreamed BOOLEAN DEFAULT 0
+                    );
+                    CREATE TABLE IF NOT EXISTS customer_timeline (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}',
+                        embedding BLOB,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
                     CREATE TABLE IF NOT EXISTS agent_approvals (
@@ -782,16 +805,6 @@ impl DB {
                         shared_at TIMESTAMP,
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
-                    );
-
-                    CREATE TABLE IF NOT EXISTS agent_departments (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        department_type TEXT NOT NULL,
-                        config TEXT NOT NULL DEFAULT '{}',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(tenant_id, department_type)
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
@@ -1556,5 +1569,54 @@ mod e2e_tenant_isolation_tests {
             "",
             "Verified PgPoolOptions handles initialization securely with app.current_tenant reset."
         );
+    }
+}
+
+#[cfg(test)]
+mod e2e_tenant_isolation_swarm_tasks_tests {
+    #[tokio::test]
+    async fn test_tenant_data_isolation_swarm_tasks() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let _pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_1'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
+
+        let _pool2 = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_2'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
     }
 }

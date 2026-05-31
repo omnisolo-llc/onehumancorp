@@ -21,29 +21,58 @@ impl Department for MarketingAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.insight.trending".to_string(),
+            "tenant.job.completed".to_string(),
             "tenant.inventory.low".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.orchestrator.load_department_config(&event.tenant_id, DepartmentType::Marketing).await.unwrap_or_default();
-        let risk = if config.auto_execute_enabled {
-            ActionRisk::AutoExecute
-        } else {
-            ActionRisk::DraftForReview
-        };
+        if event.event_type == "tenant.inventory.low" {
+            let item = event.payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("item");
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                format!("Inventory low on popular item: {}. Suggest promotional campaign for related items.", item),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                event.payload.clone(),
+            ).await.map(|_| ());
+        }
 
-        let description = if event.event_type == "tenant.inventory.low" {
-            format!("Suggest promotional campaign for item with low stock: {}", event.payload.get("item_id").and_then(|v| v.as_str()).unwrap_or("unknown"))
-        } else {
-            "Draft social media campaign for trending item".to_string()
-        };
+        if event.event_type == "tenant.job.completed" {
+            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
+            let media = event.payload.get("media").and_then(|v| v.as_array());
+
+            if let Some(media_array) = media {
+                if !media_array.is_empty() {
+                    let media_url = media_array[0].as_str().unwrap_or("");
+
+                    let draft_copy = format!("Beautiful new {} completed recently. Completed on time and on budget.", service_name.to_lowercase());
+
+                    let payload = serde_json::json!({
+                        "feature_type": "case_study",
+                        "service_name": service_name,
+                        "media_url": media_url,
+                        "draft_copy": draft_copy
+                    });
+
+                    let description = format!("Draft portfolio case study for {}", service_name);
+
+                    return self.orchestrator.execute_action(
+                        DepartmentType::Marketing,
+                        description,
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        payload,
+                    ).await.map(|_| ());
+                }
+            }
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,
-            description,
+            "Draft social media campaign for trending item".to_string(),
             event.tenant_id.clone(),
-            risk,
+            ActionRisk::DraftForReview,
             event.payload.clone(),
         ).await.map(|_| ())
     }
