@@ -8,7 +8,9 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
-  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
+  const [status, setStatus] = useState<any>("idle");
+  const [instantBuildDescription, setInstantBuildDescription] = useState("");
+  const [error, setError] = useState("");
   const [wizardStep, setWizardStep] = useState<number | string>(0);
   const [liveUrl, setLiveUrl] = useState("");
 
@@ -101,6 +103,63 @@ export default function WebsiteBuilderPage() {
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
     localStorage.setItem("ohc_builder_status", newStatus);
+  };
+
+  const handleInstantBuild = async () => {
+    setStatus("generating");
+    setError("");
+
+    try {
+      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
+      const userId = localStorage.getItem("user_id") || "test-user";
+
+      // 1. Intake phase
+      const intakeRes = await fetch("/api/onboarding/intake", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": tenantId,
+          "X-User-ID": userId,
+        },
+        body: JSON.stringify({ description: instantBuildDescription }),
+      });
+
+      if (!intakeRes.ok) throw new Error("Failed to process business details");
+      const intakeData = await intakeRes.json();
+
+      // 2. Start phase
+      const startRes = await fetch("/api/onboarding/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": tenantId,
+          "X-User-ID": userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || "Online Store",
+          company_name: intakeData.business_name || "My Business",
+          company_description: instantBuildDescription,
+          selling_categories: intakeData.categories || ["physical"],
+          payment_pref: "online",
+          admin_email: userEmail || `admin+${Date.now()}@ohc.app`,
+          admin_name: userName || "Admin",
+          admin_password: userPassword || `${Math.random().toString(36).slice(-8)}`,
+          website_template: "Modern",
+          first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
+          first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+          domain_choice: "subdomain",
+          price_type: "fixed",
+        }),
+      });
+
+      if (!startRes.ok) throw new Error("Failed to start onboarding");
+
+      setStatus("live");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An error occurred");
+      setStatus("idle");
+    }
   };
 
   const handleGenerate = async () => {
@@ -478,23 +537,22 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 'instant-build' && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
+                  {error && <p className="text-red-500 mb-4">{error}</p>}
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
                       className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
+                      value={instantBuildDescription}
+                      onChange={(e) => setInstantBuildDescription(e.target.value)}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
-                      }}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
+                      onClick={handleInstantBuild}
+                      disabled={!instantBuildDescription.trim() || status === 'generating'}
                     >
-                      Generate Storefront
+                      {status === 'generating' ? 'Generating...' : 'Generate Storefront'}
                     </button>
                   </div>
                 </>
