@@ -437,7 +437,7 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
         {
             let mut revoked = self.revoked.write().unwrap();
             revoked.insert(jti.clone(), exp);
