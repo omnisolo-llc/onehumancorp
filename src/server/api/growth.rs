@@ -95,6 +95,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/flyer/generate", post(handle_generate_flyer))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -507,6 +508,19 @@ async fn handle_get_team_invites(
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateFlyerRequest {
+    pub business_name: String,
+    pub tagline: String,
+    pub store_url: String,
+    pub theme_color: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenerateFlyerResponse {
+    pub svg: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct DiscountShareResponse {
     pub share_url: String,
@@ -538,6 +552,86 @@ async fn handle_team_invites_metrics(
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_generate_flyer(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateFlyerRequest>,
+) -> Result<Json<GenerateFlyerResponse>, StatusCode> {
+    use qrcode::QrCode;
+    use qrcode::render::svg;
+
+    // Generate QR code for the store URL
+    let code = QrCode::new(req.store_url.as_bytes())
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let qr_svg = code.render::<svg::Color>()
+        .min_dimensions(200, 200)
+        .dark_color(svg::Color("#000000"))
+        .light_color(svg::Color("#ffffff"))
+        .build();
+
+    let theme_color = req.theme_color.as_deref().unwrap_or("#4F46E5");
+
+    let escape_xml = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&apos;")
+    };
+
+    let safe_business_name = escape_xml(&req.business_name);
+    let safe_tagline = escape_xml(&req.tagline);
+
+    let flyer_svg = format!(r##"<svg width="800" height="1200" viewBox="0 0 800 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="flyerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" />
+      <feOffset dx="0" dy="10" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.1" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="800" height="1200" fill="url(#flyerGrad)" />
+
+  <!-- Header Border -->
+  <rect width="800" height="20" fill="{theme_color}" />
+
+  <!-- Business Name -->
+  <text x="400" y="200" font-family="sans-serif" font-size="64" font-weight="800" text-anchor="middle" fill="#1e293b" style="text-transform: uppercase; letter-spacing: 2px;">{safe_business_name}</text>
+
+  <!-- Tagline -->
+  <text x="400" y="280" font-family="sans-serif" font-size="32" font-weight="500" text-anchor="middle" fill="#64748b" opacity="0.8">{safe_tagline}</text>
+
+  <!-- QR Container -->
+  <rect x="200" y="400" width="400" height="400" rx="40" fill="#ffffff" filter="url(#shadow)" />
+  <g transform="translate(250, 450) scale(1.5)">
+    {qr_svg}
+  </g>
+
+  <!-- Scan Message -->
+  <text x="400" y="880" font-family="sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#1e293b">SCAN TO SHOP</text>
+  <text x="400" y="930" font-family="sans-serif" font-size="20" font-weight="500" text-anchor="middle" fill="#94a3b8">Support local business</text>
+
+  <!-- Footer Branding -->
+  <rect y="1100" width="800" height="100" fill="#f1f5f9" />
+  <text x="400" y="1160" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#64748b" opacity="0.6">⚡ Powered by OHC</text>
+</svg>"##);
+
+    Ok(Json(GenerateFlyerResponse {
+        svg: flyer_svg,
+    }))
 }
 
 async fn handle_onboarding_metrics(
@@ -997,6 +1091,30 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_generate_flyer() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool, hub };
+
+        let req = GenerateFlyerRequest {
+            business_name: "Maya's Cakes".to_string(),
+            tagline: "The best cakes in town".to_string(),
+            store_url: "https://maya.ohc.store".to_string(),
+            theme_color: Some("#FF0000".to_string()),
+        };
+
+        let res = handle_generate_flyer(Extension(state), Json(req)).await;
+        assert!(res.is_ok());
+        let body = res.unwrap().0;
+        assert!(body.svg.contains("Maya&apos;s Cakes"));
+        assert!(body.svg.contains("The best cakes in town"));
+        assert!(body.svg.contains("SCAN TO SHOP"));
+        assert!(body.svg.contains("#FF0000"));
+        assert!(body.svg.contains("<svg"));
     }
 }
 

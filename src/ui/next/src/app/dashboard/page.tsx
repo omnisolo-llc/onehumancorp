@@ -119,34 +119,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function checkMilestones() {
-      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
-      try {
-        const res = await fetch("/api/v1/growth/milestones/check");
-        const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem("10th_order_milestone_shown", "true");
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-  }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
-  useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
+      if (typeof localStorage === 'undefined' || localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
         const res = await fetch('/api/v1/growth/milestones/check');
+        if (!res.ok) return;
         const data = await res.json();
         if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          const orderMilestone = data.milestones.find((m: any) => m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
@@ -453,6 +432,9 @@ export default function Dashboard() {
              </Link>
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
+             </Link>
+             <Link href="/flyers" className="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors border border-orange-200 shadow-sm">
+               Flyer Designer 🎨
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
