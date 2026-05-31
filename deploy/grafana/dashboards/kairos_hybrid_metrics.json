@@ -492,8 +492,7 @@
         }
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -587,8 +586,7 @@
         }
       ],
       "title": "RAG Escalation Rate",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -682,8 +680,7 @@
         }
       ],
       "title": "Token Budget Alerts (last 1h)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,
