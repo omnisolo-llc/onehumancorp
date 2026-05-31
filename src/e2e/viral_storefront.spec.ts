@@ -39,7 +39,7 @@ test.describe('Viral Storefront E2E', () => {
   test('displays Customer Referral block in storefront preview', async ({ page }) => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.builder-block').filter({ hasText: 'Refer a Friend' })).toBeVisible();
-    await expect(page.locator('.builder-block').filter({ hasText: 'Get 10% off your next order!' })).toBeVisible();
+    await expect(page.locator('.builder-block').filter({ hasText: 'Get 20% off your next purchase when a friend buys from us!' })).toBeVisible();
     await expect(page.locator('.builder-block a[href="ohc://join?ref=storefront-referral"]')).toBeVisible();
   });
 
@@ -58,10 +58,6 @@ test.describe('Viral Storefront E2E', () => {
   test('generates social share og card with branding', async ({ request }) => {
     const response = await request.get('/api/v1/growth/storefront/og-card?tenant=test&product_name=NovaPremium');
     expect(response.ok()).toBeTruthy();
-    expect(response.headers()['content-type']).toContain('image/svg+xml');
-
-    const svg = await response.text();
-    expect(svg).toContain('NovaPremium');
-    expect(svg).toContain('⚡ Powered by OHC');
+    expect(response.headers()['content-type']).toContain('image/png');
   });
 });

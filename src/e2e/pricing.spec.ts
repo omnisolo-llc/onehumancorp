@@ -27,4 +27,21 @@ test.describe('Pricing Page', () => {
     await page.getByText('View Cost Details', { exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
   });
+
+  test('displays usage limitations text dynamically for free tier', async ({ page }) => {
+    await page.goto('/pricing');
+    await expect(page.getByText('1 Agent Limit')).toBeVisible();
+    await expect(page.getByText('500MB Storage Quota')).toBeVisible();
+  });
+
+  test('opens checkout for the Business plan', async ({ page }) => {
+    await page.goto('/pricing');
+    await page.getByRole('button', { name: 'Upgrade to Business via Stripe' }).click();
+    await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
+  });
+
+  test('shows FAQs section with billing information', async ({ page }) => {
+    await page.goto('/pricing');
+    await expect(page.getByRole('heading', { name: 'Frequently Asked Questions' })).toBeVisible();
+  });
 });
