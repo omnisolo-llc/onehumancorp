@@ -2450,7 +2450,7 @@ mod tests {
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("DATABASE_URL").ok()?;
+        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
@@ -2573,7 +2573,7 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_service)
             .fetch_one(&db.pool)
             .await
@@ -2609,7 +2609,7 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_food)
             .fetch_one(&db.pool)
             .await
