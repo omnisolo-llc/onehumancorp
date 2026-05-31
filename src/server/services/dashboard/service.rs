@@ -77,7 +77,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let agents = hub1.get_agents().await.to_vec();
-                cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+                cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {

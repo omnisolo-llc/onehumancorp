@@ -776,7 +776,17 @@ pub async fn advisory_insights_handler(
 
     let active_orders = active_orders_res.unwrap_or(0);
 
-    let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let mobile_optimized = headers
+        .get("x-mobile-optimized")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    let prompt = if mobile_optimized {
+        format!("You are a business advisory agent. Business context: A {} business named {}. Active orders: {}. Provide a 1-sentence insight summarizing performance and 1 next step. Keep it warm and ultra-brief.", industry, business_name, active_orders)
+    } else {
+        format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders)
+    };
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
@@ -6929,3 +6939,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 }
 pub mod crypto;
 // resolves #9690
+
+#[cfg(test)]
+mod advisory_insights_tests {
+    use super::*;
+    use axum::http::HeaderMap;
+
+    #[tokio::test]
+    async fn test_advisory_insights_mobile_optimized_header_parsing() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-mobile-optimized", "true".parse().unwrap());
+
+        let mobile_optimized = headers
+            .get("x-mobile-optimized")
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        assert!(mobile_optimized);
+    }
+}

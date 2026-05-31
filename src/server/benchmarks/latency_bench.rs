@@ -427,10 +427,51 @@ pub async fn bench_advisory_insights_latency() {
         }
 
         fetch_times.sort();
-        println!("Advisory Insights (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        println!("Advisory Insights Cloud Mode (Parallel): p50: {} us, p95: {} us, p99: {} us",
             fetch_times[iterations / 2],
             fetch_times[(iterations as f32 * 0.95) as usize],
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
+
+    // Standalone setup
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await;
+
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = std::sync::Arc::new(crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) });
+
+    let mut standalone_times = Vec::new();
+    for _ in 0..iterations {
+        let tenant_id = "system".to_string();
+        let start = std::time::Instant::now();
+        let (_org_res, _active_orders_res) = tokio::join!(
+            async {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&sqlite_pool)
+                .await
+            },
+            async {
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                )
+                .bind(&tenant_id)
+                .fetch_one(&sqlite_pool)
+                .await
+            }
+        );
+
+        standalone_times.push(start.elapsed().as_micros());
+    }
+
+    standalone_times.sort();
+    println!("Advisory Insights Standalone Mode (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        standalone_times[iterations / 2],
+        standalone_times[(iterations as f32 * 0.95) as usize],
+        standalone_times[(iterations as f32 * 0.99) as usize]
+    );
 }
