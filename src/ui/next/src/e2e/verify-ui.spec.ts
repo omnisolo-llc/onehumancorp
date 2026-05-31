@@ -18,9 +18,21 @@ test('Verify onboarding UI', async ({ page }) => {
 
   await page.locator('button:has-text("Generate My Business")').click();
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'onboarding-step2.png' });
+
+  // Fill in Step 2 requirements using explicit DOM locators
+  await page.locator("select").selectOption({ label: "Food & Beverage" });
+  await page.locator('input[value="Maya Cakes"]').waitFor(); // Ensure Business Name is rendered
+
+  // Find the input fields based on their associated preceding label within their div container
+  await page.locator('div:has(> label:has-text("Categories")) > input').fill("cakes, vegan, desserts");
+  await page.locator('div:has(> label:has-text("First Product")) > input').fill("Vegan Chocolate Cake");
+  await page.locator('div:has(> label:has-text("Price")) > input').fill("45.00");
 
   await page.locator('button:has-text("Continue")').click();
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'onboarding-step3.png' });
+
+  await page.locator('button:has-text("Launch Store")').click();
+  await page.waitForTimeout(2000);
+
+  await expect(page.locator('h2:has-text("You\'re Live!")')).toBeVisible();
 });

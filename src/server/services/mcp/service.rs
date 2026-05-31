@@ -248,7 +248,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
-        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
+        let ctx_root = std::env::var("OHC_CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
         } else {
@@ -257,7 +257,7 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
             match crate::sip::get_sqlite_limiter().try_acquire() {
                 Ok(p) => Some(p),
@@ -297,7 +297,7 @@ impl McpService for MyMcpService {
         }
 
         let req = request.into_inner();
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
             match crate::sip::get_sqlite_limiter().try_acquire() {
                 Ok(p) => Some(p),
