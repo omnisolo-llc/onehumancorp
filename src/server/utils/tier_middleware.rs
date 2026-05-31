@@ -24,6 +24,15 @@ pub async fn tier_middleware(
             Ok(status) => {
                 if status.soft_limit_reached {
                     warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
+                    if !status.is_allowed {
+                        return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::PAYMENT_REQUIRED,
+                            axum::Json(serde_json::json!({
+                                "error": "Quota Exceeded",
+                                "message": warning_msg.unwrap()
+                            }))
+                        ));
+                    }
                 }
             }
             Err(e) => {
@@ -69,7 +78,7 @@ mod tests {
         // struct uses a concrete `redis::Client`, we'll assume testing the core limits
         // logic via the struct directly or via axum test utilities if redis is present.
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+        let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             // Check if redis server is actually responding before attempting to test
             if client.get_multiplexed_async_connection().await.is_ok() {
@@ -111,8 +120,8 @@ mod tests {
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::OK);
-                assert!(res2.headers().contains_key("x-ratelimit-warning"));
+                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
+                // assert!(res2.headers().contains_key("x-ratelimit-warning")); // Won't have headers if returned early
             }
         }
     }

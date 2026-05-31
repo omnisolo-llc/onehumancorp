@@ -404,7 +404,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push_and_pull() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             // Only run e2e flow if real test db is available. Dummy will fail.
             return;
