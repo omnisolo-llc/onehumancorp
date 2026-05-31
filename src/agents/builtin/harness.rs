@@ -66,6 +66,12 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             "sandbox":  isolation_sandbox_id,
         });
 
+        let mesh = crate::mesh::create_teammate_mesh(std::env::var("REDIS_URL").ok().as_deref(), false).await.ok();
+
+        if let Some(ref m) = mesh {
+            let _ = m.publish_coordination(status_msg.to_string().into_bytes()).await;
+        }
+
         if let Some(ref t) = transport {
             let _ = t.send(status_msg.to_string().as_bytes()).await;
         }
@@ -75,6 +81,10 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             "stream":  "stdout",
             "content": format!("Execution started in isolated worktree {}", worktree),
         });
+
+        if let Some(ref m) = mesh {
+            let _ = m.publish_coordination(output_msg.to_string().into_bytes()).await;
+        }
 
         if let Some(ref t) = transport {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
@@ -105,6 +115,7 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
 
         let tx_stdout_transport = transport.clone();
         let agent_type_out = agent_type.to_string();
+        let mesh_stdout = mesh.clone();
         let stdout_handle = tokio::spawn(async move {
             while let Ok(Some(line)) = stdout_reader.next_line().await {
                 let msg = serde_json::json!({
@@ -112,6 +123,9 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
                     "stream": "stdout",
                     "content": line,
                 });
+                if let Some(m) = mesh_stdout.as_ref() {
+                    let _ = m.publish_coordination(msg.to_string().into_bytes()).await;
+                }
                 if let Some(t) = tx_stdout_transport.as_ref() {
                     let _ = t.send(msg.to_string().as_bytes()).await;
                 }
@@ -120,6 +134,7 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
 
         let tx_stderr_transport = transport.clone();
         let agent_type_err = agent_type.to_string();
+        let mesh_stderr = mesh.clone();
         let stderr_handle = tokio::spawn(async move {
             while let Ok(Some(line)) = stderr_reader.next_line().await {
                 let msg = serde_json::json!({
@@ -127,6 +142,9 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
                     "stream": "stderr",
                     "content": line,
                 });
+                if let Some(m) = mesh_stderr.as_ref() {
+                    let _ = m.publish_coordination(msg.to_string().into_bytes()).await;
+                }
                 if let Some(t) = tx_stderr_transport.as_ref() {
                     let _ = t.send(msg.to_string().as_bytes()).await;
                 }
@@ -154,6 +172,10 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             "status": if status.success() { "COMPLETED" } else { "ERROR" },
             "exit_code": exit_code,
         });
+
+        if let Some(ref m) = mesh {
+            let _ = m.publish_coordination(end_msg.to_string().into_bytes()).await;
+        }
 
         if let Some(ref t) = transport {
             let _ = t.send(end_msg.to_string().as_bytes()).await;
@@ -185,6 +207,12 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             "sandbox":  isolation_sandbox_id,
         });
 
+        let mesh = crate::mesh::create_teammate_mesh(std::env::var("REDIS_URL").ok().as_deref(), false).await.ok();
+
+        if let Some(m) = mesh.as_ref() {
+            let _ = m.publish_coordination(status_msg.to_string().into_bytes()).await;
+        }
+
         if let Some(t) = transport.as_ref() {
             let _ = t.send(status_msg.to_string().as_bytes()).await;
         }
@@ -194,6 +222,10 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             "stream":  "stdout",
             "content": format!("Execution started in isolated worktree {}", worktree),
         });
+
+        if let Some(m) = mesh.as_ref() {
+            let _ = m.publish_coordination(output_msg.to_string().into_bytes()).await;
+        }
 
         if let Some(t) = transport.as_ref() {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
@@ -224,6 +256,7 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 
         let tx_stdout_transport = transport.clone();
         let agent_type_out = agent_type.to_string();
+        let mesh_stdout = mesh.clone();
         let stdout_handle = tokio::spawn(async move {
             while let Ok(Some(line)) = stdout_reader.next_line().await {
                 let msg = serde_json::json!({
@@ -231,6 +264,9 @@ impl IsolationStrategy for ProcessIsolationStrategy {
                     "stream": "stdout",
                     "content": line,
                 });
+                if let Some(m) = mesh_stdout.as_ref() {
+                    let _ = m.publish_coordination(msg.to_string().into_bytes()).await;
+                }
                 if let Some(t) = tx_stdout_transport.as_ref() {
                     let _ = t.send(msg.to_string().as_bytes()).await;
                 }
@@ -239,6 +275,7 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 
         let tx_stderr_transport = transport.clone();
         let agent_type_err = agent_type.to_string();
+        let mesh_stderr = mesh.clone();
         let stderr_handle = tokio::spawn(async move {
             while let Ok(Some(line)) = stderr_reader.next_line().await {
                 let msg = serde_json::json!({
@@ -246,6 +283,9 @@ impl IsolationStrategy for ProcessIsolationStrategy {
                     "stream": "stderr",
                     "content": line,
                 });
+                if let Some(m) = mesh_stderr.as_ref() {
+                    let _ = m.publish_coordination(msg.to_string().into_bytes()).await;
+                }
                 if let Some(t) = tx_stderr_transport.as_ref() {
                     let _ = t.send(msg.to_string().as_bytes()).await;
                 }
@@ -258,9 +298,13 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 
         let end_msg = serde_json::json!({
             "agent":  agent_type,
-            "status": "COMPLETED",
+            "status": if status.success() { "COMPLETED" } else { "ERROR" },
             "exit_code": status.code().unwrap_or(-1),
         });
+
+        if let Some(m) = mesh.as_ref() {
+            let _ = m.publish_coordination(end_msg.to_string().into_bytes()).await;
+        }
 
         if let Some(t) = transport.as_ref() {
             let _ = t.send(end_msg.to_string().as_bytes()).await;
@@ -757,6 +801,25 @@ impl DBCapabilityAuthorizer {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_assistant_class_isolation_strategy_mesh_integration() {
+        // Just verify that the strategy executes correctly
+        let strategy = AssistantClassIsolationStrategy::new();
+        // Create a dummy transport that we don't care about just for the test
+        struct DummyTransport {}
+        #[async_trait]
+        impl crate::provider::Transport for DummyTransport {
+            async fn send(&self, _message: &[u8]) -> Result<(), String> {
+                Ok(())
+            }
+        }
+
+        let transport: Option<Arc<dyn crate::provider::Transport>> = Some(Arc::new(DummyTransport {}));
+        let res = strategy.run_in_isolation("echo test", "test_agent", ".", transport).await;
+        assert!(res.is_ok());
+    }
+
     use super::*;
 
     struct MockCapabilityStore {
