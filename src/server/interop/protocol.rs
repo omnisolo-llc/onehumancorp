@@ -5,7 +5,7 @@ use crate::msgbus::MemoryBus;
 use tokio::time::{sleep, timeout, Duration};
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+
 pub mod proto {
     pub use ::server_ohc::interop::*;
 }
@@ -28,7 +28,7 @@ impl InteropProtocol {
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
 
         tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
 
@@ -119,7 +119,7 @@ impl InteropProtocol {
     pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
+
                 if let Ok(decoded) = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
@@ -136,7 +136,7 @@ impl InteropProtocol {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
-                use prost::Message as ProstMessage;
+
                 if let Ok(decoded) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
                     let ack = ::server_ohc::interop::HealthAck {
                         source_node_id: node_id.clone(),
@@ -172,8 +172,8 @@ impl InteropProtocol {
 
     /// Health monitor across the swarm using protobuf
     pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
+
+
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -218,8 +218,8 @@ impl InteropProtocol {
 
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
-        use prost::Message as ProstMessage;
-        use std::sync::atomic::{AtomicBool, Ordering};
+
+
 
         tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
 
@@ -299,7 +299,7 @@ impl InteropProtocol {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
-                use prost::Message as ProstMessage;
+
                 if let Ok(decoded) = ::server_ohc::interop::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
@@ -338,7 +338,7 @@ impl InteropProtocol {
 
     /// Reports job status back to the main server
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
 
         let update = ::server_ohc::interop::JobStatusUpdate {
             job_id: job_id.to_string(),
@@ -378,7 +378,7 @@ impl InteropProtocol {
     pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
-                use prost::Message as ProstMessage;
+
                 if let Ok(decoded) = ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
@@ -390,7 +390,7 @@ impl InteropProtocol {
 
     /// Synchronizes a QueueJob across modes idempotently
     pub async fn sync_queue_job(&self, job: ::server_ohc::interop::QueueJob) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
 
         // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
         // by including updated_at_ms in the lock resource.
@@ -440,7 +440,7 @@ impl InteropProtocol {
     pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
-                use prost::Message as ProstMessage;
+
                 if let Ok(decoded) = ::server_ohc::interop::QueueJob::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
@@ -456,7 +456,7 @@ impl InteropProtocol {
 mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
-    use std::sync::atomic::{AtomicBool, Ordering};
+
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {
@@ -469,7 +469,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
+
                 let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
@@ -530,7 +530,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
+
                 let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
@@ -635,7 +635,7 @@ mod tests {
         let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
 
         // Publish a ping
-        use prost::Message as ProstMessage;
+
         let ping = ::server_ohc::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -679,7 +679,7 @@ mod tests {
         let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
 
         // Publish a job
-        use prost::Message as ProstMessage;
+
         let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
