@@ -12,10 +12,10 @@ export default defineConfig({
       '**/e2e/**',
       '**/*.spec.ts',
       '**/api/**',
-      'src/app/agent-audit-dashboard/page.test.tsx',
-      'src/app/api-docs/page.test.tsx',
-      'src/app/help/page.test.tsx',
-      'src/app/help/[article]/page.test.tsx'
+
+
+
+
     ],
   }
 })
