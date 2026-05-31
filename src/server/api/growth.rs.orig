@@ -94,7 +94,6 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
-        .route("/referrals/extend-trial", post(handle_extend_trial))
         .route("/milestone/card", get(handle_get_milestone_card))
         .layer(Extension(GrowthState { pool, hub }))
 }
@@ -150,16 +149,6 @@ pub struct ReferralGenerateResponse {
     pub referral_link: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TrialExtensionRequest {
-    pub referral_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TrialExtensionResponse {
-    pub success: bool,
-    pub new_trial_end: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
@@ -627,17 +616,6 @@ async fn handle_referral_convert(
     }
 }
 
-async fn handle_extend_trial(
-    Extension(_state): Extension<GrowthState>,
-    Json(_req): Json<TrialExtensionRequest>,
-) -> Result<Json<TrialExtensionResponse>, StatusCode> {
-    // Simulated trial extension logic
-    let end_date = chrono::Utc::now() + chrono::Duration::days(30);
-    Ok(Json(TrialExtensionResponse {
-        success: true,
-        new_trial_end: end_date.to_rfc3339(),
-    }))
-}
 
 async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,

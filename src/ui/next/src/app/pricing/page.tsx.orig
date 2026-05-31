@@ -1,46 +1,16 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function PricingPage() {
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
-  const [extended, setExtended] = useState(false);
-  const [referralLink, setReferralLink] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
   };
 
-  const handleGenerateLink = async () => {
-    setIsGenerating(true);
-    try {
-      const response = await fetch("/api/v1/growth/referrals/generate", {
-        method: "POST",
-      });
-      const data = await response.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
-      } else {
-        setReferralLink("https://ohc.store/join?ref=fallback");
-      }
-
-      // Simulate extending trial logic for this demo feature
-      await fetch("/api/v1/growth/referrals/extend-trial", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ referral_code: data.referral_link }),
-      });
-      setExtended(true);
-    } catch (e) {
-      setReferralLink("https://ohc.store/join?ref=fallback");
-      setExtended(true); // set to true anyway since mock nextjs app has no backend access usually
-    }
-    setIsGenerating(false);
-  };
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
