@@ -27,13 +27,15 @@ impl ToolGater {
             || cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnAll
             || (!is_read_only && cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnMutate)
             || cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit
+            || cfg.hil_spectrum == HumanInLoopSpectrum::PairProgramming
             || (cfg.hil_spectrum == HumanInLoopSpectrum::Supervisory && cfg.confidence_threshold < 0.5) // Fallback: requires approval if low confidence
             || (cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive && !is_read_only); // C.5 Permission Architecture
 
         if requires_approval {
             let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id);
             if !is_approved {
-                if cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit {
+                if cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit
+            || cfg.hil_spectrum == HumanInLoopSpectrum::PairProgramming {
                     return Err(ToolError::UserFixable(format!("Collaborative Edit required for tool '{}'. Please review and edit the tool payload to proceed.", tc.name)));
                 } else if is_high_risk {
                     return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
@@ -192,6 +194,15 @@ mod tests {
         cfg.hil_spectrum = HumanInLoopSpectrum::Supervisory;
         cfg.confidence_threshold = 0.8;
         assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
+
+
+        // 6. PairProgramming
+        cfg.hil_spectrum = HumanInLoopSpectrum::PairProgramming;
+        let res_pair = ToolGater::check_gating(&tc_mutating, false, &cfg);
+        assert!(matches!(res_pair, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = res_pair {
+            assert!(msg.contains("Collaborative Edit required"));
+        }
 
         cfg.confidence_threshold = 0.2;
         let res_super = ToolGater::check_gating(&tc_mutating, false, &cfg);
