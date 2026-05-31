@@ -389,7 +389,8 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        ai_budget INTEGER DEFAULT 1000
                     );
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
@@ -398,7 +399,8 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        ai_budget INTEGER DEFAULT 1000
                     );
 
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
