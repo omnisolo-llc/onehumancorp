@@ -8,7 +8,7 @@ export default function PricingPage() {
   const router = useRouter();
 
   const handleUpgrade = (tier: string) => {
-    router.push('/checkout?tier=' + tier);
+    fetch('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ tier }) }).then(() => router.push('/checkout?tier=' + tier));
   };
 
   return (
