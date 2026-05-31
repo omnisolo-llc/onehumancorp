@@ -45,7 +45,7 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
-    if (id === 'mercadopago' || id === 'cal_com') {
+    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
@@ -129,7 +129,7 @@ export default function Integrations() {
 
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-8 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">
-          {["all", "marketing", "operations", "finance"].map(tab => (
+          {["all", "marketing", "operations", "finance", "social"].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
