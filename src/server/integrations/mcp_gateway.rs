@@ -62,6 +62,20 @@ impl McpGateway {
     }
 }
 
+impl McpGateway {
+    pub async fn register_config_sync_tool(&self) {
+        let schema = crate::integrations::mcp_config_sync::tool::register_config_sync_schema();
+        let dynamic_schema = serde_json::from_value::<DynamicToolSchema>(schema).unwrap_or(DynamicToolSchema {
+            name: "mcp_config_sync".to_string(),
+            description: "Sync config".to_string(),
+            parameters: serde_json::json!({}),
+            endpoint_url: "internal://mcp_config_sync".to_string(),
+            required_spiffe_id: Some("*".to_string()),
+        });
+        let _ = self.register_tool("spiffe://admin", dynamic_schema).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,5 +121,15 @@ mod tests {
         // Should succeed with correct SPIFFE ID
         let res_ok = gateway.invoke_tool("spiffe://example.org/finance-agent", "secure_finance", serde_json::json!({})).await;
         assert!(res_ok.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_register_config_sync_tool() {
+        let gateway = McpGateway::new();
+        gateway.register_config_sync_tool().await;
+
+        let discovered = gateway.discover_tools("mcp_config_sync").await;
+        assert_eq!(discovered.len(), 1);
+        assert_eq!(discovered[0].name, "mcp_config_sync");
     }
 }

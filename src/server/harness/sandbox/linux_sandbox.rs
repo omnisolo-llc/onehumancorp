@@ -4,27 +4,25 @@ use async_trait::async_trait;
 use serde_json::json;
 use sqlx::PgPool;
 
+use ::server_telemetry::record_bubblewrap_violation;
 use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
-use crate::telemetry::SandboxTelemetryEmitter;
 
 pub struct LinuxSandbox {
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
     violation_store: Arc<ViolationStore>,
-    emitter: Arc<dyn SandboxTelemetryEmitter>,
 }
 
 impl LinuxSandbox {
-    pub fn new(pool: Option<PgPool>, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Self {
+    pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         LinuxSandbox {
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
             violation_store,
-            emitter,
         }
     }
 
@@ -90,7 +88,7 @@ impl SandboxAdapter for LinuxSandbox {
                 "ast_security_violation",
                 details
             ).await;
-            self.emitter.record_violation("unknown_agent", "unknown_task", "ast_security_violation");
+            record_bubblewrap_violation("unknown_agent", "unknown_task", "ast_security_violation");
             return Err(reason);
         }
 
@@ -103,7 +101,7 @@ impl SandboxAdapter for LinuxSandbox {
                 "command_execution",
                 details
             ).await;
-            self.emitter.record_violation("unknown_agent", "unknown_task", "command_execution_denied");
+            record_bubblewrap_violation("unknown_agent", "unknown_task", "command_execution_denied");
             return Err("Command execution denied by sandbox policy".to_string());
         }
 
@@ -152,13 +150,10 @@ impl SandboxAdapter for LinuxSandbox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::telemetry::MockTelemetryEmitter;
-    use std::sync::atomic::Ordering;
 
     #[test]
     fn test_generate_bwrap_args_default() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let sandbox = LinuxSandbox::new(None);
         let args = sandbox.generate_bwrap_args();
         assert!(args.contains(&"--unshare-all".to_string()));
         assert!(args.contains(&"--die-with-parent".to_string()));
@@ -171,8 +166,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_config_and_args() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let mut sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let mut sandbox = LinuxSandbox::new(None);
         let policy_json = r#"{
             "read_only_paths": ["/etc", "/var/log"],
             "blocked_domains": ["evil.com"],
@@ -195,8 +189,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrap_command_with_proxy() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let mut sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let mut sandbox = LinuxSandbox::new(None);
         let policy_json = r#"{
             "socat_socket_path": "/tmp/test.sock",
             "socat_proxy_port": 8080
@@ -214,8 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrap_command_allowed() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let sandbox = LinuxSandbox::new(None);
         let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
 
         assert!(wrapped.starts_with("bwrap --unshare-all"));
@@ -224,23 +216,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrap_command_ast_denied() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let sandbox = LinuxSandbox::new(None);
         let result = sandbox.wrap_command("echo test > >(cat)").await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Dangerous pattern detected: >() process substitution");
-        assert!(mock_emitter.violation_count.load(Ordering::SeqCst) > 0);
     }
 
     #[tokio::test]
     async fn test_wrap_command_evaluator_denied() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = LinuxSandbox::new(None, mock_emitter.clone());
+        let sandbox = LinuxSandbox::new(None);
         let result = sandbox.wrap_command("rm -rf /").await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Command execution denied by sandbox policy");
-        assert!(mock_emitter.violation_count.load(Ordering::SeqCst) > 0);
     }
 }

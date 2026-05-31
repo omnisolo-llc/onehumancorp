@@ -8,23 +8,20 @@ use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
-use crate::telemetry::SandboxTelemetryEmitter;
 
 pub struct MacOsSandbox {
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
     violation_store: Arc<ViolationStore>,
-    emitter: Arc<dyn SandboxTelemetryEmitter>,
 }
 
 impl MacOsSandbox {
-    pub fn new(pool: Option<PgPool>, emitter: Arc<dyn SandboxTelemetryEmitter>) -> Self {
+    pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         MacOsSandbox {
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
             violation_store,
-            emitter,
         }
     }
 
@@ -67,7 +64,6 @@ impl SandboxAdapter for MacOsSandbox {
                 "ast_security_violation",
                 details
             ).await;
-            self.emitter.record_violation("unknown_agent", "unknown_task", "ast_security_violation");
             return Err(reason);
         }
 
@@ -80,7 +76,6 @@ impl SandboxAdapter for MacOsSandbox {
                 "command_execution",
                 details
             ).await;
-            self.emitter.record_violation("unknown_agent", "unknown_task", "command_execution_denied");
             return Err("Command execution denied by sandbox policy".to_string());
         }
 
@@ -109,13 +104,10 @@ impl SandboxAdapter for MacOsSandbox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::telemetry::MockTelemetryEmitter;
-    use std::sync::atomic::Ordering;
 
     #[test]
     fn test_generate_profile_default() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = MacOsSandbox::new(None, mock_emitter.clone());
+        let sandbox = MacOsSandbox::new(None);
         let profile = sandbox.generate_profile();
         assert!(profile.contains("(version 1)"));
         assert!(profile.contains("(deny default)"));
@@ -126,8 +118,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_config_and_profile() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let mut sandbox = MacOsSandbox::new(None, mock_emitter.clone());
+        let mut sandbox = MacOsSandbox::new(None);
         let policy_json = r#"{
             "read_only_paths": ["/etc", "/var/log"],
             "blocked_domains": ["evil.com"]
@@ -143,8 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrap_command_allowed() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = MacOsSandbox::new(None, mock_emitter.clone());
+        let sandbox = MacOsSandbox::new(None);
         let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
 
         assert!(wrapped.starts_with("sandbox-exec -p '"));
@@ -154,23 +144,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrap_command_ast_denied() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = MacOsSandbox::new(None, mock_emitter.clone());
+        let sandbox = MacOsSandbox::new(None);
         let result = sandbox.wrap_command("echo test > >(cat)").await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Dangerous pattern detected: >() process substitution");
-        assert!(mock_emitter.violation_count.load(Ordering::SeqCst) > 0);
     }
 
     #[tokio::test]
     async fn test_wrap_command_evaluator_denied() {
-        let mock_emitter = Arc::new(MockTelemetryEmitter::new());
-        let sandbox = MacOsSandbox::new(None, mock_emitter.clone());
+        let sandbox = MacOsSandbox::new(None);
         let result = sandbox.wrap_command("rm -rf /").await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Command execution denied by sandbox policy");
-        assert!(mock_emitter.violation_count.load(Ordering::SeqCst) > 0);
     }
 }

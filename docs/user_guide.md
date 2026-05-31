@@ -209,3 +209,35 @@ A: Integrations are registered at server startup via the `integrations.Registry`
 - **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
 
 </div>
+## Health Status
+The platform provides simple ways to check if everything is running smoothly. Contact your platform administrator if you encounter any issues.
+
+---
+
+## FAQ
+
+**Q: What AI models are supported?**
+A: The platform supports any model referenced in the billing catalog. Current defaults include standard industry models.
+
+**Q: Is my data stored persistently?**
+A: Yes, all data is saved securely in the cloud storage system.
+
+**Q: How do I reset demo data?**
+A: You can reload the seeded demo scenario from the settings menu.
+
+**Q: Who can approve a critical-risk action?**
+A: Any user with the `approver` platform role. Reach out to your administrator to have this role assigned.
+
+**Q: How do I add a new integration?**
+A: Integrations are managed by your platform administrator. Contact them to add new capabilities.
+
+## Implementation Details
+- **Architecture**: The Dashboard UI provides a real-time, responsive experience to interact with your agents.
+- **Deployment**: Managed automatically via our cloud infrastructure.
+- **State Management**: The UI is fully real-time. Actions immediately update the central system, which the agents use to resume states.
+
+## Edge Cases
+- **Browser Disconnects**: If the connection drops, the UI will automatically attempt to reconnect and fetch missed events.
+- **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI manages the transcript list to prevent slowdowns.
+- **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the system enforces a lock; the second manager receives a conflict error.
+</div>

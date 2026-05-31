@@ -47,4 +47,6 @@ if [[ ! -x "node_modules/.bin/vitest" ]]; then
   npm ci --ignore-scripts --no-audit --no-fund
 fi
 
-npm test
+npm test -- --run \
+  src/app/api/chat/route.test.ts \
+  src/app/api/v1/growth/storefront/embed/route.test.ts

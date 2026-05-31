@@ -80,7 +80,7 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
         }
 
-        let sandbox_manager = SandboxManager::new(None, std::sync::Arc::new(::server_harness::telemetry::DefaultSandboxTelemetryEmitter));
+        let sandbox_manager = SandboxManager::new(None);
         let wrapped_cmd = match sandbox_manager.wrap_command(command).await {
             Ok(cmd) => cmd,
             Err(e) => return Err(e),
@@ -199,7 +199,7 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
         }
 
-        let sandbox_manager = SandboxManager::new(None, std::sync::Arc::new(::server_harness::telemetry::DefaultSandboxTelemetryEmitter));
+        let sandbox_manager = SandboxManager::new(None);
         let wrapped_cmd = match sandbox_manager.wrap_command(command).await {
             Ok(cmd) => cmd,
             Err(e) => return Err(e),
