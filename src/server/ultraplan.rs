@@ -20,7 +20,6 @@ pub struct UltraPlan {
 }
 
 #[allow(dead_code)]
-#[allow(dead_code)]
 pub struct UltraPlanManager {
     plans: RwLock<HashMap<String, UltraPlan>>,
 }
