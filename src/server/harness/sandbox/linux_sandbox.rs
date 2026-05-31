@@ -29,9 +29,11 @@ impl LinuxSandbox {
     fn generate_bwrap_args(&self) -> Vec<String> {
         let mut args = Vec::new();
 
-        // Basic isolation
+        // Advanced Linux Namespace isolation (as requested by [backend]advanced_sandbox_isolation.md)
+        // This fulfills NEWNS, NEWNET, NEWPID, NEWUTS, and NEWIPC by using unshare-all
         args.push("--unshare-all".to_string());
         args.push("--die-with-parent".to_string());
+        args.push("--new-session".to_string());
 
         // Mount system directories
         args.push("--dev".to_string());
