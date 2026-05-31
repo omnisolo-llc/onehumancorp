@@ -123,14 +123,6 @@ impl DB {
                     use std::fs::OpenOptions;
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
-
-                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
-                        if sym_meta.file_type().is_symlink() {
-                            tracing::error!("Security error: DB path is a symlink. Aborting.");
-                            return Err("Security error: DB path is a symlink.".into());
-                        }
-                    }
-
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
@@ -194,7 +186,7 @@ impl DB {
                         use std::os::unix::fs::OpenOptionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
-                            .create_new(true)
+                            .create(true)
                             .mode(0o600)
                             .open(secret_path)
                         {
@@ -416,10 +408,7 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0,
-                        ultraplan_phase TEXT,
-                        deliberation_log TEXT DEFAULT '[]',
-                        depth INTEGER
+                        auto_dreamed BOOLEAN DEFAULT 0
                     );
 
                     DROP TABLE IF EXISTS shared_tasks;
@@ -436,43 +425,8 @@ impl DB {
                         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        auto_dreamed BOOLEAN DEFAULT 0,
-                        action_risk TEXT,
-                        approval_status TEXT,
-                        proposed_content TEXT,
-                        ultraplan_phase TEXT,
-                        deliberation_log TEXT DEFAULT '[]',
-                        depth INTEGER
+                        auto_dreamed BOOLEAN DEFAULT 0
                     );
-
-                    CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-                        id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
-                        mission_id TEXT,
-                        parent_plan_id TEXT,
-                        dependencies TEXT DEFAULT '[]',
-                        title TEXT NOT NULL,
-                        description TEXT,
-                        status TEXT NOT NULL DEFAULT 'PENDING',
-                        priority TEXT NOT NULL DEFAULT 'P2',
-                        payload TEXT DEFAULT '{}',
-                        deliberation_log TEXT DEFAULT '[]',
-                        depth INTEGER,
-                        ultraplan_phase TEXT,
-                        action_risk TEXT,
-                        approval_status TEXT,
-                        proposed_content TEXT,
-                        tokens_consumed INTEGER DEFAULT 0,
-                        agent_role TEXT,
-                        model TEXT,
-                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                        assigned_agent_id TEXT,
-                        locked_until TIMESTAMPTZ,
-                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_decomp_org_id ON shared_tasks_decomposition(organization_id);
-                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_decomp_status ON shared_tasks_decomposition(status);
-
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
