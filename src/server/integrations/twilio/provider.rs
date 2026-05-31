@@ -49,6 +49,14 @@ impl TwilioProvider {
         }
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        // Mock checking opt-out status
+        if self.is_opted_out(to).await {
+            return Err("User opted out".to_string());
+        }
+        self.client.send_whatsapp(to, from, body).await
+    }
 }
 
 #[cfg(test)]
@@ -60,6 +68,7 @@ mod tests {
 
     struct MockTwilioClient {
         sent_messages: Arc<AtomicUsize>,
+        sent_whatsapp: Arc<AtomicUsize>,
     }
 
     #[async_trait]
@@ -68,16 +77,25 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+            self.sent_whatsapp.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
     }
 
     #[tokio::test]
     async fn test_twilio_provider_integration() {
         let sent = Arc::new(AtomicUsize::new(0));
-        let mock = Arc::new(MockTwilioClient { sent_messages: sent.clone() });
+        let sent_whatsapp = Arc::new(AtomicUsize::new(0));
+        let mock = Arc::new(MockTwilioClient { sent_messages: sent.clone(), sent_whatsapp: sent_whatsapp.clone() });
         let provider = TwilioProvider::with_client(mock);
 
         provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
+
+        provider.send_whatsapp("+1234567890", "+0987654321", "Test whatsapp message").await.unwrap();
+        assert_eq!(sent_whatsapp.load(Ordering::SeqCst), 1);
     }
 
     #[test]
