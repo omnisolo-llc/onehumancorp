@@ -392,6 +392,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS repayment_schedules (
                         id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
                         advance_id TEXT NOT NULL,
                         amount REAL NOT NULL,
                         deducted_from_order_id TEXT,

@@ -30,8 +30,13 @@ CREATE POLICY capital_advances_isolation_policy ON capital_advances
 
 CREATE TABLE IF NOT EXISTS repayment_schedules (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     advance_id TEXT NOT NULL,
     amount REAL NOT NULL,
     deducted_from_order_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE repayment_schedules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY repayment_schedules_isolation_policy ON repayment_schedules
+    USING (tenant_id = current_setting('app.current_tenant')::text);

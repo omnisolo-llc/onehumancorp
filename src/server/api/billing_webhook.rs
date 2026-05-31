@@ -130,8 +130,9 @@ pub async fn stripe_webhook_handler(
                             let schedule_id = uuid::Uuid::new_v4().to_string();
                             let payment_intent = obj.get("payment_intent").and_then(|p| p.as_str()).unwrap_or("unknown");
 
-                            let _ = sqlx::query("INSERT INTO repayment_schedules (id, advance_id, amount, deducted_from_order_id) VALUES ($1, $2, $3, $4)")
+                            let _ = sqlx::query("INSERT INTO repayment_schedules (id, tenant_id, advance_id, amount, deducted_from_order_id) VALUES ($1, $2, $3, $4, $5)")
                                 .bind(schedule_id)
+                                .bind(tenant_id)
                                 .bind(advance_id)
                                 .bind(deduction)
                                 .bind(payment_intent)
