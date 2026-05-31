@@ -16,20 +16,30 @@ export default function CheckoutPage() {
 
     // Fetch dynamic referral link
     try {
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const response = await fetch("/api/v1/growth/referrals/generate", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
       });
-      const data = await response.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.referral_link) {
+          setReferralLink(data.referral_link);
+        } else {
+          const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'my-store' : 'my-store';
+          setReferralLink(`ohc://join?ref=${tenant}`);
+        }
       } else {
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'my-store' : 'my-store';
+        setReferralLink(`ohc://join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'my-store' : 'my-store';
+      setReferralLink(`ohc://join?ref=${tenant}`);
     }
 
     setIsProcessing(false);
