@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     -- Columns to support tenant isolation and queues correctly in KAIROS
     _sync_status TEXT DEFAULT 'pending',
-    version INTEGER DEFAULT 1
+    version INTEGER DEFAULT 1,
+    auto_dreamed BOOLEAN DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
