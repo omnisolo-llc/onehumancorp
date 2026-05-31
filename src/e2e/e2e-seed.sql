@@ -158,6 +158,3 @@ ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
 COMMIT;
-INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json)
-VALUES ('e2e-tenant', 'e2e-admin-user', 0, '{}'::jsonb)
-ON CONFLICT (tenant_id, user_id) DO NOTHING;
