@@ -29,6 +29,20 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleOpenInvite = () => {
+    setInviteLink(`https://ohc.app/invite/bridge-${Date.now()}`);
+    setIsInviteModalOpen(true);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   const fetchApprovals = async () => {
     try {
@@ -132,7 +146,49 @@ export default function TeamPage() {
               );
             })
           )}
+
+          {/* Growth Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Grow Your Team</h2>
+            <p className="text-sm text-gray-600 mb-4">Bridge your local sovereignty with cloud-native collaboration.</p>
+            <button
+              onClick={handleOpenInvite}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-all active:scale-[0.98]"
+            >
+              Invite to Cloud Team
+            </button>
+          </div>
         </div>
+
+        {/* Modal */}
+        {isInviteModalOpen && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex flex-col justify-end">
+            <div className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Cloud Bridge Invite</h2>
+              <p className="text-sm text-gray-600 mb-4">Share this link to provision a temporary multi-tenant context.</p>
+              <input
+                id="cloud-bridge-invite-link"
+                value={inviteLink}
+                readOnly
+                className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl mb-4 text-sm font-mono text-gray-800"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCopyLink}
+                  className="flex-1 bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold text-sm transition-colors"
+                >
+                  {isCopied ? 'Copied!' : 'Copy Link'}
+                </button>
+                <button
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold text-sm transition-colors"
+                >
+                  Close Cloud Bridge Invite
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
