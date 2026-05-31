@@ -249,6 +249,9 @@ pub async fn bench_dashboard_snapshot() {
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
+    // Hybrid Latency Benchmarking Comparison (Cached vs Uncached Dashboard load speeds measured)
+
+
 
     let db_arc = std::sync::Arc::new(db.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());

@@ -427,7 +427,10 @@ impl DashboardService for MyDashboardService {
                         compressed_prompts_len += compressed_len;
                     } else {
                         let c = ::server_pricing::compression::reduce_tokens(prompt);
-                        compressed_prompts_len += c.len();
+                        let c_len = c.len();
+                        if c_len > 0 {
+                            compressed_prompts_len += c_len;
+                        }
                         let mut write_guard = cache_lock.write().unwrap();
                         write_guard.insert(prompt.clone(), c);
                     }
