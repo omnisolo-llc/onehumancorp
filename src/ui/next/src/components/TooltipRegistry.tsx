@@ -21,20 +21,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/tooltips")
-      .then(r => {
-        if (!r.ok) throw new Error("Failed to load tooltips");
-        return r.json();
-      })
-      .then(data => {
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          const safeTooltips = Object.fromEntries(
-            Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-          );
-          setTooltips(safeTooltips);
-        }
-      })
-      .catch(() => {});
+    fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {});
   }, []);
 
   return (
@@ -103,12 +90,6 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
   };
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   return (
     <div

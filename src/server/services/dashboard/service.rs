@@ -101,7 +101,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 };
@@ -122,7 +122,7 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
-                                        r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
+                                        "{}".to_string()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -148,7 +148,7 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
-                                        r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
+                                        "{}".to_string()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -517,7 +517,7 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
             .bind(&org_id)
             .fetch_optional(&self.db.pool)
             .await
@@ -593,7 +593,7 @@ impl DashboardService for MyDashboardService {
 
         let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3"
+                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
             )
             .bind(state.current_step)
             .bind(state_json_val)

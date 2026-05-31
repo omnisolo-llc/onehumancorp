@@ -58,7 +58,7 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
         "HeroBlock" => {
             content.get("headline").is_some() && content.get("subtitle").is_some()
         },
-        "ProductGridBlock" | "MenuBlock" => {
+        "ProductGridBlock" => {
             content.get("items").and_then(|v| v.as_array()).is_some()
         },
         "ServiceBookingBlock" => {
@@ -66,12 +66,6 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
         },
         "TestimonialBlock" => {
             content.get("quotes").and_then(|v| v.as_array()).is_some()
-        },
-        "GalleryBlock" => {
-            content.get("images").and_then(|v| v.as_array()).is_some()
-        },
-        "TextContentBlock" => {
-            content.get("body").is_some()
         },
         "ContactFormBlock" | "BookingCalendarBlock" => {
             content.is_object()
@@ -82,7 +76,8 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
 
 
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
-    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
+    let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None));
+    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
 
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
@@ -96,7 +91,6 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/blocks/{block_id}", put(update_block))
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
         .route("/sites/{site_id}/publish", post(publish_site))
-        .route("/sites/{site_id}/storefront", get(get_storefront))
         .route("/generate", post(generate_storefront))
         .route("/publish_draft", post(publish_draft))
         .route("/geo_score", post(geo_score))
@@ -260,13 +254,6 @@ async fn create_page(
     let page = db::create_page(&pool, tenant_id, site_id, payload.path, payload.title)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let pool_clone = pool.clone();
-    let page_id = page.id;
-    tokio::spawn(async move {
-        let _ = jobs::generate_and_save_seo(&pool_clone, tenant_id, page_id).await;
-    });
-
     Ok(Json(PageResponse {
         id: page.id,
         path: page.path,
@@ -333,12 +320,6 @@ async fn create_block(
     )
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let pool_clone = pool.clone();
-    tokio::spawn(async move {
-        let _ = jobs::generate_and_save_seo(&pool_clone, tenant_id, page_id).await;
-    });
-
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -369,13 +350,6 @@ async fn update_block(
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let pool_clone = pool.clone();
-    let page_id = block.page_id;
-    tokio::spawn(async move {
-        let _ = jobs::generate_and_save_seo(&pool_clone, tenant_id, page_id).await;
-    });
-
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -414,70 +388,14 @@ async fn publish_site(
     Ok(axum::http::StatusCode::ACCEPTED)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct PageWithBlocksResponse {
-    pub id: Uuid,
-    pub path: String,
-    pub title: String,
-    pub seo_metadata: Value,
-    pub blocks: Vec<BlockResponse>,
-}
 
-#[derive(Serialize, Deserialize)]
-pub struct StorefrontResponse {
-    pub id: Uuid,
-    pub domain: Option<String>,
-    pub pages: Vec<PageWithBlocksResponse>,
-}
 
-async fn get_storefront(
-    State(pool): State<PgPool>,
-    Path(site_id): Path<Uuid>,
-    Extension(claims): Extension<Claims>,
-) -> Result<Json<StorefrontResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    let sites = db::list_sites(&pool, tenant_id)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let site = sites.into_iter().find(|s| s.id == site_id).ok_or(axum::http::StatusCode::NOT_FOUND)?;
 
-    let pages = db::list_pages(&pool, tenant_id, site_id)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let mut pages_with_blocks = Vec::new();
-    for page in pages {
-        let blocks = db::list_blocks(&pool, tenant_id, page.id)
-            .await
-            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let block_responses = blocks
-            .into_iter()
-            .map(|b| BlockResponse {
-                id: b.id,
-                block_type: b.block_type,
-                content: b.content,
-                sort_order: b.sort_order,
-            })
-            .collect();
 
-        pages_with_blocks.push(PageWithBlocksResponse {
-            id: page.id,
-            path: page.path,
-            title: page.title,
-            seo_metadata: page.seo_metadata,
-            blocks: block_responses,
-        });
-    }
-
-    Ok(Json(StorefrontResponse {
-        id: site.id,
-        domain: site.domain,
-        pages: pages_with_blocks,
-    }))
-}
 
 async fn generate_storefront(
     Extension(claims): Extension<Claims>,
