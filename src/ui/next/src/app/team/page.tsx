@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+import ViralCloudInvite from './components/ViralCloudInvite';
 
 export type ApprovalRequest = {
   id: string;
@@ -132,6 +133,7 @@ export default function TeamPage() {
               );
             })
           )}
+          <ViralCloudInvite />
         </div>
       </div>
 
