@@ -781,12 +781,29 @@ pub async fn advisory_insights_handler(
 
     let active_orders = active_orders_res.unwrap_or(0);
 
+    let cache_key = format!("hub:advisory_insights:{}:{}", tenant_id, active_orders);
+    static ADVISORY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+    let cache = ADVISORY_CACHE.get_or_init(|| {
+        let redis_client = if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            redis::Client::open(redis_url).ok()
+        } else {
+            None
+        };
+        ::server_utils::cache::HybridCache::new(redis_client)
+    });
+    if let Some(cached_summary) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": cached_summary }))).into_response();
+    }
+
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            cache.set(&cache_key, output.clone(), std::time::Duration::from_secs(3600)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        }
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
