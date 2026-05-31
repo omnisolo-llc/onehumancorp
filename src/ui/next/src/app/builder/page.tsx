@@ -463,10 +463,10 @@ export default function BuilderPage() {
                           : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                       }`}
                       style={{ borderRadius: '8px' }}
-                      onClick={handleGenerate}
+                      onClick={() => setWizardStep(4)}
                       disabled={bio.trim().length <= 5}
                     >
-                      Build Store
+                      Next
                     </button>
                   </WithTooltip>
                 </div>
