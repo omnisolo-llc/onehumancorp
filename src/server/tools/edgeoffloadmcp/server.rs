@@ -33,7 +33,7 @@ impl EdgeOffloadMcpServer {
 
                 async {
                     let spiffe_id_str = &req.spiffe_id;
-                    let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or((if spiffe_id_str.starts_with("spiffe://") { "tenant".to_string() } else { "system".to_string() }, "".to_string()));
+                    let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or_else(|_| if spiffe_id_str.starts_with("spiffe://") { ("tenant".to_string(), "".to_string()) } else { ("system".to_string(), "".to_string()) });
 
                     let route = if is_sensitive || complexity == "low" {
                         "local"
