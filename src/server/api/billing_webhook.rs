@@ -160,6 +160,45 @@ pub async fn stripe_webhook_handler(
             }
             StatusCode::OK.into_response()
         },
+        "charge.succeeded" | "payment_intent.succeeded" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+
+            if let Some(tenant_id) = tenant_id_opt {
+                let amount = obj.get("amount").and_then(|a| a.as_i64()).unwrap_or(0);
+
+                // Check for active capital advances for this tenant
+                let pool = &webhook_state.db.pool;
+                let advances = sqlx::query!(
+                    "SELECT a.id, a.total_owed, a.total_repaid, o.repayment_percentage
+                     FROM capital_advances a
+                     JOIN capital_offers o ON a.offer_id = o.id
+                     WHERE a.tenant_id = $1 AND a.status = 'active'",
+                    tenant_id
+                )
+                .fetch_all(pool)
+                .await
+                .unwrap_or_default();
+
+                for adv in advances {
+                    let repayment_amount = (amount as f64) * adv.repayment_percentage;
+                    if repayment_amount > 0.0 {
+                        // Create split and update advance
+                        let _ = sqlx::query!(
+                            "INSERT INTO repayment_splits (id, tenant_id, advance_id, transaction_id, amount) VALUES ($1, $2, $3, $4, $5);
+                             UPDATE capital_advances SET total_repaid = total_repaid + $5 WHERE id = $3",
+                            uuid::Uuid::new_v4().to_string(), tenant_id, adv.id, payload.id, repayment_amount
+                        )
+                        .execute(pool)
+                        .await;
+                    }
+                }
+            }
+
+            StatusCode::OK.into_response()
+        },
         _ => {
             // Unhandled event types are ignored successfully
             StatusCode::OK.into_response()

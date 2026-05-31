@@ -123,3 +123,39 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CapitalOffer {
+    pub id: String,
+    pub tenant_id: String,
+    pub merchant_id: String,
+    pub amount: f64,
+    pub flat_fee: f64,
+    pub repayment_percentage: f64,
+    pub status: String,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CapitalAdvance {
+    pub id: String,
+    pub tenant_id: String,
+    pub offer_id: String,
+    pub total_owed: f64,
+    pub total_repaid: f64,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct RepaymentSplit {
+    pub id: String,
+    pub tenant_id: String,
+    pub advance_id: String,
+    pub transaction_id: String,
+    pub amount: f64,
+    pub created_at: Option<DateTime<Utc>>,
+}
