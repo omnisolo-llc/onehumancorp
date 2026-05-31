@@ -14,6 +14,15 @@ export default function Dashboard() {
   const [campaignSuccess, setCampaignSuccess] = useState(false);
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if (typeof navigator !== "undefined") { setIsOffline(!navigator.onLine); }
+    return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+    };
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
     }
@@ -81,6 +90,15 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if (typeof navigator !== "undefined") { setIsOffline(!navigator.onLine); }
+    return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+    };
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
@@ -118,6 +136,15 @@ export default function Dashboard() {
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if (typeof navigator !== "undefined") { setIsOffline(!navigator.onLine); }
+    return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+    };
     async function checkMilestones() {
       if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
       try {
@@ -140,6 +167,15 @@ export default function Dashboard() {
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if (typeof navigator !== "undefined") { setIsOffline(!navigator.onLine); }
+    return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+    };
     async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
