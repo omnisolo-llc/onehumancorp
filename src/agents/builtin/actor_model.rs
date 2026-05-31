@@ -109,7 +109,7 @@ impl Actor for AgentActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use crate::llm::LlmClient;
 
     struct MockLlm {

@@ -88,7 +88,6 @@ impl SyncDeltas for CloudSyncService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // We mock the DB for tests, but doing so via integration tests is better.
     // For unit testing here, we avoid starting a full postgres instance by relying on standard traits or a simple mock.
