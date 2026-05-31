@@ -139,3 +139,10 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+node_modules/
+.pytest_cache/
+__pycache__/
+target/
+coverage/
+.DS_Store
+*.log
