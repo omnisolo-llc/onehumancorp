@@ -14,7 +14,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_department_flow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -85,7 +85,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -189,7 +189,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_department_service_msgbus_integration() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -252,7 +252,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_marketing_job_completed_case_study() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 

@@ -393,7 +393,6 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
-    pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
 }
 
@@ -409,7 +408,6 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
-            event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
         }
     }
@@ -925,12 +923,6 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(msg)) => {
                             return Err(format!("Fatal tool error: {}", msg));
                         }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                        }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
                             return Err(format!("Handoff requested to {}", target));
                         }
@@ -967,13 +959,11 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
                             Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
-                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                            Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
                         }
                         continue;
                     }
@@ -1046,20 +1036,17 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
-                            }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
-                            }
                             Err(crate::types::ToolError::HandoffRequested(target)) => {
                                 return Err(format!("Handoff requested to {}", target));
+                            }
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                         }
                     } else {
@@ -1182,24 +1169,7 @@ impl Agent {
         let max_attempts = 3;
         loop {
             attempts += 1;
-            let event_stream_clone = self.event_stream.clone();
-            let mut on_event_wrapper = &mut |e: AgentEvent| {
-                if let Some(stream) = &event_stream_clone {
-                    let openhands_event = match &e {
-                        AgentEvent::TaskError { error } => Some(crate::openhands::EventType::Action(crate::openhands::Action::AgentMessage {
-                            content: format!("TaskError: {}", error),
-                        })),
-                        AgentEvent::ToolCall { name, args_json, .. } => Some(crate::openhands::EventType::Action(crate::openhands::Action::RunCommand {
-                            command: format!("{} {}", name, args_json),
-                        })),
-                        _ => None,
-                    };
-                    if let Some(evt) = openhands_event {
-                        let _ = stream.publish(evt);
-                    }
-                }
-                on_event(e);
-            };
+            let mut on_event_wrapper = |e| on_event(e);
             let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
             match result {
                 Ok(Ok(res)) => {
@@ -1517,9 +1487,6 @@ impl Agent {
                     Err(crate::types::ToolError::Fatal(msg)) => {
                         return Err(format!("Fatal tool error: {}", msg).into());
                     }
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Unexpected tool error: {}", msg).into());
-                    }
                     Err(e) => {
                         return Err(format!("Fatal tool error: {:?}", e).into());
                     }
@@ -1681,7 +1648,6 @@ impl Agent {
         });
 
         let temp_agent = Agent {
-            event_stream: None,
             llm: self.llm.clone(),
             tools: structured_tools,
             progress: self.progress.clone(),
@@ -1793,7 +1759,6 @@ impl Agent {
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
-                event_stream: None,
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
@@ -2573,17 +2538,6 @@ impl Agent {
                                 iteration,
                             });
                             content = r;
-                            break;
-                        }
-                        Err(ToolError::Transient(msg)) => {
-                            let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            error = err;
                             break;
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
@@ -6410,7 +6364,6 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: std::sync::Arc::new(tokio::sync::Mutex::new(0)) });
         let tool = Tool {
             name: "test_tool".to_string(),
@@ -6667,15 +6620,3 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
-
-
-#[cfg(test)]
-mod tao_tests {
-    #[test]
-    fn test_tao_mechanic_terminations() {
-        let _thought = "Assemble prompt";
-        let _action = "Call LLM API -> Parse output -> Execute tool calls";
-        let _observation = "Format results back -> Repeat";
-        assert_eq!(_thought, "Assemble prompt");
-    }
-}
