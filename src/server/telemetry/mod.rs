@@ -1182,7 +1182,7 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("telemetry.sandbox_violation_total")
+            .i64_up_down_counter("BubblewrapViolationTotal")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })
@@ -1303,4 +1303,37 @@ pub async fn record_sync_failed_count(
         serde_json::json!({}),
     )
     .await
+}
+pub static TASKS_COMPLETED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_FAILED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_TRANSITIONS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_tasks_completed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_COMPLETED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_completed_total")
+            .with_description("Total number of successfully completed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_failed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_FAILED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_failed_total")
+            .with_description("Total number of failed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_transitions_total")
+            .with_description("Total number of task state transitions")
+            .build()
+    })
 }
