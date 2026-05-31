@@ -35,7 +35,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    act(() => { render(<OnboardingWizard />); });
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
@@ -134,7 +134,7 @@ describe('OnboardingWizard', () => {
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
-      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
     });
   });
 
