@@ -6,6 +6,96 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [isMobileMerchant, setIsMobileMerchant] = useState(false);
+  const [acceptingOrders, setAcceptingOrders] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<string>("Locating...");
+
+  useEffect(() => {
+    // Fetch initial status
+    const fetchStatus = async () => {
+        try {
+            const res = await fetch("http://127.0.0.1:8080/api/v1/location/status", {
+                headers: {
+                    "X-Tenant-ID": typeof localStorage !== "undefined" ? localStorage.getItem("tenant_id") || "DEFAULT" : "DEFAULT",
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setIsMobileMerchant(data.is_mobile);
+                setAcceptingOrders(data.accepting_orders);
+                if (data.accepting_orders) {
+                    setLocationStatus("Live - Currently broadcasting location");
+                } else {
+                    setLocationStatus("Offline - Location hidden");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    fetchStatus();
+  }, []);
+
+  const toggleLocation = async () => {
+      const newState = !acceptingOrders;
+      setAcceptingOrders(newState);
+      setIsMobileMerchant(true);
+
+      if (newState) {
+          setLocationStatus("Locating...");
+          if ("geolocation" in navigator) {
+              navigator.geolocation.getCurrentPosition(async (position) => {
+                  const lat = position.coords.latitude;
+                  const lng = position.coords.longitude;
+                  try {
+                      await fetch("http://127.0.0.1:8080/api/v1/location/update", {
+                          method: "POST",
+                          headers: {
+                              "Content-Type": "application/json",
+                              "X-Tenant-ID": typeof localStorage !== "undefined" ? localStorage.getItem("tenant_id") || "DEFAULT" : "DEFAULT",
+                          },
+                          body: JSON.stringify({ lat, lng }),
+                      });
+                      await fetch("http://127.0.0.1:8080/api/v1/location/status", {
+                          method: "POST",
+                          headers: {
+                              "Content-Type": "application/json",
+                              "X-Tenant-ID": typeof localStorage !== "undefined" ? localStorage.getItem("tenant_id") || "DEFAULT" : "DEFAULT",
+                          },
+                          body: JSON.stringify({ accepting_orders: true, is_mobile: true }),
+                      });
+                      setLocationStatus("Live - Currently broadcasting location");
+                  } catch (e) {
+                      console.error(e);
+                      setLocationStatus("Error updating location");
+                      setAcceptingOrders(false);
+                  }
+              }, (error) => {
+                  console.error(error);
+                  setLocationStatus("Location access denied");
+                  setAcceptingOrders(false);
+              });
+          } else {
+              setLocationStatus("Geolocation not supported");
+              setAcceptingOrders(false);
+          }
+      } else {
+          try {
+              await fetch("http://127.0.0.1:8080/api/v1/location/status", {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json",
+                      "X-Tenant-ID": typeof localStorage !== "undefined" ? localStorage.getItem("tenant_id") || "DEFAULT" : "DEFAULT",
+                  },
+                  body: JSON.stringify({ accepting_orders: false, is_mobile: true }),
+              });
+              setLocationStatus("Offline - Location hidden");
+          } catch (e) {
+              console.error(e);
+          }
+      }
+  };
+
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -397,6 +487,35 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+        {/* Mobile Merchant Location Toggle Card */}
+        <div className="mb-6 p-6 shadow-md transition-all duration-300" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: acceptingOrders ? "#eef2ff" : "#f3f4f6", color: acceptingOrders ? "#4f46e5" : "#9ca3af" }}>
+                        📍
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-outfit text-gray-900">Accepting Orders / Live Location</h2>
+                        <p className="text-sm font-inter" style={{ color: acceptingOrders ? "#10b981" : "#6b7280" }}>
+                            {locationStatus}
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <button
+                        onClick={toggleLocation}
+                        data-testid="location-toggle"
+                        className={`relative inline-flex items-center h-8 rounded-full w-14 transition-colors focus:outline-none ${acceptingOrders ? "bg-indigo-600" : "bg-gray-300"}`}
+                    >
+                        <span
+                            className={`inline-block w-6 h-6 transform bg-white rounded-full transition-transform ${acceptingOrders ? "translate-x-7" : "translate-x-1"}`}
+                        />
+                    </button>
+                </div>
+            </div>
+        </div>
+
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
