@@ -687,6 +687,7 @@ rust_test(
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/server/utils:server_utils",
+        "//src/server/config:server_config",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:hmac",

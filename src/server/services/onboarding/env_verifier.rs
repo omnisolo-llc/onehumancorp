@@ -93,10 +93,9 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         }
     }
 
-    let mut is_standalone = ::server_config::get().standalone;
-    if config.mode == "standalone" {
-        is_standalone = true;
-    }
+    let is_standalone = config.mode == "standalone"
+        || env_vars.get("STANDALONE_MODE").map(|s| s.to_lowercase() == "true").unwrap_or(false)
+        || env_vars.get("OHC_STANDALONE").map(|s| s.to_lowercase() == "true").unwrap_or(false);
 
     if is_standalone {
         config.telemetry_enabled = telemetry_enabled;

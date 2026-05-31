@@ -91,6 +91,12 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 }
 
 
+pub fn is_standalone_mode() -> bool {
+    std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true"
+        || std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true"
+        || get().standalone
+}
+
 pub fn get_safe_user_dir() -> std::path::PathBuf {
     let dir = if let Ok(home) = std::env::var("USERPROFILE") {
         std::path::PathBuf::from(home).join(".ohc")
