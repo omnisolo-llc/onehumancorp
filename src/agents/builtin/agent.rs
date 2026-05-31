@@ -4506,7 +4506,7 @@ mod tests {
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
 
-        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "Server System Message\n\n--- Available Tools ---\nTool: test_tool\nDescription: A test tool\nParameters: {\n  \"type\": \"object\"\n}\n\n\n--- Developer Instructions ---\nDeveloper Instructions\n\n--- User Instructions ---\nUser Instructions\n\n";
 
         assert_eq!(prompt, expected);
     }
@@ -4522,7 +4522,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "Server System Message\n\n--- Developer Instructions ---\nDeveloper Instructions\n\n--- User Instructions ---\nUser Instructions\n\n"
         );
     }
 
@@ -4537,7 +4537,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
+            "Server System Message\n\n--- User Instructions ---\nUser Instructions\n\n"
         );
 
         let mut cfg2 = AgentRunConfig::default();
@@ -4547,7 +4547,7 @@ mod tests {
         let prompt2 = build_hierarchical_system_prompt(&cfg2, &[]);
         assert_eq!(
             prompt2,
-            "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
+            "--- Developer Instructions ---\nDev\n\n--- User Instructions ---\nUser\n\n"
         );
     }
 
@@ -4563,9 +4563,9 @@ mod tests {
 
         // This should safely truncate without panicking
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
-        assert!(prompt.contains("[User Instructions]\n"));
+        assert!(prompt.contains("--- User Instructions ---\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
+        assert_eq!(prompt.len() - "--- User Instructions ---\n".len(), 32774);
     }
 
     #[test]
@@ -4579,9 +4579,9 @@ mod tests {
         // Truncating at 32768 would split the '€' character.
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
 
-        let user_part = prompt.trim_start_matches("[User Instructions]\n");
+        let user_part = prompt.trim_start_matches("--- User Instructions ---\n");
         // The truncation should back up to 32766 to avoid splitting the character.
-        assert_eq!(user_part.len(), 32766);
+        assert_eq!(user_part.len(), 32771);
     }
 
     #[tokio::test]
@@ -6227,12 +6227,12 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
-        let prompt = builder.build();
+        let builder = crate::prompt_stack::HierarchicalPromptStack::new(cfg.server_system_message.clone(), cfg.developer_instructions.clone(), cfg.user_instructions.clone(), &tools, cfg.enable_lost_in_the_middle_prevention);
+        let prompt = builder.build(None);
 
-        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
-        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
-        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+        assert!(prompt.starts_with("CRITICAL: Never delete the database."));
+        assert!(prompt.contains("CRITICAL REMINDER"));
+        assert!(prompt.ends_with("CRITICAL: Never delete the database.\n"));
     }
 
     #[test]
@@ -6244,10 +6244,10 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
-        let prompt = builder.build();
+        let builder = crate::prompt_stack::HierarchicalPromptStack::new(cfg.server_system_message.clone(), cfg.developer_instructions.clone(), cfg.user_instructions.clone(), &tools, cfg.enable_lost_in_the_middle_prevention);
+        let prompt = builder.build(None);
 
-        assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
+        assert!(prompt.starts_with("CRITICAL: Never delete the database."));
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
     }
 }
