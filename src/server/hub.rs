@@ -54,7 +54,7 @@ impl Hub {
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
-        let redis_client = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
+        let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
             std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
         } else {
             None
@@ -697,7 +697,7 @@ impl Hub {
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
 
-        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+        let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             "standalone"
         } else {
             "cloud"

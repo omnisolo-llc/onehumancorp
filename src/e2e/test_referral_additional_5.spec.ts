@@ -6,10 +6,10 @@ test('powered by OHC link is updated dynamically', async ({ page, context }) => 
   await page.evaluate(() => localStorage.setItem('tenant_id', 'powered-by-tenant'));
   // Trigger rendering logic for storefront preview which contains the powered by link
   await page.evaluate(() => {
-    if (typeof renderStorefrontPreview === 'function') {
+    if (typeof (window as any).renderStorefrontPreview === 'function') {
         // Mock draft state to force render
         window.storefrontDraftState = [{ type: 'Hero', content: { title: 'T', subtitle: 'S', cta: 'C'} }];
-        renderStorefrontPreview();
+        (window as any).renderStorefrontPreview();
     }
   });
 

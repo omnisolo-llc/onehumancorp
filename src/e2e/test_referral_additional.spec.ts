@@ -4,7 +4,7 @@ import { memberPage as page } from './fixtures';
 test('referral link copies with correct tenant_id', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('tenant_id', 'copy-tenant-456'));
-  await page.evaluate(() => showScreen('referral-dashboard-screen'));
+  await page.evaluate(() => (window as any).showScreen('referral-dashboard-screen'));
 
   // Ensure clip board permissions are given
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);

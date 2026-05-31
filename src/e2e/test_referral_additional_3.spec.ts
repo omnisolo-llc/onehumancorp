@@ -4,7 +4,7 @@ import { memberPage as page } from './fixtures';
 test('referral link defaults to DEFAULT when no tenant_id', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.removeItem('tenant_id'));
-  await page.evaluate(() => showScreen('referral-dashboard-screen'));
+  await page.evaluate(() => (window as any).showScreen('referral-dashboard-screen'));
 
   // Verify link text
   await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');

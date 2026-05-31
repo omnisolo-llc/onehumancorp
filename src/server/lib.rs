@@ -41,7 +41,12 @@ pub fn is_standalone_runtime() -> bool {
         }
     }
 
-    if let Ok(value) = std::env::var("OHC_STANDALONE_MODE") {
+    if let Ok(value) = std::env::var("STANDALONE_MODE") {
+        if let Some(parsed) = parse_bool(&value) {
+            return parsed;
+        }
+    }
+    if let Ok(value) = std::env::var("OHC_STANDALONE") {
         if let Some(parsed) = parse_bool(&value) {
             return parsed;
         }

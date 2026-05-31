@@ -4,7 +4,7 @@ import { memberPage as page } from './fixtures';
 test('second copy invite message works with unique ID', async ({ page, context }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('tenant_id', 'invite-tenant-789'));
-  await page.evaluate(() => showScreen('referral-dashboard-screen'));
+  await page.evaluate(() => (window as any).showScreen('referral-dashboard-screen'));
 
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
