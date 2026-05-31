@@ -14,7 +14,7 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if org_id.trim() == "system" {
+    if org_id == "system" {
         if ::server_config::get().multitenant {
             return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
         }
