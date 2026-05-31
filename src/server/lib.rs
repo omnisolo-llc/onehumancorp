@@ -1881,10 +1881,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<GetMeetingsResponse>, Status> {
+        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
