@@ -79,7 +79,7 @@ export default function CostDashboardPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Advisory Dashboard</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Cost Transparency Dashboard</h1>
         <div className="flex gap-2">
             <button onClick={() => router.push('/plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to My Plan
@@ -90,12 +90,9 @@ export default function CostDashboardPage() {
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Keep track of your total usage</h2>
             <p className="text-gray-700 font-medium leading-relaxed">
-              Here's what happened this week and what you should do next:<br/><br/>
-              - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
-              - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
-              - We also noticed a few unread messages in your unified inbox. Using the AI draft feature might help you save time!
+              Understand where your business expenses are going. Review your token efficiency and AI usage across all departments below.
             </p>
         </section>
 
@@ -121,7 +118,7 @@ export default function CostDashboardPage() {
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
+                        <span className="font-medium text-gray-900">LLM Inference Cost</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
@@ -129,7 +126,7 @@ export default function CostDashboardPage() {
 
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">Storage</span>
+                        <span className="font-medium text-gray-900">Storage & CDN</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
@@ -137,7 +134,7 @@ export default function CostDashboardPage() {
 
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">Payment Fees</span>
+                        <span className="font-medium text-gray-900">Payment Processor Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
