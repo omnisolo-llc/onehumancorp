@@ -38,57 +38,30 @@ impl Runner {
         Self { core }
     }
 
-    pub async fn run_async(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        self.core.execute(message).await
+    /// Asynchronous execution mode
+    pub async fn run_async(&self, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        self.core.execute(initial_message).await
     }
 
-    pub fn run_sync_blocking(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    /// Synchronous execution mode (blocks the current thread)
+    pub fn run_sync_blocking(&self, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let initial_message = initial_message.to_string();
         let core = self.core.clone();
-        let msg = message.to_string();
 
-        let handle = tokio::runtime::Handle::try_current();
-        if let Ok(rt) = handle {
-            tokio::task::block_in_place(move || {
-                rt.block_on(async move {
-                    core.execute(&msg).await
-                })
-            })
-        } else {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move {
-                core.execute(&msg).await
-            })
-        }
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        rt.block_on(async move {
+            core.execute(&initial_message).await
+        })
     }
 
-    pub fn run_streamed(&self, message: &str) -> mpsc::Receiver<AgentEvent> {
-        let (tx, rx) = mpsc::channel(100);
-        let core = self.core.clone();
-        let msg = message.to_string();
-
-        tokio::spawn(async move {
-            let tx_clone = tx.clone();
-            let mut on_event = move |event: AgentEvent| {
-                let _ = tx_clone.try_send(event);
-            };
-            match core.agent.run(&core.runtime_config, &msg, &mut on_event).await {
-                Ok(result) => {
-                    let _ = tx.send(AgentEvent::TaskComplete { content: result }).await;
-                }
-                Err(e) => {
-                    let _ = tx.send(AgentEvent::TaskError { error: e.to_string() }).await;
-                }
-            }
-        });
-
-        rx
+    /// Streamed execution mode (returns a receiver for AgentEvents)
+    pub fn run_streamed(&self, initial_message: &str) -> mpsc::UnboundedReceiver<AgentEvent> {
+        self.core.agent.clone().query(self.core.runtime_config.clone(), initial_message.to_string())
     }
 }
 
-// 2. App Server JSON-RPC layer
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
+// App Server (bidirectional JSON-RPC API) layer
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct JsonRpcRequest {
     pub jsonrpc: String,
     pub id: Option<serde_json::Value>,
@@ -96,7 +69,7 @@ pub struct JsonRpcRequest {
     pub params: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct JsonRpcResponse {
     pub jsonrpc: String,
     pub id: Option<serde_json::Value>,
@@ -106,7 +79,7 @@ pub struct JsonRpcResponse {
     pub error: Option<JsonRpcError>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct JsonRpcError {
     pub code: i32,
     pub message: String,
@@ -121,8 +94,8 @@ impl AppServer {
         Self { runner }
     }
 
-    pub async fn handle_request(&self, req_str: &str) -> String {
-        let req: JsonRpcRequest = match serde_json::from_str(req_str) {
+    pub async fn handle_request(&self, req_json: &str) -> String {
+        let req: JsonRpcRequest = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => {
                 let err_resp = JsonRpcResponse {
@@ -135,70 +108,7 @@ impl AppServer {
             }
         };
 
-        if req.method == "run_expert_team" {
-            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-            struct LlmClientAdapter {
-                inner: Arc<dyn crate::llm::LlmClient>,
-            }
-
-            #[async_trait::async_trait]
-            impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
-                async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                    self.inner.chat(req).await
-                }
-            }
-
-            let adapter = Arc::new(LlmClientAdapter { inner: self.runner.core.agent.llm.clone() });
-
-            // Expert Team Implementation
-            let experts = vec![
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Industry Researcher".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Financial Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Strategic Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Process Supervisor".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Quality Auditor".to_string(), llm: adapter.clone() },
-            ];
-
-            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new("Project Director", experts);
-
-            // Gate 1: Pre-flight
-            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
-                let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                return serde_json::to_string(&resp).unwrap();
-            }
-
-            let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
-            match manager.execute_parallel_tasks(&initial_message, &mut trace).await {
-                Ok(summaries) => {
-                    // Gate 2: Pre-merge
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                        return serde_json::to_string(&resp).unwrap();
-                    }
-
-                    let final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n{}", summaries.join("\n"), " word".repeat(20000));
-
-                    // Gate 3: Pre-deliver
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                        return serde_json::to_string(&resp).unwrap();
-                    }
-
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: Some(serde_json::json!({ "output": final_output })),
-                        error: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-                Err(e) => {
-                    let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                    serde_json::to_string(&resp).unwrap()
-                }
-            }
-        } else if req.method == "run_agent" {
+        if req.method == "run_agent" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
             let _cfg = AgentRunConfig::default();
             match self.runner.run_async(&initial_message).await {
