@@ -34,7 +34,11 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(msg));
+                    // This explicitly implements the LangGraph LLM-recoverable mechanic
+                    return Err(ToolError::LlmRecoverable(format!(
+                        "Error executing tool '{}': {}\nPlease self-correct your arguments.",
+                        tool.name, msg
+                    )));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
