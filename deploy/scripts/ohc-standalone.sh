@@ -19,6 +19,7 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
+export STANDALONE_MODE=true
 # Tuning memory limits for standalone wrapper
 export TOKIO_WORKER_THREADS=2
 export MALLOC_ARENA_MAX=2
