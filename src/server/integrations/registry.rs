@@ -34,6 +34,7 @@ pub struct IntegrationsRegistry {
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
 
@@ -74,6 +75,7 @@ impl IntegrationsRegistry {
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
@@ -129,9 +131,16 @@ impl IntegrationsRegistry {
                          let clients = self.twilio_clients.read().unwrap();
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
+                             let is_whatsapp = channel.starts_with("whatsapp:") || from.starts_with("whatsapp:");
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     tracing::error!("Failed to send Twilio SMS: {}", e);
+                                 if is_whatsapp {
+                                     if let Err(e) = client.send_whatsapp(&to, &from, &text).await {
+                                         tracing::error!("Failed to send Twilio WhatsApp: {}", e);
+                                     }
+                                 } else {
+                                     if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                         tracing::error!("Failed to send Twilio SMS: {}", e);
+                                     }
                                  }
                              });
                          }
@@ -273,6 +282,11 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
 
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
+        }
+
         if integration_id == "sendgrid" {
             let mut clients = self.sendgrid_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
@@ -392,6 +406,34 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
+        }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.get_free_busy(time_min, time_max).await;
+        }
+
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn generate_meeting_for_booking(&self, integration_id: &str, booking_id: &str, topic: &str) -> Result<String, String> {
+        let client_zoom = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_zoom {
+            return c.generate_meeting_for_booking(booking_id, topic).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -691,6 +733,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.create_event(summary, start_time, end_time).await;
         }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.create_event(summary, start_time, end_time).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -709,7 +764,29 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn send_whatsapp_message(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "twilio" {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_whatsapp(to, from, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "sendgrid" {
                 let clients = self.sendgrid_clients.read().unwrap();
@@ -785,10 +862,19 @@ mod tests {
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
         };
-        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
+        registry.connect("twilio", "https://api.twilio.com", creds.clone()).unwrap();
 
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
+        let msg_whatsapp = registry.send_chat_message("twilio", "whatsapp:+0987654321", "agent1", "Hello WhatsApp", "thread1").unwrap();
+        assert_eq!(msg_whatsapp.content, "Hello WhatsApp");
+
+        let mut creds_whatsapp = creds.clone();
+        creds_whatsapp.from_phone = "whatsapp:+1234567890".to_string();
+        registry.connect("twilio", "https://api.twilio.com", creds_whatsapp).unwrap();
+
+        let msg_whatsapp2 = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello WhatsApp 2", "thread1").unwrap();
+        assert_eq!(msg_whatsapp2.content, "Hello WhatsApp 2");
     }
 }

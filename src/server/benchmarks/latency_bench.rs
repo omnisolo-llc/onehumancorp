@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -33,14 +33,14 @@ pub async fn bench_queue_latency() {
 
 pub async fn bench_db_query_time() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
@@ -65,14 +65,14 @@ pub async fn bench_db_query_time() {
 
 pub async fn bench_api_response_time() {
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 100;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
@@ -115,20 +115,33 @@ pub async fn bench_api_response_time() {
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+    println!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+
+    let mut standalone_mobile_times = Vec::new();
+    for _ in 0..iterations {
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        let start = Instant::now();
+
+        let _ = dashboard_service_standalone.get_dashboard(request).await;
+        standalone_mobile_times.push(start.elapsed().as_micros());
+    }
+    standalone_mobile_times.sort();
+    println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[(iterations as f32 * 0.95) as usize], standalone_mobile_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap();
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         // Run minimal migrations for benchmark
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
@@ -139,7 +152,7 @@ pub async fn bench_dashboard_snapshot() {
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap();
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
@@ -328,7 +341,7 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
@@ -371,11 +384,11 @@ mod tests {
 }
 
 pub async fn bench_advisory_insights_latency() {
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 10; // Few iterations due to Minimax API
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
         let _store = std::sync::Arc::new(crate::auth::Store::new());
 

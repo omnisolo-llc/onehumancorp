@@ -3,6 +3,9 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
+pub mod sqlite_store;
+pub mod user_repository;
+pub use user_repository::UserRepository;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -124,11 +127,11 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Self {
-        let secret = std::env::var("JWT_SECRET")
+        let secret = std::env::var("OHC_JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 if ::server_config::get().multitenant {
-                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                    panic!("OHC_JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
 
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -208,8 +211,8 @@ impl Store {
             created_at: now,
         });
 
-        let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
-        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let issuer_url = std::env::var("OHC_OIDC_ISSUER_URL").unwrap_or_default();
+        let client_id = std::env::var("OHC_OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
         let store = Store {
@@ -233,9 +236,9 @@ impl Store {
     }
 
     fn seed_default_admin(&self, now: DateTime<Utc>) {
-        let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-        let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+        let admin_user = std::env::var("OHC_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+        let admin_pass = std::env::var("OHC_ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
+        let admin_email = std::env::var("OHC_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
         let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
@@ -569,7 +572,7 @@ impl Default for Store {
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
+    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
          return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))
@@ -799,5 +802,164 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
+    }
+}
+
+#[tonic::async_trait]
+impl UserRepository for Store {
+    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let mut users = self.users.write().unwrap();
+        let mut by_name = self.by_name.write().unwrap();
+        let mut by_email = self.by_email.write().unwrap();
+
+        let name_key = TenantKey { org_id: org_id.to_string(), key: user.username.clone() };
+        if by_name.contains_key(&name_key) {
+            return Err("username already taken".to_string());
+        }
+
+        let email_key = TenantKey { org_id: org_id.to_string(), key: user.email.clone() };
+        if by_email.contains_key(&email_key) {
+            return Err("email already registered".to_string());
+        }
+
+        let id = user.id.clone();
+        users.insert(id.clone(), user.clone());
+        by_name.insert(name_key, id.clone());
+        by_email.insert(email_key, id);
+
+        Ok(())
+    }
+
+    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        let users = self.users.read().unwrap();
+        let u = users.get(id).ok_or_else(|| "not found".to_string())?;
+        if !org_id.is_empty() {
+            if let Some(ref user_org) = u.organization_id {
+                if user_org != org_id {
+                    return Err("not found".to_string());
+                }
+            }
+        }
+        Ok(u.clone())
+    }
+
+    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
+        let by_name = self.by_name.read().unwrap();
+        let users = self.users.read().unwrap();
+
+        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+        let mut user_id_opt = by_name.get(&name_key).cloned();
+
+        if user_id_opt.is_none() && org_id.is_empty() {
+            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+        }
+
+        let user_id = user_id_opt.ok_or_else(|| "not found".to_string())?;
+        let user = users.get(&user_id).ok_or_else(|| "not found".to_string())?;
+        Ok(user.clone())
+    }
+
+    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+        let by_email = self.by_email.read().unwrap();
+        let users = self.users.read().unwrap();
+
+        let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
+        let mut user_id_opt = by_email.get(&email_key).cloned();
+
+        if user_id_opt.is_none() && org_id.is_empty() {
+            user_id_opt = by_email.get(&TenantKey { org_id: "".to_string(), key: email.to_string() }).cloned();
+        }
+
+        let user_id = user_id_opt.ok_or_else(|| "not found".to_string())?;
+        let user = users.get(&user_id).ok_or_else(|| "not found".to_string())?;
+        Ok(user.clone())
+    }
+
+    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
+        let by_oidc = self.by_oidc.read().unwrap();
+        let users = self.users.read().unwrap();
+
+        let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
+        let mut user_id_opt = by_oidc.get(&oidc_key).cloned();
+
+        if user_id_opt.is_none() && org_id.is_empty() {
+            user_id_opt = by_oidc.get(&TenantKey { org_id: "".to_string(), key: sub.to_string() }).cloned();
+        }
+
+        let user_id = user_id_opt.ok_or_else(|| "not found".to_string())?;
+        let user = users.get(&user_id).ok_or_else(|| "not found".to_string())?;
+        Ok(user.clone())
+    }
+
+    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
+        let users = self.users.read().unwrap();
+        let mut result = Vec::new();
+        for (_, u) in users.iter() {
+            if org_id.is_empty() || u.organization_id.as_deref() == Some(org_id) {
+                result.push(u.clone());
+            }
+        }
+        Ok(result)
+    }
+
+    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let mut users = self.users.write().unwrap();
+        let mut by_name = self.by_name.write().unwrap();
+        let mut by_email = self.by_email.write().unwrap();
+
+        if let Some(mut existing) = users.get_mut(&user.id) {
+            if !org_id.is_empty() && existing.organization_id.as_deref() != Some(org_id) {
+                return Err("unauthorized".to_string());
+            }
+
+            if existing.username != user.username {
+                by_name.remove(&TenantKey { org_id: org_id.to_string(), key: existing.username.clone() });
+                by_name.insert(TenantKey { org_id: org_id.to_string(), key: user.username.clone() }, user.id.clone());
+            }
+
+            if existing.email != user.email {
+                by_email.remove(&TenantKey { org_id: org_id.to_string(), key: existing.email.clone() });
+                by_email.insert(TenantKey { org_id: org_id.to_string(), key: user.email.clone() }, user.id.clone());
+            }
+
+            *existing = user;
+            Ok(())
+        } else {
+            Err("user not found".to_string())
+        }
+    }
+
+    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        let mut users = self.users.write().unwrap();
+        let mut by_name = self.by_name.write().unwrap();
+        let mut by_email = self.by_email.write().unwrap();
+
+        if let Some(user) = users.remove(id) {
+            if !org_id.is_empty() && user.organization_id.as_deref() != Some(org_id) {
+                users.insert(id.to_string(), user); // rollback
+                return Err("unauthorized".to_string());
+            }
+            by_name.remove(&TenantKey { org_id: org_id.to_string(), key: user.username });
+            by_email.remove(&TenantKey { org_id: org_id.to_string(), key: user.email });
+            Ok(())
+        } else {
+            Err("user not found".to_string())
+        }
+    }
+
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) -> Result<(), String> {
+        let mut revoked = self.revoked.write().unwrap();
+        revoked.insert(jti, exp);
+        Ok(())
+    }
+
+    async fn is_revoked(&self, jti: &str, _org_id: &str) -> Result<bool, String> {
+        let revoked = self.revoked.read().unwrap();
+        if let Some(exp) = revoked.get(jti) {
+            if *exp >= Utc::now() {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }

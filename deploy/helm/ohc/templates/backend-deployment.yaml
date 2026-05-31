@@ -38,20 +38,18 @@ spec:
           ports:
             - containerPort: {{ .Values.backend.service.port }}
           env:
-            - name: LOG_FORMAT
+            - name: OHC_LOG_FORMAT
               value: "json"
-            - name: LOG_LEVEL
+            - name: OHC_LOG_LEVEL
               value: "info"
-            - name: PORT
-              value: "{{ .Values.backend.service.port }}"
             - name: OHC_PORT
               value: "{{ .Values.backend.service.port }}"
             {{- if .Values.redis.enabled }}
-            - name: REDIS_ADDR
+            - name: OHC_REDIS_ADDR
               value: "{{ .Release.Name }}-redis-master:6379"
             {{- end }}
             {{- if .Values.cnpg.enabled }}
-            - name: DATABASE_URL
+            - name: OHC_DATABASE_URL
               value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -60,13 +58,13 @@ spec:
                   key: password
             {{- end }}
             {{- if .Values.chatwoot.enabled }}
-            - name: CHATWOOT_ENABLED
+            - name: OHC_CHATWOOT_ENABLED
               value: "true"
-            - name: CHATWOOT_URL
+            - name: OHC_CHATWOOT_URL
               value: "http://{{ .Release.Name }}-chatwoot:{{ .Values.chatwoot.service.port }}"
-            - name: CHATWOOT_ADMIN_EMAIL
+            - name: OHC_CHATWOOT_ADMIN_EMAIL
               value: "{{ .Values.chatwoot.adminEmail }}"
-            - name: CHATWOOT_ADMIN_PASSWORD
+            - name: OHC_CHATWOOT_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-chatwoot-secret
@@ -84,8 +82,8 @@ spec:
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"
             {{- end }}
-            {{- if not (hasKey $backendEnv "JWT_SECRET") }}
-            - name: JWT_SECRET
+            {{- if not (hasKey $backendEnv "OHC_JWT_SECRET") }}
+            - name: OHC_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-secret

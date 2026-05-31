@@ -27,7 +27,10 @@ pub use ::server_integrations_easypost as easypost;
 pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;
 
+pub use ::server_integrations_mcp_config_sync as mcp_config_sync;
+
 pub use ::server_integrations_razorpay as razorpay;
 pub use ::server_integrations_manychat as manychat;
 pub use ::server_integrations_task_scheduler as task_scheduler;
 pub use ::server_integrations_restic as restic;
+pub use ::server_integrations_resend as resend;
