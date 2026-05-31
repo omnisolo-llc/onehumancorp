@@ -124,11 +124,11 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Self {
-        let secret = std::env::var("JWT_SECRET")
+        let secret = std::env::var("OHC_JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 if ::server_config::get().multitenant {
-                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                    panic!("OHC_JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
 
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -208,8 +208,8 @@ impl Store {
             created_at: now,
         });
 
-        let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
-        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let issuer_url = std::env::var("OHC_OIDC_ISSUER_URL").unwrap_or_default();
+        let client_id = std::env::var("OHC_OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
         let store = Store {
@@ -233,9 +233,9 @@ impl Store {
     }
 
     fn seed_default_admin(&self, now: DateTime<Utc>) {
-        let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-        let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+        let admin_user = std::env::var("OHC_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+        let admin_pass = std::env::var("OHC_ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
+        let admin_email = std::env::var("OHC_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
         let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
@@ -569,7 +569,7 @@ impl Default for Store {
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
+    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
          return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))

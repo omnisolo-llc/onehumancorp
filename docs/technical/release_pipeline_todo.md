@@ -340,8 +340,8 @@ Goal:
 Suggested direction:
 
 1. Inspect `src/e2e/global-setup.ts` and the Bazel Playwright wrapper.
-2. Ensure `DATABASE_URL` is exported into the Playwright environment.
-3. Make the seed step skip or fail clearly if `DATABASE_URL` is missing.
+2. Ensure `OHC_DATABASE_URL` is exported into the Playwright environment.
+3. Make the seed step skip or fail clearly if `OHC_DATABASE_URL` is missing.
 4. Add a regression test or wrapper assertion for the random Postgres port.
 
 Acceptance checks:
