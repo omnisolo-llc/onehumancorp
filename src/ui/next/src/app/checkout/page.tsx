@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+// Share API Integration
+async function trackShare(platform: string) { try { await fetch("/api/v1/growth/post-purchase-share", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ platform }) }); } catch(e) {} }
+
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -163,6 +166,7 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  onClick={() => trackShare("whatsapp")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -172,6 +176,7 @@ export default function CheckoutPage() {
                 </a>
                 <a
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  onClick={() => trackShare("twitter")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
