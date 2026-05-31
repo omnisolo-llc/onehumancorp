@@ -414,9 +414,7 @@ export default function BuilderPage() {
                     Back
                   </button>
                   <button
-                    onClick={() => {
-                      setWizardStep(4);
-                    }}
+                    onClick={() => setIsLoaded(true)}
                     className="flex-1 py-4 font-semibold text-white bg-[#0071E3] hover:bg-[#0077ED] transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
                     style={{ borderRadius: '8px' }}
                   >
