@@ -1,0 +1,11 @@
+--- src/server/monitoring/dashboards/tenant_cost_miser.json
++++ src/server/monitoring/dashboards/tenant_cost_miser.json
+@@ -38,7 +38,7 @@
+       },
+       "targets": [
+         {
+-          "expr": "sum(rate(ohc_llm_call_cost_total[5m])) by (organization_id)",
++          "expr": "sum(rate(ohc_mission_cost_cents[5m])) by (tenant_id)",
+           "refId": "A"
+         }
+       ],

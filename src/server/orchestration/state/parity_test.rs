@@ -80,23 +80,17 @@ mod parity_tests {
         }
 
         // Verify retrieval parity
-        if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            let row = sqlx::query("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
-                .bind(&test_product_id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
-            let id: String = row.get("id");
+        if let DbStore::Sqlite(_) = &sqlite_db.store {
+            let res = sqlite_db.get_knowledge_embedding(&test_product_id).await.unwrap();
+            assert!(res.is_some());
+            let (id, _content) = res.unwrap();
             assert_eq!(id, test_product_id);
         }
 
         if let Some(ref db) = pg_db {
-            let row = sqlx::query("SELECT id, content FROM knowledge_embeddings WHERE id = $1")
-                .bind(&test_product_id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
-            let id: String = row.get("id");
+            let res = db.get_knowledge_embedding(&test_product_id).await.unwrap();
+            assert!(res.is_some());
+            let (id, _content) = res.unwrap();
             assert_eq!(id, test_product_id);
         }
     }
