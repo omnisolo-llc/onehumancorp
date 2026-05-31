@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
 
@@ -397,6 +398,15 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+        {/* Quick Actions */}
+        <section className="mb-6 flex gap-4">
+            <Link href="/agents" role="button" className="px-6 py-3 font-semibold text-gray-600 bg-white hover:bg-gray-50 rounded-xl transition-colors shadow-sm border border-gray-200">
+                Manage AI Assistants
+            </Link>
+            <button className="px-6 py-3 font-semibold text-gray-600 bg-white hover:bg-gray-50 rounded-xl transition-colors shadow-sm border border-gray-200" onClick={() => setShowSettingsModal(true)}>
+                Settings
+            </button>
+        </section>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
@@ -2024,6 +2034,28 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Settings</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+               <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
+                 <input type="checkbox" className="w-5 h-5 accent-[#0071E3]" />
+                 <span className="font-semibold text-gray-800">Enable Email Notifications</span>
+               </label>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Embed Modal */}
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
