@@ -123,7 +123,7 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+        if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
@@ -136,45 +136,6 @@ export default function Dashboard() {
       }
     }
     checkMilestones();
-  }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
-  useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
-      try {
-        const res = await fetch('/api/v1/growth/milestones/check');
-        const data = await res.json();
-        if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-
-    setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
-    async function fetchApprovals() {
-      try {
-        const res = await fetch('/api/agents/approvals');
-        const data = await res.json();
-        if (data && data.pending_approvals) {
-          setApprovals(data.pending_approvals);
-        }
-      } catch (e) {
-        console.error("Failed to fetch approvals", e);
-      }
-    }
-    fetchApprovals();
-
-    // Connect to Teammate Mesh WebSocket for real-time swarm activity
-
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
@@ -1659,7 +1620,11 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  <button
+                  <WithTooltip id="copy-promo-message" defaultText="Copy the generated promotional message to your clipboard.">
+                    <WithTooltip id="copy-promo-message" defaultText="Copy the generated promotional message to your clipboard.">
+                    <WithTooltip id="copy-promo-message" defaultText="Copy the generated promotional message to your clipboard.">
+                    <WithTooltip id="copy-promo-message" defaultText="Copy the generated promotional message to your clipboard.">
+                    <button
                     onClick={() => {
                       navigator.clipboard.writeText(promoMessage);
                       setCopied(true);
@@ -1669,6 +1634,10 @@ export default function Dashboard() {
                   >
                     {copied ? 'Copied!' : 'Copy to Clipboard'}
                   </button>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
                 </>
               )}
 
@@ -1981,7 +1950,11 @@ export default function Dashboard() {
                     >
                       {isGeneratingWallOfLove ? "Refreshing..." : "Refresh"}
                     </button>
-                    <button
+                    <WithTooltip id="copy-wall-of-love" defaultText="Copy the code to embed the Wall of Love widget on your site.">
+                      <WithTooltip id="copy-wall-of-love" defaultText="Copy the code to embed the Wall of Love widget on your site.">
+                      <WithTooltip id="copy-wall-of-love" defaultText="Copy the code to embed the Wall of Love widget on your site.">
+                      <WithTooltip id="copy-wall-of-love" defaultText="Copy the code to embed the Wall of Love widget on your site.">
+                      <button
                       onClick={() => {
                         navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`);
                         setWallOfLoveCopied(true);
@@ -1991,6 +1964,10 @@ export default function Dashboard() {
                     >
                       {wallOfLoveCopied ? 'Copied!' : 'Copy Code'}
                     </button>
+                    </WithTooltip>
+                    </WithTooltip>
+                    </WithTooltip>
+                    </WithTooltip>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 font-medium">Paste this code anywhere in your website's HTML to display your top reviews.</p>
@@ -2136,7 +2113,11 @@ export default function Dashboard() {
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
-                  <button
+                  <WithTooltip id="copy-embed-code" defaultText="Copy the HTML iframe code to embed your store on another website.">
+                    <WithTooltip id="copy-embed-code" defaultText="Copy the HTML iframe code to embed your store on another website.">
+                    <WithTooltip id="copy-embed-code" defaultText="Copy the HTML iframe code to embed your store on another website.">
+                    <WithTooltip id="copy-embed-code" defaultText="Copy the HTML iframe code to embed your store on another website.">
+                    <button
                     onClick={() => {
                       navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
@@ -2146,6 +2127,10 @@ export default function Dashboard() {
                   >
                     {embedCopied ? 'Copied!' : 'Copy Code'}
                   </button>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
                 </div>
               </div>
             </div>
@@ -2191,7 +2176,11 @@ export default function Dashboard() {
                     value={referralLink}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
-                  <button
+                  <WithTooltip id="copy-referral-link" defaultText="Copy your unique referral link to share with friends.">
+                    <WithTooltip id="copy-referral-link" defaultText="Copy your unique referral link to share with friends.">
+                    <WithTooltip id="copy-referral-link" defaultText="Copy your unique referral link to share with friends.">
+                    <WithTooltip id="copy-referral-link" defaultText="Copy your unique referral link to share with friends.">
+                    <button
                     onClick={() => {
                       navigator.clipboard.writeText(referralLink);
                       setCopied(true);
@@ -2201,6 +2190,10 @@ export default function Dashboard() {
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
+                  </WithTooltip>
                 </div>
               </div>
 
