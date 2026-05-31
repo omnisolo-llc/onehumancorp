@@ -50,7 +50,7 @@ export default function HelpArticlePage() {
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Changing How Your Store Looks</h2>
           <p className="text-gray-700 mb-4">
-            You can pick different colors, fonts, and layouts to make your store match your brand. Just go to the Storefront Builder to try out different styles.
+            You can pick different colors, fonts, and layouts to make your store match your brand. Use the Storefront Builder to easily drag and drop sections. You can even change your main background picture to show off what you do best.
           </p>
         </>
       )
