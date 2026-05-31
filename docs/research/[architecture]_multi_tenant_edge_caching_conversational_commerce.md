@@ -39,7 +39,7 @@ erDiagram
 *   **Operations Agent:** Syncs edge cache with the core ledger. Informs the CS agent of inventory limits.
 
 ## Implementation Prompt
-Implement a multi-tenant edge-caching layer for the conversational commerce AI agents. The outcome should allow the AI agent to receive a webhook from a social channel, query the edge-cached inventory/calendar for a specific tenant, and reply to the customer with an actionable quote/checkout link in under 500ms. Ensure strict data isolation between tenants at the edge level. Do not prescribe specific edge providers (e.g., Cloudflare vs AWS) but focus on the interfaces and multi-tenant guarantees. Acceptance criteria: AI agent can handle 10,000 concurrent conversational queries with an average response time < 500ms using cached inventory data.
+Implement a multi-tenant edge-caching layer for the conversational commerce AI agents using `src/server/utils/cache.rs` `HybridCache`. Ensure the `src/server/api/agents/webhook.rs` handles webhooks instantly using the edge cache for inventory checking and generates a checkout link in under 500ms using a provider from `src/server/integrations/registry.rs`. Use the Stripe integration for checkout preference.
 
 ## Priority
 P0
