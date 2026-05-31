@@ -384,105 +384,65 @@ mod tests {
 }
 
 pub async fn bench_advisory_insights_latency() {
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::file:benchmark?mode=memory&cache=shared".to_string());
     let iterations = 10; // Few iterations due to Minimax API
 
-    if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(crate::auth::Store::new());
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        let mut fetch_times = Vec::new();
-        for _ in 0..iterations {
-            let tenant_id = "system".to_string();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&pool).await.unwrap();
 
-            let start = std::time::Instant::now();
-            let (_org_res, _active_orders_res) = tokio::join!(
-                async {
-                    sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
-                    .await
-                },
-                async {
-                    sqlx::query_scalar::<_, i64>(
-                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
-                    .await
-                }
-            );
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) })
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })
+    };
 
-            fetch_times.push(start.elapsed().as_micros());
-        }
+    let _store = std::sync::Arc::new(crate::auth::Store::new());
 
-        fetch_times.sort();
-        println!("Advisory Insights Cloud (Parallel Postgres): p50: {} us, p95: {} us, p99: {} us",
-            fetch_times[iterations / 2],
-            fetch_times[(iterations as f32 * 0.95) as usize],
-            fetch_times[(iterations as f32 * 0.99) as usize]
-        );
-    }
-
-    // SQLite Standalone Mode Benchmark
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await;
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await;
-    let _db_sqlite = std::sync::Arc::new(crate::db::DB { pool: sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) });
-
-    let mut fetch_times_sqlite = Vec::new();
+    let mut fetch_times = Vec::new();
     for _ in 0..iterations {
+        let _headers = axum::http::HeaderMap::new();
+
         let tenant_id = "system".to_string();
 
         let start = std::time::Instant::now();
         let (_org_res, _active_orders_res) = tokio::join!(
             async {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&sqlite_pool)
-                .await
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_as::<_, (String, String)>("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1").bind(&tenant_id).fetch_optional(&db.pool).await.unwrap()
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query_as::<_, (String, String)>("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?").bind(&tenant_id).fetch_optional(pool).await.unwrap()
+                    }
+                }
             },
             async {
-                sqlx::query_scalar::<_, i64>(
-                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
-                )
-                .bind(&tenant_id)
-                .fetch_one(&sqlite_pool)
-                .await
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'").bind(&tenant_id).fetch_one(&db.pool).await.unwrap_or(0)
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'").bind(&tenant_id).fetch_one(pool).await.unwrap_or(0)
+                    }
+                }
             }
         );
 
-        fetch_times_sqlite.push(start.elapsed().as_micros());
+        fetch_times.push(start.elapsed().as_micros());
     }
 
-    fetch_times_sqlite.sort();
-    println!("Advisory Insights Standalone (Parallel SQLite): p50: {} us, p95: {} us, p99: {} us",
-        fetch_times_sqlite[iterations / 2],
-        fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
-        fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
+    fetch_times.sort();
+    let mode_label = if database_url.starts_with("sqlite") { "Standalone Mode" } else { "Cloud Mode" };
+    println!("Advisory Insights (Parallel) {}: p50: {} us, p95: {} us, p99: {} us",
+        mode_label,
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
     );
-
-    // Caching Benchmark
-    let cache = ::server_utils::cache::HybridCache::new(None);
-    let mut cache_hit_times = Vec::new();
-    let cache_key = "advisory_insights:system";
-    cache.set(cache_key, "Cached summary here".to_string(), std::time::Duration::from_secs(3600)).await;
-
-    for _ in 0..iterations {
-        let start = std::time::Instant::now();
-        let _ = cache.get(cache_key).await;
-        cache_hit_times.push(start.elapsed().as_micros());
-    }
-    cache_hit_times.sort();
-    println!("Advisory Insights Cache Hit: p50: {} us, p95: {} us, p99: {} us",
-        cache_hit_times[iterations / 2],
-        cache_hit_times[(iterations as f32 * 0.95) as usize],
-        cache_hit_times[(iterations as f32 * 0.99) as usize]
-    );
-
 }
