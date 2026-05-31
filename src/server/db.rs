@@ -1590,7 +1590,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1609,7 +1609,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let pool2 = sqlx::postgres::PgPoolOptions::new()
+        let _pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
