@@ -58,7 +58,6 @@ pub struct AgentMemory {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Customer {
     pub id: String,
-    pub mood: Option<String>,
     pub tenant_id: String,
     pub name: String,
     pub email: Option<String>,
@@ -123,24 +122,4 @@ pub struct AIAgent {
     pub provider_type: Option<String>,
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct InteractionTimeline {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    pub source: String,
-    pub sentiment: Option<String>,
-    pub occurred_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct LoyaltyLedger {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    pub points_balance: Option<i32>,
-    pub tier_name: Option<String>,
-    pub last_updated: Option<DateTime<Utc>>,
 }

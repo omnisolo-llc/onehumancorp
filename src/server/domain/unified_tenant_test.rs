@@ -135,7 +135,6 @@ mod tests {
         use crate::domain::repository::models::{Customer, Product, Order, Booking, AIAgent};
 
         let c = Customer {
-            mood: None,
             id: "c1".to_string(),
             tenant_id: "t1".to_string(),
             name: "John".to_string(),
