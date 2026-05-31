@@ -24,20 +24,25 @@ impl TaskRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
-                        status, assigned_agent_role, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        id, organization_id, parent_task_id, epic_id, title, description,
+                        status, payload, assigned_agent_role, created_at, updated_at,
+                        locked_by, locked_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                     "#
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
                 .bind(&task.parent_task_id)
+                .bind(&task.epic_id)
                 .bind(&task.title)
                 .bind(&task.description)
                 .bind(&task.status)
+                .bind(&task.payload)
                 .bind(&task.assigned_agent_role)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
+                .bind(&task.locked_by)
+                .bind(&task.locked_at)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -46,20 +51,25 @@ impl TaskRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
-                        status, assigned_agent_role, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        id, organization_id, parent_task_id, epic_id, title, description,
+                        status, payload, assigned_agent_role, created_at, updated_at,
+                        locked_by, locked_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
                 .bind(&task.parent_task_id)
+                .bind(&task.epic_id)
                 .bind(&task.title)
                 .bind(&task.description)
                 .bind(&task.status)
+                .bind(&task.payload)
                 .bind(&task.assigned_agent_role)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
+                .bind(&task.locked_by)
+                .bind(&task.locked_at)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -73,8 +83,9 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
-                           status, assigned_agent_role, created_at, updated_at
+                    SELECT id, organization_id, parent_task_id, epic_id, title, description,
+                           status, payload, assigned_agent_role, created_at, updated_at,
+                           locked_by, locked_at
                     FROM tasks
                     WHERE organization_id = $1
                     "#
@@ -87,8 +98,9 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
-                           status, assigned_agent_role, created_at, updated_at
+                    SELECT id, organization_id, parent_task_id, epic_id, title, description,
+                           status, payload, assigned_agent_role, created_at, updated_at,
+                           locked_by, locked_at
                     FROM tasks
                     WHERE organization_id = ?
                     "#
@@ -149,6 +161,142 @@ impl TaskRepository {
             }
         }
         Ok(())
+    }
+
+    pub async fn get_next_available_task(&self, organization_id: &str, locked_by: &str) -> Result<Option<Task>, String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT t.id FROM tasks t
+                    WHERE t.status = 'PENDING' AND t.organization_id = $1
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM task_dependencies td
+                        JOIN tasks parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = t.id AND parent.status != 'DONE'
+                    )
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                    "#,
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
+                };
+
+                let id: String = sqlx::Row::get(&row, "id");
+
+                sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'CLAIMED', locked_by = $1, locked_at = $2, updated_at = $3
+                    WHERE id = $4
+                    "#,
+                )
+                .bind(locked_by)
+                .bind(now)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let task = sqlx::query_as::<_, Task>(
+                    r#"
+                    SELECT id, organization_id, parent_task_id, epic_id, title, description,
+                           status, payload, assigned_agent_role, created_at, updated_at,
+                           locked_by, locked_at
+                    FROM tasks
+                    WHERE id = $1
+                    "#
+                )
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                Ok(Some(task))
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT t.id FROM tasks t
+                    WHERE t.status = 'PENDING' AND t.organization_id = ?
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM task_dependencies td
+                        JOIN tasks parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = t.id AND parent.status != 'DONE'
+                    )
+                    LIMIT 1
+                    "#,
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
+                };
+
+                let id: String = sqlx::Row::get(&row, "id");
+
+                sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'CLAIMED', locked_by = ?, locked_at = ?, updated_at = ?
+                    WHERE id = ?
+                    "#,
+                )
+                .bind(locked_by)
+                .bind(now)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let task = sqlx::query_as::<_, Task>(
+                    r#"
+                    SELECT id, organization_id, parent_task_id, epic_id, title, description,
+                           status, payload, assigned_agent_role, created_at, updated_at,
+                           locked_by, locked_at
+                    FROM tasks
+                    WHERE id = ?
+                    "#
+                )
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                Ok(Some(task))
+            }
+        }
     }
 
     pub async fn create_task_dependency(&self, dependency: TaskDependency) -> Result<(), String> {
