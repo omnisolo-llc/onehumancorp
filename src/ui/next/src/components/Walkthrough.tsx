@@ -133,8 +133,8 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       {/* Speech Bubble */}
       <div
-        className="fixed z-[1000] bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/50 rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
-        style={bubbleStyle}
+        className="fixed z-[1000] rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
+        style={{ ...bubbleStyle, background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)" }}
       >
         {targetRect && (
            <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white', 'white/80')}`}></div>
