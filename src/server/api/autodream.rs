@@ -50,7 +50,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
 
             let limit = params.limit.unwrap_or(5);
 
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
 
             let embedding = match client.generate_embedding(&params.text).await {
@@ -82,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_endpoint() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
