@@ -15,6 +15,7 @@ pub struct AutoDreamWorker {
     db: Arc<DB>,
     embedded_counter: Counter<u64>,
     cache: Arc<crate::pricing::cache::LocalEmbeddingCache>,
+    pub store: Arc<dyn store::VectorStore + Send + Sync>,
 }
 
 impl AutoDreamWorker {
@@ -22,7 +23,11 @@ impl AutoDreamWorker {
         let meter = global::meter("ohc.autodream");
         let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
         let cache = Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(3600)));
-        AutoDreamWorker { db, embedded_counter, cache }
+        let store: Arc<dyn store::VectorStore + Send + Sync> = match &db.store {
+            crate::db::DbStore::Postgres => Arc::new(store::PGVectorStore::new(db.pool.clone())),
+            crate::db::DbStore::Sqlite(sqlite_pool) => Arc::new(store::SQLiteVectorStore::new(sqlite_pool.clone())),
+        };
+        AutoDreamWorker { db, embedded_counter, cache, store }
     }
 
 
@@ -57,11 +62,12 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         let counter = self.embedded_counter.clone();
         let cache_for_ingest = self.cache.clone();
+        let store_for_ingest = self.store.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
                 let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::ingest_completed_tasks(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::ingest_completed_tasks(&db, &counter, &cache_ref, &store_for_ingest).await {
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
@@ -175,7 +181,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>, vector_store: &Arc<dyn store::VectorStore + Send + Sync>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
@@ -211,6 +217,12 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+
+            let embedding_vec: Vec<f32> = serde_json::from_str(&embedding).unwrap_or_else(|_| vec![0.0; 1536]);
+            if let Err(e) = vector_store.store(&mem_id, &summary, &embedding_vec, serde_json::json!({"source_type": source_type})).await {
+                debug!("AutoDreamWorker: failed to store embedding in VectorStore: {}", e);
+            }
+
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
@@ -250,13 +262,11 @@ impl AutoDreamWorker {
             }
         } else {
             // For PostgreSQL pgvector
-            let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
-                embedding, embedding
-            );
-
-            let rows = sqlx::query(&query)
+            let rows = sqlx::query(
+                "SELECT id, content, 1 - (embedding <=> $2::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> $2::vector LIMIT $1"
+            )
                 .bind(limit)
+                .bind(embedding)
                 .fetch_all(&self.db.pool)
                 .await?;
 
