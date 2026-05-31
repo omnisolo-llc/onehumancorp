@@ -510,6 +510,7 @@ mod tests {
         assert!(!payload_captured.lock().unwrap().is_empty(), "Payload should not be empty");
     }
 
+    #[test]
     fn test_create_and_get_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();

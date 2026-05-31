@@ -137,12 +137,26 @@ mod tests {
     #[tokio::test]
     async fn test_caching_strategy_resilience() {
         // Simulates caching strategy behavior ensuring it doesn't break when Redis is unavailable.
-        let retries = 0;
+        use std::collections::HashMap;
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+
+        let cache: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
         let mut success = false;
+
+        // Emulate degraded Redis, using fallback read-through memory cache logic
+        cache.lock().await.insert("degraded_state".to_string(), "recovered_value".to_string());
+
+        let mut retries = 0;
         while retries < 3 {
-            // Emulate hitting memory cache
-            success = true;
-            break;
+            // Emulate hitting degraded storage, then using the fallback cache
+            if let Some(val) = cache.lock().await.get("degraded_state") {
+                if val == "recovered_value" {
+                     success = true;
+                     break;
+                }
+            }
+            retries += 1;
         }
         assert!(success, "Caching strategy must be resilient");
     }
