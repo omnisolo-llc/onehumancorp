@@ -95,6 +95,27 @@ export default function Dashboard() {
   // Growth Loop: VIP Customer Referral Campaign State
   const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
+  const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
+  const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const merchantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const res = await fetch(`/api/v1/capital/offers/${merchantId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setCapitalOffer(data[0]);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchOffers();
+  }, []);
+
+  useEffect(() => {
+    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -127,6 +148,23 @@ export default function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
+  const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const merchantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const res = await fetch(`/api/v1/capital/offers/${merchantId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setCapitalOffer(data[0]);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchOffers();
   }, []);
 
   useEffect(() => {
@@ -147,6 +185,23 @@ export default function Dashboard() {
         console.error("Failed to check milestones", e);
       }
     }
+    checkMilestones();
+  }, []);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const merchantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const res = await fetch(`/api/v1/capital/offers/${merchantId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setCapitalOffer(data[0]);
+          }
+        }
+      } catch (e) {}
+    };
     fetchOffers();
   }, []);
 
