@@ -1241,6 +1241,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_sqlite_transport_presence_expiration() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let transport_res = SqliteTransport::new(pool).await;
+
+        if let Ok(transport) = transport_res {
+            transport.register_presence("agent_expire", "online", 1).await.unwrap();
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            let agents = transport.get_active_agents().await.unwrap();
+            assert_eq!(agents.len(), 0);
+        }
+    }
+
+    #[tokio::test]
     async fn test_overlay_tcp_fallback() {
         let inner = Arc::new(InProcessTransport::new());
         let overlay = MeshOverlayTransport::new(inner, 0, 0).await;
@@ -1425,6 +1438,41 @@ Content-Length: 0
             let _ = transport.acquire_lock("ipc_resource", "agent_3", 10).await;
             let _ = transport.release_lock("ipc_resource", "agent_1").await;
             let _ = transport.acquire_lock("ipc_resource", "agent_2", 10).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transport_presence() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        if db_url.starts_with("postgres") {
+            if let Ok(transport) = PgTransport::new(&db_url).await {
+                // Clean up before test
+                let _ = sqlx::query("DELETE FROM mesh_presence").execute(&transport.pool).await;
+
+                transport.register_presence("agent_1", "online", 10).await.unwrap();
+                transport.register_presence("agent_2", "busy", 10).await.unwrap();
+                let mut agents = transport.get_active_agents().await.unwrap();
+                agents.sort();
+                assert_eq!(agents.len(), 2);
+                assert_eq!(agents[0], ("agent_1".to_string(), "online".to_string()));
+                assert_eq!(agents[1], ("agent_2".to_string(), "busy".to_string()));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transport_presence_expiration() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        if db_url.starts_with("postgres") {
+            if let Ok(transport) = PgTransport::new(&db_url).await {
+                // Clean up before test
+                let _ = sqlx::query("DELETE FROM mesh_presence").execute(&transport.pool).await;
+
+                transport.register_presence("agent_expire", "online", 1).await.unwrap();
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                let agents = transport.get_active_agents().await.unwrap();
+                assert_eq!(agents.len(), 0);
+            }
         }
     }
 
