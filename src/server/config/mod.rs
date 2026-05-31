@@ -147,14 +147,16 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, key)
-            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+                // Remove ?cipher=sqlcipher&key= parameter as sqlx 0.8+ parses query parameters differently.
+                // The encryption is applied via pragma config in `DB::new()`.
+                base_sqlite_url
+            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+                base_sqlite_url
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            base_sqlite_url
         } else {
             base_sqlite_url
         };
