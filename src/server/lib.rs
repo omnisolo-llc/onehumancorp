@@ -440,6 +440,16 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
         Err(e) => return Err(e),
     }
 
+    let cache = HTTP_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache_key = format!("http_metrics_{}", tenant_id);
+    if let Some(cached_response) = cache.get(&cache_key).await {
+        return (
+            StatusCode::OK,
+            axum::Json(cached_response),
+        )
+            .into_response();
+    }
+
     Ok(req)
 }
 
@@ -536,10 +546,12 @@ struct DraftReplyRequest {
     customer_message: Option<String>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DraftReplyResponse {
     output: String,
 }
+
+static DRAFT_REPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<DraftReplyResponse>> = std::sync::OnceLock::new();
 
 
 #[derive(serde::Deserialize)]
