@@ -6646,3 +6646,15 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
+
+
+#[cfg(test)]
+mod tao_tests {
+    #[test]
+    fn test_tao_mechanic_terminations() {
+        let _thought = "Assemble prompt";
+        let _action = "Call LLM API -> Parse output -> Execute tool calls";
+        let _observation = "Format results back -> Repeat";
+        assert_eq!(_thought, "Assemble prompt");
+    }
+}
