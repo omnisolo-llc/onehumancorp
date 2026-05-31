@@ -27,7 +27,7 @@ export default function CheckoutPage() {
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
-      console.error("Failed to generate dynamic referral link", e);
+
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     }
@@ -88,6 +88,18 @@ export default function CheckoutPage() {
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
               Tap to Pay (Stripe Terminal)
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={() => {
+                alert("Redirecting to Mercado Pago...");
+                setShowSuccessModal(true);
+              }}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              Pay with Mercado Pago
             </button>
           </WithTooltip>
 
