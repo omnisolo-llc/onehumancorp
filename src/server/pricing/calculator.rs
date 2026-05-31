@@ -129,14 +129,14 @@ pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
 }
 
 pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
-    if cost.abs() < 1e-9 {
+    if cost == 0.0 {
         return 0.0;
     }
     (revenue - cost) / cost * 100.0
 }
 
 pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
-    if cost.abs() < 1e-9 {
+    if cost == 0.0 {
         return 0.0;
     }
     (output_tokens as f64) / cost
