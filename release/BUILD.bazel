@@ -260,8 +260,8 @@ filegroup(
     name = "all_release_artifacts",
     srcs = select({
         "//:linux": [
-            ":ohc_cluster_unix_archive",
             ":ohc_deb",
+            ":ohc_cluster_unix_archive",
             ":ohc_unix_archive",
         ],
         "//:macos": [
