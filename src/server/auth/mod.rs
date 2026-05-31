@@ -569,7 +569,7 @@ impl Default for Store {
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
+    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
          return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))

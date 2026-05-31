@@ -1,0 +1,15 @@
+FROM postgres:16-alpine
+ENV PGVECTOR_VERSION=0.7.0
+RUN apk add --no-cache --virtual .build-deps \
+    git \
+    build-base \
+    clang15 \
+    llvm15 \
+    coreutils
+RUN git clone --branch v${PGVECTOR_VERSION} https://github.com/pgvector/pgvector.git \
+    && cd pgvector \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf pgvector \
+    && apk del .build-deps

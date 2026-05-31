@@ -339,7 +339,7 @@ services:
     environment:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
-      OHC_STANDALONE_MODE: $${OHC_STANDALONE_MODE:-false}
+      OHC_STANDALONE: $${OHC_STANDALONE:-false}
     depends_on:
       prometheus:
         condition: service_started

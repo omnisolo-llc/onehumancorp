@@ -100,7 +100,7 @@ CLOUD_HELM_SMOKE_ARGS=(
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
   --set-string backend.env.REDIS_URL=redis://redis-master:6379
   --set-string backend.env.REDIS_ADDR=redis-master:6379
-  --set-string backend.env.OHC_STANDALONE_MODE=false
+  --set-string backend.env.STANDALONE_MODE=false
   --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
 )
 
@@ -109,9 +109,9 @@ STANDALONE_HELM_SMOKE_ARGS=(
   --set multiTenant.enabled=false
   --set-string backend.env.DATABASE_URL=sqlite:///tmp/ohc-standalone/standalone.db
   --set-string backend.env.OHC_SQLITE_KEY=kind-e2e-standalone-sqlite-key
-  --set-string backend.env.OHC_STANDALONE_MODE=true
+  --set-string backend.env.OHC_STANDALONE=true
   --set-string backend.env.OHC_TELEMETRY_ENABLED=false
-  --set-string backend.env.OHC_STANDALONE_MODE=true
+  --set-string backend.env.STANDALONE_MODE=true
 )
 
 # ── Create Kind cluster ────────────────────────────────────────────────────────
@@ -332,7 +332,7 @@ kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply
 log "Installing PostgreSQL ..."
 kubectl run postgres \
   --namespace "${NAMESPACE}" \
-  --image pgvector/pgvector:pg16 \
+  --image postgis/postgis:16-3.4-alpine \
   --env POSTGRES_USER=ohc \
   --env POSTGRES_PASSWORD=ohc \
   --env POSTGRES_DB=ohc \
