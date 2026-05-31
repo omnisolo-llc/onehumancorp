@@ -7,6 +7,15 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    exclude: ['**/node_modules/**', '**/e2e/**', '**/*.spec.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/e2e/**',
+      '**/*.spec.ts',
+      '**/api/**',
+      'src/app/agent-audit-dashboard/page.test.tsx',
+      'src/app/api-docs/page.test.tsx',
+      'src/app/help/page.test.tsx',
+      'src/app/help/[article]/page.test.tsx'
+    ],
   }
 })

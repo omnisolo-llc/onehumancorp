@@ -174,7 +174,7 @@ export default function ApiDocsPage() {
           <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
         </p>
       </div>
-      {mounted && <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-xl border border-gray-100/50"><SwaggerUI spec={swaggerSpec} /></div>}
+      {mounted && <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-2xl border border-white/50"><SwaggerUI spec={swaggerSpec} /></div>}
     </div>
   );
 }
