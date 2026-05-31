@@ -424,55 +424,6 @@ impl VectorRepository {
     }
 
 
-    fn parse_conflict_row<R>(row: &R) -> Result<(EmbeddingRecord, EmbeddingRecord), String>
-    where
-        R: sqlx::Row,
-        for<'c> &'c str: sqlx::ColumnIndex<R>,
-        for<'c> String: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
-        for<'c> Vec<u8>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
-        for<'c> i32: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
-        for<'c> bool: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
-        for<'c> DateTime<Utc>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
-    {
-        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
-
-        let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
-        let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
-
-        let a = EmbeddingRecord {
-            id: row.try_get("a_id").map_err(|e| e.to_string())?,
-            tenant_id: row.try_get("a_tenant_id").map_err(|e| e.to_string())?,
-            agent_id: row.try_get::<Option<String>, _>("a_agent_id").unwrap_or_default().unwrap_or_default(),
-            content: row.try_get("a_content").map_err(|e| e.to_string())?,
-            embedding: a_embedding,
-            source_type: row.try_get("a_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
-            reference_count: row.try_get("a_reference_count").map_err(|e| e.to_string())?,
-            reliability_score: row.try_get("a_reliability_score").map_err(|e| e.to_string())?,
-            owner_override: row.try_get("a_owner_override").map_err(|e| e.to_string())?,
-            metadata: row.try_get("a_metadata").map_err(|e| e.to_string())?,
-        };
-
-        let b = EmbeddingRecord {
-            id: row.try_get("b_id").map_err(|e| e.to_string())?,
-            tenant_id: row.try_get("b_tenant_id").map_err(|e| e.to_string())?,
-            agent_id: row.try_get::<Option<String>, _>("b_agent_id").unwrap_or_default().unwrap_or_default(),
-            content: row.try_get("b_content").map_err(|e| e.to_string())?,
-            embedding: b_embedding,
-            source_type: row.try_get("b_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
-            reference_count: row.try_get("b_reference_count").map_err(|e| e.to_string())?,
-            reliability_score: row.try_get("b_reliability_score").map_err(|e| e.to_string())?,
-            owner_override: row.try_get("b_owner_override").map_err(|e| e.to_string())?,
-            metadata: row.try_get("b_metadata").map_err(|e| e.to_string())?,
-        };
-
-        Ok((a, b))
-    }
-
     pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
@@ -493,9 +444,43 @@ impl VectorRepository {
                     .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    if let Ok(pair) = Self::parse_conflict_row(&row) {
-                        conflicts.push(pair);
-                    }
+                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
+                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+
+                    let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
+                    let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+
+                    let a = EmbeddingRecord {
+                        id: row.get("a_id"),
+                        tenant_id: row.get("a_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                        content: row.get("a_content"),
+                        embedding: a_embedding,
+                        source_type: row.get("a_source_type"),
+                        created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
+                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                        reference_count: row.get("a_reference_count"),
+                        reliability_score: row.get("a_reliability_score"),
+                        owner_override: row.get("a_owner_override"),
+                        metadata: row.get("a_metadata"),
+                    };
+
+                    let b = EmbeddingRecord {
+                        id: row.get("b_id"),
+                        tenant_id: row.get("b_tenant_id"),
+                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                        content: row.get("b_content"),
+                        embedding: b_embedding,
+                        source_type: row.get("b_source_type"),
+                        created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
+                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                        reference_count: row.get("b_reference_count"),
+                        reliability_score: row.get("b_reliability_score"),
+                        owner_override: row.get("b_owner_override"),
+                        metadata: row.get("b_metadata"),
+                    };
+
+                    conflicts.push((a, b));
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
