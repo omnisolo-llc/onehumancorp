@@ -9,25 +9,11 @@ export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
-  const [wizardStep, setWizardStep] = useState<number | string>(0);
   const [liveUrl, setLiveUrl] = useState("");
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
-
-  // Wizard state bindings
-  const [businessName, setBusinessName] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [hasPhysicalProducts, setHasPhysicalProducts] = useState(false);
-  const [hasDigitalProducts, setHasDigitalProducts] = useState(false);
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [template, setTemplate] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
@@ -202,304 +188,51 @@ export default function WebsiteBuilderPage() {
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1>
+              <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
+                Review and add any extra details to help our AI generate the perfect store.
+              </p>
 
-              {wizardStep === 0 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
-                  <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Review and add any extra details to help our AI generate the perfect store.
-                  </p>
+              <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
+              <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                <textarea
+                  id="bio-input"
+                  enterKeyHint="done"
+                  autoCapitalize="sentences"
+                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
+                  style={{ borderRadius: '8px' }}
+                  value={bio}
+                  onChange={(e) => updateBio(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (bio.trim().length > 5) {
+                        handleGenerate();
+                      }
+                    }
+                  }}
+                  placeholder="e.g. I run a mobile dog grooming service in Portland"
+                  rows={6}
+                />
+              </WithTooltip>
 
-                  <div className="flex flex-col gap-4">
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => setWizardStep(1)}
-                    >
-                      Start My Business Next
-                    </button>
-
-                    <button
-                      className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                      onClick={() => setWizardStep('instant-build')}
-                    >
-                      Instant Build
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 1 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
-                    >
-                      Online Store
-                    </button>
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
-                    >
-                      Restaurant
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 2 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
-                  <div className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="What is your business called?"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                    />
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(3)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 3 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
-                  <div className="mt-6 flex flex-col gap-4">
-                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 accent-[#0071E3]"
-                        checked={hasPhysicalProducts}
-                        onChange={(e) => setHasPhysicalProducts(e.target.checked)}
-                      />
-                      <span className="font-semibold text-gray-800">Physical Products</span>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 accent-[#0071E3]"
-                        checked={hasDigitalProducts}
-                        onChange={(e) => setHasDigitalProducts(e.target.checked)}
-                      />
-                      <span className="font-semibold text-gray-800">Digital Products</span>
-                    </label>
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(4)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 4 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
-                  <div className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="What is the name of this product?"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="0.00"
-                      value={productPrice}
-                      onChange={(e) => setProductPrice(e.target.value)}
-                    />
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(5)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 5 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
-                  <div className="mt-6 flex flex-col gap-4">
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
-                    >
-                      Online
-                    </button>
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
-                    >
-                      In Person
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 6 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
-                  <div className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya Smith"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
-                    <input
-                      type="email"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="you@email.com"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                    />
-                    <input
-                      type="password"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="Password"
-                      value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
-                    />
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(7)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 7 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
-                    >
-                      Modern
-                    </button>
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
-                    >
-                      Bold
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === '7.5' && (
-                <>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(8)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 8 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => setWizardStep('8.5')}
-                    >
-                      Free OHC Domain
-                    </button>
-                    <button
-                      className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                      onClick={() => setWizardStep('8.5')}
-                    >
-                      Connect Custom Domain
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === '8.5' && (
-                <>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
-                      onClick={() => setWizardStep(9)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 9 && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
-                      }}
-                    >
-                      Publish my business
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {wizardStep === 'instant-build' && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
-                  <div className="flex flex-col gap-4 mt-6">
-                    <textarea
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. I run a local bakery"
-                      rows={4}
-                    />
-                    <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
-                      }}
-                    >
-                      Generate Storefront
-                    </button>
-                  </div>
-                </>
-              )}
-
+              <div className="flex gap-4">
+                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                  <button
+                    id="generate-btn"
+                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                      bio.trim().length > 5
+                        ? "text-white shadow-md active:scale-[0.98]"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                    onClick={handleGenerate}
+                    disabled={bio.trim().length <= 5}
+                  >
+                    Build My Storefront
+                  </button>
+                </WithTooltip>
+              </div>
             </div>
           </div>
         </div>
@@ -525,9 +258,8 @@ export default function WebsiteBuilderPage() {
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Success! Your business is live!</h1>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h1>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
-          <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">You're set up! Here's what to do next:</p>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
@@ -535,10 +267,11 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
+            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
             style={{ borderRadius: '8px' }}
+            onClick={() => updateStatus("idle")}
           >
-            View Welcome Checklist
+            Go to Dashboard
           </button>
         </div>
       </div>
@@ -585,8 +318,7 @@ export default function WebsiteBuilderPage() {
               <SmartBlock {...b} />
             </DraggableBlock>
           ))}
-          {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
-          <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
+          <SmartBlock type="PoweredBy" props={{ tenantId }} />
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>

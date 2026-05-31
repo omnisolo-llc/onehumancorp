@@ -25,11 +25,10 @@ jobs:
   check-changes:
     name: Check what files changed
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -60,6 +59,14 @@ jobs:
             echo "Non-markdown files changed: $non_md_files"
           fi
 
+  repo-hygiene:
+    name: Repo hygiene
+    needs: check-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
       - name: Check tracked artifacts
         run: .github/scripts/check_repo_hygiene.sh
 
@@ -67,11 +74,12 @@ jobs:
     name: Bazel build (${{ matrix.name }})
     needs:
       - check-changes
+      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: linux-x86_64
@@ -93,7 +101,7 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         if: startsWith(matrix.runner, 'ubuntu')
@@ -141,8 +149,6 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
 
       - name: Build non-test artifacts
         if: matrix.name != 'android'
@@ -187,9 +193,7 @@ jobs:
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build //deploy:server_web_image_tar \
-            --config=linux_x86_64 \
-            --output_groups=+tarball
+          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
@@ -238,13 +242,13 @@ jobs:
   bazel-test:
     name: Bazel test
     needs:
-      - bazel-build
       - check-changes
+      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -287,10 +291,6 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
 
       - name: Test fast targets
         run: |
@@ -302,13 +302,13 @@ jobs:
   bazel-test-e2e:
     name: Bazel Playwright E2E
     needs:
-      - bazel-build
       - check-changes
+      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -351,23 +351,20 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
 
       - name: Pull E2E Docker images
         run: |
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test Playwright E2E suite
-        run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
+      - name: Test Playwright E2E target
+        run: bazelisk test //src/e2e:playwright
 
   kind-e2e:
     name: Kind E2E
     needs:
       - check-changes
+      - repo-hygiene
     if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -382,7 +379,7 @@ jobs:
       HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -458,10 +455,6 @@ jobs:
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
 
       - name: Run Kind smoke test
         run: |

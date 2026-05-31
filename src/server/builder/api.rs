@@ -76,7 +76,8 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
 
 
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
-    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
+    let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None));
+    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
 
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
