@@ -6,6 +6,9 @@ exports_files(
         "booking.rs",
         "mod.rs",
         "wizard.rs",
+        "finance/mod.rs",
+        "finance/cashflow_forecasting.rs",
+        "finance/capital_engine.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +17,9 @@ rust_library(
     name = "server_services",
     srcs = [
         "bazel_lib.rs",
+        "finance/mod.rs",
+        "finance/cashflow_forecasting.rs",
+        "finance/capital_engine.rs",
         "booking.rs",
         "mod.rs",
         "wizard.rs",

@@ -211,6 +211,7 @@ fn dispatch_workflow(record: WorkflowRecord) {
     let binary = workflow_agent_binary();
     let task = workflow_agent_task(&record.task);
 
+
     tokio::spawn(async move {
         if is_standalone_runtime() {
             if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
@@ -375,6 +376,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod finance;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2518,6 +2520,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             dynamic_workflow_state_dir,
         ),
     );
+
+    let finance_pool = db.pool.clone();
+    tokio::spawn(async move {
+        crate::workers::finance_worker::FinanceWorker::new(finance_pool).run().await;
+    });
+
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2959,7 +2967,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 "link": { "url": link_url, "title": link_title }
             }))
         }))
-        .merge(webhook_router)
+        .merge(crate::api::finance::finance_routes(db.pool.clone())).merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -3091,6 +3099,222 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     let tooltips_json = serde_json::to_string(&*get_tooltips_registry().read().unwrap()).unwrap_or_else(|_| "{}".to_string());
     let content = match path {
         "/api/v1/health" => "{\"status\":\"ok\"}".to_string(),
+
+        "/finance" => r###"
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <title>OHC - Smart Capital</title>
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        color: #102a43;
+                    }
+                    /* Container constrained to mobile max-width */
+                    .mobile-container {
+                        width: 100%;
+                        max-width: 375px; /* iOS standard width */
+                        height: 100vh;
+                        max-height: 812px;
+                        background-color: transparent;
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        padding: 24px;
+                        box-sizing: border-box;
+                    }
+                    /* Glassmorphism card */
+                    .glass-card {
+                        background: rgba(255, 255, 255, 0.4);
+                        backdrop-filter: blur(20px) saturate(200%);
+                        -webkit-backdrop-filter: blur(20px) saturate(200%);
+                        border-radius: 24px;
+                        border: 1px solid rgba(255, 255, 255, 0.5);
+                        padding: 24px;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                        margin-top: auto;
+                        margin-bottom: auto;
+                        text-align: center;
+                        animation: slideUp 0.5s ease-out;
+                    }
+
+                    @keyframes slideUp {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+
+                    .card-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 16px;
+                    }
+
+                    .card-header h2 {
+                        margin: 0;
+                        font-size: 20px;
+                        font-weight: 600;
+                    }
+
+                    .alert-icon {
+                        background: #ffd700;
+                        border-radius: 50%;
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin-right: 12px;
+                        font-size: 16px;
+                    }
+
+                    .message {
+                        font-size: 16px;
+                        line-height: 1.5;
+                        color: #334e68;
+                        margin-bottom: 24px;
+                    }
+
+                    .graph-placeholder {
+                        height: 120px;
+                        background: rgba(255, 255, 255, 0.5);
+                        border-radius: 12px;
+                        margin-bottom: 24px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    .graph-line {
+                        position: absolute;
+                        bottom: 40px;
+                        left: -10%;
+                        width: 120%;
+                        height: 40px;
+                        border-bottom: 3px solid #10b981;
+                        border-radius: 50%;
+                        transform: rotate(-10deg);
+                    }
+
+                    .graph-dip {
+                        position: absolute;
+                        bottom: -10px;
+                        left: 50%;
+                        width: 40px;
+                        height: 40px;
+                        border-bottom: 3px solid #ef4444;
+                        border-radius: 50%;
+                        transform: translateX(-50%);
+                    }
+
+                    .btn-accept {
+                        background: #102a43;
+                        color: white;
+                        border: none;
+                        border-radius: 16px;
+                        padding: 18px;
+                        width: 100%;
+                        font-size: 18px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        box-shadow: 0 4px 14px rgba(16, 42, 67, 0.2);
+                        transition: transform 0.2s, background 0.2s;
+                    }
+
+                    .btn-accept:active {
+                        transform: scale(0.98);
+                        background: #0b1e30;
+                    }
+
+                    .subtext {
+                        font-size: 12px;
+                        color: #627d98;
+                        margin-top: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="mobile-container">
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div class="alert-icon">⚠️</div>
+                            <h2>Cash Flow Alert</h2>
+                        </div>
+                        <p class="message" id="alert-message">
+                            Looks like your ingredient costs are due before your big orders pay out. Need a quick advance?
+                        </p>
+
+                        <div class="graph-placeholder">
+                            <div class="graph-line"></div>
+                            <div class="graph-dip"></div>
+                            <!-- Simple text annotations for mock -->
+                            <span style="position:absolute; top:8px; left:12px; font-size:12px; font-weight:bold; color:#10b981;">+$3,500 In</span>
+                            <span style="position:absolute; bottom:8px; right:12px; font-size:12px; font-weight:bold; color:#ef4444;">-$2,000 Out</span>
+                        </div>
+
+                        <button class="btn-accept" id="accept-btn" onclick="acceptOffer()">Get $1,000 now</button>
+                        <p class="subtext">Repay automatically from future sales. 10% deduction.</p>
+                    </div>
+                </div>
+
+                <script>
+                    let offerId = null;
+
+                    async function loadOffers() {
+                        try {
+                            const res = await fetch('/api/v1/finance/offers');
+                            if (res.ok) {
+                                const offers = await res.json();
+                                if (offers.length > 0) {
+                                    offerId = offers[0].offer_id;
+                                    document.getElementById('accept-btn').innerText = `Get $${offers[0].amount} now`;
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Could not load offers", e);
+                        }
+                    }
+
+                    async function acceptOffer() {
+                        const btn = document.getElementById('accept-btn');
+                        btn.innerText = "Processing...";
+                        btn.disabled = true;
+
+                        try {
+                            // If we don't have an offer ID dynamically, we just simulate success in UI for the demo
+                            if (offerId) {
+                                const res = await fetch(`/api/v1/finance/offers/${offerId}/accept`, {
+                                    method: 'POST'
+                                });
+                                const data = await res.json();
+                            }
+
+                            // Visual feedback
+                            setTimeout(() => {
+                                btn.style.background = "#10b981";
+                                btn.innerText = "Funds added to ledger! ✅";
+                                document.getElementById('alert-message').innerText = "You're all set! We've advanced the funds to cover your upcoming expenses.";
+                            }, 800);
+                        } catch (e) {
+                            btn.innerText = "Error accepting offer";
+                            btn.style.background = "#ef4444";
+                        }
+                    }
+
+                    // Load immediately
+                    loadOffers();
+                </script>
+            </body>
+            </html>
+        "###.to_string(),
         _ => r##"
             <!DOCTYPE html>
             <html>
@@ -7020,3 +7244,5 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 }
 pub mod crypto;
 // resolves #9690
+
+// force rebuild

@@ -39,6 +39,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:dynamic_workflows.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
+    "//src/server/api:finance.rs",
+
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
@@ -162,7 +164,13 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/state:test.rs",
     "//src/server/orchestration/statemachine:mod.rs",
     "//src/server/services:booking.rs",
+
+
+
     "//src/server/services:mod.rs",
+    "//src/server/services:finance/mod.rs",
+    "//src/server/services:finance/cashflow_forecasting.rs",
+    "//src/server/services:finance/capital_engine.rs",
     "//src/server/services:wizard.rs",
     "//src/server/services/agent:department/mod.rs",
     "//src/server/services/agent:department/service.rs",
@@ -239,9 +247,11 @@ SERVER_RS_SRCS = [
     "//src/server/tools/kvmcp:tests.rs",
     "//src/server/workers:agent_memory_pipeline.rs",
     "//src/server/workers:competitor_audit.rs",
+
     "//src/server/workers:department_workers.rs",
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
+    "//src/server/workers:finance_worker.rs",
     "//src/server/workers:mod.rs",
 ]
 

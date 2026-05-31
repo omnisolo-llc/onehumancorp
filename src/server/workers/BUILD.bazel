@@ -4,6 +4,8 @@ exports_files(
     [
         "agent_memory_pipeline.rs",
         "competitor_audit.rs",
+        "finance_worker.rs",
+        "finance_worker.rs",
         "department_workers.rs",
         "maintenance.rs",
         "memory.rs",
@@ -18,6 +20,7 @@ rust_library(
         "bazel_lib.rs",
         "agent_memory_pipeline.rs",
         "competitor_audit.rs",
+        "finance_worker.rs",
         "department_workers.rs",
         "maintenance.rs",
         "memory.rs",
