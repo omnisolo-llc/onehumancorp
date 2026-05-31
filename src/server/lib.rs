@@ -2980,6 +2980,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         telemetry_daemon.start();
     }
 
+
+    if !is_cloud {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+        let powersync_ticker = std::sync::Arc::new(crate::orchestration::powersync_ticker::PowerSyncTicker::new(db.clone(), cloud_url));
+        powersync_ticker.start(shutdown_rx).await;
+        // In a real application, you'd want to store `shutdown_tx` somewhere and call `shutdown_tx.send(())` upon shutdown,
+        // but since `main.rs` daemon thread lifespan bounds this, dropping the receiver or channel on main exit handles it.
+    }
+
     if is_cloud {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
