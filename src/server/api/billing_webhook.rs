@@ -418,3 +418,80 @@ pub async fn mailchimp_webhook_handler(
 ) -> impl axum::response::IntoResponse {
     axum::http::StatusCode::OK.into_response()
 }
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppEvent {
+    pub object: String,
+    pub entry: Vec<WhatsAppEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppEntry {
+    pub id: String,
+    pub changes: Vec<WhatsAppChange>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppChange {
+    pub value: WhatsAppValue,
+    pub field: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppValue {
+    pub messaging_product: String,
+    pub metadata: WhatsAppMetadata,
+    pub contacts: Option<Vec<WhatsAppContact>>,
+    pub messages: Option<Vec<WhatsAppMessage>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppMetadata {
+    pub display_phone_number: String,
+    pub phone_number_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppContact {
+    pub profile: WhatsAppProfile,
+    pub wa_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppProfile {
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppMessage {
+    pub from: String,
+    pub id: String,
+    pub timestamp: String,
+    pub text: Option<WhatsAppText>,
+    pub r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WhatsAppText {
+    pub body: String,
+}
+
+pub async fn whatsapp_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<WhatsAppEvent>,
+) -> impl IntoResponse {
+    if payload.object == "whatsapp_business_account" {
+        for entry in payload.entry {
+            for change in entry.changes {
+                if let Some(messages) = change.value.messages {
+                    for msg in messages {
+                        tracing::info!("Received WhatsApp message from {}: {:?}", msg.from, msg.text.map(|t| t.body));
+                    }
+                }
+            }
+        }
+        StatusCode::OK.into_response()
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
