@@ -287,7 +287,7 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = query.tenant.as_deref().unwrap_or("my-store");
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
@@ -332,7 +332,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -708,7 +708,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_db() -> PgPool {
-        let database_url = std::env::var("DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(500))

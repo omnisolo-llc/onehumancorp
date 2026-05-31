@@ -36,25 +36,36 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
-# Resolve browsers path to absolute
+# Resolve the Bazel-provided Playwright browser repository to an absolute path.
+# Every shard gets the same runfiles-backed browser directory instead of a
+# per-shard install under the temporary Playwright workspace.
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
 
-  # Resolve relative to runfiles root if it starts with ../
-  if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
-      if [[ -L bazel-out ]]; then
-          output_base="$(dirname "$(dirname "$(dirname "$(readlink bazel-out)")")")"
-          repo_path="${PLAYWRIGHT_BROWSERS_PATH#../}"
-          repo_path="${repo_path%/..}"
-          potential_path="$output_base/external/$repo_path"
-          if [[ -d "$potential_path" ]]; then
-              export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$potential_path")"
-          fi
-      fi
+  BROWSER_PATH_CANDIDATES=(
+    "$PLAYWRIGHT_BROWSERS_PATH"
+    "$RUNFILES_ROOT/$PLAYWRIGHT_BROWSERS_PATH"
+  )
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$PLAYWRIGHT_BROWSERS_PATH"
+    )
+  fi
+  if [[ -n "${TEST_WORKSPACE:-}" && -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$TEST_WORKSPACE/$PLAYWRIGHT_BROWSERS_PATH"
+    )
   fi
 
+  for candidate in "${BROWSER_PATH_CANDIDATES[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$candidate")"
+      break
+    fi
+  done
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
+      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" \( -name "chrome-headless-shell" -o -name "headless_shell" \) -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
           ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
@@ -63,6 +74,10 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
+  else
+      echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
+      exit 1
   fi
 fi
 
@@ -110,7 +125,7 @@ else
   done
 fi
 
-for support_file in fixtures.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
+for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
   if [[ -f "$workspace_root/src/e2e/$support_file" ]]; then
     cp "$workspace_root/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   elif [[ -f "$RUNFILES_ROOT/src/e2e/$support_file" ]]; then
@@ -135,20 +150,9 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   exit 1
 fi
 
-# Check if Docker is available. If not, skip E2E tests gracefully.
-if [[ "${E2E_SKIP_DOCKER:-}" == "true" ]]; then
-  echo "Skip E2E tests gracefully per E2E_SKIP_DOCKER env var"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "${TEST_SHARD_STATUS_FILE}"
-  fi
-  exit 0
-fi
 if ! docker info >/dev/null 2>&1; then
-  echo "Skip E2E tests due to docker failure in sandbox"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
-  exit 0
+  echo "[playwright] Error: Docker is required for Bazel Playwright E2E tests."
+  exit 1
 fi
 
 # Unique container names for parallel isolation
@@ -204,9 +208,28 @@ for i in $(seq 1 120); do
   sleep 1
 done
 
+postgres_exec() {
+  local sql="$1"
+  local label="$2"
+  for i in $(seq 1 30); do
+    if docker exec "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc -c "$sql"; then
+      return 0
+    fi
+    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+      echo "[playwright] Postgres container exited while running: $label"
+      docker logs "$POSTGRES_NAME" || true
+      return 1
+    fi
+    sleep 1
+  done
+  echo "[playwright] Error: failed to run Postgres setup SQL: $label"
+  docker logs "$POSTGRES_NAME" || true
+  return 1
+}
+
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
+postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
