@@ -50,8 +50,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -78,9 +76,7 @@ export default function OnboardingWizard() {
       categories,
       websiteTemplate,
       firstProductName,
-      firstProductPrice,
-      aiAgents,
-      aiAutoRespond
+      firstProductPrice
     };
 
     const timer = setTimeout(() => {
@@ -94,8 +90,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, isLoaded
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -158,7 +153,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription || whatYouSell,
+          company_description: businessDescription,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -225,13 +220,9 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
-                        autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        autoComplete="organization"
-                        autoCapitalize="words"
-                        enterKeyHint="next"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -262,11 +253,9 @@ export default function OnboardingWizard() {
                   <div className="space-y-4 flex-1">
                     <div>
                       <textarea
-                        autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        enterKeyHint="next"
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
@@ -298,13 +287,9 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
-                        autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        autoComplete="address-level2"
-                        autoCapitalize="words"
-                        enterKeyHint="done"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -339,12 +324,8 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
-                    autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    autoComplete="organization"
-                    autoCapitalize="words"
-                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -354,8 +335,6 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    autoCapitalize="words"
-                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -365,8 +344,6 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    autoCapitalize="words"
-                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -377,8 +354,6 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        autoCapitalize="words"
-                        enterKeyHint="next"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -386,10 +361,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
-                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        enterKeyHint="done"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>

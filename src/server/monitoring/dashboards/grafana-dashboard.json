@@ -26,8 +26,9 @@
   "liveNow": false,
   "panels": [
     {
-      "id": 999,
       "type": "text",
+      "title": "OHC Aesthetics",
+      "id": 4,
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -36,23 +37,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #FFF;\">\n<h1 style=\"margin: 0; font-size: 24px;\">OHC Infrastructure Dashboard</h1>\n</div>"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 4,
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -114,7 +99,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 2
       },
       "id": 2,
       "options": {
@@ -144,13 +129,13 @@
       "title": "",
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 10,
         "w": 12,
         "h": 3
       },
       "id": 3,
       "options": {
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\nOHC Premium Infrastructure Dashboard\n</div>",
+        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
         "mode": "html"
       }
     }

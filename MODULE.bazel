@@ -84,9 +84,7 @@ rust.toolchain(
     edition = "2024",
     extra_target_triples = [
         "aarch64-pc-windows-gnullvm",
-        "aarch64-pc-windows-msvc",
         "x86_64-pc-windows-gnullvm",
-        "x86_64-pc-windows-msvc",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
         "x86_64-apple-darwin",
@@ -127,13 +125,11 @@ crate.from_cargo(
     supported_platform_triples = [
         "aarch64-apple-darwin",
         "aarch64-pc-windows-gnullvm",
-        "aarch64-pc-windows-msvc",
         "aarch64-unknown-linux-gnu",
         "wasm32-unknown-unknown",
         "wasm32-wasip1",
         "x86_64-apple-darwin",
         "x86_64-pc-windows-gnullvm",
-        "x86_64-pc-windows-msvc",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-nixos-gnu",
     ],
@@ -240,7 +236,7 @@ use_repo(rules_pkg_rpm, "rules_pkg_rpmbuild")
 register_toolchains("@rules_pkg_rpmbuild//:all")
 
 bazel_dep(name = "rules_oci", version = "2.3.0")
-bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "aspect_bazel_lib", version = "2.7.9")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 bazel_dep(name = "rules_playwright", version = "0.5.4")

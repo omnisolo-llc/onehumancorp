@@ -2,8 +2,9 @@
   "title": "Harness Efficiency Dashboard",
   "panels": [
     {
-      "id": 999,
       "type": "text",
+      "title": "OHC Aesthetics",
+      "id": 1,
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -12,23 +13,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #FFF;\">\n<h1 style=\"margin: 0; font-size: 24px;\">Harness Efficiency Dashboard</h1>\n</div>"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 1,
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -57,7 +42,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(ohc_harness_execution_duration_ms_bucket[5m])) by (le, deployment_mode))",
+          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
           "legendFormat": "{{deployment_mode}} Execution Latency (p95)"
         }
       ]

@@ -14,8 +14,8 @@
   },
   "panels": [
     {
-      "id": 999,
       "type": "text",
+      "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -24,22 +24,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #FFF;\">\n<h1 style=\"margin: 0; font-size: 24px;\">Hybrid Swarm Health</h1>\n</div>"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetic Injector",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -51,7 +36,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 2
       },
       "targets": [
         {
@@ -70,7 +55,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 2
       },
       "targets": [
         {
@@ -89,7 +74,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 10
       },
       "targets": [
         {
@@ -108,7 +93,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 10
       },
       "targets": [
         {
@@ -127,7 +112,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 18
       },
       "targets": [
         {

@@ -167,15 +167,4 @@ impl IntegrationService for MyIntegrationService {
             Err(e) => Err(Status::internal(e)),
         }
     }
-
-    async fn generate_meeting_for_booking(
-        &self,
-        request: Request<GenerateMeetingForBookingRequest>,
-    ) -> Result<Response<GenerateMeetingForBookingResponse>, Status> {
-        let req = request.into_inner();
-        match self.registry.generate_meeting_for_booking(&req.integration_id, &req.booking_id, &req.topic).await {
-            Ok(link) => Ok(Response::new(GenerateMeetingForBookingResponse { link })),
-            Err(e) => Err(Status::internal(e)),
-        }
-    }
 }
