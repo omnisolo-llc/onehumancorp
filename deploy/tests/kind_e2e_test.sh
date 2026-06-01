@@ -370,6 +370,17 @@ kubectl wait pod/postgres \
   --for=condition=Ready \
   --timeout=120s
 
+# ── Install Redis for cloud/web mesh and cache paths ───────────────────────────
+log "Installing Redis ..."
+helm upgrade --install redis bitnami/redis \
+  --namespace "${NAMESPACE}" \
+  --set architecture=standalone \
+  --set auth.enabled=false \
+  --set image.registry=public.ecr.aws \
+  --set image.repository=bitnami/redis \
+  --set global.security.allowInsecureImages=true \
+  --wait --timeout 120s
+
 # ── Cloud/web mode ─────────────────────────────────────────────────────────────
 install_ohc_release "${CLOUD_RELEASE_NAME}" "cloud/web mode" "${CLOUD_HELM_SMOKE_ARGS[@]}"
 run_rest_smoke_tests "${CLOUD_RELEASE_NAME}" "cloud/web mode" 18080

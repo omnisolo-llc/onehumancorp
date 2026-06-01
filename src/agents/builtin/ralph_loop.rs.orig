@@ -51,7 +51,7 @@ impl RalphLoop {
     pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Phase 1: Initializer
         let mut progress = self.initialize(initial_task).await?;
-        
+
         // Phase 2: Coding Agent Loop
         while !progress.is_complete {
             if progress.current_feature_index >= progress.features.len() {
@@ -67,7 +67,7 @@ impl RalphLoop {
             }
 
             tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
-            
+
             // Phase 2 (Coding Agent): Read git logs to orient itself
             let git_log_output = Command::new("git")
                 .arg("log")
@@ -94,7 +94,7 @@ impl RalphLoop {
                 String::new()
             };
             feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
-            
+
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
                     tracing::error!("Ralph Loop Feature Error: {}", error);
@@ -110,14 +110,16 @@ impl RalphLoop {
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
+                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git add: {}", e);
+                    }
+                    let commit_msg = format!("Completed feature: {}", feature_name);
+
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                     let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
-                        let commit_msg = format!("Completed feature: {}\n\n{}", feature_name, result);
-                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                            tracing::error!("Phase 2 failed to git commit: {}", e);
-                        }
+                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git commit: {}", e);
                     }
                 }
                 Err(e) => {
@@ -140,12 +142,12 @@ impl RalphLoop {
         }
 
         tracing::info!("Ralph Loop: Initializing new progress file.");
-        
+
         let breakdown_prompt = format!("Break down the following task into 3 distinct, manageable features to implement sequentially. Respond strictly with a JSON array of strings representing the feature names. Task: {}", task);
-        
+
         let mut on_event = |_| {};
         let result = self.agent.run(&self.config, &breakdown_prompt, &mut on_event).await?;
-        
+
         let mut features = vec![];
         if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&result) {
             for name in parsed {
@@ -203,11 +205,7 @@ impl RalphLoop {
 
     async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
-        let tmp_path = format!("{}.tmp", self.progress_file_path);
-        fs::write(&tmp_path, json).await?;
-        if let Err(e) = fs::rename(&tmp_path, &self.progress_file_path).await {
-            tracing::error!("Failed to rename progress file: {}", e);
-        }
+        fs::write(&self.progress_file_path, json).await?;
         Ok(())
     }
 }
