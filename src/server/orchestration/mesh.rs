@@ -1,3 +1,4 @@
+use crate::hub::Hub as ServerHub;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
