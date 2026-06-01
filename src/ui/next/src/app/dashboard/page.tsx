@@ -124,7 +124,7 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+        if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
@@ -138,7 +138,6 @@ export default function Dashboard() {
     }
     checkMilestones();
   }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
     async function checkMilestones() {
