@@ -49,6 +49,11 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchApprovals();
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
+      setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+    }
   }, []);
 
   const handleApprove = async (id: string) => {
