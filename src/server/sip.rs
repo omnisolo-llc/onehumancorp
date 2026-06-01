@@ -54,6 +54,7 @@ impl SipDB {
 
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
+        let super_stale_threshold = Utc::now() - chrono::Duration::hours(24);
         let fail_threshold = Utc::now() - age_threshold;
         
         let mut attempt = 0;
@@ -67,6 +68,13 @@ impl SipDB {
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                // Mark super stale missions (older than 24h) explicitly
+                sqlx::query("UPDATE agent_missions SET status = 'STALE' WHERE (status = 'PENDING' OR status = 'STUCK') AND created_at < $1 AND tenant_id = $2")
+                    .bind(super_stale_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;

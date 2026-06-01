@@ -260,6 +260,8 @@ pub mod msgbus;
 pub mod pipeline;
 pub use ::server_oidc as oidc;
 pub mod sip;
+#[cfg(test)]
+mod sip_stale_test;
 pub mod seeder;
 pub mod queue;
 pub mod domain;

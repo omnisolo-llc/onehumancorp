@@ -22,6 +22,7 @@ SERVER_RS_SRCS = [
     "seeder.rs",
     "settings.rs",
     "sip.rs",
+    "sip_stale_test.rs",
     "store.rs",
     "tasks.rs",
     "ultraplan.rs",

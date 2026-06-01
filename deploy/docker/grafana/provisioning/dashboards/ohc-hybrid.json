@@ -243,7 +243,7 @@
   ],
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [],
+  "tags": ["premium", "glassmorphism"],
   "templating": {
     "list": []
   },
