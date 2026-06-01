@@ -509,14 +509,6 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                    CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
-                        tenant_id TEXT NOT NULL,
-                        year_month TEXT NOT NULL,
-                        actions_used INTEGER NOT NULL DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (tenant_id, year_month)
-                    );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
                         tenant_id TEXT NOT NULL,
                         user_id TEXT NOT NULL,
@@ -1224,6 +1216,13 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -1247,6 +1246,13 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1298,6 +1304,13 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1490,6 +1503,13 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1502,6 +1522,13 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;

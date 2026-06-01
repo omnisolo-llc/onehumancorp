@@ -17,7 +17,11 @@ type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_MEMBER_USER;
 async function loginAs(page: Page, user: E2EUser) {
   // Wait, there's no auth in the NextJS local builder mock app
   // Just navigate to the root dashboard route so it doesn't fail.
-  await page.goto('/');
+  // Evaluate local storage to bypass the redirection rule to /onboarding
+  await page.evaluate(() => {
+      localStorage.setItem('has_onboarded', 'true');
+  });
+  await page.goto('/dashboard');
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
@@ -32,36 +36,27 @@ function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
 }
 
 export const test = base.extend<{
-  adminUser: typeof E2E_ADMIN_USER;
-  memberUser: typeof E2E_MEMBER_USER;
-  loginAs: (page: Page, user: E2EUser) => Promise<void>;
+  adminPage: Page;
   memberPage: Page;
 }>({
-  adminUser: async ({}, use) => {
-    await use(E2E_ADMIN_USER);
+  adminPage: async ({ page, context }, use) => {
+    rejectNetworkStubbing(context, page);
+    await loginAs(page, E2E_ADMIN_USER);
+    await use(page);
   },
-  memberUser: async ({}, use) => {
-    await use(E2E_MEMBER_USER);
+  memberPage: async ({ page, context }, use) => {
+    rejectNetworkStubbing(context, page);
+    await loginAs(page, E2E_MEMBER_USER);
+    await use(page);
   },
-  loginAs: async ({}, use) => {
-    await use(loginAs);
+  page: async ({ page, context }, use) => {
+    rejectNetworkStubbing(context, page);
+    await use(page);
   },
   context: async ({ context }, use) => {
     rejectNetworkStubbing(context);
     await use(context);
-  },
-  page: async ({ page, adminUser }, use) => {
-    rejectNetworkStubbing(page.context(), page);
-    await loginAs(page, adminUser);
-    await use(page);
-  },
-  memberPage: async ({ browser, memberUser }, use) => {
-    const page = await browser.newPage();
-    rejectNetworkStubbing(page.context(), page);
-    await loginAs(page, memberUser);
-    await use(page);
-    await page.close();
-  },
+  }
 });
 
 export { expect };
