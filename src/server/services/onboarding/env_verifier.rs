@@ -182,6 +182,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
         env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
