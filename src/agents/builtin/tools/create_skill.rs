@@ -5,7 +5,9 @@ use std::sync::Arc;
 use super::{Tool, ToolExecutor};
 
 
-struct CreateSkillExecutor {}
+struct CreateSkillExecutor {
+    // We are mocking persistence for now as LongTermMemory is not exported easily
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for CreateSkillExecutor {

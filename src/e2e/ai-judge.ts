@@ -12,19 +12,24 @@ type JudgeResult = {
 };
 
 export async function judgeGeneratedOutput(testInfo: TestInfo, input: JudgeInput): Promise<JudgeResult> {
-  const apiKey = process.env.OHC_MINIMAX_API_KEY;
+  const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
-    return { score: 10, reason: 'Mock score because OHC_MINIMAX_API_KEY was missing.' };
+    return { score: 10, reason: 'Mock score because MINIMAX_API_KEY was missing.' };
   }
 
-  const response = await fetch('https://api.minimax.chat/v1/chat/completions', {
+  const minimaxBaseUrl = normalizeMiniMaxBaseUrl(
+    process.env.MINIMAX_BASE_URL ?? process.env.MINIMAX_API_BASE_URL ?? 'https://api.minimaxi.com/v1',
+  );
+  const minimaxModel = process.env.MINIMAX_MODEL ?? 'MiniMax-M3';
+
+  const response = await fetch(`${minimaxBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'MiniMax-M2.7',
+      model: minimaxModel,
       stream: false,
       messages: [
         {
@@ -54,4 +59,16 @@ export async function judgeGeneratedOutput(testInfo: TestInfo, input: JudgeInput
 
   expect(result.score, result.reason).toBeGreaterThan(9);
   return result;
+}
+
+function normalizeMiniMaxBaseUrl(baseUrl: string): string {
+  let normalized = baseUrl.trim().replace(/\/+$/, '');
+  normalized = normalized.replace(/\/(?:chat\/completions|embeddings)$/, '');
+  normalized = normalized.replace(/\/anthropic(?:\/v1)?$/, '/v1');
+
+  if (normalized === 'https://api.minimax.io' || normalized === 'https://api.minimaxi.com') {
+    return `${normalized}/v1`;
+  }
+
+  return normalized;
 }
