@@ -26,22 +26,7 @@ sh_binary(
 # Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_16
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-<<<<<<< HEAD
     ci_shard_count = 16,
-=======
-    ci_specs = [
-        "documentation.spec.ts",
-        "grandmother_test.spec.ts",
-        "help.spec.ts",
-        "kairos_orchestration.spec.ts",
-        "landing_ux.spec.ts",
-        "login.spec.ts",
-        "login_ux.spec.ts",
-        "telemetry_sync.spec.ts",
-        "viral_embed.spec.ts",
-    ],
-    specs = glob(["*.spec.ts"]),
->>>>>>> 80b76d0e (feat(docs): polish documentation pages and fix Next.js build issue)
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]),
 )
