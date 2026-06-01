@@ -41,7 +41,7 @@ pub async fn run_health_monitor(
 
             if let Some(sync_queue) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
                 if sync_queue > 100 {
-                    tracing::warn!("HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}", sync_queue);
+                    tracing::trace!("HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}", sync_queue);
                 }
             }
         }
@@ -53,13 +53,14 @@ pub async fn run_health_monitor(
                     tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
-                let mut active_agent_ids = std::collections::HashSet::new();
+                let mut active_agent_ids = std::collections::HashSet::with_capacity(agents.len());
                 for (agent_id, _status) in agents {
                     active_agent_ids.insert(agent_id.clone());
                 }
 
-                let mut to_fire = Vec::new();
-                for agent in monitor_hub.get_agents().await.iter() {
+                let hub_agents = monitor_hub.get_agents().await;
+                let mut to_fire = Vec::with_capacity(hub_agents.len());
+                for agent in hub_agents.iter() {
                     // Fire agents that are missing from active agents mesh list OR if ping failed
                     if !active_agent_ids.contains(&agent.id) || !ping_ok {
                         to_fire.push(agent.id.clone());
