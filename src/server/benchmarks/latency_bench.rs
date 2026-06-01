@@ -1,11 +1,12 @@
-use ::server_ohc::app::dashboard_service_server::DashboardService;
+use crate::proto::app::dashboard_service_server::DashboardService;
 
 // Benchmark Results from Optimization Run:
-// Parallel Fetch Dashboard: p50: 483 us, p95: 608 us, p99: 43302 us
-// API Response Time Standalone Mode: p50: 456 us, p95: 537 us, p99: 706 us
-// Database Query Time Standalone Mode (SQLite): p50: 244 us, p95: 337 us, p99: 383 us
-// AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 6 us, p95: 48 us, p99: 48 us
-// AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 4 us, p95: 11 us, p99: 11 us
+// Parallel Fetch Dashboard: p50: 513 us, p95: 988 us, p99: 4412 us
+// API Response Time Standalone Mode (Desktop): p50: 480 us, p95: 689 us, p99: 913 us
+// API Response Time Standalone Mode (Mobile): p50: 216 us, p95: 269 us, p99: 282 us
+// Database Query Time Standalone Mode (SQLite): p50: 230 us, p95: 336 us, p99: 405 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us
 
 use std::time::Instant;
 use std::sync::Arc;
@@ -79,9 +80,9 @@ pub async fn bench_api_response_time() {
 
         let mut cloud_times = Vec::new();
         for _ in 0..iterations {
-            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+            let req = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
             let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+            request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
             let start = Instant::now();
 
 
@@ -105,9 +106,9 @@ pub async fn bench_api_response_time() {
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
 
@@ -119,9 +120,9 @@ pub async fn bench_api_response_time() {
 
     let mut standalone_mobile_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let req = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
         let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
@@ -164,7 +165,7 @@ pub async fn bench_dashboard_snapshot() {
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
     hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..50 {
-        let msg = ::server_ohc::orchestration::Message {
+        let msg = crate::proto::orchestration::Message {
             id: format!("msg-{}", i),
             from_agent: "test_agent".to_string(),
             to_agent: "all".to_string(),
@@ -173,7 +174,7 @@ pub async fn bench_dashboard_snapshot() {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
+        let _ = hub.clone().publish(crate::proto::orchestration::Message {
             id: msg.id,
             from_agent: msg.from_agent,
             to_agent: msg.to_agent,
@@ -185,7 +186,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for i in 0..50 {
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::proto::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -198,12 +199,12 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req_desktop = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
         let db_arc = std::sync::Arc::new(db.clone());
         let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
             org_id: "system".to_string(),
             agent_id: "test".to_string(),
@@ -217,21 +218,21 @@ pub async fn bench_dashboard_snapshot() {
     fetch_times.sort();
     println!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
-    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
-    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+    let req_mobile = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+    let req_desktop = crate::proto::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
 
     let db_arc = std::sync::Arc::new(db.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
-    req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+    req_mobile_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
         spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
         org_id: "system".to_string(),
         agent_id: "test".to_string(),
     });
     let mut req_desktop_t = tonic::Request::new(req_desktop);
-    req_desktop_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+    req_desktop_t.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
         spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
         org_id: "system".to_string(),
         agent_id: "test".to_string(),
