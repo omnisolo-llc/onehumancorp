@@ -102,7 +102,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, '' as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 };
@@ -176,7 +176,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
+                    "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
                 };
