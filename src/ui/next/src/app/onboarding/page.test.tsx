@@ -29,12 +29,15 @@ describe('OnboardingWizard', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -42,7 +45,9 @@ describe('OnboardingWizard', () => {
   it('Step 1: Has correct mobile keyboard hints on inputs', async () => {
     render(<OnboardingWizard />);
 
-    // Check first chat step (Business Name)
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Maya's Custom Cakes/i)).toBeInTheDocument();
+    });
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     expect(nameInput).toHaveAttribute('autoComplete', 'organization');
     expect(nameInput).toHaveAttribute('autoCapitalize', 'words');
@@ -93,7 +98,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Maya's Custom Cakes/i)).toBeInTheDocument();
+    });
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
@@ -156,7 +163,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Maya's Custom Cakes/i)).toBeInTheDocument();
+    });
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
@@ -206,6 +215,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Launch Store/i })).toBeInTheDocument();
+    });
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
     await user.click(launchButton);
@@ -236,6 +248,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continue/i })).toBeInTheDocument();
+    });
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
     await user.click(continueButton);
@@ -260,6 +275,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continue/i })).toBeInTheDocument();
+    });
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
     await user.click(continueButton);
@@ -277,7 +295,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Verify initial state
+    await waitFor(() => {
+      expect(screen.getByText('Sales Agent')).toBeInTheDocument();
+    });
     const salesAgent = screen.getByText('Sales Agent');
     expect(salesAgent).toBeInTheDocument();
 
@@ -313,6 +333,41 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+    });
+  });
+
+  it('restores cross-device state on load correctly', async () => {
+    // Mock fetch to return a saved wizard state
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/state') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            wizardState: {
+              step: 3,
+              businessName: "Mock Resumed Store",
+              whatYouSell: "Mock Items",
+              location: "Mock City",
+              businessType: "Mock Type",
+              categories: ["mock"],
+              firstProductName: "Mock Product",
+              firstProductPrice: "99",
+              aiAgents: [],
+              aiAutoRespond: true
+            }
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Wait for state to fetch and render step 3
+    await waitFor(() => {
+      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().businessName).toBe("Mock Resumed Store");
+      expect(useOnboardingStore.getState().step).toBe(3);
     });
   });
 });

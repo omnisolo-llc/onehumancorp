@@ -27,9 +27,8 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
 
-  // Read state from server on mount
+// Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -54,7 +53,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => setIsLoaded(true));
   }, []);
 
   // Sync state to backend
@@ -355,6 +355,8 @@ export default function OnboardingWizard() {
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
                     autoCapitalize="words"
+                    autoComplete="off"
+                    inputMode="text"
                     enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
@@ -366,6 +368,8 @@ export default function OnboardingWizard() {
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
                     autoCapitalize="words"
+                    autoComplete="off"
+                    inputMode="text"
                     enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
@@ -378,6 +382,8 @@ export default function OnboardingWizard() {
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
                         autoCapitalize="words"
+                        autoComplete="off"
+                        inputMode="text"
                         enterKeyHint="next"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
@@ -389,6 +395,7 @@ export default function OnboardingWizard() {
                         inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                        autoComplete="off"
                         enterKeyHint="done"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />

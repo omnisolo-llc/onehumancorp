@@ -122,3 +122,42 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.locator('text="Minimal"').click();
   });
 });
+
+  test('restores user state from backend across devices seamlessly', async ({ page }) => {
+    // Mock a backend response that has partially filled state (user started on phone and is now on desktop)
+    await page.route('**/api/onboarding/state', async route => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200,
+          body: JSON.stringify({
+            wizardState: {
+              step: 2,
+              chatStep: 3,
+              businessName: "Resumed Maya Bakery",
+              whatYouSell: "I bake amazing resumed cakes",
+              location: "New York, NY",
+              businessType: "Bakery",
+              categories: ["food", "dessert"],
+              firstProductName: "Custom Cake",
+              firstProductPrice: "50",
+              aiAgents: [],
+              aiAutoRespond: true
+            }
+          })
+        });
+      }
+      return route.continue();
+    });
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Wait for the state to load and assert that the user is placed on Step 2 with the fields populated correctly
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+
+    // Assert fields are populated from state
+    await expect(page.locator('label:has-text("Business Name") + input')).toHaveValue("Resumed Maya Bakery");
+    await expect(page.locator('label:has-text("Business Type") + input')).toHaveValue("Bakery");
+    await expect(page.locator('label:has-text("Categories") + input')).toHaveValue("food, dessert");
+    await expect(page.locator('label:has-text("First Product") + input')).toHaveValue("Custom Cake");
+    await expect(page.locator('label:has-text("Price") + input')).toHaveValue("50");
+  });
