@@ -2465,56 +2465,15 @@ impl Agent {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > std::cmp::min(final_cfg.max_retries, 2) {
-                            if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
-                                rewind_attempts_remaining -= 1;
-                                let _ = checkpoint_history.pop();
-                                if let Some(prev_id) = checkpoint_history.last().cloned() {
-                                    let mut restored_msgs = None;
-                                    if let Some(checkpointer) = &self.checkpointer {
-                                        if let Ok(Some(cp)) = checkpointer.get_checkpoint(final_cfg.thread_id.as_ref().unwrap(), &prev_id).await {
-                                            if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
-                                                let _ = checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
-                                            }
-                                        }
-                                    }
-
-                                    // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                    // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                    if restored_msgs.is_none() {
-                                        let mut new_messages = Vec::new();
-                                        let mut found = false;
-                                        for m in messages.iter() {
-                                            new_messages.push(m.clone());
-                                            if let Some(rid) = &m.response_id {
-                                                if rid == &prev_id {
-                                                    found = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        if found {
-                                            restored_msgs = Some(new_messages);
-                                        } else if !new_messages.is_empty() {
-                                            new_messages.truncate(1);
-                                            restored_msgs = Some(new_messages);
-                                        }
-                                    }
-
-                                    if let Some(msgs) = restored_msgs {
-                                        messages = msgs;
-                                        messages.push(Message::system(format!(
-                                            "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
-                                            tc.name, prev_id
-                                        )));
-                                        on_event(AgentEvent::RewindOccurred {
-                                            iteration,
-                                            checkpoint_id: prev_id,
-                                            reason: format!("Tool '{}' failed 3 times", tc.name),
-                                        });
-                                        tool_error_counts.remove(&tc.name);
-                                        continue;
-                                    }
+                            if final_cfg.enable_time_travel_rewind {
+                                if let Ok(Some(prev_id)) = self.handle_time_travel_rewind(&tc.name, final_cfg.thread_id.as_ref().unwrap(), &mut checkpoint_history, &mut messages, &mut rewind_attempts_remaining).await {
+                                    on_event(AgentEvent::RewindOccurred {
+                                        iteration,
+                                        checkpoint_id: prev_id,
+                                        reason: format!("Tool '{}' failed 3 times", tc.name),
+                                    });
+                                    tool_error_counts.remove(&tc.name);
+                                    continue;
                                 }
                             }
                             let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
@@ -3030,6 +2989,62 @@ impl Agent {
         }
 
         Ok(())
+    }
+
+
+    pub async fn handle_time_travel_rewind(
+        &self,
+        tc_name: &str,
+        thread_id: &str,
+        checkpoint_history: &mut Vec<String>,
+        messages: &mut Vec<Message>,
+        rewind_attempts_remaining: &mut usize,
+    ) -> Result<Option<String>, String> {
+        if *rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
+            *rewind_attempts_remaining -= 1;
+            let _ = checkpoint_history.pop();
+            if let Some(prev_id) = checkpoint_history.last().cloned() {
+                let mut restored_msgs = None;
+                if let Some(checkpointer) = &self.checkpointer {
+                    if let Ok(Some(cp)) = checkpointer.get_checkpoint(thread_id, &prev_id).await {
+                        if let Ok(msgs) = serde_json::from_value::<Vec<Message>>(cp.data) {
+                            let _ = checkpointer.restore_checkpoint(&prev_id).await;
+                            restored_msgs = Some(msgs);
+                        }
+                    }
+                }
+
+                if restored_msgs.is_none() {
+                    let mut new_messages = Vec::new();
+                    let mut found = false;
+                    for m in messages.iter() {
+                        new_messages.push(m.clone());
+                        if let Some(rid) = &m.response_id {
+                            if rid == &prev_id {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if found {
+                        restored_msgs = Some(new_messages);
+                    } else if !new_messages.is_empty() {
+                        new_messages.truncate(1);
+                        restored_msgs = Some(new_messages);
+                    }
+                }
+
+                if let Some(msgs) = restored_msgs {
+                    *messages = msgs;
+                    messages.push(Message::system(format!(
+                        "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
+                        tc_name, prev_id
+                    )));
+                    return Ok(Some(prev_id));
+                }
+            }
+        }
+        Ok(None)
     }
 
     async fn execute_tool(

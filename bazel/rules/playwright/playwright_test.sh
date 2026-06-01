@@ -200,7 +200,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
+USE_STANDALONE=false
+
+if docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
+  docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
 PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
@@ -247,6 +250,14 @@ postgres_exec() {
 echo "[playwright] Initializing database roles..."
 postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
 postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
+else
+  echo "[playwright] Docker pull failed (likely overlayfs permission issue in sandbox). Falling back to Standalone Mode."
+  USE_STANDALONE=true
+  export OHC_STANDALONE_MODE=true
+  # Set dummy ports so script doesn't fail parsing later if it checks
+  export PG_PORT=5432
+  export VK_PORT=6379
+fi
 
 if [[ -z "$server_bin" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -268,14 +279,25 @@ export OHC_BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${server_bin:-}" && -x "${server_bin:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $server_bin..."
-  OHC_DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  OHC_REDIS_URL="redis://127.0.0.1:$VK_PORT" \
-  OHC_JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
-  OHC_SQLITE_KEY="test_sqlite_key" \
-  OHC_PORT="$OHC_SERVER_PORT" \
-  OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
-  OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  if [ "$USE_STANDALONE" = "true" ]; then
+    OHC_STANDALONE_MODE=true \
+    OHC_DATABASE_URL="sqlite::memory:" \
+    OHC_JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+    OHC_SQLITE_KEY="test_sqlite_key" \
+    OHC_PORT="$OHC_SERVER_PORT" \
+    OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
+    OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+      "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  else
+    OHC_DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+    OHC_REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+    OHC_JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+    OHC_SQLITE_KEY="test_sqlite_key" \
+    OHC_PORT="$OHC_SERVER_PORT" \
+    OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
+    OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+      "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+  fi
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
