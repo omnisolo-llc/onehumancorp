@@ -141,15 +141,3 @@ dummy.*
 dummy_*
 .next/
 /*.patch
-node_modules/
-.next/
-bazel-*/
-target/
-/tmp/
-playwright-report/
-test-results/
-
-node_modules/
-target/
-bazel-*/
-.next/
