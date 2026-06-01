@@ -59,7 +59,7 @@ impl CloudStateManager {
         let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
-        if to_state == "IN_PROGRESS" {
+        if to_state == "EXECUTING" {
             let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 
