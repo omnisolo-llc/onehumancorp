@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import StorefrontBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { useStorefrontBuilderStore } from './store';
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
@@ -16,6 +17,15 @@ describe('StorefrontBuilderPage', () => {
         json: () => Promise.resolve({ data: {} })
     });
     localStorage.clear();
+    useStorefrontBuilderStore.setState({
+      bio: '',
+      blocks: [],
+      status: 'idle',
+      liveUrl: '',
+      draggedIndex: null,
+      selectedBlockIndex: null,
+      tenantId: 'storefront'
+    });
   });
 
   afterEach(() => {
@@ -24,7 +34,7 @@ describe('StorefrontBuilderPage', () => {
 
   it('renders initial setup state', () => {
     render(<StorefrontBuilderPage />);
-    expect(screen.getByText('Welcome to OHC Smart Builder')).toBeTruthy();
+    expect(screen.getByText('Welcome to OHC')).toBeTruthy();
     expect(screen.getByText('Build My Storefront')).toBeTruthy();
   });
 
@@ -56,7 +66,7 @@ describe('StorefrontBuilderPage', () => {
 
     fireEvent.click(button);
 
-    expect(screen.getByText('Agents are building your store...')).toBeTruthy();
+    expect(screen.getByText('Building Your Store...')).toBeTruthy();
 
     await waitFor(() => {
       expect(screen.getByText('Preview Mode')).toBeTruthy();
