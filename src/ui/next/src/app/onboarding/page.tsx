@@ -529,7 +529,7 @@ export default function OnboardingWizard() {
                 <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
+                      <span className="text-[#0066FF] font-semibold">{businessName ? businessName.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : "my-business"}.ohc.store</span>
                    </div>
                 </div>
 
