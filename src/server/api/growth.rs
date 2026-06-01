@@ -786,7 +786,7 @@ mod tests {
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 
@@ -854,7 +854,7 @@ mod tests {
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 
@@ -904,7 +904,7 @@ mod tests {
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 
@@ -945,7 +945,7 @@ mod tests {
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 
@@ -1009,7 +1009,7 @@ mod tests {
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 
@@ -1044,7 +1044,7 @@ mod tests {
     async fn test_onboarding_metrics() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
+            println!("Skipping DB test, DB not available");
             return;
         }
 

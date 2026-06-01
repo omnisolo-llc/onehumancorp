@@ -46,13 +46,9 @@ spec:
               value: "{{ .Values.backend.service.port }}"
             - name: OHC_PORT
               value: "{{ .Values.backend.service.port }}"
-            {{- if and .Values.valkey.enabled (not (hasKey $backendEnv "REDIS_ADDR")) }}
+            {{- if .Values.redis.enabled }}
             - name: REDIS_ADDR
-              value: {{ include "ohc.valkey.addr" . | quote }}
-            {{- end }}
-            {{- if and .Values.valkey.enabled (not (hasKey $backendEnv "REDIS_URL")) }}
-            - name: REDIS_URL
-              value: {{ include "ohc.valkey.url" . | quote }}
+              value: "{{ .Release.Name }}-redis-master:6379"
             {{- end }}
             {{- if .Values.cnpg.enabled }}
             - name: DATABASE_URL

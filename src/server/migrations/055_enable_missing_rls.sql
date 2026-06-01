@@ -59,25 +59,3 @@ BEGIN
     END LOOP;
 END
 $$;
-
--- Enable RLS on shared_task_dependencies (using organization_id from shared_tasks since this relates to shared_tasks)
--- However, it does not have tenant_id directly. We should add organization_id.
-ALTER TABLE shared_task_dependencies ADD COLUMN IF NOT EXISTS organization_id TEXT;
-CREATE INDEX IF NOT EXISTS idx_shared_task_dependencies_org_id ON shared_task_dependencies(organization_id);
-
-ALTER TABLE shared_task_dependencies ENABLE ROW LEVEL SECURITY;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies
-        WHERE schemaname = current_schema()
-          AND tablename = 'shared_task_dependencies'
-          AND policyname = 'tenant_isolation_shared_task_dependencies'
-    ) THEN
-        CREATE POLICY tenant_isolation_shared_task_dependencies ON shared_task_dependencies
-            USING (organization_id::text = current_setting('app.current_tenant', true))
-            WITH CHECK (organization_id::text = current_setting('app.current_tenant', true));
-    END IF;
-END
-$$;

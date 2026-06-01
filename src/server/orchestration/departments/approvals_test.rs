@@ -19,13 +19,13 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test Tenant', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test Tenant', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
