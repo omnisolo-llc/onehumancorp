@@ -4420,24 +4420,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
-                        async function openCloudBridgeInvite() {
+                                                async function openCloudBridgeInvite() {
                             const modal = document.getElementById('cloud-bridge-invite-modal');
                             const input = document.getElementById('cloud-bridge-invite-link');
                             const copyButton = document.getElementById('cloud-bridge-copy-button');
                             if (modal) modal.style.display = 'block';
                             if (copyButton) copyButton.textContent = 'Copy Link';
-                            if (input) input.value = 'https://ohc.app/invite/team-default';
+                            if (input) input.value = 'Generating link...';
                             try {
                                 const response = await fetch('/api/v1/growth/team-invites', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
                                 });
-                                if (!response.ok) return;
+                                if (!response.ok) {
+                                    if (input) input.value = 'Failed to generate link';
+                                    return;
+                                }
                                 const data = await response.json();
-                                if (data && data.invite_link && input) input.value = data.invite_link;
+                                if (data && data.invite_link && input) {
+                                    input.value = data.invite_link;
+                                } else if (input) {
+                                    input.value = 'Failed to generate link';
+                                }
                             } catch (e) {
                                 console.error('Failed to create team invite', e);
+                                if (input) input.value = 'Failed to generate link';
                             }
                         }
 
