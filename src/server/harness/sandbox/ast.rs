@@ -14,6 +14,14 @@ impl ASTParser {
     }
 
     pub fn parse_for_security(&mut self, cmd: &str) -> Result<(), String> {
+        let res = self.parse_for_security_inner(cmd);
+        if let Err(ref e) = res {
+            ::server_telemetry::record_sandbox_violation(e);
+        }
+        res
+    }
+
+    fn parse_for_security_inner(&mut self, cmd: &str) -> Result<(), String> {
         let tree = self.parser.parse(cmd, None).ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
 
@@ -42,6 +50,29 @@ impl ASTParser {
             if text.starts_with(">(") {
                 return Err("Dangerous pattern detected: >() process substitution".to_string());
             }
+        }
+
+        // command substitution e.g. $(...) or `...`
+        if node_kind == "command_substitution" {
+            return Err("Dangerous pattern detected: subshell execution".to_string());
+        }
+
+        // redirect statements
+        if node_kind == "file_redirect" {
+            // Check if destination is process substitution first
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                if child.kind() == "process_substitution" {
+                    let text = &source[child.start_byte()..child.end_byte()];
+                    if text.starts_with("<(") {
+                        return Err("Dangerous pattern detected: <() process substitution".to_string());
+                    }
+                    if text.starts_with(">(") {
+                        return Err("Dangerous pattern detected: >() process substitution".to_string());
+                    }
+                }
+            }
+            return Err("Dangerous pattern detected: file redirection".to_string());
         }
 
         // legacy expansions $[] (not strictly supported in all bash, often handled as expansion)
@@ -80,23 +111,43 @@ mod tests {
     #[test]
     fn test_allowed_commands() {
         let mut parser = ASTParser::new();
-        assert!(parser.parse_for_security("echo 'hello world'").is_ok());
-        assert!(parser.parse_for_security("ls -l /tmp").is_ok());
-        assert!(parser.parse_for_security("cat file.txt | grep foo").is_ok());
+        assert!(parser.parse_for_security_inner("echo 'hello world'").is_ok());
+        assert!(parser.parse_for_security_inner("ls -l /tmp").is_ok());
+        assert!(parser.parse_for_security_inner("cat file.txt | grep foo").is_ok());
     }
 
     #[test]
     fn test_block_zmodload() {
         let mut parser = ASTParser::new();
-        let res = parser.parse_for_security("zmodload zsh/net/tcp");
+        let res = parser.parse_for_security_inner("zmodload zsh/net/tcp");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: zmodload");
     }
 
     #[test]
+    fn test_block_subshell() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security_inner("echo \"su\"$(echo \"do\")");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: subshell execution");
+
+        let res2 = parser.parse_for_security_inner("echo `ls`");
+        assert!(res2.is_err());
+        assert_eq!(res2.unwrap_err(), "Dangerous pattern detected: subshell execution");
+    }
+
+    #[test]
+    fn test_block_redirection() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security_inner("echo test > /etc/passwd");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: file redirection");
+    }
+
+    #[test]
     fn test_block_process_substitution_out() {
         let mut parser = ASTParser::new();
-        let res = parser.parse_for_security("echo 'test' > >(cat)");
+        let res = parser.parse_for_security_inner("echo 'test' > >(cat)");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: >() process substitution");
     }
@@ -104,7 +155,7 @@ mod tests {
     #[test]
     fn test_block_process_substitution_in() {
         let mut parser = ASTParser::new();
-        let res = parser.parse_for_security("cat < <(echo 'test')");
+        let res = parser.parse_for_security_inner("cat < <(echo 'test')");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: <() process substitution");
     }
@@ -113,7 +164,7 @@ mod tests {
     fn test_block_legacy_expansion() {
         let mut parser = ASTParser::new();
         // $[] might be parsed as word or expansion depending on tree-sitter-bash grammar rules
-        let res = parser.parse_for_security("echo $[1+1]");
+        let res = parser.parse_for_security_inner("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
     }

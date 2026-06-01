@@ -1222,6 +1222,23 @@ pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) 
     );
 }
 
+pub static OHC_SANDBOX_VIOLATION_TOTAL: std::sync::OnceLock<opentelemetry::metrics::Counter<u64>> = std::sync::OnceLock::new();
+
+pub fn get_ohc_sandbox_violation_total() -> &'static opentelemetry::metrics::Counter<u64> {
+    OHC_SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.sandbox");
+        meter
+            .u64_counter("ohc_sandbox_violation_total")
+            .with_description("Total number of sandbox violations (AST or bwrap policy)")
+            .build()
+    })
+}
+
+pub fn record_sandbox_violation(reason: &str) {
+    let counter = get_ohc_sandbox_violation_total();
+    counter.add(1, &[opentelemetry::KeyValue::new("reason", reason.to_string())]);
+}
+
 pub fn get_harness_init_latency() -> &'static Histogram<f64> {
     HARNESS_INIT_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.harness");
