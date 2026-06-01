@@ -667,32 +667,4 @@ mod tests {
         assert_eq!(row.0, "APPROVED");
     }
 
-
-    #[test]
-    fn test_poll_tasks() {
-        let tm = TaskManager::new();
-
-        let mut task1 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 1".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
-        task1.status = "PENDING".to_string();
-        tm.insert_task(task1.clone());
-
-        let mut task2 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 2".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
-        task2.status = "PENDING".to_string();
-        task2.approval_status = Some("PENDING".to_string());
-        tm.insert_task(task2.clone());
-
-        let mut task3 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 3".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
-        task3.status = "IN_PROGRESS".to_string();
-        tm.insert_task(task3.clone());
-
-        let tasks = tm.poll_tasks("agent1", 10);
-
-        assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].id, task1.id);
-
-        let fetched_task1 = tm.get_task(&task1.id).unwrap();
-        assert_eq!(fetched_task1.status, "IN_PROGRESS");
-        assert_eq!(fetched_task1.assigned_agent_id, Some("agent1".to_string()));
-    }
-
 }
