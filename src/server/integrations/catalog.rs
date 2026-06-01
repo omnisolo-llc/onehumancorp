@@ -90,5 +90,23 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
     catalog.push(restic_provider.to_integration_provider());
 
+    let buffer_provider = crate::integrations::buffer::provider::BufferProvider::new("dummy_token".to_string());
+    catalog.push(buffer_provider.to_integration_provider());
+
+    let acuity_provider = crate::integrations::acuity::provider::AcuityProvider::new("dummy_token".to_string());
+    catalog.push(acuity_provider.to_integration_provider());
+
+    let activecampaign_provider = crate::integrations::activecampaign::provider::ActiveCampaignProvider::new("dummy_token".to_string());
+    catalog.push(activecampaign_provider.to_integration_provider());
+
+    let shipstation_provider = crate::integrations::shipstation::provider::ShipStationProvider::new("dummy_token".to_string());
+    catalog.push(shipstation_provider.to_integration_provider());
+
+    let messagebird_provider = crate::integrations::messagebird::provider::MessageBirdProvider::new("dummy_token".to_string());
+    catalog.push(messagebird_provider.to_integration_provider());
+
+    let teams_provider = crate::integrations::teams::provider::TeamsProvider::new("dummy_token".to_string());
+    catalog.push(teams_provider.to_integration_provider());
+
     catalog
 }
