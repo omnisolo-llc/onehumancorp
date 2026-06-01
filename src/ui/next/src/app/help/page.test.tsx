@@ -21,11 +21,11 @@ describe('HelpCenterPage', () => {
   it('renders articles loaded from API', async () => {
     render(<HelpCenterPage />);
 
-    expect(screen.getByText('Help Center')).toBeInTheDocument();
+    expect(screen.getByText('Help Center')).toBeTruthy();
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
+      expect(screen.getByText('My Store')).toBeTruthy();
     });
   });
 
@@ -34,15 +34,15 @@ describe('HelpCenterPage', () => {
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles...');
     await user.type(searchInput, 'products');
 
     await waitFor(() => {
-      expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
+      expect(screen.queryByText('Getting Started')).not.toBeTruthy();
+      expect(screen.getByText('My Store')).toBeTruthy();
     });
   });
 
@@ -51,14 +51,14 @@ describe('HelpCenterPage', () => {
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles...');
     await user.type(searchInput, 'nonexistentxyz123');
 
     await waitFor(() => {
-      expect(screen.getByText('No articles found matching "nonexistentxyz123"')).toBeInTheDocument();
+      expect(screen.getByText('No articles found matching "nonexistentxyz123"')).toBeTruthy();
     });
   });
 });

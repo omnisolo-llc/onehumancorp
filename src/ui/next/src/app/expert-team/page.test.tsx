@@ -11,7 +11,7 @@ describe('ExpertTeamPage', () => {
 
   it('renders correctly', () => {
     render(<ExpertTeamPage />);
-    expect(screen.getByText(/Tencent Workbuddy: Expert Team/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tencent Workbuddy: Expert Team/i)).toBeTruthy();
   });
 
   it('handles execution and displays result', async () => {
@@ -31,7 +31,7 @@ describe('ExpertTeamPage', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/expert-team', expect.any(Object));
 
     await waitFor(() => {
-      expect(screen.getByText('Test expert output')).toBeInTheDocument();
+      expect(screen.getByText('Test expert output')).toBeTruthy();
     });
   });
 
@@ -50,7 +50,7 @@ describe('ExpertTeamPage', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Gate failed')).toBeInTheDocument();
+      expect(screen.getByText('Gate failed')).toBeTruthy();
     });
   });
 });

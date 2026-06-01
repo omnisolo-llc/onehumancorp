@@ -16,8 +16,8 @@ describe('HelpArticlePage', () => {
 
     render(<HelpArticlePage />);
 
-    expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
-    expect(screen.getByText('Step 1: Tell us about your business')).toBeInTheDocument();
+    expect(screen.getByText('Getting Started with Your Store')).toBeTruthy();
+    expect(screen.getByText('Step 1: Tell us about your business')).toBeTruthy();
   });
 
   it('renders "Article Not Found" for an unknown article', () => {
@@ -26,7 +26,7 @@ describe('HelpArticlePage', () => {
 
     render(<HelpArticlePage />);
 
-    expect(screen.getByText('Article Not Found')).toBeInTheDocument();
-    expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
+    expect(screen.getByText('Article Not Found')).toBeTruthy();
+    expect(screen.getByText("We couldn't find the article you're looking for.")).toBeTruthy();
   });
 });

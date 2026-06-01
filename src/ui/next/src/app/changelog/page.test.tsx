@@ -7,11 +7,11 @@ describe('ChangelogPage', () => {
   it('renders the release notes page correctly', () => {
     render(<ChangelogPage />);
 
-    expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
-    expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();
+    expect(screen.getByText('Release Notes & Changelog')).toBeTruthy();
+    expect(screen.getByText('Version 1.0 (Latest)')).toBeTruthy();
 
     // Check for some content points
-    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
+    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeTruthy();
+    expect(screen.getByText(/Smart Tooltips:/)).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 // Retain existing smoke test

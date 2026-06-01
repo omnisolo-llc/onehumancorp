@@ -14,8 +14,8 @@ describe('ApiDocsPage', () => {
   it('renders the advanced warning and swagger ui mock', () => {
     render(<ApiDocsPage />);
 
-    expect(screen.getByText('Advanced:')).toBeInTheDocument();
-    expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();
-    expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();
+    expect(screen.getByText('Advanced:')).toBeTruthy();
+    expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeTruthy();
+    expect(screen.getByTestId('swagger-ui-mock')).toBeTruthy();
   });
 });
