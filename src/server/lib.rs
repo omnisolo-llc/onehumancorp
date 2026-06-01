@@ -756,7 +756,7 @@ pub async fn advisory_insights_handler(
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
                     .bind(&tenant_id)
                     .fetch_optional(&db.pool)
@@ -764,7 +764,7 @@ pub async fn advisory_insights_handler(
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
                     .bind(&tenant_id)
                     .fetch_optional(pool)
@@ -859,7 +859,7 @@ async fn draft_reply_handler(
     };
 
     let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+        "SELECT business_name, COALESCE(industry, '') FROM tenants WHERE id = $1"
     )
     .bind(&tenant_id)
     .fetch_optional(&db.pool)

@@ -408,7 +408,7 @@ pub async fn bench_advisory_insights_latency() {
             let (_org_res, _active_orders_res) = tokio::join!(
                 async {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
                     .bind(&tenant_id)
                     .fetch_optional(&db.pool)
