@@ -17,6 +17,7 @@ SERVER_RS_SRCS = [
     "pipeline.rs",
     "powersync.rs",
     "queue.rs",
+    "rag_sync.rs",
     "scheduler.rs",
     "seeder.rs",
     "settings.rs",
