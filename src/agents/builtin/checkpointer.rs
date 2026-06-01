@@ -213,7 +213,6 @@ impl CheckpointSaver for GitCheckpointer {
 }
 
 
-
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
@@ -271,6 +270,7 @@ impl CheckpointSaver for PgCheckpointer {
 
         Ok(())
     }
+
 
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let rows = sqlx::query(
