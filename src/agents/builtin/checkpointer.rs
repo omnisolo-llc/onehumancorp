@@ -102,12 +102,13 @@ impl GitCheckpointer {
     }
 }
 
+
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
-        let output = Command::new("git")
+        let output = std::process::Command::new("git")
             .arg("show")
             .arg(format!("{}:{}", checkpoint_id, file_name))
             .current_dir(&self.repo_path)
@@ -118,97 +119,46 @@ impl CheckpointSaver for GitCheckpointer {
             return Ok(None);
         }
 
-        let content = String::from_utf8_lossy(&output.stdout);
-        let cp: Checkpoint = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-
+        let content_str = String::from_utf8_lossy(&output.stdout);
+        let cp: Checkpoint = serde_json::from_str(&content_str).map_err(|e| e.to_string())?;
         Ok(Some(cp))
     }
+
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
-        let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);
+        let json_str = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
 
-        let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
-        tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
+        std::fs::write(&file_path, json_str).map_err(|e| e.to_string())?;
 
-        // Structured scratchpad
-        let mut scratchpad = ProgressFile::default();
-        scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-        let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
-        tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
+        let file_name = file_path.file_name().unwrap().to_str().unwrap();
 
-        // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
-        let add_out = Command::new("git")
+        let _ = std::process::Command::new("git")
             .arg("add")
-            .arg("-A")
+            .arg(file_name)
             .current_dir(&self.repo_path)
             .output()
-            .map_err(|e| format!("Failed to execute git add: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
-        if !add_out.status.success() {
-            return Err(format!("git add failed: {}", String::from_utf8_lossy(&add_out.stderr)));
-        }
-
-        // 2. Commit the changes
-        let commit_msg = format!("Checkpoint: {}", checkpoint.checkpoint_id);
-        let output = Command::new("git")
+        let msg = format!("checkpoint: {}", checkpoint.checkpoint_id);
+        let commit_out = std::process::Command::new("git")
             .arg("commit")
-            .arg("--allow-empty")
             .arg("-m")
-            .arg(&commit_msg)
+            .arg(&msg)
             .current_dir(&self.repo_path)
             .output()
-            .map_err(|e| format!("Failed to execute git commit: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
-        if !output.status.success() {
-            return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)));
-        }
-
-        let tag_output = Command::new("git")
-            .arg("tag")
-            .arg("-f")
-            .arg(&checkpoint.checkpoint_id)
-            .current_dir(&self.repo_path)
-            .output()
-            .map_err(|e| format!("Failed to execute git tag: {}", e))?;
-
-        if !tag_output.status.success() {
-            return Err(format!("Failed to tag: {}", String::from_utf8_lossy(&tag_output.stderr)));
+        if !commit_out.status.success() {
+            tracing::warn!("Git commit failed or nothing to commit: {}", String::from_utf8_lossy(&commit_out.stderr));
         }
 
         Ok(())
     }
 
-
-    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        let output = Command::new("git")
-            .arg("reset")
-            .arg("--hard")
-            .arg(checkpoint_id)
-            .current_dir(&self.repo_path)
-            .output()
-            .map_err(|e| e.to_string())?;
-
-        if !output.status.success() {
-            return Err(format!("Failed to restore workspace (reset): {}", String::from_utf8_lossy(&output.stderr)));
-        }
-
-        let clean_output = Command::new("git")
-            .arg("clean")
-            .arg("-fd")
-            .current_dir(&self.repo_path)
-            .output()
-            .map_err(|e| e.to_string())?;
-
-        if !clean_output.status.success() {
-            return Err(format!("Failed to restore workspace (clean): {}", String::from_utf8_lossy(&clean_output.stderr)));
-        }
-
-        Ok(())
-    }
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
-        let output = Command::new("git")
+        let output = std::process::Command::new("git")
             .arg("log")
             .arg("--format=%H")
             .arg("--")
@@ -221,13 +171,12 @@ impl CheckpointSaver for GitCheckpointer {
             return Ok(vec![]);
         }
 
-        let hashes = String::from_utf8_lossy(&output.stdout);
+        let hashes_str = String::from_utf8_lossy(&output.stdout);
         let mut checkpoints = Vec::new();
 
-        for hash in hashes.lines() {
+        for hash in hashes_str.lines() {
             let hash = hash.trim();
             if hash.is_empty() { continue; }
-
             if let Ok(Some(cp)) = self.get_checkpoint(thread_id, hash).await {
                 checkpoints.push(cp);
             }
@@ -235,7 +184,35 @@ impl CheckpointSaver for GitCheckpointer {
 
         Ok(checkpoints)
     }
+
+    async fn restore_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<(), String> {
+        let file_name = format!(".agent_progress_{}.json", thread_id);
+        let output = std::process::Command::new("git")
+            .arg("checkout")
+            .arg(checkpoint_id)
+            .arg("--")
+            .arg(&file_name)
+            .current_dir(&self.repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(format!("Failed to checkout file: {}", String::from_utf8_lossy(&output.stderr)));
+        }
+
+        let _ = std::process::Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg(format!("restore checkpoint: {}", checkpoint_id))
+            .current_dir(&self.repo_path)
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
 }
+
+
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
