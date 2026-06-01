@@ -1,3 +1,4 @@
+pub mod python_native;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
@@ -107,6 +108,7 @@ pub fn all_tools(
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
         bash::bash_tool(working_dir.clone(), runner.clone()),
+        python_native::python_native_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),

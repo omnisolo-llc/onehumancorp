@@ -43,6 +43,7 @@ rust_library(
         "websearch.rs",
         "workflow.rs",
         "write.rs",
+        "python_native.rs",
     ],
     crate_root = "mod.rs",
     crate_name = "ohc_builtin_agent_tools",
