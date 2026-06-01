@@ -59,6 +59,14 @@ impl StripeClient {
                 } else {
                     Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
                 }
+            },
+            crate::integrations::stripe::routing::PaymentMethod::Alipay => {
+                if let Ok(token) = std::env::var("ALIPAY_ACCESS_TOKEN") {
+                    let alipay_client = crate::integrations::alipay::client::AlipayClient::new(token);
+                    alipay_client.create_checkout_preference(_price_id, customer_id).await
+                } else {
+                    Ok("https://openapi.alipay.com/gateway.do?app_id=mock_app_123&method=alipay.trade.page.pay".to_string())
+                }
             }
         }
     }

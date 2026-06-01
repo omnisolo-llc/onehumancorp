@@ -577,17 +577,54 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+    pub async fn alipay_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
         let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
+            if integration_id == "alipay" {
+                let clients = self.alipay_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
                 None
             }
         };
         if let Some(c) = client {
-            return c.handle_webhook(payload).await;
+            return c.create_payment(amount, description, payer_email).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn razorpay_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "razorpay" {
+                let clients = self.razorpay_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_payment(amount, description, payer_email).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        if integration_id == "mercadopago" {
+            let clients = self.mercadopago_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id) {
+                return c.handle_webhook(payload).await;
+            }
+        }
+        if integration_id == "alipay" {
+            let clients = self.alipay_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id) {
+                return c.handle_webhook(payload).await;
+            }
+        }
+        if integration_id == "razorpay" {
+            let clients = self.razorpay_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id) {
+                return c.handle_webhook(payload).await;
+            }
         }
         Err("integration not found or not supported".to_string())
     }

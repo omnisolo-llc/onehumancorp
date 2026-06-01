@@ -4,6 +4,7 @@ pub enum PaymentMethod {
     Ach,
     Razorpay,
     MercadoPago,
+    Alipay,
 }
 
 pub struct PaymentRouter;
@@ -23,6 +24,9 @@ impl PaymentRouter {
     }
 
     pub fn optimize_payment_method_with_currency(amount: f64, currency: &str) -> PaymentMethod {
+        if currency.eq_ignore_ascii_case("CNY") {
+            return PaymentMethod::Alipay;
+        }
         if currency.eq_ignore_ascii_case("INR") {
             return PaymentMethod::Razorpay;
         }
@@ -162,5 +166,16 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
+    }
+}
+
+#[cfg(test)]
+mod alipay_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_alipay() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"), PaymentMethod::Alipay);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "cny"), PaymentMethod::Alipay);
     }
 }
