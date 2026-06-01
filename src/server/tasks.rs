@@ -93,6 +93,7 @@ pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
     pub(crate) broadcaster: std::sync::RwLock<Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>>,
+    pub(crate) mesh: std::sync::RwLock<Option<Arc<dyn crate::orchestration::mesh::TeammateMesh>>>,
 }
 
 impl TaskManager {
@@ -101,6 +102,7 @@ impl TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
             broadcaster: std::sync::RwLock::new(None),
+            mesh: std::sync::RwLock::new(None),
         }
     }
 
@@ -109,6 +111,7 @@ impl TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
             broadcaster: std::sync::RwLock::new(None),
+            mesh: std::sync::RwLock::new(None),
         }
     }
 
@@ -116,9 +119,25 @@ impl TaskManager {
         *self.broadcaster.write().unwrap() = Some(broadcaster);
     }
 
+    pub fn set_mesh(&self, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) {
+        *self.mesh.write().unwrap() = Some(mesh);
+    }
+
     fn broadcast(&self, task: &SharedTask, event_type: &str) {
         if let Some(ref b) = *self.broadcaster.read().unwrap() {
             b(task.clone(), event_type.to_string());
+        }
+
+        // Also broadcast via TeammateMesh if configured
+        if let Some(ref mesh) = *self.mesh.read().unwrap() {
+            let task_json = serde_json::to_string(task).unwrap_or_default();
+            let topic = format!("tasks:{}", task.organization_id);
+            let mesh_clone = mesh.clone();
+            tokio::spawn(async move {
+                if let Err(e) = mesh_clone.publish(&topic, task_json.into_bytes()).await {
+                    tracing::error!("Failed to broadcast task update to mesh: {}", e);
+                }
+            });
         }
     }
 

@@ -46,6 +46,9 @@ pub struct Hub {
 }
 
 impl Hub {
+    pub fn set_mesh(&self, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) {
+        self.task_manager.set_mesh(mesh);
+    }
 
     pub fn set_db(&self, db: std::sync::Arc<crate::db::DB>) {
         *self.task_manager.db.write().unwrap() = Some(db);

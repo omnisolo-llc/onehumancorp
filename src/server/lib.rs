@@ -480,16 +480,18 @@ use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
+    mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
     dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
+    publish_latency: opentelemetry::metrics::Histogram<u64>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Self {
+    pub fn new(hub: Arc<Hub>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
         let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
@@ -498,8 +500,9 @@ impl MyHubService {
         let meter = opentelemetry::global::meter("ohc.orchestration.hub");
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
+        let publish_latency = meter.u64_histogram("hub.mesh_events.publish_latency_ms").build();
 
-        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, mesh, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter, publish_latency }
     }
 }
 
@@ -950,11 +953,11 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
-    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
+    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::Message, Status>> + Send>>;
 
     async fn stream_messages(
         &self,
-        request: Request<StreamMessagesRequest>,
+        request: Request<crate::ohc::orchestration::StreamMessagesRequest>,
     ) -> Result<Response<Self::StreamMessagesStream>, Status> {
         let req = request.into_inner();
         let agent_id = req.agent_id.clone();
@@ -977,8 +980,8 @@ impl HubService for MyHubService {
 
     async fn reason(
         &self,
-        request: Request<ReasonRequest>,
-    ) -> Result<Response<ReasonResponse>, Status> {
+        request: Request<crate::ohc::orchestration::ReasonRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::ReasonResponse>, Status> {
         let req = request.into_inner();
         let api_key = self.hub.minimax_api_key().to_string();
         if api_key.is_empty() {
@@ -987,7 +990,7 @@ impl HubService for MyHubService {
 
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Ok(content) => Ok(Response::new(crate::ohc::orchestration::ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
     }
@@ -995,8 +998,8 @@ impl HubService for MyHubService {
 
     async fn trigger_custom_order(
         &self,
-        request: Request<TriggerCustomOrderRequest>,
-    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        request: Request<crate::ohc::orchestration::TriggerCustomOrderRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::TriggerCustomOrderResponse>, Status> {
         let req = request.into_inner();
 
         // Dispatch an event to Operations
@@ -1027,15 +1030,15 @@ impl HubService for MyHubService {
         };
         self.dept_orchestrator.add_approval_request(cs_approval).await;
 
-        Ok(Response::new(TriggerCustomOrderResponse {
+        Ok(Response::new(crate::ohc::orchestration::TriggerCustomOrderResponse {
             success: true,
         }))
     }
 
     async fn decompose_task(
         &self,
-        request: Request<DecomposeTaskRequest>,
-    ) -> Result<Response<DecomposeTaskResponse>, Status> {
+        request: Request<crate::ohc::orchestration::DecomposeTaskRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::DecomposeTaskResponse>, Status> {
         let req = request.into_inner();
 
         for st in req.sub_tasks {
@@ -1057,7 +1060,7 @@ impl HubService for MyHubService {
             ).map_err(|e| Status::internal(e))?;
         }
 
-        Ok(Response::new(DecomposeTaskResponse { success: true }))
+        Ok(Response::new(crate::ohc::orchestration::DecomposeTaskResponse { success: true }))
     }
 
 
@@ -1228,12 +1231,12 @@ impl HubService for MyHubService {
 
     async fn register_agent(
         &self,
-        request: Request<RegisterAgentRequest>,
-    ) -> Result<Response<RegisterAgentResponse>, Status> {
+        request: Request<crate::ohc::orchestration::RegisterAgentRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::RegisterAgentResponse>, Status> {
         let req = request.into_inner();
         if let Some(agent) = req.agent {
             self.hub.register_agent(agent);
-            Ok(Response::new(RegisterAgentResponse { success: true }))
+            Ok(Response::new(crate::ohc::orchestration::RegisterAgentResponse { success: true }))
         } else {
             Err(Status::invalid_argument("agent is required"))
         }
@@ -1263,8 +1266,8 @@ impl HubService for MyHubService {
 
     async fn open_meeting(
         &self,
-        request: Request<OpenMeetingRequest>,
-    ) -> Result<Response<MeetingRoom>, Status> {
+        request: Request<crate::ohc::orchestration::OpenMeetingRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::MeetingRoom>, Status> {
         let req = request.into_inner();
         let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda);
         Ok(Response::new(meeting))
@@ -1272,12 +1275,12 @@ impl HubService for MyHubService {
 
     async fn publish(
         &self,
-        request: Request<PublishMessageRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<crate::ohc::orchestration::PublishMessageRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
             match self.hub.clone().publish(msg) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(crate::ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1287,12 +1290,12 @@ impl HubService for MyHubService {
 
     async fn delegate_task(
         &self,
-        request: Request<DelegateTaskRequest>,
-    ) -> Result<Response<DelegateTaskResponse>, Status> {
+        request: Request<crate::ohc::orchestration::DelegateTaskRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         if let Some(task) = req.task {
             match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
-                Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
+                Ok(_) => Ok(Response::new(crate::ohc::orchestration::DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1635,7 +1638,7 @@ impl HubService for MyHubService {
 
     async fn create_task(
         &self,
-        request: Request<CreateTaskRequest>,
+        request: Request<crate::ohc::orchestration::CreateTaskRequest>,
     ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
@@ -1674,7 +1677,7 @@ impl HubService for MyHubService {
     
     async fn poll_tasks(
         &self,
-        request: Request<PollTasksRequest>,
+        request: Request<crate::ohc::orchestration::PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
@@ -1710,8 +1713,8 @@ impl HubService for MyHubService {
 
     async fn update_task_status(
         &self,
-        request: Request<UpdateTaskStatusRequest>,
-    ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
+        request: Request<crate::ohc::orchestration::UpdateTaskStatusRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::UpdateTaskStatusResponse>, Status> {
         let req = request.into_inner();
         
         match req.status.as_str() {
@@ -1729,14 +1732,14 @@ impl HubService for MyHubService {
             }
         }
         
-        Ok(Response::new(UpdateTaskStatusResponse { success: true }))
+        Ok(Response::new(crate::ohc::orchestration::UpdateTaskStatusResponse { success: true }))
     }
 
 
     async fn approve_task(
         &self,
-        request: Request<ApproveTaskRequest>,
-    ) -> Result<Response<ApproveTaskResponse>, Status> {
+        request: Request<crate::ohc::orchestration::ApproveTaskRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::ApproveTaskResponse>, Status> {
         let org_id = request.extensions().get::<::server_common::Claims>()
             .ok_or_else(|| Status::unauthenticated("Missing claims"))?
             .organization_id.as_ref()
@@ -1748,15 +1751,15 @@ impl HubService for MyHubService {
         self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved).await
             .map_err(|e| Status::internal(e))?;
 
-        Ok(Response::new(ApproveTaskResponse {
+        Ok(Response::new(crate::ohc::orchestration::ApproveTaskResponse {
             success: true,
         }))
     }
 
 async fn get_pending_approvals(
         &self,
-        request: Request<GetPendingApprovalsRequest>,
-    ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
+        request: Request<crate::ohc::orchestration::GetPendingApprovalsRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::GetPendingApprovalsResponse>, Status> {
         let req = request.into_inner();
         let limit = 100;
         let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
@@ -1809,7 +1812,7 @@ async fn get_pending_approvals(
             }
         }).collect();
 
-        Ok(Response::new(GetPendingApprovalsResponse {
+        Ok(Response::new(crate::ohc::orchestration::GetPendingApprovalsResponse {
             tasks: mapped_tasks,
         }))
     }
@@ -1817,8 +1820,8 @@ async fn get_pending_approvals(
 
     async fn delegate_sub_task(
         &self,
-        request: Request<SubTask>,
-    ) -> Result<Response<DelegateTaskResponse>, Status> {
+        request: Request<crate::ohc::orchestration::SubTask>,
+    ) -> Result<Response<crate::ohc::orchestration::DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         
         if req.task_id.is_empty() || req.target_role.is_empty() {
@@ -1877,31 +1880,31 @@ async fn get_pending_approvals(
         };
         
         match self.hub.clone().publish(msg) {
-            Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
+            Ok(_) => Ok(Response::new(crate::ohc::orchestration::DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
     }
 
     async fn advertise_capabilities(
         &self,
-        request: Request<AgentCapabilities>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<crate::ohc::orchestration::AgentCapabilities>,
+    ) -> Result<Response<crate::ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
         }
         
         match self.hub.advertise_capabilities(req) {
-            Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+            Ok(_) => Ok(Response::new(crate::ohc::orchestration::PublishMessageResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
     }
 
-    type DiscoverAgentsStream = Pin<Box<dyn Stream<Item = Result<AgentCapabilities, Status>> + Send>>;
+    type DiscoverAgentsStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::AgentCapabilities, Status>> + Send>>;
 
     async fn discover_agents(
         &self,
-        _request: Request<Query>,
+        _request: Request<crate::ohc::orchestration::Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
         
@@ -1914,20 +1917,34 @@ async fn get_pending_approvals(
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
-    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<MeshEvent, Status>> + Send>>;
+    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::MeshEvent, Status>> + Send>>;
 
     async fn publish_mesh_event(
         &self,
         request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+    ) -> Result<Response<crate::ohc::orchestration::PublishMessageResponse>, Status> {
+        let start = std::time::Instant::now();
         let req = request.into_inner();
         if let Some(event) = req.event {
             self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
 
-            match self.hub.publish_mesh_event(event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+            // Broadcast to the distributed mesh
+            let mesh_clone = self.mesh.clone();
+            let event_clone = event.clone();
+            tokio::spawn(async move {
+                if let Err(e) = mesh_clone.publish(&event_clone.topic, event_clone.payload.clone()).await {
+                    tracing::error!("Failed to publish mesh event to distributed mesh: {}", e);
+                }
+            });
+
+            // Local fallback broadcast
+            let res = match self.hub.publish_mesh_event(event) {
+                Ok(_) => Ok(Response::new(crate::ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
-            }
+            };
+            let duration = start.elapsed().as_millis() as u64;
+            self.publish_latency.record(duration, &[]);
+            res
         } else {
             Err(Status::invalid_argument("event is required"))
         }
@@ -1935,7 +1952,7 @@ async fn get_pending_approvals(
 
     async fn stream_mesh_events(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<crate::ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamMeshEventsStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1955,21 +1972,37 @@ async fn get_pending_approvals(
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
-    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<TeammateMeshEvent, Status>> + Send>>;
+    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::TeammateMeshEvent, Status>> + Send>>;
 
     async fn publish_teammate_mesh_event(
         &self,
         request: Request<PublishTeammateMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+    ) -> Result<Response<crate::ohc::orchestration::PublishMessageResponse>, Status> {
+        let start = std::time::Instant::now();
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
-            match self.hub.publish_teammate_event(req.channel, event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+            // Forward to distributed mesh (Centrifuge/Redis)
+            let mesh_clone = self.mesh.clone();
+            let channel_clone = req.channel.clone();
+            let event_clone = event.clone();
+            tokio::spawn(async move {
+                let bytes = event_clone.payload.clone();
+                if let Err(e) = mesh_clone.publish(&channel_clone, bytes).await {
+                    tracing::error!("Failed to publish teammate event to distributed mesh: {}", e);
+                }
+            });
+
+            // Fallback local broadcast
+            let res = match self.hub.publish_teammate_event(req.channel, event) {
+                Ok(_) => Ok(Response::new(crate::ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
-            }
+            };
+            let duration = start.elapsed().as_millis() as u64;
+            self.publish_latency.record(duration, &[]);
+            res
         } else {
             Err(Status::invalid_argument("event is required"))
         }
@@ -1977,7 +2010,7 @@ async fn get_pending_approvals(
 
     async fn stream_teammate_mesh(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<crate::ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamTeammateMeshStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1997,8 +2030,8 @@ async fn get_pending_approvals(
 
     async fn invite(
         &self,
-        request: Request<InviteRequest>,
-    ) -> Result<Response<InviteResponse>, Status> {
+        request: Request<crate::ohc::orchestration::InviteRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::InviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
@@ -2010,13 +2043,13 @@ async fn get_pending_approvals(
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
 
-        Ok(Response::new(InviteResponse { success: true }))
+        Ok(Response::new(crate::ohc::orchestration::InviteResponse { success: true }))
     }
 
     async fn accept_invite(
         &self,
-        request: Request<AcceptInviteRequest>,
-    ) -> Result<Response<AcceptInviteResponse>, Status> {
+        request: Request<crate::ohc::orchestration::AcceptInviteRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::AcceptInviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.invitee_id.is_empty() {
@@ -2025,7 +2058,7 @@ async fn get_pending_approvals(
 
         self.viral_loop_tracker.record_invite_accepted(&req.invitee_id);
 
-        Ok(Response::new(AcceptInviteResponse { success: true }))
+        Ok(Response::new(crate::ohc::orchestration::AcceptInviteResponse { success: true }))
     }
 
     async fn get_meetings(
@@ -2038,8 +2071,8 @@ async fn get_pending_approvals(
 
     async fn start_onboarding(
         &self,
-        request: Request<StartOnboardingRequest>,
-    ) -> Result<Response<StartOnboardingResponse>, Status> {
+        request: Request<crate::ohc::orchestration::StartOnboardingRequest>,
+    ) -> Result<Response<crate::ohc::orchestration::StartOnboardingResponse>, Status> {
         let req = request.into_inner();
         match self.onboarding_agent.start_onboarding(req).await {
             Ok(resp) => Ok(Response::new(resp)),
@@ -2985,7 +3018,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
+    let hub_service = MyHubService::new(hub.clone(), handoff_mesh.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(crate::auth::Store::new());
     
