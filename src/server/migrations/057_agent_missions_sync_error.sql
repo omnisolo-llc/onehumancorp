@@ -1,0 +1,2 @@
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS sync_error TEXT;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMPTZ;
