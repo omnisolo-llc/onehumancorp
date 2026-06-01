@@ -31,6 +31,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
 
   const fetchApprovals = async () => {
     try {
@@ -48,6 +49,11 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchApprovals();
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
+      setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+    }
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -178,14 +184,14 @@ export default function TeamPage() {
                   id="cloud-bridge-invite-link"
                   type="text"
                   readOnly
-                  value="https://ohc.app/invite/team-default"
+                  value={inviteLink}
                   className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
                 />
               </div>
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText("https://ohc.app/invite/team-default");
+                  navigator.clipboard.writeText(inviteLink);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}
