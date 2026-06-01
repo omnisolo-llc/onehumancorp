@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 pub struct BudgetManager {
     pub total_limit: f64,
-    current: Mutex<f64>,
+    current_cents: Mutex<i64>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
 }
@@ -11,7 +11,7 @@ impl BudgetManager {
     pub fn new(limit: f64) -> Self {
         BudgetManager {
             total_limit: limit,
-            current: Mutex::new(0.0),
+            current_cents: Mutex::new(0),
             telemetry_store: None,
             tenant_id: None,
         }
@@ -24,43 +24,45 @@ impl BudgetManager {
     }
 
     pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
-        let mut current = self.current.lock().unwrap();
+        let cents = (amount * 100.0).round() as i64;
+        self.record_spend_cents(cents)
+    }
 
-        if amount < 0.0 {
+    pub fn get_remaining(&self) -> f64 {
+        let current_cents = self.current_cents.lock().unwrap();
+        self.total_limit - (*current_cents as f64 / 100.0)
+    }
+
+    pub fn get_remaining_cents(&self) -> i64 {
+        let current_cents = self.current_cents.lock().unwrap();
+        let total_limit_cents = (self.total_limit * 100.0).round() as i64;
+        total_limit_cents - *current_cents
+    }
+
+    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
+        let mut current_cents = self.current_cents.lock().unwrap();
+
+        if amount_cents < 0 {
             return Err("spend amount cannot be negative".to_string());
         }
 
-        *current += amount;
+        *current_cents += amount_cents;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            let cents = (amount * 100.0).round() as u64;
-            if cents > 0 {
+            if amount_cents > 0 {
                 store.llm_cost_counter.add(
-                    cents,
+                    amount_cents as u64,
                     &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
                 );
             }
         }
 
-        if *current > self.total_limit {
+        let total_limit_cents = (self.total_limit * 100.0).round() as i64;
+        if *current_cents > total_limit_cents {
             Ok(false)
         } else {
             Ok(true)
         }
-    }
-
-    pub fn get_remaining(&self) -> f64 {
-        let current = self.current.lock().unwrap();
-        self.total_limit - *current
-    }
-
-    pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.lock().unwrap();
-        ((self.total_limit - *current) * 100.0).round() as i64
-    }
-
-    pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
-        self.record_spend((amount_cents as f64) / 100.0)
     }
 }
 
