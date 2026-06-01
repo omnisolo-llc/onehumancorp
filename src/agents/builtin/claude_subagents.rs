@@ -236,6 +236,51 @@ impl ClaudeSubagentSpawner {
     }
 
     #[tokio::test]
+    async fn test_subagent_e2e_isolation_and_handoff() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "I am the parent condenser. Condensed summary of isolation test.".to_string()
+            ]),
+        });
+        let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
+
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "I am the subagent. My long output goes here...".to_string()
+            ]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client.clone(), vec![]));
+
+        let dir = tempdir().unwrap();
+        let mailbox_dir = dir.path().join("mailboxes");
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_agent,
+            subagent,
+            ClaudeSubagentMode::Teammate { mailbox_dir: mailbox_dir.clone() },
+        );
+
+        let parent_context = vec![ohc_builtin_agent_core::types::Message::user("Parent context message: The secret is 42")];
+        let config = AgentRunConfig::default();
+
+        let task = "Perform E2E test";
+        let result = spawner.run_subagent(task, &parent_context, &config).await.unwrap();
+
+        // 1. Verify parent-child isolation
+        // The subagent should ONLY receive the task, not the parent context.
+        // We verify this by looking at what was written to the inbox, which is what the teammate subagent reads.
+        let inbox_content = std::fs::read_to_string(mailbox_dir.join("inbox.txt")).unwrap();
+        assert_eq!(inbox_content, task);
+        assert!(!inbox_content.contains("The secret is 42"));
+
+        // 2. Assert handoff contract
+        // The spawner execute_and_summarize ensures that the output is condensed via the parent's llm.
+        // The final result returned to the parent should be the condensed version.
+        assert_eq!(result, "I am the parent condenser. Condensed summary of isolation test.");
+        assert!(!result.contains("My long output goes here..."));
+    }
+
+    #[tokio::test]
     async fn test_claude_subagent_worktree() {
         let parent_client = Arc::new(MockLlmClient {
             responses: std::sync::Mutex::new(vec![
