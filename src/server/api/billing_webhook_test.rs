@@ -32,6 +32,7 @@ async fn test_stripe_webhook_handler_completed() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        orchestrator: None,
     };
 
     // Seed the database with a test tenant
@@ -104,6 +105,7 @@ async fn test_stripe_webhook_handler_deleted() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        orchestrator: None,
     };
 
     // Seed the database with a test tenant
@@ -180,6 +182,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: Arc::new(db),
+        orchestrator: None,
     };
 
     let event = MercadoPagoEvent {
@@ -199,4 +202,59 @@ async fn test_mercadopago_webhook_handler_payment_created() {
 
     let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_stripe_webhook_handler_split_payment_event() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
+
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db),
+        orchestrator: None, // We mock this away, just verify we don't crash
+    };
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .with_state(webhook_state);
+
+    let payload = json!({
+        "id": "evt_test",
+        "type": "payment_intent.succeeded",
+        "data": {
+            "object": {
+                "id": "pi_123",
+                "amount": 20000,
+                "metadata": {
+                    "tenant_id": "test_tenant",
+                    "product_id": "prod_abc"
+                }
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+
+    // We should get a 200 OK since it parsed the event successfully.
+    // The actual orchestrator is mocked as None so the event dispatch is skipped.
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
 }

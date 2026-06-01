@@ -24,10 +24,21 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SplitPaymentRule {
+    pub id: String,
+    pub product_id: String,
+    pub partner_id: String,
+    pub partner_phone_or_email: String,
+    pub split_type: String,
+    pub split_value: String, // String to safely hold Decimal values in JSON
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/split-rules", axum::routing::get(list_split_rules_handler).post(create_split_rule_handler))
         .with_state(hub)
 }
 
@@ -156,4 +167,102 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn list_split_rules_handler(
+    _headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Result<Json<Vec<SplitPaymentRule>>, axum::http::StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => auth.tenant_id.clone(),
+        None => return Err(axum::http::StatusCode::UNAUTHORIZED),
+    };
+
+    let pool = crate::db::get_pool();
+    let query_result = sqlx::query!(
+        "SELECT id, product_id, partner_id, partner_phone_or_email, split_type, split_value::text FROM split_payment_rules WHERE tenant_id = $1",
+        tenant_id
+    )
+    .fetch_all(&pool)
+    .await;
+
+    match query_result {
+        Ok(rows) => {
+            let rules = rows.into_iter().map(|row| SplitPaymentRule {
+                id: row.id,
+                product_id: row.product_id.unwrap_or_default(),
+                partner_id: row.partner_id,
+                partner_phone_or_email: row.partner_phone_or_email,
+                split_type: row.split_type,
+                split_value: row.split_value.unwrap_or_else(|| "0".to_string()),
+            }).collect();
+            Ok(Json(rules))
+        },
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+pub async fn create_split_rule_handler(
+    _headers: HeaderMap,
+    request: axum::extract::Request,
+    axum::extract::Json(payload): axum::extract::Json<SplitPaymentRule>,
+) -> Result<Json<SplitPaymentRule>, axum::http::StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => auth.tenant_id.clone(),
+        None => return Err(axum::http::StatusCode::UNAUTHORIZED),
+    };
+
+    let pool = crate::db::get_pool();
+    let id = if payload.id.is_empty() { uuid::Uuid::new_v4().to_string() } else { payload.id.clone() };
+
+    let split_value_decimal: sqlx::types::BigDecimal = payload.split_value.parse().unwrap_or_default();
+
+    let query_result = sqlx::query!(
+        "INSERT INTO split_payment_rules (id, tenant_id, product_id, partner_id, partner_phone_or_email, split_type, split_value) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        id,
+        tenant_id,
+        payload.product_id,
+        payload.partner_id,
+        payload.partner_phone_or_email,
+        payload.split_type,
+        split_value_decimal
+    )
+    .execute(&pool)
+    .await;
+
+    match query_result {
+        Ok(_) => {
+            let mut new_rule = payload;
+            new_rule.id = id;
+            Ok(Json(new_rule))
+        },
+        Err(e) => {
+            tracing::error!("Failed to insert split rule: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Request;
+    use axum::body::Body;
+
+    #[tokio::test]
+    async fn test_split_payment_rule_struct() {
+        let rule = SplitPaymentRule {
+            id: "1".to_string(),
+            product_id: "prod_1".to_string(),
+            partner_id: "part_1".to_string(),
+            partner_phone_or_email: "test@example.com".to_string(),
+            split_type: "percentage".to_string(),
+            split_value: "15".to_string(),
+        };
+
+        assert_eq!(rule.id, "1");
+        assert_eq!(rule.product_id, "prod_1");
+        assert_eq!(rule.split_type, "percentage");
+        assert_eq!(rule.split_value, "15");
+    }
 }

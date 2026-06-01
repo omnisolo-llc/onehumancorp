@@ -9,12 +9,15 @@ use serde_json::Value;
 
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::DepartmentEvent;
 
 #[derive(Clone)]
 pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub orchestrator: Option<Arc<DepartmentOrchestrator>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +38,29 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
+        "payment_intent.succeeded" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str())
+                .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
+
+            if let Some(tenant_id) = tenant_id_opt {
+                if let Some(orchestrator) = &webhook_state.orchestrator {
+                    let event = DepartmentEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id.to_string(),
+                        event_type: "tenant.payment.received".to_string(),
+                        source: "stripe_webhook".to_string(),
+                        payload: obj.clone(),
+                    };
+                    let _ = orchestrator.dispatch_event(event).await;
+                }
+                StatusCode::OK.into_response()
+            } else {
+                StatusCode::BAD_REQUEST.into_response()
+            }
+        },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
