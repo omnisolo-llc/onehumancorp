@@ -1,0 +1,13 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -723,10 +723,6 @@
+                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
+                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
+                         }
+-                        Err(crate::types::ToolError::Fatal(err_msg)) | Err(crate::types::ToolError::Unexpected(err_msg)) => {
+-                            // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
+-                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
+-                        }
+                         Err(e) => {
+                             let err_str = e.to_string();
+                             on_event(AgentEvent::ToolCall {
