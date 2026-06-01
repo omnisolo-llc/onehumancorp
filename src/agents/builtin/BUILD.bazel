@@ -50,6 +50,7 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "agentic_seek.rs",
+        "goose.rs",
         "checkpointer.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",

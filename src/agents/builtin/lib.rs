@@ -267,3 +267,5 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub mod agentic_seek;
+
+pub mod goose;
