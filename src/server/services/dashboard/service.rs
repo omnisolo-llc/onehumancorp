@@ -101,7 +101,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 };
@@ -122,7 +122,7 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
-                                        "{}".to_string()
+                                        r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -148,7 +148,7 @@ impl DashboardService for MyDashboardService {
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                                     fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
-                                        "{}".to_string()
+                                        r.try_get::<String, _>("metadata_json").unwrap_or_else(|_| "{}".to_string())
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
@@ -347,7 +347,7 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let mut final_meetings = Vec::new();
+        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -464,7 +464,7 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-            final_meetings = out_meetings;
+
         }
 
         let org = if req.mobile_optimized {

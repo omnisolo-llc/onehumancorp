@@ -76,8 +76,7 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
 
 
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
-    let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None));
-    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
+    let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
@@ -403,7 +402,7 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     // Step 1: The Advisor extracts metadata

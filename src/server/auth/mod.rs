@@ -116,6 +116,7 @@ pub struct Store {
     by_email: RwLock<HashMap<TenantKey, String>>,
     by_oidc: RwLock<HashMap<TenantKey, String>>,
     revoked: RwLock<HashMap<String, DateTime<Utc>>>,
+    redis_client: Option<redis::Client>,
     #[allow(dead_code)]
     secret: Vec<u8>,
     #[allow(dead_code)]
@@ -124,11 +125,11 @@ pub struct Store {
 
 impl Store {
     pub fn new() -> Self {
-        let secret = std::env::var("JWT_SECRET")
+        let secret = std::env::var("OHC_JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
                 if ::server_config::get().multitenant {
-                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                    panic!("OHC_JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
 
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
@@ -208,9 +209,17 @@ impl Store {
             created_at: now,
         });
 
-        let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
-        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let issuer_url = std::env::var("OHC_OIDC_ISSUER_URL").unwrap_or_default();
+        let client_id = std::env::var("OHC_OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
+
+        let redis_client = if ::server_config::get().multitenant {
+            std::env::var("OHC_REDIS_URL")
+                .ok()
+                .and_then(|url| redis::Client::open(url).ok())
+        } else {
+            None
+        };
 
         let store = Store {
             users: RwLock::new(HashMap::new()),
@@ -219,6 +228,7 @@ impl Store {
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
+            redis_client,
             secret,
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
@@ -233,9 +243,9 @@ impl Store {
     }
 
     fn seed_default_admin(&self, now: DateTime<Utc>) {
-        let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-        let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+        let admin_user = std::env::var("OHC_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+        let admin_pass = std::env::var("OHC_ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
+        let admin_email = std::env::var("OHC_ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
         let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
 
@@ -428,19 +438,39 @@ impl Store {
     }
 
     pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
-        let mut revoked = self.revoked.write().unwrap();
-        revoked.insert(jti, exp);
+        {
+            let mut revoked = self.revoked.write().unwrap();
+            revoked.insert(jti.clone(), exp);
 
-        let now = Utc::now();
-        revoked.retain(|_, v| *v > now);
+            let now = Utc::now();
+            revoked.retain(|_, v| *v > now);
+        }
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
+                let redis_key = format!("revoked_token:{}", jti);
+                let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
+            }
+        }
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
-        let revoked = self.revoked.read().unwrap();
-        if let Some(exp) = revoked.get(jti) {
-             if exp > &Utc::now() {
-                 return true;
-             }
+    pub async fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+        {
+            let revoked = self.revoked.read().unwrap();
+            if let Some(exp) = revoked.get(jti) {
+                 if *exp > Utc::now() {
+                     return true;
+                 }
+            }
+        }
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                let redis_key = format!("revoked_token:{}", jti);
+                let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
+                if let Ok(true) = exists {
+                    return true;
+                }
+            }
         }
         false
     }
@@ -483,7 +513,7 @@ impl Store {
                     if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
-                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     return Ok(claims);
@@ -509,7 +539,7 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.as_deref() == Some("system") {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -533,7 +563,7 @@ impl Store {
                         if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                             return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                         }
-                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
                             return Err("token revoked".to_string());
                         }
                         return Ok(claims);
@@ -569,7 +599,7 @@ impl Default for Store {
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
+    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
          return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))
