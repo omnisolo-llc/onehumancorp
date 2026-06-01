@@ -916,7 +916,7 @@ impl AgentService for AgentServiceImpl {
                     }
                     Err(_) => {
                         let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
                              continue;

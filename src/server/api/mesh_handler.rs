@@ -60,19 +60,6 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
     Ok(spiffe_id.to_string())
 }
 
-
-/// Helper method to format responses
-fn publish_response(result: Result<(), String>) -> axum::response::Response {
-    match result {
-        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
-        Err(e) => {
-            let error_res = serde_json::json!({ "error": e.to_string() });
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
-        }
-    }
-}
-
-/// Handler to broadcast messages via HTTP
 pub async fn orchestration_broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -82,10 +69,15 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    match transport.publish(&payload.topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handler for WebSockets to stream orchestration tasks
 pub async fn orchestration_tasks_stream_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -94,7 +86,6 @@ pub async fn orchestration_tasks_stream_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
-/// Broadcast handler for general mesh communication
 pub async fn broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -104,10 +95,15 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    match transport.publish(&payload.topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handler for direct agent-to-agent communication over HTTP
 pub async fn direct_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -118,10 +114,15 @@ pub async fn direct_handler(
     }
 
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    match transport.publish(&topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Mailbox handler for delayed message delivery
 pub async fn mailbox_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -132,10 +133,15 @@ pub async fn mailbox_handler(
     }
 
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    match transport.publish(&topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handles the WebSocket connection for mesh communication
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(100);

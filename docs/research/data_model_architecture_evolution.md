@@ -31,7 +31,7 @@ As OneHumanCorp scales to support diverse business types—from bakers and freel
 - Ensure every new table includes a `tenant_id` column and the corresponding RLS policies are applied immediately upon creation.
 
 ## Implementation Prompt
-Implement the data model enhancements for the OHC platform. Ensure that all new tables include a `tenant_id` column and that Row Level Security (RLS) is enabled and configured correctly. Update the Rust backend repository layer to pass the `tenant_id` context in all queries. Implement E2E tests verifying that a user from one tenant cannot access data from another tenant, even via API manipulation.
+Implement the data model enhancements for the OHC platform. Ensure that all new tables include a `tenant_id` column and that Row Level Security (RLS) is enabled and configured correctly. Update the Go backend repository layer to pass the `tenant_id` context in all queries. Implement E2E tests verifying that a user from one tenant cannot access data from another tenant, even via API manipulation.
 
 ## Priority
 P0

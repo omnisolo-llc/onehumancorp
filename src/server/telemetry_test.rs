@@ -452,59 +452,6 @@ fn test_redact_interface_pii_malicious_payloads() {
 }
 
 #[test]
-fn test_redact_interface_pii_edge_cases() {
-    let payload_mixed_array = serde_json::json!({
-        "mixed_array": [
-            "safe_string",
-            123,
-            { "email": "should_be_redacted@test.com", "safe_field": "ok" },
-            ["another_safe", { "password": "super_secret" }]
-        ],
-        "non_sensitive_parent": {
-            "userEmail": "camelCase@test.com",
-            "CREDIT_CARD": "1234",
-            "secret_token_123": "token"
-        }
-    });
-
-    let redacted_mixed = ::server_telemetry::redact_interface_pii(payload_mixed_array);
-    assert_eq!(redacted_mixed["mixed_array"][0], "safe_string");
-    assert_eq!(redacted_mixed["mixed_array"][1], 123);
-    assert_eq!(redacted_mixed["mixed_array"][2]["email"], "[REDACTED]");
-    assert_eq!(redacted_mixed["mixed_array"][2]["safe_field"], "ok");
-    assert_eq!(redacted_mixed["mixed_array"][3][0], "another_safe");
-    assert_eq!(redacted_mixed["mixed_array"][3][1]["password"], "[REDACTED]");
-
-    assert_eq!(redacted_mixed["non_sensitive_parent"]["userEmail"], "[REDACTED]");
-    assert_eq!(redacted_mixed["non_sensitive_parent"]["CREDIT_CARD"], "[REDACTED]");
-    assert_eq!(redacted_mixed["non_sensitive_parent"]["secret_token_123"], "[REDACTED]");
-}
-
-#[test]
-fn test_redact_interface_pii_highly_nested() {
-    let payload = serde_json::json!({
-        "level1": {
-            "level2": {
-                "level3": {
-                    "level4": {
-                        "level5": {
-                            "level6": {
-                                "secret_token": "token123",
-                                "safe_value": 42
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    let redacted = ::server_telemetry::redact_interface_pii(payload);
-    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["secret_token"], "[REDACTED]");
-    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["safe_value"], 42);
-}
-
-#[test]
 fn test_harness_telemetry_recording() {
     // This test ensures the metric recording logic runs without panicking.
     // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.

@@ -174,7 +174,7 @@ async fn test_single_agent_flow() {
             &task_id,
             "system",
             "PENDING",
-            "IN_PROGRESS",
+            "EXECUTING",
             Some("agent_1"),
             None,
         )
@@ -188,7 +188,7 @@ async fn test_single_agent_flow() {
             .fetch_one(pool)
             .await
             .unwrap();
-        assert_eq!(status, "IN_PROGRESS");
+        assert_eq!(status, "EXECUTING");
     }
 }
 

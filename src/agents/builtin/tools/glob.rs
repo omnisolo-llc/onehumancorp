@@ -52,9 +52,9 @@ impl ToolExecutor for GlobExecutor {
         }
 
         let mut output_matches = matches;
-        if output_matches.len() > 50 {
-            output_matches.truncate(50);
-            output_matches.push("... (truncated to 50 results. Please use a more specific glob pattern or use grep/find.)".to_string());
+        if output_matches.len() > 100 {
+            output_matches.truncate(100);
+            output_matches.push("... (truncated)".to_string());
         }
 
         Ok(output_matches.join("\n"))
