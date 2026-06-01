@@ -1,4 +1,3 @@
-pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
 

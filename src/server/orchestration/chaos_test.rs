@@ -272,16 +272,16 @@ mod chaos_tests {
         });
 
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
-        let state_manager = CloudStateManager::new(db.clone(), mesh).with_timeout(std::time::Duration::from_millis(50));
+        let state_manager = CloudStateManager::new(db.clone(), mesh);
 
         let start = std::time::Instant::now();
         let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
-        // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
-        // The mocked sleeping mesh sleeps for 61s, forcing the 2s timeout to trigger.
-        assert!(elapsed < std::time::Duration::from_millis(100));
-        assert!(elapsed > std::time::Duration::from_millis(40));
+        // The pull_available_tasks for cloud has a 60-second timeout on the lock or DB
+        // The mocked sleeping mesh sleeps for 61s, forcing the 60s timeout to trigger.
+        assert!(elapsed < std::time::Duration::from_millis(62000));
+        assert!(elapsed > std::time::Duration::from_millis(59000));
 
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
