@@ -1,86 +1,117 @@
-# Architecture Brief: Zero-Config Subscription Billing Engine
+# Zero-Configuration AI-Powered Subscription & Membership Billing Engine
+
+## Title
+Architect and Implement the Zero-Configuration AI-Powered Subscription & Membership Billing Engine
 
 ## Problem Statement
-For business personas like Leo the Music Tutor, creating recurring revenue is essential, but the technical setup is extremely confusing. The traditional setup requires the user to integrate Stripe Billing or Chargebee, manage webhooks for failed payments, and handle customer cancellation portals themselves. If Leo cannot easily offer "Monthly Guitar Lessons" without a technical degree, he will stay on legacy platforms like Patreon or handle cash manually.
+Small business owners like Leo (a music tutor offering weekly lesson packages) and Priya (a boutique owner launching a monthly VIP style box) need a way to offer recurring subscriptions and memberships. However, they hit a wall when trying to set this up on existing platforms. They are forced to navigate complex third-party app stores, figure out Stripe webhooks, manage failed payment retry logic, and deal with "subscription hell" where their base platform fee balloons from $29 to $200+ just to add basic recurring billing functionality. They don't know what "dunning" or "proration" means, and they shouldn't have to. They just want to tap "Make this a monthly subscription" on their phone and have the system handle everything invisibly.
 
 ## Research Report
-- **The "Subscription Friction":** Analysis of the SMB market shows that setting up subscription products requires 5x more clicks and API knowledge than setting up a one-time product on standard builders.
-- **Competitor Gaps:** Shopify requires third-party apps for subscriptions (e.g., Recharge, Skio) which adds immediate monthly overhead ($50-$300/mo) and fragmentation. Wix provides basic recurring payments but lacks robust self-serve cancellation and upgrade/downgrade portals.
-- **The OHC Opportunity:** Since OHC manages the unified data layer, it can provide an embedded "Zero-Config" subscription engine. The user defines a recurring product ("Monthly Guitar Lessons - $100/mo"); OHC automatically sets up the Stripe Billing plans, creates the customer portal for self-serve management, and provides an AI Finance Agent to chase failed payments via natural language emails.
+### The Small Business "Subscription Gap"
+Recurring revenue is the holy grail for small businesses, increasing lifetime value (LTV) and business resilience. Yet, offering subscriptions remains highly technical.
+- **Shopify**: Does not support native subscriptions out of the box without relying on external apps (like Recharge, Appstle, or Skio), which add monthly fees and require complex configuration.
+- **Wix**: Offers native subscriptions, but the setup is buried in complex desktop-first dashboard settings. It struggles with hybrid models (e.g., booking a service + a product subscription).
+- **Squarespace**: Supports subscriptions, but only on the highest-tier Advanced Commerce plan. The mobile management for merchants is severely lacking.
+- **GoDaddy**: Basic subscription options exist, but lack AI-driven churn management or flexible pause/resume flows for customers.
+
+### OneHumanCorp Differentiation
+Our platform must provide an **invisible, native subscription engine**. A merchant should be able to toggle a switch on any product, service, or digital good to make it recurring. The AI Finance and Operations departments handle all the backend complexity: dunning (failed payment retries), customer notifications, automated pause/resume actions via SMS, and ledger reconciliation—with absolutely zero configuration from the user.
 
 ## Design Doc
 
-### Architecture Diagram
+### Architecture Diagram (Mermaid.js)
 ```mermaid
 erDiagram
-    TENANT ||--o{ RECURRING_PRODUCT : offers
-    RECURRING_PRODUCT ||--o{ SUBSCRIPTION : generates
-    TENANT ||--o{ SUBSCRIPTION : manages
-    SUBSCRIPTION ||--o{ INVOICE : requires
-    INVOICE ||--|{ PAYMENT : records
+    MERCHANT ||--o{ SUBSCRIPTION_PRODUCT : "creates"
+    CUSTOMER ||--o{ SUBSCRIPTION : "subscribes to"
+    SUBSCRIPTION_PRODUCT ||--o{ SUBSCRIPTION : "templates"
+    SUBSCRIPTION ||--o{ INVOICE : "generates"
+    SUBSCRIPTION ||--o{ LEDGER_ENTRY : "records"
 
-    TENANT {
-        string id PK
-        string name
-    }
-    RECURRING_PRODUCT {
-        string id PK
-        string tenant_id FK
-        string interval "Monthly | Yearly"
-        float amount
-    }
-    SUBSCRIPTION {
-        string id PK
-        string tenant_id FK
-        string product_id FK
-        string status "Active | Past Due | Canceled"
-    }
-    INVOICE {
-        string id PK
-        string subscription_id FK
-        float amount
-    }
+    %% AI Departments Interactions
+    FINANCE_AGENT ||--o{ SUBSCRIPTION : "monitors for dunning/renewal"
+    OPS_AGENT ||--o{ SUBSCRIPTION : "triggers fulfillment/booking"
+    CRM_AGENT ||--o{ SUBSCRIPTION : "manages churn & loyalty"
 ```
 
 ```mermaid
 sequenceDiagram
-    participant BusinessOwner
-    participant OHC_Platform
-    participant StripeBilling
-    participant AI_FinanceAgent
+    autonumber
+    actor Customer
+    participant Storefront as OHC Storefront Edge
+    participant SubEngine as Zero-Config Subscription Engine
+    participant FinanceAgent as AI Finance Dept
+    participant CRM_Agent as AI CRM Dept
 
-    BusinessOwner->>OHC_Platform: Toggle "Recurring Product" ON
-    OHC_Platform->>StripeBilling: Auto-create Stripe Product/Price
-    OHC_Platform-->>BusinessOwner: Product Live!
+    Customer->>Storefront: Taps "Subscribe Monthly" ($50/mo)
+    Storefront->>SubEngine: Create Subscription Intent
+    SubEngine-->>Customer: Collect Vaulted Payment (Apple Pay / GPay)
+    Customer->>SubEngine: Confirm Payment
+    SubEngine->>FinanceAgent: Activate Subscription & Vault Token
+    FinanceAgent->>SubEngine: Schedule Next Billing Cycle
+    SubEngine->>CRM_Agent: Trigger Welcome Flow
+    CRM_Agent-->>Customer: SMS: "Welcome to the VIP club! Manage your sub here."
 
-    rect rgb(200, 255, 200)
-    Note over OHC_Platform, AI_FinanceAgent: Future Webhook Event
-    StripeBilling->>OHC_Platform: invoice.payment_failed
-    OHC_Platform->>AI_FinanceAgent: Chase Payment
-    AI_FinanceAgent-->>OHC_Platform: Draft email to customer
-    end
+    %% Cycle 2 - Failed Payment Scenario
+    Note over SubEngine, FinanceAgent: 30 Days Later
+    SubEngine->>FinanceAgent: Attempt Charge Cycle 2
+    FinanceAgent-->>SubEngine: Charge Failed (Insufficient Funds)
+    FinanceAgent->>CRM_Agent: Trigger Dunning Protocol
+    CRM_Agent-->>Customer: SMS: "Hey! Your payment for the VIP box failed. Tap to update your card without logging in."
 ```
 
-### Mobile UX Flow (375px First)
-1. **Product Creation:** In the "Products & Services" tab, Leo selects "Add Service". A prominent toggle says "Make this a recurring subscription?".
-2. **Pricing Setup:** He selects the interval ("Every Month") and price. No mention of API keys, webhooks, or Stripe dashboard.
-3. **Active Subscribers View:** A new "Subscribers" module appears on the dashboard, showing Active, Paused, and Failed subscriptions.
-4. **Agent Action:** When an invoice fails, Leo gets a notification on the home screen: "1 payment failed. Drafted recovery email to Sarah."
+### UI Wireframes & Screen Flow (375px Mobile-First)
+Adhering to the macOS-style Translucent Glass and UniFi modular dashboard aesthetics.
+
+**Screen 1: The Merchant Product Setup (Leo's View)**
+- **Header**: "Edit Piano Lesson Package"
+- **Card Layout**: Standard product details (Name, Price, Photo).
+- **The "Magic" Toggle**: A simple, prominent toggle switch labeled "Make this a recurring subscription."
+- **Expanded Options (Appears on Toggle)**:
+  - "How often?" (Carousel picker: Weekly, Monthly, Yearly).
+  - "Allow customers to pause?" (Toggle, default ON).
+  - *No complex settings.* "Save & Publish" button fixed at the bottom.
+
+**Screen 2: The Customer Experience (Customer's View)**
+- **Product Page**: Clean image, bold price "$50 / month".
+- **Action Button**: "Subscribe with Apple Pay" (1-tap checkout).
+- **Post-Purchase Sheet**: "You're in! We'll text you a magic link to manage your subscription anytime."
+
+**Screen 3: AI Dunning & Management (Merchant Dashboard View)**
+- **Dashboard Card**: "Subscription Health"
+- **AI Insight Chip**: "Leo, 2 subscriptions failed this week. The Finance Agent already texted them a 1-tap update link. 1 has already recovered."
+
+### Mobile UX Flow
+1. **Creation**: Merchant creates a product/service and taps a single toggle to make it recurring. They set the frequency. Done.
+2. **Checkout**: Customer views the product on the edge-cached storefront. They use digital wallets (Apple/Google Pay) for frictionless vaulting.
+3. **Management (Customer)**: Customers receive SMS notifications before renewals with a passwordless magic link to skip a month, pause, or update payment methods.
+4. **Management (Merchant)**: The merchant's mobile dashboard shows a simple MRR (Monthly Recurring Revenue) widget and active subscriber count. The AI handles the rest.
 
 ### AI Agent Integration Points
-- **Finance & Payments Agent ("The Accountant"):** Automatically monitors subscription health. Sends the business owner a weekly brief: "You gained 2 new subscribers this week. 1 payment failed, but I already emailed them a link to update their card."
+- **Finance Department**: Automatically handles prorations, grandfathering pricing, and dunning (payment retries) using smart retry algorithms.
+- **CRM/Marketing Department**: Sends proactive, conversational SMS messages for upcoming renewals, payment failures, or churn prevention (e.g., offering a discount if a user clicks 'Cancel').
+- **Operations Department**: Automatically generates fulfillment tickets for physical boxes (Priya) or adds recurring calendar slots (Leo) when a subscription renews successfully.
 
 ### Key Design Decisions
-- **Complete Abstraction:** The user never interacts with the Stripe dashboard. OHC handles all Stripe object provisioning invisibly.
-- **Embedded Portals:** Customers must be able to cancel or update their cards themselves without contacting the business owner, managed via the Stripe Customer Portal embed.
-- **Native 375px Flow:** Building subscription items must work fluently on mobile without complex sidebars or multi-page wizards.
+- **Zero-Config Dunning**: Merchants are not asked to define retry schedules. The Finance AI optimizes retry days based on industry best practices and automated learning.
+- **Passwordless Customer Management**: To eliminate friction, customers manage subscriptions via SMS magic links rather than forcing them to create and remember portal passwords.
+- **Universal Subscription Protocol**: The engine must treat physical goods, digital downloads, and booked services identically at the core data layer to allow hybrid subscriptions.
+- **Strict Multi-Tenant Isolation**: Payment tokens and subscription ledgers are strictly isolated per tenant using Zero-Trust principles, ensuring Carlos cannot access Maya's customer vaults.
 
 ## Implementation Prompt
 **To Implementer Agent:**
-Implement the "Zero-Config Subscription Engine" within the OHC backend and UI. Extend the `Product` schema to support `is_recurring` and `interval` properties. Integrate with Stripe Billing to automatically provision the corresponding Stripe Plans when a recurring product is created. Update the checkout flow to support subscription creation. Finally, implement a webhook handler for failed recurring payments that triggers a task for the AI Finance Agent to draft a recovery email. Ensure the UI for creating a recurring product passes the "grandmother test" (no technical jargon, optimized for 375px).
+Implement the core Zero-Configuration Subscription & Membership Billing Engine.
+- **User Journey (CUJ)**: A merchant (non-technical) must be able to toggle "recurring" on any product, service, or digital good and define a billing interval (e.g., monthly). A customer must be able to subscribe via a 1-tap checkout and manage their subscription via a passwordless magic link.
+- **Acceptance Criteria**:
+  1. The engine supports creating recurring billing intents for any asset type.
+  2. The Finance AI automatically intercepts failed renewals and triggers the dunning protocol.
+  3. All customer management (pause, resume, cancel, update card) must be accessible via passwordless magic links.
+  4. The solution must integrate seamlessly with our edge storefront and hybrid event mesh, enforcing strict multi-tenant data isolation.
+  5. Provide a 375px mobile-first UI for both merchant setup and customer checkout.
+- **Constraint**: Do not expose any configuration for webhooks, API keys, or manual retry schedules to the merchant. The system must be "Zero-Config".
 
 ## Priority
-P0
+P0 (Critical to unlocking recurring revenue and maximizing LTV for all core personas).
 
 ## Estimated Scope
 Large
