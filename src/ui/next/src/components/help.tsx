@@ -14,12 +14,10 @@ type Step = {
 
 type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string };
-type HelpTab = "center" | "chat" | "videos" | "whatsnew";
-type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
+type HelpTab = "center" | "videos" | "whatsnew";
 
 const helpTabs = [
   { id: "center", label: "Help" },
-  { id: "chat", label: "Ask AI" },
   { id: "videos", label: "Videos" },
   { id: "whatsnew", label: "New" }
 ] as const;
@@ -46,19 +44,6 @@ function normalizeVideos(data: unknown): HelpVideo[] {
     if (!isRecord(item) || typeof item.id !== "number" || typeof item.title !== "string" || typeof item.duration !== "string") return [];
     return [{ id: item.id, title: item.title, duration: item.duration }];
   });
-}
-
-function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
-  if (!isRecord(data) || typeof data.reply !== "string" || !data.reply.trim()) {
-    throw new Error("Invalid chat reply");
-  }
-
-  const link = isRecord(data.link) ? data.link : undefined;
-  return {
-    text: data.reply,
-    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
-    linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
-  };
 }
 
 type WalkthroughContextType = {
@@ -147,12 +132,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<HelpTab>("center");
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
-  ]);
-  const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const nextMessageId = useRef(1);
 
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
 
@@ -186,25 +166,6 @@ export function HelpWidget() {
       })
       .catch(() => {});
   }, []);
-
-  const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const val = chatInput.trim();
-    if (!val) return;
-
-    setChatInput("");
-    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
-
-    try {
-      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-      if (!response.ok) throw new Error("Failed to fetch chat reply");
-      const data = await response.json();
-      const reply = normalizeChatReply(data);
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
-    }
-  };
 
   return (
     <>
@@ -282,44 +243,6 @@ export function HelpWidget() {
                     <span className="font-bold text-indigo-800 text-sm block">Tour: KAIROS AI OS Orchestration</span>
                   </button>
                 </div>
-              </div>
-            )}
-
-            {tab === "chat" && (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
-                  {chatMessages.map((msg) => {
-                    const className = `p-3 rounded-2xl text-sm w-4/5 ${
-                      msg.role === "bot"
-                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
-                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
-                    }`;
-                    return msg.role === "bot" ? (
-                      <div key={msg.id} className={className}>
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.linkUrl && msg.linkTitle && (
-                          <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div key={msg.id} className={className}>{msg.text}</div>
-                    );
-                  })}
-                </div>
-                <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
-                  <input
-                    type="text"
-                    placeholder="Ask anything..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Send message">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                  </button>
-                </form>
               </div>
             )}
 
