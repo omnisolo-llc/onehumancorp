@@ -280,6 +280,7 @@ pub use ::server_common as common;
 pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
+pub mod voice;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -4315,6 +4316,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>AI Departments</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
+
+                        <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
+                            <h2>Select an AI Voice</h2>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
+                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
+                            <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
+                        </div>
 
                         <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
                             <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
