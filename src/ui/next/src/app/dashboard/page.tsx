@@ -35,6 +35,22 @@ export default function Dashboard() {
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
   const [productAdded, setProductAdded] = useState<boolean>(false);
 
+  useEffect(() => {
+    async function fetchTrialStatus() {
+      try {
+        const res = await fetch('/api/v1/growth/trial/status');
+        if (res.ok) {
+          const data = await res.json();
+          setTrialDaysLeft(data.trial_days_left ?? 14);
+          setTwitterConnected(data.twitter_shared ?? false);
+        }
+      } catch (e) {
+        console.error("Failed to fetch trial status", e);
+      }
+    }
+    fetchTrialStatus();
+  }, []);
+
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
@@ -1205,11 +1221,18 @@ export default function Dashboard() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!twitterConnected) {
-                                        setTwitterConnected(true);
-                                        fetch("/api/v1/growth/trial/extend", { method: "POST" });
-                                        setTrialDaysLeft(prev => prev + 7);
+                                        try {
+                                          const res = await fetch("/api/v1/growth/trial/extend", { method: "POST" });
+                                          const data = await res.json();
+                                          if (res.ok && data.success) {
+                                              setTwitterConnected(true);
+                                              setTrialDaysLeft(prev => prev + 7);
+                                          }
+                                        } catch (e) {
+                                          console.error("Failed to extend trial", e);
+                                        }
                                     }
                                 }}
                                 disabled={twitterConnected}

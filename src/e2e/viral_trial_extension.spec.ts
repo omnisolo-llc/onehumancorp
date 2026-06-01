@@ -36,6 +36,7 @@ test.describe('Viral Trial Extension Growth Loop', () => {
     // Verify Persistence (refresh and ensure the value remains)
     await page.reload();
     await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Shared' })).toBeVisible();
     await expect(daysLeftElement).toHaveText(String(initialDays + 7));
   });
 });
