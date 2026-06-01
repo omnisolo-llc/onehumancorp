@@ -31,8 +31,6 @@ pub struct IntegrationsRegistry {
     pub messagebird_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::messagebird::provider::MessagebirdProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
-    pub daily_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::daily::provider::DailyProvider>>>,
-    pub chatwoot_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::chatwoot::provider::ChatwootProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
@@ -75,8 +73,6 @@ impl IntegrationsRegistry {
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            daily_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            chatwoot_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -97,21 +93,6 @@ impl IntegrationsRegistry {
     pub fn chat_messages(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::ChatMessage> {
         let msgs = self.messages.read().unwrap();
         msgs.get(integration_id).cloned().unwrap_or_default()
-    }
-
-    pub fn receive_chat_message(&self, integration_id: &str, channel: &str, from_customer: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
-        let msg = ::server_ohc::orchestration::ChatMessage {
-            id: format!("msg-{}", Utc::now().timestamp()),
-            channel: channel.to_string(),
-            from_agent: from_customer.to_string(),
-            content: content.to_string(),
-            thread_id: thread_id.to_string(),
-            timestamp_unix: Utc::now().timestamp(),
-        };
-
-        let mut msgs = self.messages.write().unwrap();
-        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
-        Ok(msg)
     }
 
     pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
@@ -290,14 +271,6 @@ impl IntegrationsRegistry {
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "daily" {
-            let mut clients = self.daily_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::daily::provider::DailyProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "chatwoot" {
-            let mut clients = self.chatwoot_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::chatwoot::provider::ChatwootProvider::new(creds.api_token.clone(), creds.base_url.clone())));
         }
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
@@ -479,19 +452,6 @@ impl IntegrationsRegistry {
         if let Some(c) = client_zoom {
             return c.generate_meeting_for_booking(booking_id, topic).await;
         }
-
-        let client_daily = {
-            if integration_id == "daily" {
-                let clients = self.daily_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client_daily {
-            return c.generate_meeting_for_booking(booking_id, topic).await;
-        }
-
         Err("integration not found or not supported".to_string())
     }
 
@@ -782,18 +742,6 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
-        let client_daily = {
-            if integration_id == "daily" {
-                let clients = self.daily_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client_daily {
-            return c.create_meeting(topic).await;
-        }
-
         let client_jitsi = {
             if integration_id == "jitsi" {
                 let clients = self.jitsi_clients.read().unwrap();
@@ -940,23 +888,5 @@ mod tests {
         let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
 
-    }
-}
-
-#[cfg(test)]
-mod tests2 {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_receive_chat_message() {
-        let registry = IntegrationsRegistry::new();
-
-        let msg = registry.receive_chat_message("meta", "whatsapp", "customer1", "Hello there!", "thread1").unwrap();
-        assert_eq!(msg.content, "Hello there!");
-        assert_eq!(msg.from_agent, "customer1");
-
-        let msgs = registry.chat_messages("meta");
-        assert_eq!(msgs.len(), 1);
-        assert_eq!(msgs[0].content, "Hello there!");
     }
 }

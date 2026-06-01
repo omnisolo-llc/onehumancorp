@@ -18,23 +18,15 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
     if let crate::db::DbStore::Sqlite(ref pool) = db.store {
         let mut payloads = Vec::new();
 
-        let (embedding_rows_res, mission_rows_res) = tokio::join!(
-            sqlx::query(
-                r#"
-                SELECT id, prompt FROM embedding_cache
-                WHERE synced_to_cloud = 0
-                "#,
-            ).fetch_all(pool),
-            sqlx::query(
-                r#"
-                SELECT id, payload FROM agent_missions
-                WHERE synced_to_cloud = 0
-                "#,
-            ).fetch_all(pool)
-        );
-
-        let embedding_rows = embedding_rows_res?;
-        let mission_rows = mission_rows_res?;
+        // Query unsynced embedding_cache records
+        let embedding_rows = sqlx::query(
+            r#"
+            SELECT id, prompt FROM embedding_cache
+            WHERE synced_to_cloud = 0
+            "#,
+        )
+        .fetch_all(pool)
+        .await?;
 
         for row in &embedding_rows {
             let id: String = row.try_get("id")?;
@@ -45,6 +37,16 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
                 payload: serde_json::json!({ "prompt": prompt }),
             });
         }
+
+        // Query unsynced agent_missions
+        let mission_rows = sqlx::query(
+            r#"
+            SELECT id, payload FROM agent_missions
+            WHERE synced_to_cloud = 0
+            "#,
+        )
+        .fetch_all(pool)
+        .await?;
 
         for row in &mission_rows {
             let id: String = row.try_get("id")?;
@@ -88,42 +90,26 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         let mut failed_missions = 0;
 
         if sync_successful {
-            let mut embedding_futures = Vec::new();
             for row in embedding_rows {
                 let id: String = row.try_get("id")?;
-                let pool_clone = pool.clone();
-                embedding_futures.push(async move {
-                    sqlx::query("UPDATE embedding_cache SET synced_to_cloud = 1 WHERE id = $1")
-                        .bind(&id)
-                        .execute(&pool_clone)
-                        .await
-                });
-            }
-
-            let mut mission_futures = Vec::new();
-            for row in mission_rows {
-                let id: String = row.try_get("id")?;
-                let pool_clone = pool.clone();
-                mission_futures.push(async move {
-                    sqlx::query("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id = $1")
-                        .bind(&id)
-                        .execute(&pool_clone)
-                        .await
-                });
-            }
-
-            let embedding_results = futures::future::join_all(embedding_futures).await;
-            for res in embedding_results {
-                if res.is_ok() {
+                let result = sqlx::query("UPDATE embedding_cache SET synced_to_cloud = 1 WHERE id = $1")
+                    .bind(&id)
+                    .execute(pool)
+                    .await;
+                if result.is_ok() {
                     synced_embeddings += 1;
                 } else {
                     failed_embeddings += 1;
                 }
             }
 
-            let mission_results = futures::future::join_all(mission_futures).await;
-            for res in mission_results {
-                if res.is_ok() {
+            for row in mission_rows {
+                let id: String = row.try_get("id")?;
+                let result = sqlx::query("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id = $1")
+                    .bind(&id)
+                    .execute(pool)
+                    .await;
+                if result.is_ok() {
                     synced_missions += 1;
                 } else {
                     failed_missions += 1;
