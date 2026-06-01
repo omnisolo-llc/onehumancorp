@@ -42,8 +42,16 @@ async fn get_draft(
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
     let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
     match agent.get_onboarding_state(tenant_id, user_id).await {
-        Ok(state) => Ok(Json(state)),
-        Err(_) => Ok(Json(serde_json::json!({}))), // fallback
+        Ok(state) => {
+            // For now, extract the bio field if we store it as a general state document
+            // If there's no state or bio, returning an empty json is fine
+            if let Some(bio) = state.get("bio") {
+                Ok(Json(serde_json::json!({ "bio": bio })))
+            } else {
+                Ok(Json(serde_json::json!({ "bio": "" })))
+            }
+        },
+        Err(_) => Ok(Json(serde_json::json!({ "bio": "" }))), // fallback
     }
 }
 
@@ -55,13 +63,8 @@ async fn save_draft(
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
     let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
-    let step = payload.get("wizardState")
-        .and_then(|w| w.get("step"))
-        .or_else(|| payload.get("step"))
-        .and_then(|s| s.as_i64())
-        .unwrap_or(0) as i32;
-
-    match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
+    // Persist as step 0 or merge into state. Here we treat step=0 as drafting phase.
+    match agent.save_onboarding_state(tenant_id, user_id, 0, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }

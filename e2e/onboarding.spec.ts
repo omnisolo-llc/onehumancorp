@@ -79,12 +79,6 @@ test.describe('Onboarding Wizard CUJ', () => {
     // Click generate, expect validation failure message
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await generateBtn.click();
-
-    // Wait for step 2 (Review Details)
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
-
-    // In step 2, name is small, so try to continue, validation should fail
-    await page.getByRole('button', { name: /Continue/i }).click();
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
   });
 

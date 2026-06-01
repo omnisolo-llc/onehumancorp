@@ -83,11 +83,9 @@ impl TaskQueue for SQLiteTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = ? AND status = 'QUEUED'")
             .bind(&job.tenant_id)
-            .fetch_one(&mut *tx)
+            .fetch_one(&*self.pool)
             .await
             .unwrap_or((0,));
 
@@ -108,11 +106,10 @@ impl TaskQueue for SQLiteTaskQueue {
         .bind(&job.payload)
         .bind(run_after)
         .bind(&job.tenant_id)
-        .execute(&mut *tx)
+        .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -137,7 +134,7 @@ impl TaskQueue for SQLiteTaskQueue {
         let query_str = format!(
             "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
              FROM sub_agent_jobs
-             WHERE status = 'QUEUED' AND datetime(run_after) <= datetime('now') AND agent_role IN ({})
+             WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
              ORDER BY run_after ASC, created_at ASC
              LIMIT 1",
             role_placeholders
@@ -191,10 +188,9 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING updated_at, run_after")
             .bind(job_id)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -206,7 +202,6 @@ impl TaskQueue for SQLiteTaskQueue {
             let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
