@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [activeReferrals, setActiveReferrals] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -277,13 +278,17 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const [metricsRes, invitesRes] = await Promise.all([
+            const [metricsRes, invitesRes, referralsRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
                 fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`/api/v1/growth/referrals/metrics?tenant_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -300,6 +305,11 @@ export default function Dashboard() {
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
+            }
+
+            if (referralsRes.ok) {
+                const referralsData = await referralsRes.json();
+                setActiveReferrals(referralsData.active_referrals);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -1376,7 +1386,7 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">

@@ -25,9 +25,9 @@ if [ ! -f .env ]; then
   echo "Creating default .env file..."
   cat << 'ENV' > .env
 # Default Local Config
-OHC_LOG_LEVEL=info
-OHC_LOG_FORMAT=json
-OHC_PORT=8080
+LOG_LEVEL=info
+LOG_FORMAT=json
+PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
