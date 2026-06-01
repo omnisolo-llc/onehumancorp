@@ -37,6 +37,7 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
     await page.locator('textarea[placeholder="e.g. Maya Bakery that bakes custom vegan cakes in Portland, OR"]').fill('Maya Bakery that bakes custom vegan cakes in Portland, OR');
 
+
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();
 
@@ -99,6 +100,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Verification
     await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 15000 });
+
   });
 
   test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
@@ -106,6 +108,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Step 1: Tell us about your business
     await page.locator('textarea[placeholder="e.g. Maya Bakery that bakes custom vegan cakes in Portland, OR"]').fill('Maya Bakery that bakes custom vegan cakes in Portland, OR');
+
 
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();
