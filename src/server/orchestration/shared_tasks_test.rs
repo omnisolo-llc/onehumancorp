@@ -68,7 +68,7 @@ async fn test_shared_task_orchestrator() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_sqlite() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .unwrap();
 
@@ -146,7 +146,7 @@ async fn test_shared_task_orchestrator_sqlite() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_sqlite_dependencies() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .unwrap();
 
@@ -244,7 +244,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_update_and_list_sqlite() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .unwrap();
 
