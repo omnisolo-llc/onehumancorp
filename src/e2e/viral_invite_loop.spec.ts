@@ -16,6 +16,7 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByText('Share this link to provision a temporary multi-tenant context')).toBeVisible();
 
     // Verify loading spinner (optional) and then the generated link
+    // E2E framework seeds the 'e2e-tenant' or local storage provides 'team-default' / dynamic
     await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/.*/);
 
     // Test copy button interaction
