@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.fulfillment.failed".to_string(),
         ]
     }
 
@@ -38,27 +39,33 @@ impl Department for OperationsAgent {
         };
 
         let action_description = if event.event_type == "tenant.order.created" {
-            "Process Order & Update Inventory".to_string()
+            "Process Order, Calculate Prep Time & Dispatch Fulfillment".to_string()
+        } else if event.event_type == "tenant.fulfillment.failed" {
+            "Re-route order to fallback courier".to_string()
         } else {
             "Create order and booking".to_string()
         };
 
         self.orchestrator.execute_action(
             DepartmentType::Operations,
-            action_description,
+            action_description.clone(),
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
         ).await?;
 
-        // Dispatch event for customer success agent
-        let cs_event = DepartmentEvent {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: event.tenant_id.clone(),
-            event_type: "tenant.order.fulfillment_ready".to_string(),
-            payload: event.payload.clone(),
-        };
-        self.orchestrator.dispatch_event(cs_event).await
+        // After successful dispatch, notify CS Agent
+        if event.event_type == "tenant.order.created" {
+            let cs_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.order.fulfillment_ready".to_string(), // In reality this would happen after prep, but keeping it simple
+                payload: event.payload.clone(),
+            };
+            self.orchestrator.dispatch_event(cs_event).await?;
+        }
+
+        Ok(())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
@@ -88,6 +95,7 @@ impl BaseAgent for OperationsAgent {
     }
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {
+        // Normally this would parse payload, perform tool calls (like to FulfillmentService), etc.
         Ok(())
     }
 }

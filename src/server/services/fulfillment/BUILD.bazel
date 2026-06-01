@@ -1,0 +1,21 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+exports_files(["mod.rs", "service.rs", "db.rs"], visibility = ["//visibility:public"])
+
+rust_library(
+    name = "fulfillment",
+    srcs = ["mod.rs", "service.rs", "db.rs"],
+    edition = "2021",
+    deps = [
+        "//src/server:bazel_lib",
+        "//src/proto:fulfillment",
+        "//src/proto:hub",
+        "//src/proto:common",
+        "@crates//:tonic",
+        "@crates//:tokio",
+        "@crates//:chrono",
+        "@crates//:uuid",
+        "@crates//:sqlx",
+    ],
+    visibility = ["//visibility:public"],
+)
