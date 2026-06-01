@@ -101,15 +101,6 @@ impl TaskDecompositionService {
                         .await
                         .map_err(|e| e.to_string())?;
                 }
-
-                for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)")
-                        .bind(&task.id)
-                        .bind(dep)
-                        .execute(&self.db.pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let deps_str =
@@ -147,15 +138,6 @@ impl TaskDecompositionService {
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
-
-                for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
-                        .bind(&task.id)
-                        .bind(dep)
-                        .execute(sqlite_pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
 
                 for dep in &task.dependencies {
                     sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
@@ -228,7 +210,6 @@ impl TaskDecompositionService {
                     FOR UPDATE SKIP LOCKED
                     "#,
                 )
-                .bind(organization_id)
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
@@ -339,7 +320,6 @@ impl TaskDecompositionService {
                 )
                 .bind(agent_id)
                 .bind(now.to_rfc3339())
-                .bind(organization_id)
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
@@ -646,8 +626,6 @@ impl TaskDecompositionService {
                     "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
                 )
                 .bind(task_id)
-                .bind(organization_id)
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -700,8 +678,6 @@ impl TaskDecompositionService {
                     "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
                 )
                 .bind(task_id)
-                .bind(organization_id)
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -777,8 +753,6 @@ impl TaskDecompositionService {
                     "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
                 )
                 .bind(id)
-                .bind(organization_id)
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -832,8 +806,6 @@ impl TaskDecompositionService {
                     "SELECT status FROM shared_tasks_decomposition WHERE id = ?",
                 )
                 .bind(id)
-                .bind(organization_id)
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -912,7 +884,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mission_telemetry_metrics() {
-        let database_url = "sqlite://file::memory:?cache=shared";
+        let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect(database_url)
             .await
@@ -920,9 +892,6 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
@@ -1074,7 +1043,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_dag_dependencies_sqlite() {
-        let database_url = "sqlite://file::memory:?cache=shared";
+        let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect(database_url)
             .await
@@ -1082,9 +1051,6 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
@@ -1491,7 +1457,7 @@ mod tests {
         // Verify postgres test path doesn't crash on connection
         assert!(result.is_err()); // Will fail correctly since table is not created but covers path
 
-        let sqlite_url = "sqlite://file::memory:?cache=shared";
+        let sqlite_url = "sqlite::memory:";
         if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect(sqlite_url)
@@ -1585,7 +1551,7 @@ mod chaos_tests {
             std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "1000");
         }
 
-        let database_url = "sqlite://file::memory:?cache=shared";
+        let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
@@ -1595,9 +1561,6 @@ mod chaos_tests {
         // Setup tables
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
@@ -1680,7 +1643,7 @@ mod chaos_tests {
             std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "1000");
         }
 
-        let database_url = "sqlite://file::memory:?cache=shared";
+        let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
@@ -1690,9 +1653,6 @@ mod chaos_tests {
         // Setup tables
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
