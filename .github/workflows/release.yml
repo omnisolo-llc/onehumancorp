@@ -45,23 +45,21 @@ jobs:
             bazel_config: macos_aarch64
             artifact_name: ohc-aarch64-apple-darwin.tar.gz
             install_linux_deps: false
-          # Supported by //release:release_archive, left disabled until we turn
-          # on the full cross-platform release matrix.
-          # - name: linux-arm64
-          #   runner: ubuntu-22.04-arm
-          #   bazel_config: linux_arm64
-          #   artifact_name: ohc-aarch64-unknown-linux-gnu.tar.gz
-          #   install_linux_deps: true
-          # - name: windows-arm64
-          #   runner: windows-11-arm
-          #   bazel_config: windows_arm64
-          #   artifact_name: ohc-aarch64-pc-windows-msvc.zip
-          #   install_linux_deps: false
-          # - name: macos-x86_64
-          #   runner: macos-15-intel
-          #   bazel_config: macos_x86_64
-          #   artifact_name: ohc-x86_64-apple-darwin.tar.gz
-          #   install_linux_deps: false
+          - name: linux-arm64
+            runner: ubuntu-22.04-arm
+            bazel_config: linux_arm64
+            artifact_name: ohc-aarch64-unknown-linux-gnu.tar.gz
+            install_linux_deps: true
+          - name: windows-arm64
+            runner: windows-11-arm
+            bazel_config: windows_arm64
+            artifact_name: ohc-aarch64-pc-windows-msvc.zip
+            install_linux_deps: false
+          - name: macos-x86_64
+            runner: macos-15-intel
+            bazel_config: macos_x86_64
+            artifact_name: ohc-x86_64-apple-darwin.tar.gz
+            install_linux_deps: false
     steps:
       - uses: actions/checkout@v6.0.2
 
@@ -92,7 +90,7 @@ jobs:
       - name: Build packaged application
         env:
           MSYS2_ARG_CONV_EXCL: "*"
-        run: bazelisk build //release:release_archive --config=${{ matrix.bazel_config }}
+        run: bazelisk build //release:release_archive --config=release --config=${{ matrix.bazel_config }}
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v7.0.1
@@ -201,7 +199,7 @@ jobs:
 
       - name: Build Tauri CLI with Bazel
         run: |
-          if ! bazelisk build @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }}; then
+          if ! bazelisk build @crates//:tauri-cli__cargo-tauri --config=release ${{ matrix.tauri_cli_bazel_flags }}; then
             if [[ "${{ runner.os }}" != "Windows" ]]; then
               exit 1
             fi
@@ -211,7 +209,7 @@ jobs:
             exit 0
           fi
 
-          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
+          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri --config=release ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
           cli_ext=""
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cli_ext=".exe"
@@ -576,14 +574,14 @@ jobs:
             build --show_timestamps
 
       - name: Build Tauri mobile artifacts
-        run: bazelisk build ${{ matrix.targets }}
+        run: bazelisk build ${{ matrix.targets }} --config=release
 
       - name: Collect mobile artifacts
         run: |
           mkdir -p dist
           : > mobile-files.txt
           for target in ${{ matrix.targets }}; do
-            bazelisk cquery --output=files "$target" >> mobile-files.txt
+            bazelisk cquery --output=files "$target" --config=release >> mobile-files.txt
           done
           for pattern in ${{ matrix.patterns }}; do
             while IFS= read -r src; do
@@ -645,12 +643,12 @@ jobs:
             build --show_timestamps
 
       - name: Build server web image tarball
-        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
+        run: bazelisk build //deploy:server_web_image_tar --config=release --config=linux_x86_64 --output_groups=+tarball
 
       - name: Collect server web image artifact
         run: |
           mkdir -p dist
-          bazelisk cquery --output=files //deploy:server_web_image_tar --config=linux_x86_64 > image-files.txt
+          bazelisk cquery --output=files //deploy:server_web_image_tar --config=release --config=linux_x86_64 > image-files.txt
           image_tar="$(grep -E '/tarball\.tar$' image-files.txt | head -n 1)"
           if [[ -z "$image_tar" || ! -f "$image_tar" ]]; then
             echo "No server web image tarball found" >&2
@@ -865,14 +863,14 @@ jobs:
 
       - name: Push server web image
         run: |
-          bazelisk run //deploy:server_push_ghcr \
+          bazelisk run --config=release //deploy:server_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          bazelisk run //deploy:server_push_dockerhub \
+          bazelisk run --config=release //deploy:server_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push agent image
         run: |
-          bazelisk run //deploy:agent_push_ghcr \
+          bazelisk run --config=release //deploy:agent_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          bazelisk run //deploy:agent_push_dockerhub \
+          bazelisk run --config=release //deploy:agent_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
