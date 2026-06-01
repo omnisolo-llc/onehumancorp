@@ -33,7 +33,7 @@ grep -q "onehumancorp/server:latest" "$compose_file"
 ! grep -q "^  ui:" "$compose_file"
 
 grep -q "backend" "$values_file"
-grep -q "valkey" "$values_file"
+grep -q "redis" "$values_file"
 
 grep -q "Deployment" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
 test ! -e "${root}/deploy/helm/ohc/templates/frontend-deployment.yaml"
