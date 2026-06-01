@@ -137,7 +137,7 @@ impl HybridSyncDaemon {
                     }
 
                     let update_res = sqlx::query(
-                        "UPDATE agent_missions SET synced_to_cloud = true, sync_error = NULL WHERE id = ?",
+                        "UPDATE agent_missions SET synced_to_cloud = true WHERE id = ?",
                     )
                     .bind(&id)
                     .execute(&self.sqlite_pool)
