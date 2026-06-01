@@ -36,13 +36,15 @@ fn escape_html(s: &str) -> String {
 }
 
 pub async fn handle_edge_request(
+    headers: axum::http::HeaderMap,
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
 ) -> Result<Response<Body>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
-    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id);
+    let accept_lang = headers.get("Accept-Language").and_then(|v| v.to_str().ok()).unwrap_or("en-US").split(",").next().unwrap_or("en-US").to_string();
+    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, accept_lang);
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
@@ -60,7 +62,7 @@ pub async fn handle_edge_request(
                 let pool_clone = state.pool.clone();
                 let cache_key_clone = cache_key.clone();
                 tokio::spawn(async move {
-                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache).await;
+                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache, accept_lang.clone()).await;
                     let ongoing = get_ongoing_generation();
                     ongoing.lock().await.remove(&cache_key_clone);
                 });
@@ -95,7 +97,7 @@ pub async fn handle_edge_request(
         }
     }
 
-    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache, accept_lang).await;
 
     {
         let ongoing = get_ongoing_generation();
@@ -118,6 +120,7 @@ async fn regenerate_cache(
     site_id: Uuid,
     cache_key: String,
     cache: Arc<HybridCache<String>>,
+    accept_lang: String,
 ) -> Result<(String, Vec<String>), axum::http::StatusCode> {
     let site = match super::db::list_sites(&pool, tenant_id).await {
         Ok(sites) => sites.into_iter().find(|s| s.id == site_id),
@@ -138,6 +141,7 @@ async fn regenerate_cache(
 
     let page = &pages[0];
 
+    let mesh = crate::domain::localization_mesh::LocalizationMesh::new(pool.clone());
     let blocks = super::db::list_blocks(&pool, tenant_id, page.id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -193,17 +197,23 @@ async fn regenerate_cache(
         html.push_str("<div class=\"block\">\n");
         match block.block_type.as_str() {
             "HeroBlock" | "Hero" => {
-                let title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome");
-                let subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
-                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(title)));
-                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(subtitle)));
+                let orig_title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome");
+                let title_res = mesh.get_localized_entity(&tenant_id.to_string(), &block.id.to_string(), "HeroBlock", &accept_lang, orig_title, None, "en-US").await;
+                let title = title_res.map(|c| c.localized_name.unwrap_or(orig_title.to_string())).unwrap_or(orig_title.to_string());
+                let orig_subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
+                let sub_res = mesh.get_localized_entity(&tenant_id.to_string(), &block.id.to_string(), "HeroBlockDesc", &accept_lang, orig_subtitle, None, "en-US").await;
+                let subtitle = sub_res.map(|c| c.localized_name.unwrap_or(orig_subtitle.to_string())).unwrap_or(orig_subtitle.to_string());
+                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(&title)));
+                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(&subtitle)));
             }
             "ProductGridBlock" | "Catalog" => {
                 html.push_str("<h2 class=\"font-outfit\">Our Products</h2>\n");
                 html.push_str("<div class=\"product-grid\">\n");
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
-                        let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
+                        let orig_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
+                        let name_res = mesh.get_localized_entity(&tenant_id.to_string(), &block.id.to_string(), "ProductGridBlock", &accept_lang, orig_name, None, "en-US").await;
+                        let name = name_res.map(|c| c.localized_name.unwrap_or(orig_name.to_string())).unwrap_or(orig_name.to_string());
                         let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
@@ -211,7 +221,7 @@ async fn regenerate_cache(
                         }
                         html.push_str(&format!(
                             "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
-                            escape_html(name), escape_html(desc), escape_html(price)
+                            escape_html(&name), escape_html(desc), escape_html(price)
                         ));
                     }
                 }
@@ -221,7 +231,7 @@ async fn regenerate_cache(
                 let title = block.content.get("title").and_then(|v| v.as_str()).unwrap_or("Book a Service");
                 let avail = block.content.get("availability").and_then(|v| v.as_str()).unwrap_or("Available now");
                 html.push_str("<div class=\"service-block\">\n");
-                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>\n", escape_html(title)));
+                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>\n", escape_html(&title)));
                 html.push_str(&format!("<p>{}</p>\n", escape_html(avail)));
                 html.push_str("<button class=\"btn\">Book Now</button>\n");
                 html.push_str("</div>\n");

@@ -123,3 +123,39 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocaleConfig {
+    pub tenant_id: String,
+    pub primary_locale: String,
+    pub supported_locales: sqlx::types::Json<Vec<String>>,
+    pub auto_translate: bool,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocalizedContent {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub entity_id: String,
+    pub entity_type: String,
+    pub locale: String,
+    pub localized_name: Option<String>,
+    pub localized_desc: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ConversationMessage {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub conversation_id: String,
+    pub original_text: String,
+    pub original_locale: String,
+    pub translated_text: Option<String>,
+    pub target_locale: Option<String>,
+    pub sender_type: String,
+    pub created_at: Option<DateTime<Utc>>,
+}

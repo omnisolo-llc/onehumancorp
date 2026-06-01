@@ -75,6 +75,7 @@ rust_library(
         "//src/server/telemetry:server_telemetry",
         "//src/server/tools/local_proxy:server_tools_local_proxy",
         "//src/server/utils:server_utils",
+        "//src/server/domain:server_domain",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
         "@crates//:axum",
