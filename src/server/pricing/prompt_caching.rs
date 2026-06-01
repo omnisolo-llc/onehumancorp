@@ -42,7 +42,7 @@ impl PromptCache {
             // very rough estimate of saved cents for cache hit
             static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
             let ratio = RATIO.get_or_init(|| {
-                std::env::var("OHC_MISER_TOKEN_RATIO")
+                std::env::var("MISER_TOKEN_RATIO")
                     .unwrap_or_else(|_| "0.0001".to_string())
                     .parse::<f64>()
                     .unwrap_or(0.0001)
