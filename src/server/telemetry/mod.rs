@@ -1042,11 +1042,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("ip_address")
         || k.contains("mac_address")
         || k.contains("geolocation")
-        || k.contains("medical")
-        || k.contains("health")
-        || k.contains("salary")
-        || k.contains("tax")
-        || k.contains("social_security")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1267,6 +1262,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
+    use super::*;
 
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
@@ -1274,65 +1270,4 @@ mod additional_tests {
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
     }
-}
-
-pub async fn record_sync_completed_count(
-    pool: &PgPool,
-    count: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_autodream_sync_completed_total",
-        "counter",
-        count,
-        serde_json::json!({}),
-    )
-    .await
-}
-
-pub async fn record_sync_failed_count(
-    pool: &PgPool,
-    count: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_autodream_sync_failed_total",
-        "counter",
-        count,
-        serde_json::json!({}),
-    )
-    .await
-}
-pub static TASKS_COMPLETED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-pub static TASKS_FAILED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-pub static TASKS_TRANSITIONS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-
-pub fn get_tasks_completed_total() -> &'static Counter<u64> {
-    let meter = global::meter("orchestration_state_machine");
-    TASKS_COMPLETED_TOTAL.get_or_init(|| {
-        meter
-            .u64_counter("tasks_completed_total")
-            .with_description("Total number of successfully completed shared tasks")
-            .build()
-    })
-}
-
-pub fn get_tasks_failed_total() -> &'static Counter<u64> {
-    let meter = global::meter("orchestration_state_machine");
-    TASKS_FAILED_TOTAL.get_or_init(|| {
-        meter
-            .u64_counter("tasks_failed_total")
-            .with_description("Total number of failed shared tasks")
-            .build()
-    })
-}
-
-pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
-    let meter = global::meter("orchestration_state_machine");
-    TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
-        meter
-            .u64_counter("tasks_transitions_total")
-            .with_description("Total number of task state transitions")
-            .build()
-    })
 }

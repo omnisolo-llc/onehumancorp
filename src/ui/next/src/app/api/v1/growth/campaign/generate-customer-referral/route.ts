@@ -4,8 +4,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // In production, OHC_BACKEND_URL would be defined. For local dev we use the default 8080.
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
+    // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
     const backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-customer-referral`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ message });
     }
   } catch (error) {
-    console.error("Error generating customer referral campaign message:", error);
+
     // Fallback if fetch fails completely
     const message = `Hi there!\n\nWe love having you as a top customer at our store. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });

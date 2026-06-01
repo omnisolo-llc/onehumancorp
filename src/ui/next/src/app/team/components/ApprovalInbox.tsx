@@ -508,7 +508,7 @@ export default function ApprovalInbox({
 =======
               className="bg-white/80 backdrop-blur-[20px] saturate-200 rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 border-t border-white/40"
               style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
->>>>>>> 7c9321bbf (feat: Implement DB persistence and UI for agent approvals)
+>>>>>>> 044871750 (feat: Implement DB persistence and UI for agent approvals)
             >
               <h2 className="text-xl font-bold mb-4 font-outfit text-gray-900">
                 Review Draft
@@ -526,7 +526,7 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Context</p>
                 <div className="bg-white/60 backdrop-blur-md p-3 rounded-xl border border-white/40 shadow-sm text-sm text-gray-700">
                    {extractPayload(selectedReview.description).payload?.original_message || "N/A"}
->>>>>>> 7c9321bbf (feat: Implement DB persistence and UI for agent approvals)
+>>>>>>> 044871750 (feat: Implement DB persistence and UI for agent approvals)
                 </div>
               </div>
 
@@ -542,7 +542,7 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Draft</p>
                 <div className="bg-blue-50/70 backdrop-blur-md p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative shadow-sm">
                   {extractPayload(selectedReview.description).payload?.generated_response || "N/A"}
->>>>>>> 7c9321bbf (feat: Implement DB persistence and UI for agent approvals)
+>>>>>>> 044871750 (feat: Implement DB persistence and UI for agent approvals)
                 </div>
               </div>
 

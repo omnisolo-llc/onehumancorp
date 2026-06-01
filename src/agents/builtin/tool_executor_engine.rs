@@ -29,7 +29,7 @@ impl ToolExecutionEngine {
                         continue;
                     } else {
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
-                        return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                        return Err(ToolError::Transient(msg));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
