@@ -441,7 +441,35 @@ mod tests {
         let mesh_res = super::get_mesh_transport(&db_store).await;
         assert!(mesh_res.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_mesh_concurrent_lock_acquisition() {
+        let _ = crate::telemetry::get_mcp_tool_calls_counter();
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let node = Arc::new(CentrifugeNode::new(transport));
+
+        let mut handles = vec![];
+        let success_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+        for i in 0..20 {
+            let n = node.clone();
+            let c = success_count.clone();
+            handles.push(tokio::spawn(async move {
+                let agent_id = format!("agent_{}", i);
+                if n.acquire_lock("concurrent_resource", &agent_id, 10).await.unwrap() {
+                    c.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            }));
+        }
+
+        for h in handles {
+            let _ = h.await;
+        }
+
+        assert_eq!(success_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
 }
+
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
@@ -490,4 +518,3 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
         }
     }
 }
-// dummy validation comment
