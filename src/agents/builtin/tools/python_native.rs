@@ -4,13 +4,11 @@ use std::sync::Arc;
 use tokio::time::Duration;
 use crate::Tool;
 use ohc_builtin_agent_core::code_native::{CodeNativeTool, RichExecutionEnvironment};
-use std::collections::HashMap;
 
 pub struct PythonNativeExecutor {
     pub working_dir: Option<std::path::PathBuf>,
     pub runner: Arc<dyn crate::runner::CommandRunner>,
 }
-
 
 #[async_trait::async_trait]
 impl CodeNativeTool for PythonNativeExecutor {
@@ -114,6 +112,10 @@ print(captured_stdout.getvalue(), end="")
         if result.is_empty() {
             result = "Success (no output)".to_string();
         }
+
+        // To demonstrate state preservation: increment a counter in the native env
+        let count = env.get_variable::<usize>("python_exec_count").map(|c| *c).unwrap_or(0);
+        env.set_variable("python_exec_count", count + 1);
 
         Ok(result)
     }
