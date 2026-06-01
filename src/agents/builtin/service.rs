@@ -604,6 +604,7 @@ impl AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+            enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
         }
     }
 
@@ -1026,6 +1027,7 @@ impl AgentService for AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+            enable_tao_orchestration_loop: sub_req.enable_tao_orchestration_loop,
             };
 
             let observation_store = Arc::new(dashmap::DashMap::new());
@@ -1318,6 +1320,8 @@ pub async fn start_builtin_agent(
                     runtime_config: None,
                     toolset_config: None,
                     department,
+                    enable_tools_gating: false,
+                    enable_tao_orchestration_loop: false,
                 };
 
                 let svc = svc.clone();

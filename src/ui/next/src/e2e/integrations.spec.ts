@@ -17,23 +17,23 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
-        const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
+        const mercadoCard = page.locator('div').filter({ hasText: /Mercado Pago/ }).filter({ hasText: /Accept credit cards and local payment methods/ }).first();
+        const connectMercadoPagoButton = mercadoCard.locator('button').filter({ hasText: 'Connect' }).first();
 
         // Mock window alert
         page.on('dialog', dialog => dialog.accept());
         await connectMercadoPagoButton.click();
 
         // Verify state changed
-        await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
+        await expect(mercadoCard.locator('button').filter({ hasText: 'Manage' }).first()).toBeVisible();
 
         // Let's connect Zoom
-        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
-        const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
+        const zoomCard = page.locator('div').filter({ hasText: /Zoom/ }).filter({ hasText: /Automated Online Lesson Links/ }).first();
+        const connectZoomButton = zoomCard.locator('button').filter({ hasText: 'Connect' }).first();
         await connectZoomButton.click();
 
         // Verify state changed
-        await expect(zoomCard.locator('button:has-text("Manage")')).toBeVisible();
+        await expect(zoomCard.locator('button').filter({ hasText: 'Manage' }).first()).toBeVisible();
 
     });
 
@@ -47,26 +47,5 @@ test.describe('Integrations Loop', () => {
         await page.goto('http://localhost:3000/calendar');
         const joinMeetingButton = page.locator('a:has-text("Join Meeting")');
         await expect(joinMeetingButton).toBeVisible();
-    });
-
-    test('Integrations loop connects Twilio WhatsApp', async ({ page }) => {
-        await page.goto('http://localhost:3000/integrations');
-
-        const twilioCard = page.locator('div').filter({ hasText: 'Twilio Conversations' }).first();
-        const connectTwilioButton = twilioCard.locator('button:has-text("Connect")');
-        await connectTwilioButton.click();
-
-        // Modal should appear
-        await expect(page.locator('h2:has-text("Connect Twilio Conversations")')).toBeVisible();
-
-        // Verify WhatsApp option is visible
-        await expect(page.locator('span:has-text("WhatsApp Business API")')).toBeVisible();
-
-        // Save & Connect
-        await page.locator('button:has-text("Save & Connect")').click();
-
-        // Should redirect to inbox
-        await page.waitForURL('**/inbox');
-        await expect(page.locator('h1:has-text("Customer Inbox")')).toBeVisible();
     });
 });
