@@ -41,915 +41,100 @@ pub fn validate_bool(v: &Value, field: &str) -> Result<(), SchemaError> {
     Ok(())
 }
 
-pub fn validate_sales_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
 
-    // Core Sales requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "target_revenue") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "crm_sync_id") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_sales_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Sales requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "target_revenue") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "crm_sync_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_sales_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Sales requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "target_revenue") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "crm_sync_id") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_sales_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Sales requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "target_revenue") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "crm_sync_id") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_sales_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Sales requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "target_revenue") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "crm_sync_id") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_marketing_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Marketing requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_marketing_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Marketing requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_marketing_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Marketing requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_marketing_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Marketing requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_marketing_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Marketing requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_engineering_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Engineering requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "github_repo") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "requires_code_review") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_engineering_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Engineering requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "github_repo") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "requires_code_review") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_engineering_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Engineering requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "github_repo") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "requires_code_review") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_engineering_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Engineering requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "github_repo") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "requires_code_review") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_engineering_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Engineering requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "github_repo") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "requires_code_review") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_hr_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core HR requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "candidate_email") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "background_check_passed") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_hr_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core HR requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "candidate_email") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "background_check_passed") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_hr_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core HR requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "candidate_email") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "background_check_passed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_hr_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core HR requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "candidate_email") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "background_check_passed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_hr_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core HR requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "candidate_email") { errors.push(e); }
-    if let Err(e) = validate_bool(payload, "background_check_passed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_finance_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Finance requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_finance_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Finance requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_finance_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Finance requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_finance_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Finance requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_finance_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Finance requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_legal_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Legal requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_legal_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Legal requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_legal_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Legal requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_legal_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Legal requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_legal_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Legal requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_operations_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Operations requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_operations_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Operations requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_operations_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Operations requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_operations_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Operations requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_operations_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Operations requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_product_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Product requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_product_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Product requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_product_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Product requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_product_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Product requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_product_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Product requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_design_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Design requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_design_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Design requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_design_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Design requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_design_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Design requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_design_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Design requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_support_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Support requirement for Analysis
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "data_points_analyzed") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_support_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Support requirement for Reporting
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "report_format") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_support_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Support requirement for Onboarding
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_support_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Support requirement for Sync
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_support_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    // Core Support requirement for Audit
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "internal_tracking_code") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_security_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_security_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_security_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_security_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_security_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_compliance_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_compliance_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_compliance_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_compliance_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_compliance_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_it_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_it_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_it_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_it_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_it_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_facilities_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_facilities_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_facilities_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_facilities_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_facilities_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_exec_analysis_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_exec_reporting_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_exec_onboarding_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_exec_sync_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
-
-pub fn validate_exec_audit_payload(payload: &Value) -> Result<(), Vec<SchemaError>> {
-    let mut errors = Vec::new();
-
-    if let Err(e) = validate_string(payload, "department_id") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "action_type") { errors.push(e); }
-    if let Err(e) = validate_number(payload, "priority_score") { errors.push(e); }
-    if let Err(e) = validate_string(payload, "strict_clearance_level") { errors.push(e); }
-
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
-}
+macro_rules! define_validator {
+    ($name:ident, $($validator:ident($field:expr)),*) => {
+        pub fn $name(payload: &Value) -> Result<(), Vec<SchemaError>> {
+            let mut errors = Vec::new();
+            $(
+                if let Err(e) = $validator(payload, $field) {
+                    errors.push(e);
+                }
+            )*
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                Err(errors)
+            }
+        }
+    };
+}
+
+define_validator!(validate_sales_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_number("target_revenue"), validate_string("crm_sync_id"), validate_number("data_points_analyzed"));
+define_validator!(validate_sales_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_number("target_revenue"), validate_string("crm_sync_id"), validate_string("report_format"));
+define_validator!(validate_sales_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_number("target_revenue"), validate_string("crm_sync_id"));
+define_validator!(validate_sales_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_number("target_revenue"), validate_string("crm_sync_id"));
+define_validator!(validate_sales_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_number("target_revenue"), validate_string("crm_sync_id"));
+define_validator!(validate_marketing_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_marketing_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_marketing_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_marketing_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_marketing_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_engineering_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("github_repo"), validate_bool("requires_code_review"), validate_number("data_points_analyzed"));
+define_validator!(validate_engineering_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("github_repo"), validate_bool("requires_code_review"), validate_string("report_format"));
+define_validator!(validate_engineering_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("github_repo"), validate_bool("requires_code_review"));
+define_validator!(validate_engineering_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("github_repo"), validate_bool("requires_code_review"));
+define_validator!(validate_engineering_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("github_repo"), validate_bool("requires_code_review"));
+define_validator!(validate_hr_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("candidate_email"), validate_bool("background_check_passed"), validate_number("data_points_analyzed"));
+define_validator!(validate_hr_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("candidate_email"), validate_bool("background_check_passed"), validate_string("report_format"));
+define_validator!(validate_hr_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("candidate_email"), validate_bool("background_check_passed"));
+define_validator!(validate_hr_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("candidate_email"), validate_bool("background_check_passed"));
+define_validator!(validate_hr_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("candidate_email"), validate_bool("background_check_passed"));
+define_validator!(validate_finance_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_finance_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_finance_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_finance_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_finance_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_legal_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_legal_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_legal_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_legal_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_legal_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_operations_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_operations_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_operations_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_operations_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_operations_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_product_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_product_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_product_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_product_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_product_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_design_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_design_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_design_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_design_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_design_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_support_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_number("data_points_analyzed"));
+define_validator!(validate_support_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"), validate_string("report_format"));
+define_validator!(validate_support_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_support_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_support_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("internal_tracking_code"));
+define_validator!(validate_security_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_security_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_security_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_security_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_security_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_compliance_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_compliance_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_compliance_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_compliance_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_compliance_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_it_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_it_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_it_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_it_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_it_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_facilities_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_facilities_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_facilities_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_facilities_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_facilities_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_exec_analysis_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_exec_reporting_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_exec_onboarding_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_exec_sync_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
+define_validator!(validate_exec_audit_payload, validate_string("department_id"), validate_string("action_type"), validate_number("priority_score"), validate_string("strict_clearance_level"));
 
 // Unified Router
 pub fn validate_dynamic_payload(department: &str, action: &str, payload: &Value) -> Result<(), Vec<SchemaError>> {
