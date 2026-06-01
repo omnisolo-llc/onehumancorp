@@ -463,18 +463,18 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm rounded-2xl mac-glass-container flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
                </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm rounded-2xl mac-glass-container flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
                </div>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
-           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+           <div className="relative p-6 shadow-sm rounded-2xl mac-glass-container overflow-hidden">
                <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
                <div className="filter blur-sm select-none opacity-50">
                    <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
@@ -666,7 +666,7 @@ export default function Dashboard() {
          {/* Plain-Language Weekly Financial Brief */}
          <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+            <div className="p-6 shadow-sm rounded-2xl mac-glass-container border-blue-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
                 <div className="flex items-start gap-4">
                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -1416,7 +1416,7 @@ export default function Dashboard() {
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
@@ -1481,7 +1481,7 @@ export default function Dashboard() {
       {/* Add Item Modal */}
       {showAddItemModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
               <button
@@ -1554,7 +1554,7 @@ export default function Dashboard() {
       {/* Paywall Modal */}
       {showPaywallModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
 
@@ -1596,7 +1596,7 @@ export default function Dashboard() {
       {/* Promo Modal */}
       {showPromoModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
@@ -1672,7 +1672,7 @@ export default function Dashboard() {
       {/* Abandoned Cart Modal */}
       {showCartModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-red-100">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter border border-red-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-red-600">
@@ -1748,7 +1748,7 @@ export default function Dashboard() {
       {/* Review Request Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-blue-100">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter border border-blue-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-blue-600">
@@ -1828,7 +1828,7 @@ export default function Dashboard() {
       {/* Customer Referral Modal */}
       {showCustomerReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter border border-purple-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
@@ -1981,7 +1981,7 @@ export default function Dashboard() {
       {/* SaaS Conversion: Upgrade Modal (Soft Paywall) */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter border border-yellow-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
@@ -2084,7 +2084,7 @@ export default function Dashboard() {
       {/* Embed Modal */}
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter border border-green-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
@@ -2134,7 +2134,7 @@ export default function Dashboard() {
       {/* Referral Modal */}
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="w-full max-w-md p-6 relative mac-glass-container rounded-2xl shadow-2xl overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 

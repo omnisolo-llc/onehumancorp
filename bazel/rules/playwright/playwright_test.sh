@@ -183,6 +183,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
+# TODO: Fix Docker environment issue (failed to convert whiteout file) causing `docker pull pgvector/pgvector:pg16` to fail during E2E tests.
 docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
