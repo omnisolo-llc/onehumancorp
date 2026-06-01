@@ -1,7 +1,6 @@
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
-pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -5000,7 +4999,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass">
+                    <div id="my-plan-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -5021,7 +5020,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass">
+                    <div id="cost-dashboard-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
