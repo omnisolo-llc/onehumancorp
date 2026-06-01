@@ -6,16 +6,23 @@ test.describe('Team Approvals', () => {
     await page.goto('/team');
 
     // Check that we are on the Team page
-    await expect(page.locator('h1', { hasText: 'Your Team' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Your Team' })).toBeVisible({ timeout: 15000 });
+
+    // Wait for the department list to load by waiting for the spinner to disappear if it's there
+    await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 15000 });
 
     // Click on Customer Success department card (The Ambassador)
-    // Wait for the department list to load
-    await expect(page.locator('h3', { hasText: 'The Ambassador' })).toBeVisible();
-    await page.locator('h3', { hasText: 'The Ambassador' }).click();
+    // The h3 element is rendering `{name}` which is 'The Ambassador'
+    const ambassadorHeader = page.locator('h3', { hasText: 'The Ambassador' });
+    await expect(ambassadorHeader).toBeVisible({ timeout: 15000 });
+
+    // Since the h3 is inside the button, we can click the button
+    const ambassadorButton = ambassadorHeader.locator('xpath=ancestor::button').first();
+    await ambassadorButton.click();
 
     // Now we are in the Approval Inbox for Customer Success
     // Wait for the new block to appear
-    await expect(page.locator('text=Automated Review Request')).toBeVisible();
+    await expect(page.locator('text=Automated Review Request')).toBeVisible({ timeout: 15000 });
 
     // Check that the target details are displayed
     await expect(page.locator('text=Targeting: recent unreviewed orders')).toBeVisible();
@@ -32,6 +39,6 @@ test.describe('Team Approvals', () => {
     await approveButton.click();
 
     // Verify it disappears (approvals state updates)
-    await expect(page.locator('text=Automated Review Request')).toBeHidden();
+    await expect(page.locator('text=Automated Review Request')).toBeHidden({ timeout: 15000 });
   });
 });
