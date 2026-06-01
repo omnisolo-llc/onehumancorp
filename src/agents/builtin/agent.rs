@@ -4738,7 +4738,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result == "missing parameter X\nPlease correct your arguments and try again. Pay close attention to the requested schema types."
             } else {
                 false
             }
@@ -4752,7 +4752,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X\nPlease correct your arguments and try again. Pay close attention to the requested schema types.");
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
