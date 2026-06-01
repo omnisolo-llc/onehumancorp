@@ -44,7 +44,7 @@ async fn test_sqlite_task_queue() {
     queue.enqueue(job).await.unwrap();
 
     let dequeued_opt = queue.dequeue(vec!["test-role".to_string()], 100, 100).await.unwrap();
-    let dequeued = dequeued_opt.unwrap();
+    let dequeued = dequeued_opt.expect("Failed to dequeue job. Wait, did the queue correctly insert it?");
     assert_eq!(dequeued.id, "job-1");
     assert_eq!(dequeued.tenant_id, "system");
 
