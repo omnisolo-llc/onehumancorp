@@ -31,28 +31,33 @@ export default function CostDashboardPage() {
           const fetchedData = await res.json();
           setData(fetchedData);
         } else {
-            console.error("Failed to fetch cost data:", res.status);
             // Fallback for UI
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
             setData({
                 total_revenue: 0,
                 total_costs: 0,
                 llm_cost: 0,
                 storage_cost: 0,
                 payment_fees: 0,
-                period_start: "2024-05-01",
-                period_end: "2024-05-31",
+                period_start: startOfMonth.toLocaleDateString('en-CA'),
+                period_end: endOfMonth.toLocaleDateString('en-CA'),
             });
         }
       } catch (err) {
-        console.error("Error fetching cost data", err);
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         setData({
             total_revenue: 0,
             total_costs: 0,
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
-            period_start: "2024-05-01",
-            period_end: "2024-05-31",
+            period_start: startOfMonth.toLocaleDateString('en-CA'),
+            period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
       } finally {
         setLoading(false);
@@ -71,10 +76,10 @@ export default function CostDashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Advisory Dashboard</h1>
         <div className="flex gap-2">
-            <button onClick={() => router.push('/plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+            <button onClick={() => router.push('/plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors" style={{ borderRadius: '8px' }}>
             Back to My Plan
             </button>
         </div>
@@ -82,7 +87,7 @@ export default function CostDashboardPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
             <p className="text-gray-700 font-medium leading-relaxed">
               Here's what happened this week and what you should do next:<br/><br/>
@@ -93,7 +98,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -108,7 +113,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">

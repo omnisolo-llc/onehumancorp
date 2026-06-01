@@ -91,6 +91,18 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={() => {
+                alert("Redirecting to Mercado Pago...");
+                setShowSuccessModal(true);
+              }}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              Pay with Mercado Pago
+            </button>
+          </WithTooltip>
+
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button
               onClick={() => router.push('/pricing')}
