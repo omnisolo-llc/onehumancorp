@@ -232,7 +232,7 @@ export default function OnboardingWizard() {
                         autoComplete="organization"
                         autoCapitalize="words"
                         enterKeyHint="next"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -274,7 +274,10 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      onClick={() => {
+                        setBusinessDescription(whatYouSell);
+                        setChatStep(3);
+                      }}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -305,7 +308,7 @@ export default function OnboardingWizard() {
                         autoComplete="address-level2"
                         autoCapitalize="words"
                         enterKeyHint="done"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -402,6 +405,10 @@ export default function OnboardingWizard() {
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
+                      return;
+                    }
+                    if (!businessType.trim() || categories.length === 0) {
+                      setValidationError('Business Type and Categories are required.');
                       return;
                     }
                     setValidationError('');
