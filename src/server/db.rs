@@ -349,7 +349,30 @@ impl DB {
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                migrator.run(&self.pool).await?;
+
+                // Add advisory lock to prevent concurrent migrations from failing CI
+                // 123456789 is an arbitrary unique lock ID for migrations
+                let mut conn = self.pool.acquire().await?;
+                let lock_id: i64 = 123456789;
+
+                // Try to acquire an advisory lock. Wait if another process holds it.
+                tracing::info!("Acquiring migration lock...");
+                sqlx::query("SELECT pg_advisory_lock($1)")
+                    .bind(lock_id)
+                    .execute(&mut *conn)
+                    .await?;
+
+                tracing::info!("Migration lock acquired. Running migrator...");
+                let result = migrator.run(&self.pool).await;
+
+                // Release the lock regardless of success or failure
+                tracing::info!("Releasing migration lock...");
+                let _ = sqlx::query("SELECT pg_advisory_unlock($1)")
+                    .bind(lock_id)
+                    .execute(&mut *conn)
+                    .await;
+
+                result?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
