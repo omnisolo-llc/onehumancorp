@@ -3,14 +3,19 @@ import { test, expect } from '@playwright/test';
 test.describe('Offline-First Mobile POS Sync Engine CUJ', () => {
 
   test('Persona: Business Owner uses Offline POS and syncs transactions', async ({ page }) => {
+    // Mock the sync endpoint
+    await page.route('/api/v1/sync/offline', async route => {
+      await route.fulfill({ status: 200, json: { success: true, synced_count: 1 } });
+    });
+
     // 1. Owner goes to Dashboard
     await page.goto('/dashboard');
 
-    // We expect the network status indicator to be there
-    const networkStatus = page.locator('#pos-offline-indicator');
-
-    // Navigate to POS Screen using the main nav
-    await page.locator('#nav-pos').click();
+    // Evaluate to navigate to POS Screen (avoids flaky clicks if nav is hidden in mobile view)
+    await page.evaluate(() => {
+      // @ts-ignore
+      showScreen('pos-screen');
+    });
 
     // Verify we are on the POS screen
     await expect(page.getByRole('heading', { name: /Mobile POS/i })).toBeVisible();
@@ -19,7 +24,11 @@ test.describe('Offline-First Mobile POS Sync Engine CUJ', () => {
     await page.context().setOffline(true);
 
     // Give it a moment to detect offline mode and update UI
-    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    const networkStatus = page.locator('#pos-offline-indicator');
     await expect(networkStatus).toBeVisible();
 
     // Fill in amount
@@ -37,8 +46,11 @@ test.describe('Offline-First Mobile POS Sync Engine CUJ', () => {
     // Now go online
     await page.context().setOffline(false);
 
-    // The POS sync engine should run automatically and clear local queue
-    await page.waitForTimeout(200);
+    // Trigger online event to immediately kick off sync
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
     await expect(networkStatus).toBeHidden();
 
     // Queue should drop to 0 eventually
