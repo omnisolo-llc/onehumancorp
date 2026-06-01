@@ -17,6 +17,7 @@ exports_files(
         "mod.rs",
         "offline_sync.rs",
         "telemetry.rs",
+        "catalog.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -40,6 +41,7 @@ rust_library(
         "mod.rs",
         "offline_sync.rs",
         "telemetry.rs",
+        "catalog.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
