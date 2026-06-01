@@ -39,7 +39,7 @@
 **Objective:** Verify that all "ML-Resilience" rules apply equally to Cloud-native (Postgres) and Standalone Desktop (SQLite) environments.
 
 *   **Test:** `TestSIPDB_ChaosParity` added to `chaos_mesh_test.go`.
-*   **Methodology:** Tested `PruneStaleMissions` explicitly in an injected `OHC_STANDALONE_MODE=true` (SQLite) environment and `OHC_STANDALONE_MODE=false` (Postgres mocked interface) environment.
+*   **Methodology:** Tested `PruneStaleMissions` explicitly in an injected `OHC_STANDALONE=true` (SQLite) environment and `OHC_STANDALONE=false` (Postgres mocked interface) environment.
 *   **Result:** <span style="color:#00e676">**100% GREEN**</span>. Both databases correctly gracefully recovered from connection pool stress.
 
 ---
