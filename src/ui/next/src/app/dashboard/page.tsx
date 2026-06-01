@@ -1934,7 +1934,7 @@ export default function Dashboard() {
                           </div>
                       </div>
                       <div className="text-center mt-3">
-                          <a href="#" className="text-[10px] text-gray-400 hover:text-gray-600 font-semibold uppercase tracking-wider transition-colors">⚡ Powered by OHC</a>
+                          <a href="#" className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1 rounded-full">⚡ Powered by OHC - Create your own Wall of Love</a>
                       </div>
                   </div>
               </div>
@@ -1945,7 +1945,7 @@ export default function Dashboard() {
                   <textarea
                     readOnly
                     className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-xl h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
-                    value={`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/wall-of-love?tenant=${typeof window !== 'undefined' ? (localStorage.getItem('tenant') || 'my-store') : 'my-store'}" width="100%" height="600" frameborder="0" style="border-radius: 16px; border: 1px solid #eaeaea;"></iframe>`}
                   />
                   <div className="absolute top-3 right-3 flex gap-2">
                     <button
@@ -1961,7 +1961,7 @@ export default function Dashboard() {
                     </button>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`);
+                        navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/wall-of-love?tenant=${typeof window !== 'undefined' ? (localStorage.getItem('tenant') || 'my-store') : 'my-store'}" width="100%" height="600" frameborder="0" style="border-radius: 16px; border: 1px solid #eaeaea;"></iframe>`);
                         setWallOfLoveCopied(true);
                         setTimeout(() => setWallOfLoveCopied(false), 2000);
                       }}
