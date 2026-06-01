@@ -13,7 +13,7 @@ test.describe('CUJ: Billing Cost Tracking', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
     // Check elements dynamically populated on My Plan screen by clicking "Billing"
-    await page.getByRole('button', { name: 'Billing', exact: true }).click();
+    await page.getByRole('link', { name: 'My Plan', exact: true }).click();
 
     // Verify My Plan Screen
     await expect(page.locator('#my-plan-screen')).toBeVisible();
