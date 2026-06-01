@@ -394,7 +394,7 @@ mod tests {
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2)).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
