@@ -8,7 +8,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('onboarding-storage-v3');
     }, id);
-    await page.goto('/website-builder');
+    await page.goto('/onboarding');
 
     // Step 1: Business Name
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
