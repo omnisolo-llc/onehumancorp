@@ -3,8 +3,6 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
-pub mod postgres_store;
-pub mod sqlite_store;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -73,7 +71,6 @@ use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
