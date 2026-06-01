@@ -1,8 +1,18 @@
 "use client";
 
+
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+
+export type VoiceAgentConfig = {
+  tenant_id: string;
+  phone_number: string;
+  is_enabled: boolean;
+  primary_language: string;
+  custom_instructions: string;
+};
+
 
 export type ApprovalRequest = {
   id: string;
@@ -33,6 +43,31 @@ export default function TeamPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
 
+  const [voiceConfig, setVoiceConfig] = useState<VoiceAgentConfig>({
+    tenant_id: '',
+    phone_number: '(555) 123-4567',
+    is_enabled: false,
+    primary_language: 'en-US',
+    custom_instructions: '',
+  });
+  const [saveMessage, setSaveMessage] = useState('');
+
+
+
+  const fetchVoiceConfig = async (tenantId: string) => {
+    try {
+      const res = await fetch(`/api/v1/voice/config/${tenantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVoiceConfig(data);
+      } else {
+        setVoiceConfig(prev => ({ ...prev, tenant_id: tenantId }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const fetchApprovals = async () => {
     try {
       const response = await fetch('/api/agents/approvals');
@@ -53,8 +88,26 @@ export default function TeamPage() {
     if (typeof window !== 'undefined' && window.localStorage) {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
       setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+      fetchVoiceConfig(tenantId);
     }
   }, []);
+
+
+  const handleSaveVoiceConfig = async () => {
+    try {
+      const res = await fetch(`/api/v1/voice/config/${voiceConfig.tenant_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(voiceConfig),
+      });
+      if (res.ok) {
+        setSaveMessage('Voice settings updated successfully');
+        setTimeout(() => setSaveMessage(''), 3000);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -124,7 +177,8 @@ export default function TeamPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
 
-          <div className="mb-6 p-5 rounded-[16px] border flex flex-col gap-3 shadow-sm relative overflow-hidden group" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
+
+                    <div className="mb-6 p-5 rounded-[16px] border flex flex-col gap-3 shadow-sm relative overflow-hidden group" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative z-10">
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
@@ -137,6 +191,57 @@ export default function TeamPage() {
               </button>
             </div>
           </div>
+
+          <div className="mb-6 p-5 rounded-[16px] border flex flex-col gap-3 shadow-sm relative overflow-hidden group" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <h2 className="text-xl font-semibold font-outfit text-gray-900">AI Voice Receptionist</h2>
+              <p className="text-sm text-gray-600 mt-1 mb-3">Your Business Phone Number: {voiceConfig.phone_number}</p>
+
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="ai-receptionist-toggle"
+                  className="w-4 h-4"
+                  checked={voiceConfig.is_enabled}
+                  onChange={(e) => setVoiceConfig({...voiceConfig, is_enabled: e.target.checked})}
+                />
+                <label htmlFor="ai-receptionist-toggle" className="text-sm font-medium text-gray-900">Activate AI Receptionist</label>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-sm font-medium text-gray-900 block mb-1">Primary Language</label>
+                <select
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                  value={voiceConfig.primary_language}
+                  onChange={(e) => setVoiceConfig({...voiceConfig, primary_language: e.target.value})}
+                >
+                  <option value="en-US">English</option>
+                  <option value="ar">Arabic</option>
+                  <option value="es">Spanish</option>
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-sm font-medium text-gray-900 block mb-1">What should the agent know?</label>
+                <textarea
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none h-20"
+                  placeholder="e.g., 'Tell callers to park in the back'"
+                  value={voiceConfig.custom_instructions}
+                  onChange={(e) => setVoiceConfig({...voiceConfig, custom_instructions: e.target.value})}
+                ></textarea>
+              </div>
+
+              <button
+                onClick={handleSaveVoiceConfig}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
+              >
+                Save Voice Settings
+              </button>
+              {saveMessage && <p className="text-green-600 text-sm mt-2 font-medium">{saveMessage}</p>}
+            </div>
+          </div>
+
 
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">AI Departments</h2>
 

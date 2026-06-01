@@ -38,6 +38,9 @@ rust_library(
         "mesh_handler.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
+        "voice/mod.rs",
+        "voice/config.rs",
+        "voice/webhook.rs",
         "mod.rs",
         "offline_sync.rs",
         "telemetry.rs",
@@ -159,3 +162,9 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files([
+    "voice/mod.rs",
+    "voice/config.rs",
+    "voice/webhook.rs",
+])

@@ -2487,7 +2487,15 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             dynamic_workflow_state_dir,
         ),
     );
+
+    let voice_engine = std::sync::Arc::new(crate::voice::engine::VoiceAIEdgeEngine::new());
+    let voice_router = axum::Router::new()
+        .nest("/api/v1/voice/config", crate::api::voice::config::router())
+        .nest("/api/v1/webhooks/voice", crate::api::voice::webhook::router(voice_engine));
+
+
     let app = axum::Router::new()
+        .merge(voice_router)
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();

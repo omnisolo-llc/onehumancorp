@@ -782,6 +782,17 @@ impl DB {
                         mission_log TEXT
                     );
 
+
+                    CREATE TABLE IF NOT EXISTS voice_agent_configs (
+                        tenant_id TEXT PRIMARY KEY,
+                        phone_number TEXT NOT NULL,
+                        is_enabled BOOLEAN NOT NULL DEFAULT 0,
+                        primary_language TEXT NOT NULL DEFAULT 'en-US',
+                        custom_instructions TEXT NOT NULL DEFAULT '',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
