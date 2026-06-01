@@ -917,10 +917,10 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
+                    let org_id: String = row.get("organization_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
@@ -936,10 +936,10 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
+                    let org_id: String = row.get("organization_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
