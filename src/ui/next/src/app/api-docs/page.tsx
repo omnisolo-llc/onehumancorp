@@ -95,6 +95,55 @@ const swaggerSpec = {
         }
       }
     },
+    "/api/help": {
+      get: {
+        summary: "Get help topics",
+        description: "Retrieves a list of help topics for the Help Center.",
+        tags: ["Documentation"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      desc: { type: "string" },
+                      link: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tooltips": {
+      get: {
+        summary: "Get tooltips",
+        description: "Retrieves a dictionary of tooltips mapping element IDs to tooltip text.",
+        tags: ["Documentation"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos": {
       get: {
         summary: "Get video tutorials",

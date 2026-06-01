@@ -120,6 +120,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
       className="inline-block relative cursor-help"
+      style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
     >
       {children}
     </div>

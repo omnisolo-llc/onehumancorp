@@ -14,7 +14,7 @@ type Mission = {
 
 const MISSIONS: Mission[] = [
   { id: '1', title: 'Identify undocumented endpoints', status: 'completed', progress: 100, agent: 'Scribe', department: 'Documentation' },
-  { id: '2', title: 'Generate missing OpenAPI specs', status: 'active', progress: 65, agent: 'Scribe', department: 'Documentation' },
+  { id: '2', title: 'Generate missing OpenAPI specs', status: 'completed', progress: 100, agent: 'Scribe', department: 'Documentation' },
   { id: '3', title: 'Write tutorial walkthroughs', status: 'active', progress: 40, agent: 'Scribe', department: 'Documentation' },
   { id: '4', title: 'Review inline code comments', status: 'pending', progress: 0, agent: 'Scribe', department: 'Documentation' },
   { id: '5', title: 'Standardize README formatting', status: 'pending', progress: 0, agent: 'Scribe', department: 'Documentation' },

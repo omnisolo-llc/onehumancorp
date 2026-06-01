@@ -6406,6 +6406,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                         }
                                                     }
                                                 },
+                                                "/api/help": {
+                                                    "get": {
+                                                        "summary": "Get help topics",
+                                                        "tags": ["Documentation"],
+                                                        "responses": { "200": { "description": "Success" } }
+                                                    }
+                                                },
+                                                "/api/tooltips": {
+                                                    "get": {
+                                                        "summary": "Get tooltips",
+                                                        "tags": ["Documentation"],
+                                                        "responses": { "200": { "description": "Success" } }
+                                                    }
+                                                },
                                                 "/api/videos": {
                                                     "get": {
                                                         "summary": "Get video tutorials",

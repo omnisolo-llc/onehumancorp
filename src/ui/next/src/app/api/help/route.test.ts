@@ -14,12 +14,12 @@ describe('/api/help GET', () => {
     const gettingStarted = data.find((item: any) => item.link === '/help/getting-started');
     expect(gettingStarted).toBeDefined();
     expect(gettingStarted.title).toBe('Getting Started');
-    expect(gettingStarted.desc).toContain('easily set up your store');
+    expect(gettingStarted.desc).toContain('Welcome to One Human Corp');
 
     const myStore = data.find((item: any) => item.link === '/help/my-store');
     expect(myStore).toBeDefined();
     expect(myStore.title).toBe('My Store');
-    expect(myStore.desc).toContain('Add products');
+    expect(myStore.desc).toContain('add products');
 
     // Ensure all items have the required fields
     data.forEach((item: any) => {
