@@ -71,11 +71,22 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct BrandingToggleRequest {
+    pub enabled: bool,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct BrandingToggleResponse {
+    pub status: String,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/branding-toggle", post(handle_branding_toggle))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -188,6 +199,27 @@ async fn handle_social_post(
     Json(SocialPostResponse {
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
+    })
+}
+
+async fn handle_branding_toggle(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<BrandingToggleRequest>,
+) -> impl IntoResponse {
+    if let Ok(event) = serde_json::to_string(&serde_json::json!({
+        "type": "branding_toggled",
+        "enabled": req.enabled,
+    })) {
+        let msg = crate::hub::HubEvent {
+            r#type: "growth.branding_toggled".to_string(),
+            payload: event,
+            occurred_at: chrono::Utc::now(),
+        };
+        state.hub.append_recent_event(msg);
+    }
+
+    Json(BrandingToggleResponse {
+        status: "success".to_string(),
     })
 }
 
@@ -716,6 +748,38 @@ mod tests {
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB");
         pool
+    }
+
+    #[tokio::test]
+    async fn test_handle_branding_toggle() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        // Test toggle off
+        let req_off = BrandingToggleRequest { enabled: false };
+        let res_off = handle_branding_toggle(Extension(state.clone()), Json(req_off)).await;
+
+        let body_bytes = axum::body::to_bytes(res_off.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: BrandingToggleResponse = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(res_json.status, "success");
+
+        let recent_events = state.hub.recent_events(10);
+        let event_off = recent_events.iter().find(|e| e.r#type == "growth.branding_toggled").unwrap();
+        assert!(event_off.payload.contains("\"enabled\":false"));
+
+        // Test toggle on
+        let req_on = BrandingToggleRequest { enabled: true };
+        let res_on = handle_branding_toggle(Extension(state.clone()), Json(req_on)).await;
+
+        let body_bytes_on = axum::body::to_bytes(res_on.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json_on: BrandingToggleResponse = serde_json::from_slice(&body_bytes_on).unwrap();
+        assert_eq!(res_json_on.status, "success");
+
+        let recent_events_on = state.hub.recent_events(10);
+        let event_on = recent_events_on.iter().filter(|e| e.r#type == "growth.branding_toggled" && e.payload.contains("\"enabled\":true")).last().unwrap();
+        assert!(event_on.payload.contains("\"enabled\":true"));
     }
 
     #[tokio::test]

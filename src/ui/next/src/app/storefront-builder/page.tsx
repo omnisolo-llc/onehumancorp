@@ -10,6 +10,7 @@ export default function StorefrontBuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+  const [showBranding, setShowBranding] = useState(true);
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
@@ -37,6 +38,11 @@ export default function StorefrontBuilderPage() {
 
     const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
     if (savedLiveUrl) setLiveUrl(savedLiveUrl);
+
+    const savedShowBranding = localStorage.getItem("ohc_builder_show_branding");
+    if (savedShowBranding !== null) {
+        setShowBranding(savedShowBranding === "true");
+    }
   }, []);
 
   useEffect(() => {
@@ -319,7 +325,50 @@ export default function StorefrontBuilderPage() {
             </DraggableBlock>
           ))}
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
-          <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
+          {showBranding && (
+            <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-[40]">
+              <div className="px-4 py-2 shadow-sm flex items-center justify-center gap-2" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '24px' }}>
+                  <a href={`ohc://join?ref=${tenantId}`} className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-black font-semibold font-outfit tracking-wide uppercase transition-colors">
+                      <span className="opacity-60 text-[10px]">Powered by</span>
+                      <span className="text-blue-600">OHC</span>
+                  </a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Builder Sidebar / Tools Overlay */}
+        <div className="absolute top-16 left-4 z-50 bg-white/90 backdrop-blur-xl border border-white/40 shadow-xl p-4 rounded-xl max-w-[200px]">
+          <h3 className="font-bold text-sm mb-3 font-outfit text-gray-900">Growth Tools</h3>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2">
+               <input
+                 type="checkbox"
+                 id="branding-toggle"
+                 checked={showBranding}
+                 onChange={async (e) => {
+                     setShowBranding(e.target.checked);
+                     localStorage.setItem("ohc_builder_show_branding", e.target.checked ? "true" : "false");
+                     try {
+                        await fetch('/api/v1/growth/branding-toggle', {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({ enabled: e.target.checked })
+                        });
+                     } catch(err) {
+                         console.error("Failed to sync branding toggle", err);
+                     }
+                 }}
+                 className="mt-1 shrink-0 accent-blue-600 cursor-pointer"
+               />
+               <label htmlFor="branding-toggle" className="text-xs text-gray-700 cursor-pointer">
+                  Show <b>"Powered by OHC"</b> badge
+               </label>
+            </div>
+            <p className="text-[10px] text-gray-500 leading-tight">
+               Enable to grant your store <span className="font-bold text-blue-600">+100 bonus AI actions</span> per month!
+            </p>
+          </div>
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
