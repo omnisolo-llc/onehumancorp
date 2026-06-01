@@ -37,6 +37,9 @@ impl HibernationManager {
 
     pub async fn wake(&self, session_id: &str) -> Result<HibernationState, String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
+        if !tokio::fs::try_exists(&path).await.unwrap_or(false) {
+            return Err(format!("Session {} not found", session_id));
+        }
         let data = tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())?;
         let state: HibernationState = serde_json::from_str(&data).map_err(|e| e.to_string())?;
         Ok(state)
@@ -88,6 +91,48 @@ mod tests {
         // Clear
         assert!(manager.clear(session_id).await.is_ok());
         assert!(!manager.is_hibernated(session_id).await);
+
+        let _ = tokio::fs::remove_dir_all(dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_hibernation_wake_not_found() {
+        let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
+        let manager = HibernationManager::new(&dir).await;
+        let session_id = "non-existent-sess";
+
+        let result = manager.wake(session_id).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Session non-existent-sess not found");
+
+        let _ = tokio::fs::remove_dir_all(dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_hibernation_clear_not_found() {
+        let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
+        let manager = HibernationManager::new(&dir).await;
+        let session_id = "non-existent-sess";
+
+        // Clearing a non-existent session should return Ok
+        let result = manager.clear(session_id).await;
+        assert!(result.is_ok());
+
+        let _ = tokio::fs::remove_dir_all(dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_hibernation_corrupt_data() {
+        let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
+        let manager = HibernationManager::new(&dir).await;
+        let session_id = "corrupt-sess";
+
+        let path = format!("{}/{}.json", dir, session_id);
+        tokio::fs::write(&path, "{\"invalid\": json}").await.unwrap();
+
+        let result = manager.wake(session_id).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("expected value"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
