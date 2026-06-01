@@ -8,13 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "meta", name: "Social Media Accounts", category: "social", status: "disconnected", icon: "💬", description: "Manage all your social media messages and posts in one place.", buttonText: "Connect my Instagram and Facebook" },
-    { id: "cal_com", name: "Autonomous Booking Agent", category: "operations", status: "disconnected", icon: "📅", description: "Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.", buttonText: "Enable Booking Agent" },
-    { id: "shippo", name: "Shipping Labels", category: "operations", status: "disconnected", icon: "📦", description: "Print shipping labels and automatically track packages for your orders.", buttonText: "Set up shipping" },
-    { id: "mercadopago", name: "Local Payments", category: "finance", status: "disconnected", icon: "🌎", description: "Get paid easily using local payment methods in Latin America.", buttonText: "Accept local payments" },
-    { id: "resend", name: "Customer Emails", category: "marketing", status: "disconnected", icon: "📧", description: "Send email updates and promotions to your customers.", buttonText: "Start sending emails" },
-    { id: "zoom", name: "Online Meetings", category: "operations", status: "disconnected", icon: "📹", description: "Host online video meetings with your customers easily without extra downloads.", buttonText: "Create my meeting room" },
-    { id: "twilio", name: "Text Notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Send automatic text message updates to your customers about their orders.", buttonText: "Enable text messages" }
+    { id: "ayrshare", name: "Ayrshare", category: "social", status: "disconnected", icon: "📱", description: "Manage all your social media messages and posts in one place.", buttonText: "Connect my Instagram and Facebook" },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.", buttonText: "Enable Booking Agent" },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Print shipping labels and automatically track packages for your orders.", buttonText: "Set up shipping" },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Get paid easily using local payment methods in Latin America.", buttonText: "Accept local payments" },
+    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Send email updates and promotions to your customers.", buttonText: "Start sending emails" },
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Host online video meetings with your customers easily without extra downloads.", buttonText: "Create my meeting room" },
+    { id: "twilio", name: "Twilio Notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Send automatic text message updates to your customers about their orders.", buttonText: "Enable text messages" }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -50,7 +50,7 @@ export default function Integrations() {
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
     }
-    if (id === 'shippo' || id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com') {
+    if (id === 'ayrshare' || id === 'easypost' || id === 'jitsi' || id === 'listmonk' || id === 'mercadopago' || id === 'cal_com') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
