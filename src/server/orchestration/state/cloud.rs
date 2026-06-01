@@ -156,13 +156,13 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             Ok(Ok(guard)) => guard,
             Ok(Err(e)) => {
                 if e.contains("is currently locked") || e.contains("Timeout") {
-                    tracing::warn!("Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                    tracing::warn!(error = %e, method = "pull_available_tasks", "Lock timeout or unavailable in CloudStateManager, fail-safing to empty list");
                     return Ok(vec![]);
                 }
                 return Err(e);
             },
-            Err(_) => {
-                tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+            Err(e) => {
+                tracing::warn!(error = %e, method = "pull_available_tasks", "Lock timeout in CloudStateManager, fail-safing to empty list");
                 return Ok(vec![]);
             }
         };
@@ -191,8 +191,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         let rows = match tokio::time::timeout(std::time::Duration::from_secs(2), rows_future).await {
             Ok(Ok(rows)) => rows,
             Ok(Err(e)) => return Err(e.to_string()),
-            Err(_) => {
-                tracing::warn!("Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+            Err(e) => {
+                tracing::warn!(error = %e, method = "pull_available_tasks", "Database timeout in CloudStateManager, fail-safing to empty list");
                 return Ok(vec![]);
             }
         };

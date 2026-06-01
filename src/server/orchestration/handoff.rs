@@ -64,7 +64,7 @@ impl HandoffManager {
                                             .execute(&db_clone.pool)
                                             .await
                                         {
-                                            tracing::error!("Failed to save state handoff (agent_memories) to Postgres: error={}", e);
+                                            tracing::error!(error = %e, "Failed to save state handoff (agent_memories) to Postgres");
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
@@ -76,7 +76,7 @@ impl HandoffManager {
                                             .execute(sqlite_pool)
                                             .await
                                         {
-                                            tracing::error!("Failed to save state handoff (agent_memories) to Sqlite: error={}", e);
+                                            tracing::error!(error = %e, "Failed to save state handoff (agent_memories) to Sqlite");
                                         }
                                     }
                                 }
@@ -98,7 +98,7 @@ impl HandoffManager {
                                             .execute(&db_clone.pool)
                                             .await
                                         {
-                                            tracing::error!("Failed to save state handoff (shared_tasks) to Postgres: error={}", e);
+                                            tracing::error!(error = %e, "Failed to save state handoff (shared_tasks) to Postgres");
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
@@ -110,13 +110,13 @@ impl HandoffManager {
                                             .execute(sqlite_pool)
                                             .await
                                         {
-                                            tracing::error!("Failed to save state handoff (shared_tasks) to Sqlite: error={}", e);
+                                            tracing::error!(error = %e, "Failed to save state handoff (shared_tasks) to Sqlite");
                                         }
                                     }
                                 }
                             },
                             _ => {
-                                tracing::warn!("Received handoff for unknown entity type: {}", entity_type);
+                                tracing::warn!(entity_type = %entity_type, "Received handoff for unknown entity type");
                             }
                         }
                         let _ = mesh.release_lock(&lock_key, "handoff_manager").await;

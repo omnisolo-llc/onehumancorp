@@ -198,7 +198,7 @@ impl DepartmentOrchestrator {
                         }
 
                         if !success {
-                            tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
+                            tracing::error!(error = %last_err, event_id = %event.id, "Dead-letter logging for event after 3 failed retries");
                             let dl_id = Uuid::new_v4().to_string();
                             let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
                             let dl_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
@@ -217,7 +217,7 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
                                     if let Err(err) = res {
-                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                        tracing::error!(error = %err, "Failed to insert dead letter into DB");
                                     }
                                 }
                                 DbStore::Sqlite(pool) => {
@@ -233,7 +233,7 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await;
                                     if let Err(err) = res {
-                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                        tracing::error!(error = %err, "Failed to insert dead letter into DB");
                                     }
                                 }
                             }

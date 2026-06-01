@@ -178,8 +178,8 @@ mod chaos_tests {
         let _ = mesh.subscribe("mesh:test:corrupt", Box::new(|msg| {
             // Simulate how the orchestrator processes JSON with fallback
             let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&msg.payload);
-            if parsed.is_err() {
-                 tracing::warn!("Message mailbox corruption detected. Applying circuit breaker fallback logic.");
+            if let Err(e) = parsed {
+                 tracing::warn!(error = %e, "Message mailbox corruption detected. Applying circuit breaker fallback logic.");
                  // Circuit breaker loop / fallback
                  let mut fallback_attempts = 0;
                  while fallback_attempts < 3 {

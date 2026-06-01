@@ -468,7 +468,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
                         }
                         Err(e) => {
-                            tracing::warn!(error = ?e, "Failed to initialize PgTransport");
+                            tracing::warn!(error = %e, "Failed to initialize PgTransport");
                             // Fallback to memory
                         }
                     }
@@ -482,7 +482,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
                 Err(e) => {
-                    tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
+                    tracing::warn!(error = %e, "Failed to initialize SqliteTransport");
                     let transport = ohc_builtin_agent::mesh::transport::InProcessTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
