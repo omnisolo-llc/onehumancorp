@@ -161,7 +161,6 @@ function KairosContent() {
         .ohc-hybrid-panel {
             backdrop-filter: blur(20px) saturate(200%);
             background: rgba(255, 255, 255, 0.03);
-            font-family: 'Outfit', 'Inter', sans-serif;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 24px;
