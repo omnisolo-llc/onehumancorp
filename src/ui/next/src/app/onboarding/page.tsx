@@ -408,15 +408,15 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
+                        if (location.trim().length < 2) {
+                          setValidationError('Location must be at least 2 characters.');
                           return;
                         }
                         setValidationError('');
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -559,26 +559,6 @@ export default function OnboardingWizard() {
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Web Address</label>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div
-                      onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Free Subdomain</span>
-                      <span className="text-[10px] opacity-70">your-name.ohc.store</span>
-                    </div>
-                    <div
-                      onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Custom Domain</span>
-                      <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
                   </div>
                 </div>
 
