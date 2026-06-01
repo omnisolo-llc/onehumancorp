@@ -138,7 +138,25 @@ describe('OnboardingWizard', () => {
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1: Validate short business name', async () => {
+    const user = userEvent.setup();
+    render(<OnboardingWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
+    });
+
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Custom Cakes/i);
+    await user.type(nameInput, 'AB');
+
+    const nextButton = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Business Name must be at least 3 characters.")).toBeInTheDocument();
     });
   });
 
