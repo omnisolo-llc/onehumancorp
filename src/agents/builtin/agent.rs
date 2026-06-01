@@ -995,33 +995,12 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
-
-                            loop {
-                                match tool.execute.execute(args.clone()).await {
-                                    Ok(res) => {
-                                        final_res = Ok(res);
-                                        break;
-                                    }
-                                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                                        if retry_count < max_retries {
-                                            retry_count += 1;
-                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                            tokio::time::sleep(backoff).await;
-                                            continue;
-                                        } else {
-                                            final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        final_res = Err(e);
-                                        break;
-                                    }
-                                }
-                            }
+                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                tool,
+                                &tc,
+                                max_retries
+                            ).await;
                             (id, final_res)
                         } else {
                             // Unreachable if tool not found goes to mutating calls
@@ -1130,33 +1109,12 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
-
-                        loop {
-                            match tool.execute.execute(args.clone()).await {
-                                Ok(res) => {
-                                    final_res = Ok(res);
-                                    break;
-                                }
-                                Err(crate::types::ToolError::Unexpected(msg)) => {
-                                    if retry_count < max_retries {
-                                        retry_count += 1;
-                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                        tokio::time::sleep(backoff).await;
-                                        continue;
-                                    } else {
-                                        final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    final_res = Err(e);
-                                    break;
-                                }
-                            }
-                        }
+                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                            tool,
+                            &tc,
+                            max_retries
+                        ).await;
 
                         match final_res {
                             Err(crate::types::ToolError::Transient(msg)) => {
@@ -1480,13 +1438,9 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let llm_clone = self.llm.clone();
-            let model_clone = cfg.model.clone();
-
             read_only_futures.push(async move {
                 let mut retry_count = 0;
-                let mut current_tc = tc_clone.clone();
-                let mut llm_recovery_attempts = 0;
+                let current_tc = tc_clone.clone();
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
@@ -1501,37 +1455,9 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            if llm_recovery_attempts < max_retries {
-                                llm_recovery_attempts += 1;
-
-                                // Error Handling (Compounding Error Prevention): LLM-recoverable
-                                // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                                let recovery_system = format!(
-                                    "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
-                                    current_tc.name, msg, current_tc.arguments
-                                );
-
-                                let recovery_req = ChatRequest {
-                                    model: model_clone.clone(),
-                                    system: recovery_system,
-                                    messages: vec![Message::user("Please fix the JSON arguments.")],
-                                    tools: vec![],
-                                    max_tokens: 1000,
-                                    temperature: 0.0,
-                                };
-
-                                match llm_clone.chat(recovery_req).await {
-                                    Ok(resp) => {
-                                        let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                                        if let Ok(fixed_args) = serde_json::from_str(json_text) {
-                                            current_tc.arguments = fixed_args;
-                                            continue; // Retry with fixed args
-                                        }
-                                    }
-                                    Err(_) => {}
-                                }
-                            }
-                            break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
+                        // Error Handling (Compounding Error Prevention): LLM-recoverable
+                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        break Ok(format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg));
                         }
                         Err(e) => {
                             break Err(e);
@@ -1594,8 +1520,7 @@ impl Agent {
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
-            let mut current_tc = tc.clone();
-            let mut llm_recovery_attempts = 0;
+            let current_tc = tc.clone();
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
@@ -1610,37 +1535,9 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        if llm_recovery_attempts < max_retries {
-                            llm_recovery_attempts += 1;
-
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable
-                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let recovery_system = format!(
-                                "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
-                                current_tc.name, msg, current_tc.arguments
-                            );
-
-                            let recovery_req = ChatRequest {
-                                model: cfg.model.clone(),
-                                system: recovery_system,
-                                messages: vec![Message::user("Please fix the JSON arguments.")],
-                                tools: vec![],
-                                max_tokens: 1000,
-                                temperature: 0.0,
-                            };
-
-                            match self.llm.chat(recovery_req).await {
-                                Ok(resp) => {
-                                    let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                                    if let Ok(fixed_args) = serde_json::from_str(json_text) {
-                                        current_tc.arguments = fixed_args;
-                                        continue; // Retry with fixed args
-                                    }
-                                }
-                                Err(_) => {}
-                            }
-                        }
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
+                        // Error Handling (Compounding Error Prevention): LLM-recoverable
+                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        break format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);

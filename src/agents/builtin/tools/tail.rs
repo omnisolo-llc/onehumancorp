@@ -34,6 +34,9 @@ impl ToolExecutor for TailExecutor {
         if lines_to_read == 0 {
             return Ok(String::new());
         }
+        if lines_to_read > 1000 {
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
+        }
 
         let metadata = file.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         let len = metadata.len();
@@ -176,5 +179,18 @@ mod tests {
         let result = executor.execute(args).await.unwrap();
         let expected = "This is line number 9998\nThis is line number 9999\nThis is line number 10000";
         assert_eq!(result, expected);
+    }
+
+    #[tokio::test]
+    async fn test_tail_jit_limit() {
+        let executor = TailExecutor { working_dir: None };
+        let args = json!({ "path": "test.txt", "lines": 1500 });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Cannot read more than 1000 lines"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
     }
 }

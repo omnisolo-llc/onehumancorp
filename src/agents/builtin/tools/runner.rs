@@ -112,17 +112,52 @@ impl SandboxedCommandRunner {
                 ssh_args.push(format!("{} {}", env_prefix, command));
                 ssh_args
             },
-            "singularity" | "modal" | "daytona" | "vercal" => {
-                // Placeholder mappings for these advanced multi-backends
-                // They generally wrap the command in their own execution context
+            "singularity" => {
+                let image = std::env::var("OHC_AGENT_SINGULARITY_IMAGE")
+                    .unwrap_or_else(|_| "ubuntu.sif".to_string());
                 let mut exec_args = vec!["exec".to_string()];
 
                 // Add environments
                 for (key, value) in envs {
-                    exec_args.push("-e".to_string());
+                    exec_args.push("--env".to_string());
                     exec_args.push(format!("{}={}", key, value));
                 }
 
+                exec_args.push(image);
+                exec_args.push("/bin/sh".to_string());
+                exec_args.push("-c".to_string());
+                exec_args.push(command);
+                exec_args
+            },
+            "modal" => {
+                let mut exec_args = vec!["run".to_string(), "ohc_modal_stub".to_string(), "--".to_string()];
+                for (key, value) in envs {
+                    exec_args.push("--env".to_string());
+                    exec_args.push(format!("{}={}", key, value));
+                }
+                exec_args.push(command);
+                exec_args
+            },
+            "daytona" => {
+                let workspace = std::env::var("OHC_AGENT_DAYTONA_WORKSPACE")
+                    .unwrap_or_else(|_| "default".to_string());
+                let mut exec_args = vec!["execute".to_string(), workspace];
+
+                let mut env_prefix = String::new();
+                for (key, value) in envs {
+                    env_prefix.push_str(&format!("{}={} ", key, value));
+                }
+
+                exec_args.push(format!("{}{}", env_prefix, command));
+                exec_args
+            },
+            "vercal" => {
+                let mut exec_args = vec!["sandbox".to_string(), "exec".to_string()];
+                for (key, value) in envs {
+                    exec_args.push("-e".to_string());
+                    exec_args.push(format!("{}={}", key, value));
+                }
+                exec_args.push("--".to_string());
                 exec_args.push(command);
                 exec_args
             },
@@ -322,5 +357,69 @@ pub mod mock {
             stdout: stdout.as_bytes().to_vec(),
             stderr: stderr.as_bytes().to_vec(),
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_container_args_ssh() {
+        let args = SandboxedCommandRunner::container_args(
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "ssh"
+        );
+        assert_eq!(args[0], "localhost"); // default target
+        assert!(args[1].contains("FOO=bar"));
+        assert!(args[1].contains("echo hello"));
+    }
+
+    #[test]
+    fn test_container_args_singularity() {
+        let args = SandboxedCommandRunner::container_args(
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "singularity"
+        );
+        assert_eq!(args[0], "exec");
+        assert_eq!(args[1], "--env");
+        assert_eq!(args[2], "FOO=bar");
+        assert_eq!(args[3], "ubuntu.sif"); // default image
+        assert_eq!(args[4], "/bin/sh");
+        assert_eq!(args[5], "-c");
+        assert_eq!(args[6], "echo hello");
+    }
+
+    #[test]
+    fn test_container_args_modal() {
+        let args = SandboxedCommandRunner::container_args(
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "modal"
+        );
+        assert_eq!(args[0], "run");
+        assert_eq!(args[1], "ohc_modal_stub");
+        assert_eq!(args[2], "--");
+        assert_eq!(args[3], "--env");
+        assert_eq!(args[4], "FOO=bar");
+        assert_eq!(args[5], "echo hello");
+    }
+
+    #[test]
+    fn test_container_args_daytona() {
+        let args = SandboxedCommandRunner::container_args(
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "daytona"
+        );
+        assert_eq!(args[0], "execute");
+        assert_eq!(args[1], "default"); // default workspace
+        assert_eq!(args[2], "FOO=bar echo hello");
+    }
+
+    #[test]
+    fn test_container_args_vercal() {
+        let args = SandboxedCommandRunner::container_args(
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "vercal"
+        );
+        assert_eq!(args[0], "sandbox");
+        assert_eq!(args[1], "exec");
+        assert_eq!(args[2], "-e");
+        assert_eq!(args[3], "FOO=bar");
+        assert_eq!(args[4], "--");
+        assert_eq!(args[5], "echo hello");
     }
 }

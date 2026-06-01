@@ -498,4 +498,3 @@ impl ResilientClient {
         }
     }
 }
-
