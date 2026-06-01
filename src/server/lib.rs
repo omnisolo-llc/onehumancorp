@@ -4843,10 +4843,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
+                    <div id="pricing-screen" class="screen" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; box-sizing: border-box; width: 100%; max-width: 100%; overflow-x: hidden;">
+                        <h1 style="font-family: Outfit, Inter, sans-serif;">Pricing Plans</h1>
+                        <p style="font-family: Outfit, Inter, sans-serif; font-size: 16px; line-height: 1.5; color: var(--text-secondary);">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
+                        <button class="secondary" style="width: 100%; max-width: 335px; margin: 10px auto; display: block;">Annual billing 20% Discount</button>
 
                         <div class="card glass">
                             <h3>Free</h3>

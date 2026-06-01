@@ -36,4 +36,10 @@ mod tests {
         assert_eq!(should_batch_payout(10000), false);
         assert_eq!(should_batch_payout(50000), false);
     }
+
+    #[test]
+    fn test_should_batch_payout_edge_cases() {
+        assert_eq!(should_batch_payout(0), true);
+        assert_eq!(should_batch_payout(-100), true);
+    }
 }

@@ -88,5 +88,8 @@ mod tests {
         assert_eq!(manager.record_spend_cents(1000).unwrap(), false); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
+
+        let err_cents = manager.record_spend_cents(-500).unwrap_err();
+        assert_eq!(err_cents, "spend amount cannot be negative");
     }
 }
