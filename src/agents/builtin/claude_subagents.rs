@@ -282,4 +282,32 @@ impl ClaudeSubagentSpawner {
         assert!(worktree_dir.exists());
         assert!(worktree_dir.join("test.txt").exists());
     }
+
+    #[tokio::test]
+    async fn test_summarize_output() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "Here is the 1k-2k token summary of the execution...".to_string()
+            ]),
+        });
+        let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
+
+        // Subagent is not used in summarize_output, so a dummy one is fine.
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_agent,
+            subagent,
+            ClaudeSubagentMode::Fork,
+        );
+
+        let config = AgentRunConfig::default();
+        let raw_output = "Long raw context loop output that exceeds standard token lengths. Contains a lot of redundant tool logs.";
+
+        let result = spawner.summarize_output(raw_output, &config).await.unwrap();
+        assert_eq!(result, "Here is the 1k-2k token summary of the execution...");
+    }
 }
