@@ -3104,6 +3104,31 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_hierarchical_system_prompt_tier_truncation() {
+        let large_user_instructions = "A".repeat(40000);
+
+        let cfg = AgentRunConfig {
+            user_instructions: large_user_instructions,
+            developer_instructions: "Dev Info".to_string(),
+            ..Default::default()
+        };
+
+        // Note: The HierarchicalPromptBuilder pulls server_system_message from environment variables,
+        // but for this test we only verify the truncation of the user_instructions.
+
+        let tools: Vec<crate::tools::Tool> = vec![];
+        let builder = super::HierarchicalPromptBuilder::new(&cfg, &tools);
+
+        let prompt = builder.build();
+
+        assert!(prompt.contains("[Developer Instructions]"));
+        assert!(prompt.contains("[User Instructions]"));
+
+        // Ensure it doesn't exceed 40k chars for user instructions, checking truncation (max 32KiB usually)
+        assert!(prompt.len() < 35000, "Prompt should be truncated to fit the ~32KiB constraint, actual length: {}", prompt.len());
+    }
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,

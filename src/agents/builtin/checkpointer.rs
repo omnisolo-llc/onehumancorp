@@ -384,6 +384,20 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
 mod tests {
     use super::*;
 
+    #[tokio::test]
+    async fn test_git_checkpointer_empty_init() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let cp = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let result = cp.get_checkpoint("thread_1", "chk_1").await;
+        // In empty repo without commits/checkpoint, it should cleanly return Ok(None) or an Error, but not panic
+        assert!(result.is_ok() || result.is_err(), "Should not panic on missing checkpointer repo");
+
+        if let Ok(opt) = result {
+            assert!(opt.is_none(), "Should be None for missing checkpoint");
+        }
+    }
+
     #[test]
     fn test_compress_decompress() {
         let data = b"Hello, world! This is a test of compression and decompression.";

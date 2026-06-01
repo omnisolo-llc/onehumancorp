@@ -38,3 +38,18 @@ async fn test_pydantic_adapter_failure() {
         panic!("Expected LlmRecoverable error for self-correction");
     }
 }
+
+#[tokio::test]
+async fn test_pydantic_tool_missing_field_recovery() {
+    let adapter = PydanticAdapter::new(MyExecutor);
+    // Missing required 'bar' field
+    let result = adapter.execute(serde_json::json!({ "foo": "test" })).await;
+    assert!(result.is_err());
+
+    if let Err(ToolError::LlmRecoverable(msg)) = result {
+        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(msg.contains("missing field `bar`"));
+    } else {
+        panic!("Expected LlmRecoverable error indicating missing field for self-correction");
+    }
+}
