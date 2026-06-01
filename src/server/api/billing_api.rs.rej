@@ -1,0 +1,13 @@
+--- src/server/api/billing_api.rs
++++ src/server/api/billing_api.rs
+@@ -127,8 +127,9 @@
+
+     // Proper concurrent execution combining spawn_blocking for CPU/sync methods
+     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
++    let tenant_id_clone_for_auditor = tenant_id.clone();
+     let auditor_future = tokio::task::spawn_blocking(move || {
+-        (auditor.get_total_cost(), auditor.get_total_revenue())
++        (auditor.get_tenant_cost(&tenant_id_clone_for_auditor), auditor.get_tenant_revenue(&tenant_id_clone_for_auditor))
+     });
+
+     let storage_future = tokio::task::spawn(async move {
