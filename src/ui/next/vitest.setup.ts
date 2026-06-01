@@ -1,5 +1,5 @@
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
 
-global.vi = vi
+global.vi = vi;
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
