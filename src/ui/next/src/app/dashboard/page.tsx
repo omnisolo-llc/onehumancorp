@@ -736,6 +736,50 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Storefront Branding Soft Paywall */}
+         <section className="mb-6">
+            <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 165, 0, 0.3)' }}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                        Storefront Branding
+                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255, 165, 0, 0.1)', color: '#d97706' }}>
+                            Premium Feature
+                        </span>
+                    </h3>
+                </div>
+
+                <p className="text-gray-600 font-inter text-sm mb-4 leading-relaxed">
+                    Remove the "Powered by OHC" watermark from your storefront and embed widgets.
+                </p>
+
+                <div className="flex justify-between items-center bg-black/5 p-4 rounded-xl mb-4">
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900">Remove "Powered by OHC" Badge</span>
+                        <span className="text-sm text-gray-600">Show only your own brand on your storefront.</span>
+                    </div>
+                    <div className="relative">
+                        {/* Toggle Switch (Locked) */}
+                        <label className="relative inline-block w-12 h-7 opacity-50 cursor-not-allowed">
+                            <input type="checkbox" disabled className="opacity-0 w-0 h-0" />
+                            <span className="absolute cursor-not-allowed top-0 left-0 right-0 bottom-0 bg-gray-300 transition-all duration-300 rounded-full"></span>
+                            <span className="absolute h-5 w-5 left-1 bottom-1 bg-white transition-all duration-300 rounded-full"></span>
+                        </label>
+                        <div className="absolute -top-2.5 -right-2.5 text-base">🔒</div>
+                    </div>
+                </div>
+
+                <div className="text-center mt-4">
+                    <button
+                        onClick={() => { setShowSoftPaywall(true); }}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 shadow-md"
+                        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)' }}
+                    >
+                        Upgrade to Premium to Unlock
+                    </button>
+                </div>
+            </div>
+         </section>
+
          {/* Automated AI Review Requests Growth Loop */}
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
