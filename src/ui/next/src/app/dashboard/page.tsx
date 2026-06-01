@@ -40,6 +40,11 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+  // Growth Loop: Link-in-Bio
+  const [showLinkInBioModal, setShowLinkInBioModal] = useState<boolean>(false);
+  const [linkInBioCopied, setLinkInBioCopied] = useState<boolean>(false);
+
+
 
   // Growth Loop: Post-Purchase Social Share State
   const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
@@ -1180,6 +1185,50 @@ export default function Dashboard() {
               </div>
            </section>
          )}
+         {/* Growth Loop: Link-in-Bio Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8 shadow-sm transition-all hover:shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '24px' }}>
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-xl shadow-inner">
+                            📱
+                        </div>
+                        <h3 className="text-lg font-bold font-outfit" style={{ color: '#1D1D1F' }}>Autonomous Link-in-Bio</h3>
+                    </div>
+                    <p className="text-sm md:text-base leading-relaxed mb-6" style={{ color: '#4B5563' }}>
+                        Generate a beautiful, mobile-optimized link-in-bio page for your TikTok or Instagram. The Marketing Agent will automatically sync your active products and services to a single link.
+                    </p>
+                    <button
+                        onClick={() => setShowLinkInBioModal(true)}
+                        className="w-full sm:w-auto px-6 py-3 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                    >
+                        <span>Generate Link</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </button>
+                </div>
+                <div className="hidden md:block w-48 relative">
+                    <div className="aspect-[9/16] bg-gray-100 rounded-2xl border-4 border-gray-800 shadow-xl overflow-hidden relative">
+                         <div className="absolute top-0 inset-x-0 h-6 bg-gray-800 rounded-b-xl opacity-50 mx-4"></div>
+                         <div className="mt-8 flex flex-col items-center p-2 gap-2">
+                             <div className="w-8 h-8 rounded-full bg-purple-500"></div>
+                             <div className="h-2 w-16 bg-gray-300 rounded"></div>
+                             <div className="h-6 w-full bg-white rounded shadow-sm mt-2"></div>
+                             <div className="h-6 w-full bg-white rounded shadow-sm"></div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+         </section>
+
+
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
