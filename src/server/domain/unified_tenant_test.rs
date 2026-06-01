@@ -171,6 +171,8 @@ mod tests {
             customer_id: "c1".to_string(),
             status: None,
             total_amount: None,
+            tracking_number: None,
+            shipping_label_url: None,
             created_at: None,
             updated_at: None,
         };

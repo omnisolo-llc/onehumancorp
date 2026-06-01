@@ -1,4 +1,3 @@
-pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
 
@@ -4737,16 +4736,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
                             </div>
 
-                            <!-- Front Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Omnichannel Inbox</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📥</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Front...')">Connect Front</button>
-                            </div>
-
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -5337,6 +5326,55 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         // Server-Side State Management for Cross-Device Resumes
                         let saveWizardStateTimeout = null;
 
+                        async function requestShippingRates(orderId) {
+                            const btn = document.querySelector("#shipping-actions-" + orderId + " button");
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.textContent = "Loading...";
+                            }
+                            try {
+                                const res = await fetch("/api/v1/orders/" + orderId + "/shipping-rates", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({ weight: 1.0, dimensions: "10x10x10" })
+                                });
+                                const data = await res.json();
+                                let html = "";
+                                for (let i=0; i<data.rates.length; i++) {
+                                    html += "<button onclick=\"purchaseLabel(" + "'" + orderId + "', '" + data.rates[i] + "')\">" + data.rates[i] + "</button>";
+                                }
+                                document.getElementById("shipping-rates-container-" + orderId).style.display = "block";
+                                document.getElementById("rates-list-" + orderId).innerHTML = html;
+                            } catch (e) {
+                                alert("Failed to fetch rates.");
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.textContent = "Get Shipping Rates";
+                                }
+                            }
+                        }
+
+                        async function purchaseLabel(orderId, rateId) {
+                            try {
+                                const res = await fetch("/api/v1/orders/" + orderId + "/purchase-label", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({ rate_id: rateId })
+                                });
+                                const data = await res.json();
+                                document.getElementById("shipping-actions-" + orderId).style.display = "none";
+                                document.getElementById("shipping-rates-container-" + orderId).style.display = "none";
+                                document.getElementById("order-tracking-info-" + orderId).style.display = "block";
+                                document.getElementById("tracking-num-" + orderId).textContent = data.tracking_number;
+                                document.getElementById("order-status-" + orderId).textContent = "Shipped";
+                            } catch (e) {
+                                alert("Failed to purchase label.");
+                            }
+                        }
                         function saveWizardState() {
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
