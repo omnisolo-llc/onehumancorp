@@ -3,6 +3,7 @@ filegroup(
     name = "embedsrcs",
     srcs = [
         "//src/server/migrations:migrations",
+        "//src/server/db/migrations:migrations",
     ],
     visibility = ["//visibility:public"],
 )

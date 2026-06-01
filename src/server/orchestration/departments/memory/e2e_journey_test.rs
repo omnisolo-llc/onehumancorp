@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 #[tokio::test]
 async fn test_full_consolidated_memory_e2e_journey() {
-    let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared").expect("Failed to parse connection string");
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
     let pool = SqlitePoolOptions::new()
         .connect_with(conn_opts)
         .await
@@ -137,7 +137,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
 
 #[tokio::test]
 async fn test_tenant_isolation_e2e_journey() {
-    let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared").expect("Failed to parse connection string");
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
     let pool = SqlitePoolOptions::new()
         .connect_with(conn_opts)
         .await

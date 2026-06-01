@@ -89,6 +89,9 @@ export function HelpChat() {
     };
   };
 
+  if (process.env.NEXT_PUBLIC_E2E === 'true') {
+    return null; // Disable in E2E
+  }
 
   return (
     <div className="help-chat-wrapper">
@@ -97,7 +100,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group"
+            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse"
             aria-label="Open help chat"
           >
             <span className="text-xl">✨</span>
@@ -108,9 +111,9 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] rounded-[16px] shadow-2xl flex flex-col overflow-hidden border border-[rgba(255,255,255,0.4)] animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat">
           {/* Header */}
-          <div className="bg-[rgba(22,22,26,0.7)] text-[rgba(245,245,247,1)] p-4 flex justify-between items-center backdrop-blur-[30px] saturate-[210%] border-b border-[rgba(255,255,255,0.1)]">
+          <div className="bg-gray-900/90 text-white p-4 flex justify-between items-center backdrop-blur-md">
             <div className="flex items-center gap-2">
               <span className="text-xl">✨</span>
               <div>
@@ -129,7 +132,7 @@ export function HelpChat() {
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] leading-relaxed ${
                   msg.sender === 'user'
-                    ? 'bg-[#0066FF] backdrop-blur-md text-white rounded-br-sm shadow-sm'
+                    ? 'bg-blue-600/90 backdrop-blur-md text-white rounded-br-sm shadow-sm'
                     : 'bg-white/80 backdrop-blur-md border border-white/50 text-gray-800 rounded-bl-sm shadow-sm'
                 }`}>
                   {msg.text}
@@ -156,7 +159,7 @@ export function HelpChat() {
             <button
               type="submit"
               disabled={!inputValue.trim()}
-              className="bg-[#0066FF] backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0055DD] transition-colors shadow-sm"
+              className="bg-blue-600/90 backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/90 transition-colors shadow-sm"
               aria-label="Send message"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>

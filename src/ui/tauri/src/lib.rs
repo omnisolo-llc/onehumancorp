@@ -181,7 +181,7 @@ fn to_provider_view(config: AiProviderConfig) -> AiProviderView {
 
 fn default_model_for_provider(provider: &str) -> String {
     match provider {
-        "minimax" => "MiniMax-M3".to_string(),
+        "minimax" => "MiniMax-M2.7".to_string(),
         "openai" => "gpt-4.1-mini".to_string(),
         _ => String::new(),
     }
@@ -189,7 +189,7 @@ fn default_model_for_provider(provider: &str) -> String {
 
 fn default_base_url_for_provider(provider: &str) -> String {
     match provider {
-        "minimax" => "https://api.minimaxi.com/v1".to_string(),
+        "minimax" => "https://api.minimax.chat/v1".to_string(),
         "openai" => "https://api.openai.com/v1".to_string(),
         _ => String::new(),
     }

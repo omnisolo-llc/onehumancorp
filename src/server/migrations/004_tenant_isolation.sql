@@ -154,23 +154,3 @@ BEGIN
     END IF;
 END
 $$;
--- Add migration_jobs to tenant isolation
-DO $$
-BEGIN
-    IF to_regclass('migration_jobs') IS NOT NULL THEN
-        ALTER TABLE migration_jobs ENABLE ROW LEVEL SECURITY;
-
-        IF NOT EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE schemaname = current_schema()
-                AND tablename = 'migration_jobs'
-                AND policyname = 'tenant_isolation_migration_jobs'
-        ) THEN
-            CREATE POLICY tenant_isolation_migration_jobs
-                ON migration_jobs
-                USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
-        END IF;
-    END IF;
-END
-$$;

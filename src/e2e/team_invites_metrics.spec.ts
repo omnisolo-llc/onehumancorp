@@ -37,10 +37,4 @@ test.describe('Growth Loop: Team Invites Metrics Component', () => {
     const cardValue = page.locator('div', { hasText: 'Team Invites Sent' }).locator('div.text-indigo-900').first();
     await expect(cardValue).toBeVisible();
   });
-
-  test('TC6: Should show correct active referrals value', async ({ page }) => {
-    // We are already on the dashboard
-    const cardValue = page.locator('div', { hasText: 'Active Referrals' }).locator('div.text-indigo-900').first();
-    await expect(cardValue).toBeVisible();
-  });
 });

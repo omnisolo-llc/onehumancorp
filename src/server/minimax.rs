@@ -7,9 +7,6 @@ use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
-const DEFAULT_MINIMAX_BASE_URL: &str = "https://api.minimaxi.com/v1";
-const DEFAULT_MINIMAX_MODEL: &str = "MiniMax-M3";
-
 struct CircuitBreaker {
     failures: Mutex<usize>,
     last_failure: Mutex<Option<Instant>>,
@@ -62,7 +59,6 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
 
 pub struct MinimaxClient {
     api_key: String,
-    base_url: String,
     url: String,
     cache: PromptCache,
 }
@@ -98,12 +94,9 @@ struct MessageContent {
 
 impl MinimaxClient {
     pub fn new(api_key: String) -> Self {
-        let base_url = configured_minimax_base_url();
-        let url = endpoint_url(&base_url, "chat/completions");
         MinimaxClient {
             api_key,
-            base_url,
-            url,
+            url: "https://api.minimax.chat/v1/chat/completions".to_string(),
             cache: PromptCache::new(Duration::from_secs(300)), // 5 minute TTL
         }
     }
@@ -167,7 +160,7 @@ impl MinimaxClient {
         let client = reqwest::Client::new();
 
         let request_body = MinimaxRequest {
-            model: configured_minimax_model(),
+            model: "MiniMax-M2.7".to_string(),
             messages: vec![MinimaxMessage {
                 role: "user".to_string(),
                 content: optimized_prompt,
@@ -231,7 +224,6 @@ impl MinimaxClient {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
         let optimized_prompt = truncate_by_word_count(prompt, 2000);
-        let model = configured_minimax_model();
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
@@ -263,7 +255,7 @@ impl MinimaxClient {
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let request_body = MinimaxRequest {
-                model,
+                model: "MiniMax-M2.7".to_string(),
                 messages: vec![MinimaxMessage {
                     role: "user".to_string(),
                     content: optimized_prompt,
@@ -338,7 +330,7 @@ impl MinimaxClient {
         let mut last_err = String::new();
         for _ in 0..5 {
             let response = client
-                .post(endpoint_url(&self.base_url, "embeddings"))
+                .post("https://api.minimax.chat/v1/embeddings")
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .json(&request_body)
@@ -394,109 +386,6 @@ impl MinimaxClient {
         }
 
         Err(format!("failed after 5 retries: {}", last_err))
-    }
-}
-
-fn configured_minimax_model() -> String {
-    std::env::var("MINIMAX_MODEL")
-        .or_else(|_| std::env::var("OHC_LLM_MODEL"))
-        .unwrap_or_else(|_| DEFAULT_MINIMAX_MODEL.to_string())
-}
-
-fn configured_minimax_base_url() -> String {
-    first_non_empty_env(&[
-        "MINIMAX_BASE_URL",
-        "MINIMAX_API_BASE_URL",
-        "OHC_LLM_BASE_URL",
-        "OHC_LLM_ENDPOINT",
-    ])
-    .map(|url| normalize_minimax_base_url(&url))
-    .unwrap_or_else(|| DEFAULT_MINIMAX_BASE_URL.to_string())
-}
-
-fn first_non_empty_env(keys: &[&str]) -> Option<String> {
-    keys.iter().find_map(|key| {
-        std::env::var(key)
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty())
-    })
-}
-
-fn normalize_minimax_base_url(base_url: &str) -> String {
-    let trimmed = base_url.trim().trim_end_matches('/');
-
-    for suffix in ["/chat/completions", "/embeddings"] {
-        if let Some(root) = trimmed.strip_suffix(suffix) {
-            return normalize_minimax_base_url(root);
-        }
-    }
-
-    if let Some(root) = trimmed.strip_suffix("/anthropic/v1") {
-        return format!("{}/v1", root.trim_end_matches('/'));
-    }
-
-    if let Some(root) = trimmed.strip_suffix("/anthropic") {
-        return format!("{}/v1", root.trim_end_matches('/'));
-    }
-
-    if trimmed == "https://api.minimax.io" || trimmed == "https://api.minimaxi.com" {
-        return format!("{}/v1", trimmed);
-    }
-
-    trimmed.to_string()
-}
-
-fn endpoint_url(base_url: &str, endpoint: &str) -> String {
-    format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn normalizes_minimaxi_root_urls() {
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimaxi.com"),
-            "https://api.minimaxi.com/v1"
-        );
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimax.io"),
-            "https://api.minimax.io/v1"
-        );
-    }
-
-    #[test]
-    fn normalizes_minimaxi_endpoint_urls_to_api_roots() {
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimaxi.com/v1/chat/completions"),
-            "https://api.minimaxi.com/v1"
-        );
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimax.io/v1/embeddings"),
-            "https://api.minimax.io/v1"
-        );
-    }
-
-    #[test]
-    fn normalizes_minimaxi_anthropic_urls_to_openai_compatible_roots() {
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimaxi.com/anthropic"),
-            "https://api.minimaxi.com/v1"
-        );
-        assert_eq!(
-            normalize_minimax_base_url("https://api.minimax.io/anthropic/v1"),
-            "https://api.minimax.io/v1"
-        );
-    }
-
-    #[test]
-    fn builds_minimaxi_endpoint_urls() {
-        assert_eq!(
-            endpoint_url("https://api.minimaxi.com/v1/", "chat/completions"),
-            "https://api.minimaxi.com/v1/chat/completions"
-        );
     }
 }
 

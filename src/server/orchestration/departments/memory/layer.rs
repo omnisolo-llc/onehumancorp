@@ -9,7 +9,7 @@ mod tests {
     #[tokio::test]
     async fn test_cross_department_context_sharing() {
         // Safe database initialization
-        let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared").expect("Failed to parse connection string");
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
             .await

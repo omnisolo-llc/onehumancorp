@@ -25,6 +25,8 @@ exports_files(
         "state_machine.rs",
         "state_machine_test.rs",
         "tasks.rs",
+        "tasks_db.rs",
+        "tasks_db_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -55,6 +57,8 @@ rust_library(
         "state_machine.rs",
         "state_machine_test.rs",
         "tasks.rs",
+        "tasks_db.rs",
+        "tasks_db_test.rs",
         "//src/server/orchestration/departments:approvals_test.rs",
         "//src/server/orchestration/departments:business_advisory_agent.rs",
         "//src/server/orchestration/departments:customer_success_agent.rs",

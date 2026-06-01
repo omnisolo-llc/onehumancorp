@@ -369,7 +369,7 @@ mod tests {
     async fn setup_db() -> sqlx::SqlitePool {
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
-            .connect("sqlite://file::memory:?cache=shared")
+            .connect("sqlite::memory:")
             .await
             .unwrap();
 

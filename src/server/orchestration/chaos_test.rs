@@ -335,7 +335,7 @@ mod chaos_tests {
     async fn test_standalone_db_transition_fallback() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy("sqlite://file::memory:?cache=shared")
+            .connect_lazy("sqlite::memory:")
             .unwrap();
 
         let db = Arc::new(DB {
@@ -356,7 +356,7 @@ mod chaos_tests {
     async fn test_standalone_db_pull_fallback() {
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy("sqlite://file::memory:?cache=shared")
+            .connect_lazy("sqlite::memory:")
             .unwrap();
 
         let db = Arc::new(DB {
