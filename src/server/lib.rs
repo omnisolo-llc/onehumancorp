@@ -6503,8 +6503,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         let aiLimit = data.ai_actions_limit ? data.ai_actions_limit : 'Unlimited';
                                         document.getElementById('my-plan-ai-usage').textContent = 'AI Actions Used: ' + data.ai_actions_used + ' / ' + aiLimit;
 
-                                        let storageUsedMB = Math.round(data.storage_used_bytes / (1024 * 1024));
-                                        let storageLimitText = data.storage_limit_bytes ? Math.round(data.storage_limit_bytes / (1024 * 1024)) + 'MB' : 'Unlimited';
+                                        let storageUsedMB = (data.storage_used_bytes / (1024 * 1024)).toFixed(0);
+                                        let storageLimitText = (data.storage_limit_bytes !== undefined && data.storage_limit_bytes !== null && data.storage_limit_bytes > 0)
+                                            ? (data.storage_limit_bytes / (1024 * 1024)).toFixed(0) + 'MB'
+                                            : 'Unlimited';
                                         document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
                                     })
                                     .catch(err => console.error('Error fetching plan info:', err));
