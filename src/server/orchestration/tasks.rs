@@ -229,7 +229,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
+                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
                     WHERE id = $3
                     "#,
                 )
@@ -245,7 +245,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'EXECUTING', $3, $4)
+                    VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
                     "#
                 )
                 .bind(trans_id)
@@ -303,7 +303,7 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                    SET status = 'IN_PROGRESS', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
                         WHERE st.organization_id = ? AND (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
@@ -339,7 +339,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'EXECUTING', ?, ?)
+                    VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
                     "#
                 )
                 .bind(trans_id)
