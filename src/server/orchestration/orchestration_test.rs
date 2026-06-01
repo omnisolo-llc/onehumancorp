@@ -9,7 +9,7 @@ use chrono::Utc;
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
@@ -177,7 +177,7 @@ async fn test_task_decomposition_service() {
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -336,7 +336,7 @@ async fn test_task_decomposition_dag_blocked() {
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
