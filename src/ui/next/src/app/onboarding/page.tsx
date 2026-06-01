@@ -26,55 +26,6 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [saveMessage, setSaveMessage] = useState('');
-
-  const handleSaveDraft = async () => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-      const wizardState = {
-        step,
-        chatStep,
-        businessDescription,
-        businessName,
-        whatYouSell,
-        location,
-        businessType,
-        categories,
-        websiteTemplate,
-        firstProductName,
-        firstProductPrice,
-        aiAgents,
-        aiAutoRespond
-      };
-
-      const res = await fetch('/api/onboarding/draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
-          'X-User-ID': userId,
-        },
-        body: JSON.stringify({ wizardState })
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to save draft');
-      }
-
-      setSaveMessage('Draft Saved!');
-      setTimeout(() => setSaveMessage(''), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred saving draft');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Read state from server on mount
   useEffect(() => {
@@ -101,7 +52,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -127,7 +77,6 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
-      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -146,7 +95,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, domainChoice, isLoaded
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -268,19 +217,9 @@ export default function OnboardingWizard() {
               {chatStep === 1 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Our AI will instantly generate your storefront, products, and back-office agents.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Our AI will instantly generate your storefront, products, and back-office agents.
+                  </p>
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -290,6 +229,9 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
+                        autoComplete="organization"
+                        autoCapitalize="words"
+                        enterKeyHint="next"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -313,19 +255,9 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Tell us a bit about your products or services.
+                  </p>
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -334,6 +266,7 @@ export default function OnboardingWizard() {
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                        enterKeyHint="next"
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
@@ -357,19 +290,9 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    This helps us set up your shipping and tax settings.
+                  </p>
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -379,6 +302,9 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
+                        autoComplete="address-level2"
+                        autoCapitalize="words"
+                        enterKeyHint="done"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -404,19 +330,9 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Here's what our AI figured out. Feel free to tweak these.
-                </p>
-                <button
-                  onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                  Save Draft
-                </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Here's what our AI figured out. Feel free to tweak these.
+              </p>
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
@@ -426,6 +342,9 @@ export default function OnboardingWizard() {
                     autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
+                    autoComplete="organization"
+                    autoCapitalize="words"
+                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -435,6 +354,8 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
+                    autoCapitalize="words"
+                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -444,6 +365,8 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    autoCapitalize="words"
+                    enterKeyHint="next"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -454,6 +377,8 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
+                        autoCapitalize="words"
+                        enterKeyHint="next"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -464,6 +389,7 @@ export default function OnboardingWizard() {
                         inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                        enterKeyHint="done"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -496,19 +422,9 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
-                </p>
-                <button
-                  onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                  Save Draft
-                </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+              </p>
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>
@@ -524,26 +440,6 @@ export default function OnboardingWizard() {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Domain Choice</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['subdomain', 'custom'].map(domain => (
-                      <div
-                        key={domain}
-                        onClick={() => setDomainChoice(domain)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === domain ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold text-sm capitalize">
-                          {domain === 'subdomain' ? 'Free Subdomain' : 'Custom Domain'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mt-2">
-                    {domainChoice === 'subdomain' ? 'Get a free .ohc.store domain instantly.' : 'Connect a domain you already own (e.g. mybusiness.com).'}
-                  </p>
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">

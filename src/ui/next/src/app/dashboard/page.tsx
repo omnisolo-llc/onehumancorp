@@ -120,6 +120,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function checkMilestones() {
+      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
+      try {
+        const res = await fetch("/api/v1/growth/milestones/check");
+        const data = await res.json();
+        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          if (orderMilestone) {
+            setCurrentMilestone(orderMilestone);
+            setShowMilestoneModal(true);
+            localStorage.setItem("10th_order_milestone_shown", "true");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check milestones", e);
+      }
+    }
+    checkMilestones();
+  }, []);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
         const res = await fetch('/api/v1/growth/milestones/check');
@@ -688,45 +710,6 @@ export default function Dashboard() {
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
                    </div>
-                </div>
-            </div>
-         </section>
-
-         {/* Social Media Discount Share Growth Loop */}
-         <section className="mb-8 mt-8">
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: '#ffffff', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex items-center gap-4 w-full">
-                    <div className="w-16 h-16 bg-green-50 rounded-2xl shadow-sm flex items-center justify-center text-3xl">
-                        🐦
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                           <h3 className="text-lg font-bold font-outfit text-gray-900">Social Media Discount Share</h3>
-                           <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">New Growth Loop</span>
-                        </div>
-                        <p className="text-sm text-gray-600 font-medium">Offer a 10% discount on social media when you hit a new milestone. Drive instant traffic back to your store!</p>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <button
-                        onClick={async () => {
-                            try {
-                                const response = await fetch('/api/v1/growth/discount_share/generate', { method: 'POST' });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    const text = encodeURIComponent(`I just unlocked a milestone for my store! 🚀 Here is a special 10% discount for my followers: ${data.share_url}`);
-                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                                } else {
-                                    alert('Failed to generate discount share link');
-                                }
-                            } catch (e) {
-                                alert('Network error');
-                            }
-                        }}
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
-                    >
-                        🐦 Share 10% Off on X (Twitter)
-                    </button>
                 </div>
             </div>
          </section>
