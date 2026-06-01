@@ -4843,7 +4843,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
+                    <div id="pricing-screen" class="screen" style="backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: Outfit, Inter, sans-serif;">
                         <h1>Pricing Plans</h1>
                         <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
@@ -4913,7 +4913,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
+                    <div id="my-plan-screen" class="screen" style="backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: Outfit, Inter, sans-serif;">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -4934,7 +4934,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
+                    <div id="cost-dashboard-screen" class="screen" style="backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: Outfit, Inter, sans-serif;">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
@@ -4976,7 +4976,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                      <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
+                     <div id="checkout-screen" class="screen" style="backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: Outfit, Inter, sans-serif;">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
