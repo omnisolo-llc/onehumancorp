@@ -148,7 +148,7 @@ impl SandboxedCommandRunner {
                     env_prefix.push_str(&format!("{}={} ", key, value));
                 }
 
-                exec_args.push(format!("{} {}", env_prefix, command));
+                exec_args.push(format!("{}{}", env_prefix, command));
                 exec_args
             },
             "vercal" => {
