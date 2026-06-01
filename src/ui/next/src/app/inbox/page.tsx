@@ -10,6 +10,9 @@ type Message = {
   content: string;
   date: string;
   draft?: string;
+  is_escalation?: boolean;
+  context_summary?: string;
+  best_guess_draft?: string;
 };
 
 export default function InboxPage() {
@@ -37,9 +40,11 @@ export default function InboxPage() {
       sender: 'WhatsApp User',
       source: 'WhatsApp',
       icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
+      content: 'Can I get a custom 3-tier cake with edible photo prints?',
+      date: 'Just now',
+      is_escalation: true,
+      context_summary: 'Customer has previously ordered standard cakes. No previous custom orders.',
+      best_guess_draft: 'We can certainly help with this custom request. Let me know the exact details and photo dimensions.'
     },
   ]);
   const [replyInput, setReplyInput] = useState('');
@@ -61,19 +66,34 @@ export default function InboxPage() {
     sms: true,
   });
 
-  const sendReply = (msgId?: number) => {
-    let contentToSend = replyInput;
+  const sendReply = (msgId?: number, directContent?: string) => {
+    let contentToSend = directContent;
+    if (!contentToSend && replyInput) contentToSend = replyInput;
+
     if (msgId) {
        const msg = messages.find(m => m.id === msgId);
-       if (msg && msg.draft) contentToSend = msg.draft;
+       if (msg && msg.is_escalation && !contentToSend) {
+           contentToSend = msg.best_guess_draft || '';
+       } else if (msg && msg.draft && !contentToSend) {
+           contentToSend = msg.draft;
+       }
     }
 
     if (!contentToSend) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' }]);
 
-    if (msgId) {
-      setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
-    }
+    // Add the new message
+    const newMessage = { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' };
+
+    setMessages(prevMessages => {
+      const updatedMessages = prevMessages.map(m => {
+        if (m.id === msgId) {
+          return { ...m, draft: undefined, is_escalation: false };
+        }
+        return m;
+      });
+      return [...updatedMessages, newMessage as Message];
+    });
+
     setReplyInput('');
     setEditingId(null);
   };
@@ -222,6 +242,56 @@ export default function InboxPage() {
             <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
+
+
+            {/* Action Needed Handoff Card */}
+            {msg.is_escalation && msg.sender !== 'Me' && (
+               <div className="mt-3 ml-4 bg-[#fff5f5] border border-[#fed7d7] rounded-xl p-4 shadow-sm relative backdrop-blur-sm backdrop-filter backdrop-saturate-[200%]">
+                  <div className="absolute -top-3 left-4 bg-[#fed7d7] text-[#c53030] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                     Action Needed
+                  </div>
+
+                  <div className="mb-3 border-b border-[#fed7d7]/50 pb-2">
+                      <p className="text-xs text-gray-500 font-semibold mb-1">AI Context Summary</p>
+                      <p className="text-sm text-gray-800">{msg.context_summary}</p>
+                  </div>
+
+                  {editingId === msg.id ? (
+                      <div className="mt-2">
+                        <textarea
+                          id="reply-input-edit"
+                          value={replyInput}
+                          onChange={e => setReplyInput(e.target.value)}
+                          className="w-full border border-[#fc8181] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#e53e3e]"
+                          rows={3}
+                        />
+                        <div className="flex justify-end mt-2 gap-2">
+                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
+                           <button onClick={() => sendReply(msg.id)} className="bg-[#e53e3e] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#c53030] transition-colors">Send & Teach AI</button>
+                        </div>
+                      </div>
+                  ) : (
+                      <>
+                        <p className="text-xs text-gray-500 font-semibold mb-1">Proposed Draft</p>
+                        <p className="text-sm text-gray-800 italic">"{msg.best_guess_draft}"</p>
+                        <div className="flex gap-2 mt-3 pt-3">
+                           <button data-testid={`send-escalation-${msg.id}`} onClick={() => { sendReply(msg.id, msg.best_guess_draft); }} className="flex-1 bg-[#e53e3e] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#c53030] transition-colors flex items-center justify-center gap-1">
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                               Send
+                           </button>
+                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.best_guess_draft || ''); }} className="flex-1 bg-white text-[#e53e3e] border border-[#fc8181] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                               Edit
+                           </button>
+                        </div>
+                        <div className="mt-2 text-center text-xs text-gray-400">
+                           AI has notified the customer we are checking on this.
+                        </div>
+                      </>
+                  )}
+               </div>
+            )}
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (

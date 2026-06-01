@@ -28,6 +28,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.escalation.resolved".to_string(),
         ]
     }
 
@@ -77,43 +78,86 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
+        if event.event_type == "tenant.escalation.resolved" {
+            let human_response = event.payload.get("human_response").and_then(|v| v.as_str()).unwrap_or("");
+            let original_message = event.payload.get("original_message").and_then(|v| v.as_str()).unwrap_or("");
+
+            tracing::info!("LEARNING FROM ESCALATION: Human responded with: {}", human_response);
+
+            let content = format!("Learned from manual escalation. For customer inquiry: '{}', the owner responded: '{}'. Will use this context for future identical edge-cases.", original_message, human_response);
+
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                agent_id: "customer_success_agent".to_string(),
+                content,
+                embedding: vec![0.0; 1536],
+                source_type: "HUMAN_ESCALATION_OVERRIDE".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: true,
+                metadata: None,
+            };
+            self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
+            // We simulate the API returning control to AI
+            return Ok(());
+        }
+
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+            let is_escalation = message.to_lowercase().contains("custom") ||
+                                message.to_lowercase().contains("owner") ||
+                                message.to_lowercase().contains("human") ||
+                                message.to_lowercase().contains("complex") ||
+                                message.to_lowercase().contains("photo");
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
             let context_summary = if !memories.is_empty() {
-                memories.join("\n")
+                memories.join("
+")
             } else {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
+            let generated_response = if is_escalation {
+                "That sounds amazing! Let me double-check the specifics for you really quick."
+            } else if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
                 "Yes, we do vegan cakes!"
             } else {
                 "Thank you for your message. We will get back to you shortly."
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
+            let description = if is_escalation {
+                format!("Escalation: Action Required for complex request: '{}'", message)
+            } else if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
                 "Draft email for review".to_string()
             };
 
             let action_payload = serde_json::json!({
-                "feature_type": "ambassador_reply",
+                "feature_type": if is_escalation { "ambassador_escalation" } else { "ambassador_reply" },
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
+                "is_escalation": is_escalation,
+                "best_guess_draft": "We can certainly help with this custom request. Let me know the exact details.",
             });
 
+            // If it's an escalation, we could notify via push notification service here.
+            // For now, we execute the action which surfaces it to the owner's mobile feed.
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk,
+                if is_escalation { ActionRisk::DraftForReview } else { risk },
                 action_payload,
             ).await.map(|_| ())?;
 
