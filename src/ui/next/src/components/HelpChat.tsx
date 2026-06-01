@@ -89,9 +89,6 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.OHC_E2E === 'true') {
-    return null; // Disable in E2E
-  }
 
   return (
     <div className="help-chat-wrapper">
