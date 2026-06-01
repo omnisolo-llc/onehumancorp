@@ -228,7 +228,7 @@ impl KairosOrchestrator {
             }
         }
     }
-    pub async fn claim_swarm_task(&self, agent_id: &str) -> Result<Option<SwarmTask>, KairosError> {
+    pub async fn claim_swarm_task(&self, tenant_id: &str, agent_id: &str) -> Result<Option<SwarmTask>, KairosError> {
         let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
@@ -747,7 +747,7 @@ mod tests {
     #[tokio::test]
     async fn test_kairos_orchestrator_sqlite_swarm_tasks() {
         let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
+            .connect("sqlite://file::memory:?cache=shared")
             .await
             .unwrap();
 
@@ -811,31 +811,32 @@ mod tests {
         let orchestrator = KairosOrchestrator::new(db);
 
         // Insert tasks
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('1', 'm1', 'Task 1', 'PENDING', '[]')")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('1', 'test-tenant', 'm1', 'Task 1', 'PENDING', '[]')")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('2', 'm1', 'Task 2', 'PENDING', '[\"1\"]')")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('2', 'test-tenant', 'm1', 'Task 2', 'PENDING', '[]')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('2', '1')")
             .execute(&pool).await.unwrap();
 
         // Try to claim, should get Task 1
-        let task1 = orchestrator.claim_swarm_task("agent1").await.unwrap().unwrap();
+        let task1 = orchestrator.claim_swarm_task("test-tenant", "agent1").await.unwrap().unwrap();
         assert_eq!(task1.id, "1");
 
         // Try to claim again, Task 2 is blocked by Task 1 (not completed)
-        let task2_blocked = orchestrator.claim_swarm_task("agent2").await.unwrap();
+        let task2_blocked = orchestrator.claim_swarm_task("test-tenant", "agent2").await.unwrap();
         assert!(task2_blocked.is_none());
 
         // Complete Task 1
         sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = '1'").execute(&pool).await.unwrap();
 
         // Now claim Task 2
-        let task2 = orchestrator.claim_swarm_task("agent2").await.unwrap().unwrap();
+        let task2 = orchestrator.claim_swarm_task("test-tenant", "agent2").await.unwrap().unwrap();
         assert_eq!(task2.id, "2");
     }
 
     #[tokio::test]
     async fn test_kairos_orchestrator_approval_workflow() {
         let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
+            .connect("sqlite://file::memory:?cache=shared")
             .await
             .unwrap();
 
@@ -905,7 +906,7 @@ mod tests {
     #[tokio::test]
     async fn test_kairos_orchestrator_sqlite_shared_tasks() {
         let pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
+            .connect("sqlite://file::memory:?cache=shared")
             .await
             .unwrap();
 
@@ -982,7 +983,7 @@ mod tests {
         let orchestrator = KairosOrchestrator::new(db);
 
         // It will fail because the db might not be fully seeded, but it covers the PG path
-        let _ = orchestrator.claim_swarm_task("agent1").await;
+        let _ = orchestrator.claim_swarm_task("test-tenant", "agent1").await;
         let _ = orchestrator.claim_shared_task("tenant1", "agent1").await;
     }
 }

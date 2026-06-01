@@ -13,7 +13,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {
         let sqlite_pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
+            .connect("sqlite://file::memory:?cache=shared")
             .await
             .unwrap();
 
@@ -188,7 +188,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     use std::time::Duration;
 
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
+        .connect("sqlite://file::memory:?cache=shared")
         .await
         .unwrap();
 

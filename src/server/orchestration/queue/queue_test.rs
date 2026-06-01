@@ -5,7 +5,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_sqlite_task_queue() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = SqlitePool::connect("sqlite://file::memory:?cache=shared").await.unwrap();
 
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
@@ -53,7 +53,7 @@ async fn test_sqlite_task_queue() {
 
 #[tokio::test]
 async fn test_sqlite_task_queue_empty_dequeue() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = SqlitePool::connect("sqlite://file::memory:?cache=shared").await.unwrap();
 
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
@@ -80,7 +80,7 @@ async fn test_sqlite_task_queue_empty_dequeue() {
 
 #[tokio::test]
 async fn test_sqlite_fail_backoff() {
-    let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::SqlitePool::connect("sqlite://file::memory:?cache=shared").await.unwrap();
 
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
