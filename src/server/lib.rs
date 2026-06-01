@@ -4887,6 +4887,58 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
                         </div>
 
+                        <div class="card glass" style="margin-top: 24px; overflow-x: auto;">
+                            <h2>Compare Plans</h2>
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border);">
+                                        <th style="padding: 12px; font-weight: bold;">Features</th>
+                                        <th style="padding: 12px; font-weight: bold;">Free</th>
+                                        <th style="padding: 12px; font-weight: bold;">Starter</th>
+                                        <th style="padding: 12px; font-weight: bold; color: var(--primary);">Pro</th>
+                                        <th style="padding: 12px; font-weight: bold;">Business</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                        <td style="padding: 12px; font-weight: 500;">Monthly Price</td>
+                                        <td style="padding: 12px;">$0</td>
+                                        <td style="padding: 12px;">$29</td>
+                                        <td style="padding: 12px; font-weight: bold; color: var(--primary);">$79</td>
+                                        <td style="padding: 12px;">$299</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                        <td style="padding: 12px; font-weight: 500;">Agent Limit</td>
+                                        <td style="padding: 12px;">1</td>
+                                        <td style="padding: 12px;">3</td>
+                                        <td style="padding: 12px;">10</td>
+                                        <td style="padding: 12px;">Unlimited</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                        <td style="padding: 12px; font-weight: 500;">AI Actions / Month</td>
+                                        <td style="padding: 12px;">100</td>
+                                        <td style="padding: 12px;">1,000</td>
+                                        <td style="padding: 12px;">Unlimited</td>
+                                        <td style="padding: 12px;">Unlimited</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+                                        <td style="padding: 12px; font-weight: 500;">Storage Quota</td>
+                                        <td style="padding: 12px;">500MB</td>
+                                        <td style="padding: 12px;">5GB</td>
+                                        <td style="padding: 12px;">50GB</td>
+                                        <td style="padding: 12px;">500GB</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; font-weight: 500;">Products Limit</td>
+                                        <td style="padding: 12px;">10</td>
+                                        <td style="padding: 12px;">100</td>
+                                        <td style="padding: 12px;">Unlimited</td>
+                                        <td style="padding: 12px;">Unlimited</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
                         <div class="card glass">
