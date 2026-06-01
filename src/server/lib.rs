@@ -1069,10 +1069,11 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
+        let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
+                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
                 (llm, rev)
             }),
             async move {
@@ -1089,14 +1090,20 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
+        let now = chrono::Utc::now();
+        use chrono::Datelike;
+        let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
+        let period_start = start_of_month.format("%Y-%m-%d").to_string();
+        let period_end = now.format("%Y-%m-%d").to_string();
+
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
             storage_cost: (storage_cost_f64 * 100.0) as i64,
             payment_fees: (payment_fees_f64 * 100.0) as i64,
-            period_start: "2024-05-01".to_string(), // In a real app this would be computed
-            period_end: "2024-05-31".to_string(),
+            period_start,
+            period_end,
         }))
     }
 

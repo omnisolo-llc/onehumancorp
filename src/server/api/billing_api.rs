@@ -117,7 +117,7 @@ pub async fn cost_dashboard_handler(
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
-    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
+    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
     let period_start = start_of_month.format("%Y-%m-%d").to_string();
     let period_end = now.format("%Y-%m-%d").to_string();
 
@@ -129,7 +129,7 @@ pub async fn cost_dashboard_handler(
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
-        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue())
+        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_tenant_revenue(&tenant_id_clone_2))
     });
 
     let storage_future = tokio::task::spawn(async move {
