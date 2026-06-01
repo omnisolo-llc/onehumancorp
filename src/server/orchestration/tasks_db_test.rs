@@ -14,17 +14,27 @@ async fn test_tasks_db_claim_task_sqlite() {
         CREATE TABLE IF NOT EXISTS shared_tasks (
             id TEXT PRIMARY KEY,
             organization_id TEXT NOT NULL,
-            parent_plan_id TEXT,
+            mission_id TEXT NOT NULL DEFAULT '',
+            parent_plan_id TEXT NOT NULL DEFAULT '',
             title TEXT NOT NULL,
             description TEXT,
             status TEXT NOT NULL DEFAULT 'PENDING',
             assigned_agent_id TEXT,
+            priority TEXT NOT NULL DEFAULT 'NORMAL',
+            payload TEXT NOT NULL DEFAULT '',
             dependencies TEXT DEFAULT '[]',
+            locked_until TEXT,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT DEFAULT '[]',
+            depth INTEGER,
+            action_risk TEXT,
+            approval_status TEXT,
+            proposed_content TEXT,
             created_at TEXT,
             updated_at TEXT,
-            locked_until TEXT,
             _sync_status TEXT DEFAULT 'pending',
-            version INTEGER DEFAULT 1
+            version INTEGER DEFAULT 1,
+            auto_dreamed BOOLEAN DEFAULT FALSE
         );
         "#
     )

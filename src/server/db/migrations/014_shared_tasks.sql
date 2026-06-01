@@ -1,13 +1,26 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL,
-    parent_plan_id TEXT,
+    mission_id TEXT NOT NULL DEFAULT '',
+    parent_plan_id TEXT NOT NULL DEFAULT '',
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
     assigned_agent_id TEXT,
-    dependencies JSONB,
+    priority TEXT NOT NULL DEFAULT 'NORMAL',
+    payload TEXT NOT NULL DEFAULT '',
+    dependencies JSONB DEFAULT '[]',
+    locked_until TIMESTAMPTZ,
+    ultraplan_phase TEXT,
+    deliberation_log JSONB DEFAULT '[]',
+    depth INTEGER,
+    action_risk TEXT,
+    approval_status TEXT,
+    proposed_content TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    _sync_status TEXT DEFAULT 'pending',
+    version INTEGER DEFAULT 1,
+    auto_dreamed BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_org_status ON shared_tasks(organization_id, status);
