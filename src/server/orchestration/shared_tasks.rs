@@ -35,6 +35,41 @@ impl SharedTaskOrchestrator {
         Self { db, sqlite_mutex: Mutex::new(()) }
     }
 
+    pub fn start_background_worker(self: Arc<Self>, agent_id: String, org_id: String) {
+        tokio::spawn(async move {
+            let (tx, mut rx) = tokio::sync::mpsc::channel(10); // Throttle capacity
+
+            let orchestrator = self.clone();
+            let agent_id_clone = agent_id.clone();
+            let org_id_clone = org_id.clone();
+
+            tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    if let Ok(Some(task)) = orchestrator.claim_task(&org_id_clone, &agent_id_clone).await {
+                        if tx.send(task).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+            });
+
+            let orchestrator = self.clone();
+            while let Some(task) = rx.recv().await {
+                let agent_id_clone = agent_id.clone();
+                let orchestrator_clone = orchestrator.clone();
+                tokio::spawn(async move {
+                    // Dispatch the task (simplified execution simulation)
+                    tracing::info!("Agent {} executing task {}", agent_id_clone, task.id);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await; // Simulate work
+
+                    // AutoDream Summarization would happen here
+                    let _ = orchestrator_clone.complete_task(&task.id, Some(&agent_id_clone)).await;
+                });
+            }
+        });
+    }
+
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
         let task_id = if task.id.is_empty() {
             Uuid::new_v4().to_string()
@@ -317,6 +352,11 @@ impl SharedTaskOrchestrator {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "COMPLETED" {
+                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
+                    let _ = autodream.consolidate_epoch().await;
+                }
                 Ok(())
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -362,6 +402,11 @@ impl SharedTaskOrchestrator {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                if new_status == "COMPLETED" {
+                    let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
+                    let _ = autodream.consolidate_epoch().await;
+                }
                 Ok(())
             }
         }

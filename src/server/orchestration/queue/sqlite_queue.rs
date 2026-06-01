@@ -19,6 +19,9 @@ impl TaskQueue for SQLiteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
+        for _ in 0..jobs.len() {
+            ::server_telemetry::record_task_lifecycle_event("enqueued", ::server_telemetry::get_deployment_mode());
+        }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
@@ -83,6 +86,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
+        ::server_telemetry::record_task_lifecycle_event("enqueued", ::server_telemetry::get_deployment_mode());
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = ? AND status = 'QUEUED'")
             .bind(&job.tenant_id)
             .fetch_one(&*self.pool)
@@ -195,6 +199,7 @@ impl TaskQueue for SQLiteTaskQueue {
             .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
+            ::server_telemetry::record_task_lifecycle_event("completed", ::server_telemetry::get_deployment_mode());
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             use sqlx::Row;
             let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
@@ -221,6 +226,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
             if next_attempt >= max_attempts {
                 // Poison pill
+                ::server_telemetry::record_task_lifecycle_event("failed", ::server_telemetry::get_deployment_mode());
                 sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', attempts = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
                     .bind(job_id)

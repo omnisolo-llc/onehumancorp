@@ -142,3 +142,78 @@ async fn test_sqlite_fail_backoff() {
     let diff = run_after.signed_duration_since(expected_time).num_milliseconds().abs();
     assert!(diff < 1000, "run_after timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
 }
+
+#[tokio::test]
+async fn test_sqlite_task_queue_lock_contention() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+    sqlx::query(
+        "CREATE TABLE sub_agent_jobs (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT,
+            parent_task_id TEXT,
+            agent_role TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            locked_until TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )"
+    ).execute(&pool).await.unwrap();
+
+    let queue = Arc::new(SQLiteTaskQueue::new(Arc::new(pool)));
+
+    let job1 = Job {
+        id: "job-lock-1".to_string(),
+        tenant_id: "system".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        agent_role: "test-role".to_string(),
+        payload: "{}".to_string(),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: Utc::now() - chrono::Duration::seconds(1),
+        locked_until: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+
+    let job2 = Job {
+        id: "job-lock-2".to_string(),
+        tenant_id: "system".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        agent_role: "test-role".to_string(),
+        payload: "{}".to_string(),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: Utc::now() - chrono::Duration::seconds(1),
+        locked_until: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+
+    queue.enqueue_batch(vec![job1, job2]).await.unwrap();
+
+    // Simulate concurrent dequeues
+    let queue_clone1 = queue.clone();
+    let queue_clone2 = queue.clone();
+
+    let t1 = tokio::spawn(async move {
+        queue_clone1.dequeue(vec!["test-role".to_string()], 100, 100).await
+    });
+
+    let t2 = tokio::spawn(async move {
+        queue_clone2.dequeue(vec!["test-role".to_string()], 100, 100).await
+    });
+
+    let res1 = t1.await.unwrap().unwrap();
+    let res2 = t2.await.unwrap().unwrap();
+
+    assert!(res1.is_some());
+    assert!(res2.is_some());
+    assert_ne!(res1.unwrap().id, res2.unwrap().id);
+}

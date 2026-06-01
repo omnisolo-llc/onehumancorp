@@ -463,6 +463,12 @@ pub fn record_task_claim_contention(mode: &str) {
     counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
 }
 
+pub fn record_task_lifecycle_event(event_type: &str, deployment_mode: &str) {
+    let meter = global::meter("ohc.orchestration");
+    let counter = meter.u64_counter(format!("task.{}", event_type)).build();
+    counter.add(1, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
 pub async fn record_autodream_sync(
     pool: &PgPool,
     count: f32,
