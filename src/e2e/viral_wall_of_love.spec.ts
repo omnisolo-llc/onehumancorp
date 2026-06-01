@@ -28,7 +28,7 @@ test.describe('Wall of Love Growth Loop', () => {
         await page.getByRole('button', { name: 'Generate Widget' }).click();
 
         // 4. Ensure textarea is populated with the embed code
-        const textArea = page.locator('textarea:has-text("ohc.app/widgets/wall-of-love.js")');
+        const textArea = page.locator('textarea:has-text("ohc.app/api/v1/growth/widgets/wall-of-love")');
         await expect(textArea).toBeVisible();
 
         // 5. Click the Refresh button
