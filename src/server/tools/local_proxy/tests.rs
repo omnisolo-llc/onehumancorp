@@ -41,6 +41,10 @@ async fn test_local_proxy_server_invoke() {
         None
     };
 
+    if let Some(ref p) = pool {
+        let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ('system', 'System') ON CONFLICT DO NOTHING").execute(p).await;
+    }
+
     let resp = server.invoke_tool(&req, pool.clone()).await.unwrap();
     let json: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(json["status"], "success");
