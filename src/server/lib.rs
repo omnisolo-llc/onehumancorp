@@ -2452,6 +2452,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
+        .merge(crate::api::capital_api::router(hub.clone()))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
