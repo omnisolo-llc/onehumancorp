@@ -196,7 +196,7 @@ export default function AgentsPage() {
               {departments.map((dept) => (
                 <div
                   key={dept.id}
-                  className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                  className="mac-glass-container shadow-sm p-5 rounded-[20px] flex items-start gap-4 cursor-pointer hover:shadow-md hover:bg-white/80 transition-all duration-200"
                 >
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
@@ -221,7 +221,7 @@ export default function AgentsPage() {
 
           ) : activeTab === 'workflows' ? (
             <div className="space-y-4 pb-8">
-              <form onSubmit={createWorkflow} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+              <form onSubmit={createWorkflow} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div>
                     <h2 className="font-bold text-gray-900 font-outfit text-xl">Create Workflow</h2>
@@ -259,19 +259,19 @@ export default function AgentsPage() {
                 <button
                   type="submit"
                   disabled={workflowLoading}
-                  className={`mt-4 w-full min-h-[44px] rounded-xl font-semibold text-sm transition-colors shadow-sm ${workflowLoading ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                  className={`mt-4 w-full min-h-[44px] rounded-xl font-semibold text-sm transition-colors shadow-sm ${workflowLoading ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transform transition hover:-translate-y-0.5'}`}
                 >
                   {workflowLoading ? 'Creating...' : 'Create & Run Workflow'}
                 </button>
               </form>
 
               {workflows.length === 0 ? (
-                <div className="bg-white rounded-[16px] border border-dashed border-gray-300 p-5 text-center">
+                <div className="mac-glass-container rounded-[20px] border border-dashed border-gray-300 p-8 text-center">
                   <p className="text-gray-500 text-sm">No workflows yet.</p>
                 </div>
               ) : (
                 workflows.map((workflow) => (
-                  <div key={workflow.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                  <div key={workflow.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                     <div className="flex justify-between items-start gap-3">
                       <div>
                         <h3 className="font-bold text-gray-900 font-outfit text-lg">{workflow.name}</h3>
@@ -308,7 +308,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {feed.map((item) => (
-                    <div key={item.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                    <div key={item.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {item.department}
@@ -342,7 +342,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {approvals.map((req) => (
-                    <div key={req.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                    <div key={req.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {req.department}
@@ -357,14 +357,14 @@ export default function AgentsPage() {
                         <button
                           onClick={() => handleDecision(req.id, false)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white/80 hover:bg-white text-gray-800 border border-gray-200 shadow-sm transition-all'}`}
                         >
                           {actionLoading === req.id ? '...' : 'Edit Draft'}
                         </button>
                         <button
                           onClick={() => handleDecision(req.id, true)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transform transition hover:-translate-y-0.5'}`}
                         >
                           {actionLoading === req.id ? '...' : 'Approve & Send'}
                         </button>
