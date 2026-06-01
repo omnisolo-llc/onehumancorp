@@ -46,7 +46,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:mod.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:telemetry.rs",
-    "//src/server/api:catalog.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",
@@ -250,9 +249,6 @@ SERVER_RS_SRCS = [
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
     "//src/server/workers:mod.rs",
-    "//src/server/voice:mod.rs",
-    "//src/server/voice:engine.rs",
-    "//src/server/voice:router.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules
