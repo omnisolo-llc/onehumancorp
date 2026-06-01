@@ -1,7 +1,6 @@
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
-pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -285,7 +284,6 @@ pub use ::server_common as common;
 pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
-pub mod voice;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -2488,7 +2486,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
-        .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -2567,6 +2564,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
+        .route("/brand-studio", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/team", axum::routing::get(ui_handler))
@@ -2848,13 +2846,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3724,6 +3721,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
+                        <a onclick="showScreen('brand-studio-screen')" id="nav-brand-studio">Brand Studio</a>
                         <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                         <a onclick="showScreen('inbox-screen')">Inbox</a>
@@ -3735,7 +3733,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
+                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                         <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
@@ -3780,61 +3778,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
 
                         <script>
-                            async function saveCatalogItem() {
+                            function saveCatalogItem() {
                                 const name = document.getElementById('item-name').value;
-                                const price = document.getElementById('item-price').value;
-                                const duration = document.getElementById('item-duration').value;
-                                const description = document.getElementById('item-desc').value;
-                                const item_type = document.querySelector('input[name="item_type"]:checked').value;
-
                                 if (!name) {
                                     alert('Please enter a name.');
                                     return;
                                 }
-
-                                try {
-                                    const response = await fetch('/api/v1/catalog/product', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
-                                    });
-
-                                    if (response.status === 402) {
-                                        const errorData = await response.json();
-                                        if (errorData.error === 'LIMIT_EXCEEDED') {
-                                            document.getElementById('upgrade-modal-message').innerText = errorData.message || "You've reached your product limit. Upgrade to Starter to add up to 100 products.";
-                                            document.getElementById('upgrade-modal').style.display = 'flex';
-                                            return;
-                                        }
-                                    }
-
-                                    if (response.ok) {
-                                        alert('Saved ' + name + ' successfully!');
-                                        document.getElementById('item-name').value = '';
-                                        document.getElementById('item-price').value = '';
-                                        document.getElementById('item-duration').value = '';
-                                        document.getElementById('item-desc').value = '';
-                                        showScreen('dashboard-screen');
-                                    } else {
-                                        alert('Error saving product');
-                                    }
-                                } catch (e) {
-                                    console.error(e);
-                                    alert('Error saving product');
-                                }
+                                alert('Saved ' + name + ' successfully!');
+                                document.getElementById('item-name').value = '';
+                                document.getElementById('item-price').value = '';
+                                document.getElementById('item-duration').value = '';
+                                document.getElementById('item-desc').value = '';
+                                showScreen('dashboard-screen');
                             }
                         </script>
-                    </div>
-
-
-                    <!-- Upgrade Modal -->
-                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
-                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
-                            <h2 style="margin-top: 0;">Limit Reached</h2>
-                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
-                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
-                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
-                        </div>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -3969,6 +3926,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
+                            <button onclick="showScreen('brand-studio-screen')">Create Brand Toolbox</button>
                             <button onclick="showScreen('calendar-screen')">Calendar</button>
                             <button onclick="showScreen('calendar-screen')">Calendar 📅</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -4055,7 +4013,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
+                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
@@ -4394,15 +4352,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>AI Departments</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
-
-                        <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
-                            <h2>Select an AI Voice</h2>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
-                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
-                            <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
-                        </div>
 
                         <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
                             <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
@@ -5157,25 +5106,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">Online Store</button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">Service Business</button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">Restaurant / Food</button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">Creative</button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -5183,7 +5132,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -5194,7 +5143,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -5202,20 +5151,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Create your account</h1>
                             <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -5226,17 +5175,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
@@ -5253,13 +5202,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -5268,12 +5217,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-launch-ai" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
                     </div>
 
+
+                    <!-- Brand Studio Screen -->
+                    <div id="brand-studio-screen" class="screen glass" style="display: none; max-width: 1180px; margin: 32px auto; padding: 24px;">
+                        <div style="display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 24px; align-items: start;">
+                            <section class="card glass" style="margin: 0;">
+                                <p style="margin: 0 0 6px 0; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;">Brand Studio</p>
+                                <h1 style="margin: 0 0 12px 0;">Create Brand Toolbox</h1>
+                                <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Build a Brand DNA, logo directions, brand book, product catalog, photoshoot plan, campaign assets, and website draft from one business brief.</p>
+
+                                <label for="brand-toolbox-description" style="display:block; font-weight:700; margin-bottom:8px;">Business</label>
+                                <textarea id="brand-toolbox-description" style="width:100%; min-height:130px; box-sizing:border-box; resize:vertical; border-radius:8px; border:1px solid var(--border); padding:12px; margin-bottom:14px;">I run a local bakery called Luna Loaf that sells custom cakes and weekend dessert boxes.</textarea>
+
+                                <label for="brand-toolbox-website" style="display:block; font-weight:700; margin-bottom:8px;">Website URL</label>
+                                <input id="brand-toolbox-website" type="url" placeholder="https://example.com" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
+
+                                <label for="brand-toolbox-product" style="display:block; font-weight:700; margin-bottom:8px;">Product URL</label>
+                                <input id="brand-toolbox-product" type="url" placeholder="https://example.com/product" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
+
+                                <label for="brand-toolbox-campaign" style="display:block; font-weight:700; margin-bottom:8px;">Campaign Goal</label>
+                                <input id="brand-toolbox-campaign" type="text" value="launch a weekend dessert box offer" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:18px;" />
+
+                                <button id="brand-toolbox-generate" onclick="generateBrandToolbox(this)" style="width:100%; border-radius:8px;">Generate Toolbox</button>
+                                <button id="brand-toolbox-publish" class="secondary" onclick="publishBrandToolboxWebsite(this)" disabled style="width:100%; border-radius:8px; margin-top:10px;">Publish Website</button>
+                                <p id="brand-toolbox-status" role="status" style="min-height:22px; margin:14px 0 0 0; color: var(--text-secondary); font-size:14px;"></p>
+                            </section>
+
+                            <section class="card glass" id="brand-toolbox-results" style="margin: 0; min-height: 640px;">
+                                <div id="brand-toolbox-empty" style="display:flex; min-height:560px; align-items:center; justify-content:center; text-align:center; border:1px dashed var(--border); border-radius:12px;">
+                                    <div>
+                                        <h2 style="margin-bottom:8px;">Brand output will appear here</h2>
+                                        <p style="max-width:520px; color: var(--text-secondary);">Generate a complete toolbox for brand creation, website drafting, product presentation, campaigns, and channel-ready creative.</p>
+                                    </div>
+                                </div>
+                                <div id="brand-toolbox-content" style="display:none;"></div>
+                            </section>
+                        </div>
+                    </div>
 
                     <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
@@ -5352,8 +5338,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="domain-setup active" id="domain-step-1">
                                 <p>Choose your domain option:</p>
-                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">Free OHC Subdomain</button>
-                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">Connect Custom Domain</button>
+                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
                             </div>
                             <div class="domain-setup" id="domain-step-free">
                                 <p>Your free domain:</p>
@@ -5499,6 +5485,221 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
+                        let currentBrandToolbox = null;
+
+                        function brandEscapeHtml(value) {
+                            return (value || '').toString()
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#039;');
+                        }
+
+                        function renderBrandList(items, renderItem) {
+                            return (items || []).map(renderItem).join('');
+                        }
+
+                        function syncWebsiteDraftToBuilder(draft) {
+                            currentSiteDraft = draft;
+                            if (draft && draft.pages && draft.pages.length > 0) {
+                                storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
+                                    id: 'brand-toolbox-' + index,
+                                    type: block.block_type,
+                                    content: block.content || {}
+                                }));
+                            }
+                        }
+
+                        function renderBrandToolbox(toolbox) {
+                            const empty = document.getElementById('brand-toolbox-empty');
+                            const content = document.getElementById('brand-toolbox-content');
+                            if (!empty || !content) return;
+
+                            empty.style.display = 'none';
+                            content.style.display = 'block';
+                            const dna = toolbox.brand_dna || {};
+                            const colors = dna.colors || [];
+                            const websiteBlocks = toolbox.website_draft && toolbox.website_draft.pages && toolbox.website_draft.pages[0]
+                                ? toolbox.website_draft.pages[0].blocks || []
+                                : [];
+
+                            content.innerHTML = `
+                                <div class="card" style="margin:0 0 16px 0; border-left:4px solid var(--primary);">
+                                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                                        <div>
+                                            <p style="margin:0 0 4px 0; color:var(--primary); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;">Brand DNA</p>
+                                            <h2 id="brand-toolbox-name" style="margin:0 0 8px 0;">${brandEscapeHtml(dna.name)}</h2>
+                                            <p style="margin:0; color:var(--text-secondary);">${brandEscapeHtml(dna.positioning)}</p>
+                                        </div>
+                                        <div id="brand-toolbox-colors" aria-label="Brand colors" style="display:flex; gap:8px; align-items:flex-start;">
+                                            ${colors.map(color => `<span title="${brandEscapeHtml(color)}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:${brandEscapeHtml(color)};"></span>`).join('')}
+                                        </div>
+                                    </div>
+                                    <p style="margin:12px 0 0 0; color:var(--text-secondary);"><strong>Voice:</strong> ${brandEscapeHtml((dna.tone_of_voice || []).join(', '))}</p>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                                    <section class="card" style="margin:0;">
+                                        <h2>Brand Book</h2>
+                                        ${renderBrandList(toolbox.brand_book, section => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <h3>${brandEscapeHtml(section.title)}</h3>
+                                                <p>${brandEscapeHtml((section.guidance || []).join(' '))}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Logo Concepts</h2>
+                                        ${renderBrandList(toolbox.logo_concepts, logo => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <h3>${brandEscapeHtml(logo.title)}</h3>
+                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${logo.svg || ''}</div>
+                                                <p>${brandEscapeHtml((logo.usage_notes || []).join(' '))}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Starter Catalog</h2>
+                                        ${renderBrandList(toolbox.catalog, item => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <div style="display:flex; justify-content:space-between; gap:12px;">
+                                                    <h3>${brandEscapeHtml(item.name)}</h3>
+                                                    <strong>${brandEscapeHtml(item.price)}</strong>
+                                                </div>
+                                                <p>${brandEscapeHtml(item.description)}</p>
+                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.seo_title)}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Campaign Ideas</h2>
+                                        ${renderBrandList(toolbox.campaign_ideas, idea => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <h3>${brandEscapeHtml(idea.title)}</h3>
+                                                <p>${brandEscapeHtml(idea.hook)}</p>
+                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml((idea.channels || []).join(' / '))}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Social Calendar</h2>
+                                        ${renderBrandList(toolbox.social_calendar, item => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(item.day)} / ${brandEscapeHtml(item.channel)}</p>
+                                                <p>${brandEscapeHtml(item.caption)}</p>
+                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.call_to_action)}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Creative Assets</h2>
+                                        ${renderBrandList(toolbox.assets, asset => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(asset.asset_type)} / ${brandEscapeHtml(asset.channel)}</p>
+                                                <h3>${brandEscapeHtml(asset.title)}</h3>
+                                                <p>${brandEscapeHtml(asset.copy)}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Photoshoot</h2>
+                                        <p>${brandEscapeHtml(toolbox.photoshoot && toolbox.photoshoot.product_source)}</p>
+                                        ${renderBrandList(toolbox.photoshoot ? toolbox.photoshoot.shots : [], shot => `
+                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+                                                <h3>${brandEscapeHtml(shot.title)}</h3>
+                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${shot.mockup_svg || ''}</div>
+                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(shot.format)} / ${brandEscapeHtml(shot.usage)}</p>
+                                            </div>
+                                        `)}
+                                    </section>
+
+                                    <section class="card" style="margin:0;">
+                                        <h2>Website Draft</h2>
+                                        <p>${websiteBlocks.length} ready-to-edit website blocks generated from the Brand DNA.</p>
+                                        <button class="secondary" onclick="showScreen('storefront-builder-screen'); renderStorefrontPreview();" style="width:100%; border-radius:8px;">Open Website Draft</button>
+                                        <p id="brand-toolbox-published-domain" style="margin-top:12px; font-weight:700;"></p>
+                                    </section>
+                                </div>
+                            `;
+                        }
+
+                        async function generateBrandToolbox(btn) {
+                            const description = document.getElementById('brand-toolbox-description').value.trim();
+                            const websiteUrl = document.getElementById('brand-toolbox-website').value.trim();
+                            const productUrl = document.getElementById('brand-toolbox-product').value.trim();
+                            const campaignPrompt = document.getElementById('brand-toolbox-campaign').value.trim();
+                            const status = document.getElementById('brand-toolbox-status');
+                            const publishBtn = document.getElementById('brand-toolbox-publish');
+
+                            if (description.length < 8) {
+                                status.textContent = 'Add a little more detail about the business first.';
+                                return;
+                            }
+
+                            btn.disabled = true;
+                            publishBtn.disabled = true;
+                            status.textContent = 'Generating brand toolbox...';
+
+                            try {
+                                const response = await fetch('/api/v1/builder/brand_toolbox/generate', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        description,
+                                        website_url: websiteUrl || null,
+                                        product_url: productUrl || null,
+                                        campaign_prompt: campaignPrompt || null,
+                                        uploaded_asset_names: []
+                                    })
+                                });
+
+                                if (!response.ok) throw new Error('Brand toolbox generation failed');
+                                currentBrandToolbox = await response.json();
+                                renderBrandToolbox(currentBrandToolbox);
+                                syncWebsiteDraftToBuilder(currentBrandToolbox.website_draft);
+                                publishBtn.disabled = !currentBrandToolbox.id;
+                                status.textContent = 'Brand toolbox ready.';
+                            } catch (e) {
+                                console.error(e);
+                                status.textContent = 'Could not generate the brand toolbox.';
+                            } finally {
+                                btn.disabled = false;
+                            }
+                        }
+
+                        async function publishBrandToolboxWebsite(btn) {
+                            const status = document.getElementById('brand-toolbox-status');
+                            if (!currentBrandToolbox || !currentBrandToolbox.id) {
+                                status.textContent = 'Generate a brand toolbox before publishing.';
+                                return;
+                            }
+
+                            btn.disabled = true;
+                            status.textContent = 'Publishing website...';
+
+                            try {
+                                const response = await fetch(`/api/v1/builder/brand_toolbox/${currentBrandToolbox.id}/publish_website`, {
+                                    method: 'POST'
+                                });
+                                if (!response.ok) throw new Error('Website publish failed');
+                                const site = await response.json();
+                                const domain = site.domain || 'Website published';
+                                const domainEl = document.getElementById('brand-toolbox-published-domain');
+                                if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
+                                status.textContent = 'Website published at ' + domain;
+                            } catch (e) {
+                                console.error(e);
+                                status.textContent = 'Could not publish the website.';
+                                btn.disabled = false;
+                            }
+                        }
 
                         function renderStorefrontPreview() {
                             const container = document.getElementById('builder-preview-container');
@@ -6010,6 +6211,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
                             'setup-screen': '/website-builder',
+                            'brand-studio-screen': '/brand-studio',
                             'storefront-builder-screen': '/storefront-builder',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
@@ -6404,8 +6606,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setMainNavLabels(id) {
                             const labels = id === 'setup-screen'
-                                ? ['Overview', 'AI Assistants', 'Setup', 'KAIROS', 'Connect Tools']
-                                : ['Dashboard', 'Agents', 'Setup', 'KAIROS', 'Connect Tools'];
+                                ? ['Overview', 'AI Assistants', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools']
+                                : ['Dashboard', 'Agents', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools'];
                             document.querySelectorAll('#main-nav a').forEach((link, index) => {
                                 if (labels[index]) link.textContent = labels[index];
                             });
@@ -6636,7 +6838,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -6699,6 +6901,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 '/changelog': 'changelog-screen',
                                 '/builder': 'storefront-builder-screen',
                                 '/calendar': 'calendar-screen',
+                                '/brand-studio': 'brand-studio-screen',
                                 '/website-builder': 'setup-screen',
                                 '/services/new': 'services-screen',
                                 '/review-campaigns': 'seasonal-promo-screen',
