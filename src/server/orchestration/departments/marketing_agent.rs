@@ -19,11 +19,44 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec![
+            "tenant.insight.trending".to_string(),
+            "tenant.job.completed".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "tenant.job.completed" {
+            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
+            let media = event.payload.get("media").and_then(|v| v.as_array());
+
+            if let Some(media_array) = media {
+                if !media_array.is_empty() {
+                    let media_url = media_array[0].as_str().unwrap_or("");
+
+                    let draft_copy = format!("Beautiful new {} completed recently. Completed on time and on budget.", service_name.to_lowercase());
+
+                    let payload = serde_json::json!({
+                        "feature_type": "case_study",
+                        "service_name": service_name,
+                        "media_url": media_url,
+                        "draft_copy": draft_copy
+                    });
+
+                    let description = format!("Draft portfolio case study for {}", service_name);
+
+                    return self.orchestrator.execute_action(
+                        DepartmentType::Marketing,
+                        description,
+                        event.tenant_id.clone(),
+                        risk,
+                        payload,
+                    ).await.map(|_| ());
+                }
+            }
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,

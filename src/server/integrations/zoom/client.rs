@@ -29,7 +29,10 @@ impl ZoomClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("https://zoom.us/j/mock_meeting_123".to_string())
+                    let text = resp.text().await.unwrap_or_default();
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let join_url = json["join_url"].as_str().unwrap_or("https://zoom.us/j/mock_meeting_123").to_string();
+                    Ok(join_url)
                 } else {
                     Err(format!("Zoom API error: {}", resp.status()))
                 }
