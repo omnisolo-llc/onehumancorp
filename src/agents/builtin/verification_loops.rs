@@ -22,6 +22,71 @@ pub trait InferentialSensor: Send + Sync {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String>;
 }
 
+/// Default computational guide using bash commands
+pub struct BashComputationalGuide {
+    pub command: String,
+    pub workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl ComputationalGuide for BashComputationalGuide {
+    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
+                        self.command, stdout, stderr
+                    ));
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
+        }
+    }
+}
+
+/// Default visual verifier using bash commands
+pub struct BashVisualVerifier {
+    pub command: String,
+    pub workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl VisualVerifier for BashVisualVerifier {
+    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
+                        self.command, stdout, stderr
+                    ));
+                } else {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if stdout.contains("REJECT") {
+                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
+        }
+    }
+}
+
 /// A manager that coordinates the 3 distinct verification loops.
 pub struct VerificationManager {
     computational: Vec<Arc<dyn ComputationalGuide>>,
@@ -235,6 +300,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bash_computational_guide() {
+        // Test successful bash execution
+        let pass_guide = BashComputationalGuide {
+            command: "echo 'Success'".to_string(),
+            workspace_path: None,
+        };
+        assert!(pass_guide.verify("", "").await.is_ok());
+
+        // Test failed bash execution
+        let fail_guide = BashComputationalGuide {
+            command: "exit 1".to_string(),
+            workspace_path: None,
+        };
+        let res = fail_guide.verify("", "").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Computational guide verification failed"));
+    }
+
+    #[tokio::test]
+    async fn test_bash_visual_verifier() {
+        // Test successful bash execution
+        let pass_verifier = BashVisualVerifier {
+            command: "echo 'Success'".to_string(),
+            workspace_path: None,
+        };
+        assert!(pass_verifier.verify_visual("").await.is_ok());
+
+        // Test failed bash execution
+        let fail_verifier = BashVisualVerifier {
+            command: "exit 1".to_string(),
+            workspace_path: None,
+        };
+        let res = fail_verifier.verify_visual("").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Visual verification failed"));
+
+        // Test execution that succeeds but outputs 'REJECT'
+        let reject_verifier = BashVisualVerifier {
+            command: "echo 'REJECT'".to_string(),
+            workspace_path: None,
+        };
+        let res = reject_verifier.verify_visual("").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Visual verification rejected the output"));
+    }
+
+    #[tokio::test]
     async fn test_verification_manager() {
         let mut manager = VerificationManager::new();
 
@@ -247,6 +359,19 @@ mod tests {
         let mut fail_manager = VerificationManager::new();
         fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
         assert!(fail_manager.run_computational_guides("", "").await.is_err());
+
+        // Test with real Bash structs
+        let mut bash_manager = VerificationManager::new();
+        bash_manager.add_computational(Arc::new(BashComputationalGuide {
+            command: "echo 'Valid'".to_string(),
+            workspace_path: None,
+        }));
+        bash_manager.add_visual(Arc::new(BashVisualVerifier {
+            command: "echo 'Valid'".to_string(),
+            workspace_path: None,
+        }));
+        assert!(bash_manager.run_computational_guides("", "").await.is_ok());
+        assert!(bash_manager.run_visual_verifiers("").await.is_ok());
     }
 
     #[tokio::test]

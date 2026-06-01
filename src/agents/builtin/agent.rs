@@ -9,72 +9,7 @@ use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
-use crate::verification_loops::{ComputationalGuide, VisualVerifier};
-
-/// Default computational guide using bash commands
-struct BashComputationalGuide {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl ComputationalGuide for BashComputationalGuide {
-    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                        self.command, stdout, stderr
-                    ));
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
-        }
-    }
-}
-
-/// Default visual verifier using bash commands
-struct BashVisualVerifier {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl VisualVerifier for BashVisualVerifier {
-    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                        self.command, stdout, stderr
-                    ));
-                } else {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    if stdout.contains("REJECT") {
-                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
-                    }
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
-        }
-    }
-}
+use crate::verification_loops::{BashComputationalGuide, BashVisualVerifier};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
