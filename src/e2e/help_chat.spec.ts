@@ -11,12 +11,12 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display Help Chat floating button', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#global-chat-btn');
     await expect(chatButton).toBeVisible();
   });
 
   test('should open chat interface and display initial agent message', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#global-chat-btn');
     await chatButton.click();
 
     const chatHeader = page.locator('h3', { hasText: 'Help Agent' });
@@ -27,7 +27,7 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should enable send button when typing a question', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#global-chat-btn');
     await chatButton.click();
 
     const inputField = page.locator('input[placeholder="Ask me anything..."]');
@@ -39,7 +39,7 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display user message in the chat window upon submission', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#global-chat-btn');
     await chatButton.click();
 
     const inputField = page.locator('input[placeholder="Ask me anything..."]');
@@ -53,7 +53,7 @@ test.describe('HelpChat Widget E2E', () => {
   });
 
   test('should display agent reply after user submits a message', async ({ page }) => {
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#global-chat-btn');
     await chatButton.click();
 
     const inputField = page.locator('input[placeholder="Ask me anything..."]');
