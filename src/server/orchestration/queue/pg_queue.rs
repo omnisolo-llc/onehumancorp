@@ -19,7 +19,6 @@ impl TaskQueue for PgTaskQueue {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
 
@@ -84,12 +83,9 @@ impl TaskQueue for PgTaskQueue {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
             .bind(&job.tenant_id)
-            .fetch_one(&mut *tx)
+            .fetch_one(&*self.pool)
             .await
             .unwrap_or((0,));
 
@@ -110,11 +106,10 @@ impl TaskQueue for PgTaskQueue {
         .bind(payload_json)
         .bind(run_after)
         .bind(&job.tenant_id)
-        .execute(&mut *tx)
+        .execute(&*self.pool)
         .await
         .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -124,7 +119,6 @@ impl TaskQueue for PgTaskQueue {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
         let query_str = format!(
@@ -184,11 +178,9 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
         let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, run_after")
             .bind(job_id)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -200,13 +192,11 @@ impl TaskQueue for PgTaskQueue {
             let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1 FOR UPDATE")
             .bind(job_id)
