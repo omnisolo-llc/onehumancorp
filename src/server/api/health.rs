@@ -33,3 +33,29 @@ pub async fn health_handler(
         "checklist": health.get("checklist").unwrap_or(&serde_json::json!(Vec::<String>::new()))
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_health_handler_output() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) };
+        let hub = Arc::new(Hub::new(tx, db_standalone.pool.clone()));
+
+        let response = health_handler(State(hub)).await;
+
+        let json = response.0;
+        assert!(json.get("mode").is_some());
+        assert!(json.get("status").is_some());
+        assert!(json.get("db_ping").is_some());
+        assert!(json.get("sync_backlog").is_some());
+        assert!(json.get("sync_error_count").is_some());
+        assert!(json.get("hybrid_mode_ready").is_some());
+        assert!(json.get("failed_missions").is_some());
+        assert!(json.get("mesh_active").is_some());
+        assert!(json.get("checklist").is_some());
+    }
+}

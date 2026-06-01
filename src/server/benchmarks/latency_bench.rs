@@ -385,12 +385,67 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_bench_ops_service() {
-        // Just verify ops service is accessible and runs, if we wanted to bench it we'd add it here.
-        // The instructions ask for a performance benchmark and comprehensive unit tests.
-        // We added the tests in the actual file.
+    async fn test_run_bench_catalog_api_latency() {
+        bench_catalog_api_latency().await;
     }
 
+}
+
+pub async fn bench_catalog_api_latency() {
+    let iterations = 100;
+    let mut times = Vec::new();
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) };
+    let hub = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
+
+    let claims = ::server_common::Claims {
+        sub: "test".to_string(),
+        exp: 0,
+        iat: 0,
+        jti: "test".to_string(),
+        organization_id: Some("system".to_string()),
+        username: "test".to_string(),
+        email: "test@example.com".to_string(),
+        roles: vec!["admin".to_string()],
+        session_id: None,
+    };
+
+    for i in 0..iterations {
+        let payload = crate::api::catalog::CreateProductRequest {
+            name: format!("Product {}", i),
+            price: "100".to_string(),
+            duration: None,
+            description: "test".to_string(),
+            item_type: "item".to_string(),
+        };
+
+        use axum::extract::{Extension, Json};
+        let start = Instant::now();
+        // Since `handle_create_product` is not public, we benchmark router setup and request processing.
+        // Actually, we can use router directly to avoid making function public.
+        let router = crate::api::catalog::router::<()>(hub.clone());
+        let req = axum::http::Request::builder()
+            .method(axum::http::Method::POST)
+            .uri("/product")
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .extension(claims.clone())
+            .body(axum::body::Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        use tower::ServiceExt;
+        let _res = router.oneshot(req).await.unwrap();
+
+        times.push(start.elapsed().as_micros());
+    }
+
+    times.sort();
+    tracing::info!("Catalog API Post Latency: p50: {} us, p95: {} us, p99: {} us",
+        times[iterations / 2],
+        times[(iterations as f32 * 0.95) as usize],
+        times[(iterations as f32 * 0.99) as usize]
+    );
 }
 
 pub async fn bench_advisory_insights_latency() {
