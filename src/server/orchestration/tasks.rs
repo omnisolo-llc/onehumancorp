@@ -194,7 +194,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -307,7 +307,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -616,7 +616,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -672,7 +672,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -751,7 +751,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -808,7 +808,7 @@ impl TaskDecompositionService {
                 .fetch_optional(&mut *tx)
                 .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -1808,12 +1808,12 @@ impl SharedTaskListManager {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 // Lock the row
-                let row = sqlx::query("SELECT id FROM shared_tasks WHERE id = $1 FOR UPDATE SKIP LOCKED")
+                let row_opt = sqlx::query("SELECT id FROM shared_tasks WHERE id = $1 FOR UPDATE SKIP LOCKED")
                     .bind(task_id)
                     .fetch_optional(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
-                if row.is_none() {
+                if row_opt.is_none() {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     return Err("Task is currently locked by another process".to_string());
                 }
@@ -2160,5 +2160,243 @@ mod shared_task_list_manager_tests {
         assert_eq!(mesh_events.len(), 2);
         assert_eq!(mesh_events[0].0, "mesh:tasks");
         assert_eq!(mesh_events[1].0, "mesh:coordination");
+    }
+}
+
+pub struct SharedTaskListManager {
+    db: Arc<DB>,
+    mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
+}
+
+impl SharedTaskListManager {
+    pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        Self { db, mesh }
+    }
+
+    pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
+        let tracer = opentelemetry::global::tracer("ohc.orchestration");
+        let _span = tracer.start("create_shared_task");
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let deps = serde_json::to_value(&task.dependencies).map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (
+                        id, organization_id, parent_plan_id, dependencies,
+                        title, description, status, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    "#,
+                )
+                .bind(&task.id)
+                .bind(&task.organization_id)
+                .bind(&task.parent_plan_id)
+                .bind(&deps)
+                .bind(&task.title)
+                .bind(&task.description)
+                .bind(&task.status)
+                .bind(&task.created_at)
+                .bind(&task.updated_at)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (
+                        id, organization_id, parent_plan_id, dependencies,
+                        title, description, status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    "#,
+                )
+                .bind(&task.id)
+                .bind(&task.organization_id)
+                .bind(&task.parent_plan_id)
+                .bind(&deps_str)
+                .bind(&task.title)
+                .bind(&task.description)
+                .bind(&task.status)
+                .bind(task.created_at.to_rfc3339())
+                .bind(task.updated_at.to_rfc3339())
+                .execute(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        let meter = opentelemetry::global::meter("ohc.orchestration.shared_task_list");
+        let counter = meter.u64_counter("shared_tasks.created").build();
+        counter.add(1, &[]);
+
+        let payload = serde_json::to_vec(&task).unwrap_or_default();
+        let _ = self.mesh.publish("mesh:tasks", payload).await;
+
+        Ok(task)
+    }
+
+    pub async fn update_task_status(
+        &self,
+        task_id: &str,
+        new_status: &str,
+        agent_id: Option<&str>,
+    ) -> Result<(), String> {
+        let tracer = opentelemetry::global::tracer("ohc.orchestration");
+        let _span = tracer.start("update_shared_task_status");
+        let now = chrono::Utc::now();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                // Lock the row
+                let row_opt = sqlx::query("SELECT id FROM shared_tasks WHERE id = $1 FOR UPDATE SKIP LOCKED")
+                    .bind(task_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if row_opt.is_none() {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    return Err("Task is currently locked by another process".to_string());
+                }
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks
+                    SET status = $1, assigned_agent_id = $2, updated_at = $3
+                    WHERE id = $4
+                    "#,
+                )
+                .bind(new_status)
+                .bind(agent_id)
+                .bind(now)
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    UPDATE shared_tasks
+                    SET status = ?, assigned_agent_id = ?, updated_at = ?
+                    WHERE id = ?
+                    "#,
+                )
+                .bind(new_status)
+                .bind(agent_id)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
+
+        let meter = opentelemetry::global::meter("ohc.orchestration.shared_task_list");
+        let counter = meter.u64_counter("shared_tasks.updated").build();
+        counter.add(1, &[]);
+
+        let event_payload = serde_json::json!({
+            "task_id": task_id,
+            "status": new_status,
+            "agent_id": agent_id,
+        });
+        let payload = serde_json::to_vec(&event_payload).unwrap_or_default();
+        let _ = self.mesh.publish("mesh:tasks", payload).await;
+        let _ = self.mesh.publish("mesh:coordination", event_payload.to_string().into_bytes()).await;
+
+        Ok(())
+    }
+
+    pub async fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = $1")
+                    .bind(task_id)
+                    .fetch_one(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let deps_json: serde_json::Value = row.get("dependencies");
+                let dependencies = serde_json::from_value(deps_json).unwrap_or_default();
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: String::new(),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies,
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: "MEDIUM".to_string(),
+                    payload: "{}".to_string(),
+                    locked_until: None,
+                    ultraplan_phase: None,
+                    deliberation_log: None,
+                    depth: None,
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                    action_risk: None,
+                    approval_status: None,
+                    proposed_content: None,
+                })
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query("SELECT * FROM shared_tasks WHERE id = ?")
+                    .bind(task_id)
+                    .fetch_one(sqlite_pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let deps_str: String = row.get("dependencies");
+                let dependencies = serde_json::from_str(&deps_str).unwrap_or_default();
+
+                let created_str: String = row.get("created_at");
+                let dt_created = chrono::DateTime::parse_from_rfc3339(&created_str)
+                    .map(|d| d.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+
+                let updated_str: String = row.get("updated_at");
+                let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_str)
+                    .map(|d| d.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+
+                Ok(SharedTask {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    mission_id: String::new(),
+                    parent_plan_id: row.get("parent_plan_id"),
+                    dependencies,
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    assigned_agent_id: row.get("assigned_agent_id"),
+                    status: row.get("status"),
+                    priority: "MEDIUM".to_string(),
+                    payload: "{}".to_string(),
+                    locked_until: None,
+                    ultraplan_phase: None,
+                    deliberation_log: None,
+                    depth: None,
+                    created_at: dt_created,
+                    updated_at: dt_updated,
+                    action_risk: None,
+                    approval_status: None,
+                    proposed_content: None,
+                })
+            }
+        }
     }
 }
