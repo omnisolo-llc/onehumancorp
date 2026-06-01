@@ -125,7 +125,7 @@ export default function Dashboard() {
         const res = await fetch('/api/v1/growth/milestones/check');
         const data = await res.json();
         if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          const orderMilestone = data.milestones.find((m: any) => m.id === "10th_order" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
