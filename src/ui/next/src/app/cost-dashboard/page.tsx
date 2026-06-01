@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 interface CostDashboardData {
   model_costs: Record<string, number>;
+  model_costs: Record<string, number>;
   total_revenue: number;
   total_costs: number;
   llm_cost: number;
@@ -45,6 +46,7 @@ export default function CostDashboardPage() {
                 storage_cost: 0,
                 payment_fees: 0,
                 model_costs: {},
+                model_costs: {},
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
             });
@@ -60,6 +62,7 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
+                model_costs: {},
                 model_costs: {},
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),

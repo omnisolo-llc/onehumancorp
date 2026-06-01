@@ -1,6 +1,7 @@
 use axum::{extract::State, Json};
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::collections::HashMap;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
 
@@ -16,6 +17,7 @@ pub struct MyPlanResponse {
 
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
+    pub model_costs: HashMap<String, i64>,
     pub model_costs: HashMap<String, i64>,
     pub total_revenue: i64,
     pub total_costs: i64,
@@ -162,6 +164,7 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+        model_costs,
         model_costs,
     })
 }

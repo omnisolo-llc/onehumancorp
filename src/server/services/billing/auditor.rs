@@ -14,6 +14,7 @@ pub struct AuditEvent {
     pub cached_input_tokens: i64,
     pub local_embedding_tokens: i64,
     pub model: Option<String>,
+    pub model: Option<String>,
 }
 
 pub struct ComputeEvent {
@@ -26,6 +27,7 @@ pub struct CostAuditor {
     config: CostConfig,
     agent_costs: Mutex<HashMap<String, f64>>,
     tenant_costs: Mutex<HashMap<String, f64>>,
+    tenant_model_costs: Mutex<HashMap<String, HashMap<String, f64>>>,
     tenant_model_costs: Mutex<HashMap<String, HashMap<String, f64>>>,
     agent_budgets: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
@@ -54,6 +56,7 @@ impl CostAuditor {
             config,
             agent_costs: Mutex::new(HashMap::new()),
             tenant_costs: Mutex::new(HashMap::new()),
+            tenant_model_costs: Mutex::new(HashMap::new()),
             tenant_model_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
@@ -108,6 +111,13 @@ impl CostAuditor {
         let mut tenant_costs = self.tenant_costs.lock().unwrap();
         let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
         *current_tenant_cost += cost;
+
+        if let Some(model) = event.model.clone() {
+            let mut tenant_model_costs = self.tenant_model_costs.lock().unwrap();
+            let tenant_models = tenant_model_costs.entry(event.tenant_id.clone()).or_insert_with(HashMap::new);
+            let current_model_cost = tenant_models.entry(model).or_insert(0.0);
+            *current_model_cost += cost;
+        }
 
         if let Some(model) = event.model.clone() {
             let mut tenant_model_costs = self.tenant_model_costs.lock().unwrap();
@@ -246,6 +256,11 @@ impl CostAuditor {
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_costs_by_model(&self, tenant_id: &str) -> HashMap<String, f64> {
+        let tenant_model_costs = self.tenant_model_costs.lock().unwrap();
+        tenant_model_costs.get(tenant_id).cloned().unwrap_or_else(HashMap::new)
     }
 
     pub fn get_tenant_costs_by_model(&self, tenant_id: &str) -> HashMap<String, f64> {

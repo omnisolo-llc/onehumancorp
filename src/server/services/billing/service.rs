@@ -96,7 +96,7 @@ mod tests {
         let req = TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 1000,
             completion_tokens: 500,
             cost_usd: 0.0,
@@ -134,7 +134,7 @@ mod tests {
         let req = TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 1000,
             completion_tokens: 500,
             cost_usd: 0.0,
@@ -152,7 +152,7 @@ mod tests {
         let req_summary = TokenUsage {
             agent_id: "".to_string(),
             organization_id: "org_y".to_string(),
-            model: "".to_string(),
+            model: "gpt-4o".to_string(),
             prompt_tokens: 0,
             completion_tokens: 0,
             cost_usd: 0.0,
@@ -171,7 +171,7 @@ mod tests {
 
         let agent_summary = &summary.agents[0];
         assert_eq!(agent_summary.agent_id, "agent_x");
-        assert_eq!(agent_summary.cost_usd, 2.0);
+        assert_eq!(agent_summary.cost_usd, 0.0125);
         assert_eq!(agent_summary.token_used, 500);
         assert_eq!(agent_summary.pct, 1.0);
     }
