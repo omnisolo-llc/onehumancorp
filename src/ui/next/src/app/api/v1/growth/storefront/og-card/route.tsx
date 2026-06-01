@@ -45,14 +45,14 @@ export async function GET(request: Request) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 40,
+              backgroundColor: '#1f2937',
+              border: '2px solid #374151',
+              borderRadius: 30,
               padding: '10px 40px',
             }}
           >
             <span style={{ fontSize: 24, color: '#d1d5db', fontWeight: 'bold' }}>
-              ⚡ Powered by OHC: Launch your free AI store in 30s
+              ⚡ Powered by OHC
             </span>
           </div>
         </div>
