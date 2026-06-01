@@ -1,0 +1,22 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "delivery",
+    srcs = [
+        "mod.rs",
+        "dispatch.rs",
+    ],
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:sqlx",
+        "//src/server/ohc:server_ohc",
+        "@crates//:tonic",
+        "@crates//:uuid",
+    ],
+)
+
+exports_files([
+    "mod.rs",
+    "dispatch.rs",
+], visibility = ["//visibility:public"])

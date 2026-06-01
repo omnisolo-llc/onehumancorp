@@ -14,5 +14,6 @@ pub mod scheduler;
 pub mod agent;
 pub mod autodream;
 pub mod booking;
+pub mod delivery;
 pub mod docs;
 pub mod syndication;

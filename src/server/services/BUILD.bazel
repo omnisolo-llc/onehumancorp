@@ -32,6 +32,8 @@ rust_library(
         "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
         "//src/server/services/dashboard:service.rs",
+        "//src/server/services/delivery:mod.rs",
+        "//src/server/services/delivery:dispatch.rs",
         "//src/server/services/docs:mod.rs",
         "//src/server/services/docs:service.rs",
         "//src/server/services/docs:service_tests.rs",

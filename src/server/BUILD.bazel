@@ -181,6 +181,8 @@ SERVER_RS_SRCS = [
     "//src/server/services/chat:mod.rs",
     "//src/server/services/chat:service.rs",
     "//src/server/services/dashboard:mod.rs",
+    "//src/server/services/delivery:mod.rs",
+    "//src/server/services/delivery:dispatch.rs",
     "//src/server/services/dashboard:service.rs",
     "//src/server/services/growth:experiments.rs",
     "//src/server/services/growth:invites.rs",

@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package ohc.delivery;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/delivery;deliverypb";
+
+import "src/proto/common.proto";
+
+message Driver {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string phone = 4;
+  string status = 5; // "AVAILABLE", "ON_ROUTE", "OFFLINE"
+}
+
+message Location {
+  double latitude = 1;
+  double longitude = 2;
+  int64 timestamp_unix = 3;
+}
+
+message DeliveryOrder {
+  string id = 1;
+  string organization_id = 2;
+  string customer_name = 3;
+  string address = 4;
+  string status = 5; // "PENDING", "DISPATCHED", "DELIVERED", "FAILED"
+  string driver_id = 6;
+  Location destination = 7;
+}
+
+message Route {
+  string id = 1;
+  string driver_id = 2;
+  string organization_id = 3;
+  repeated string order_ids = 4;
+  string status = 5; // "ACTIVE", "COMPLETED"
+}
+
+message ToggleDeliveryRequest {
+  string organization_id = 1;
+  bool enabled = 2;
+}
+message ToggleDeliveryResponse {
+  bool enabled = 1;
+}
+
+message GetOrdersRequest {
+  string organization_id = 1;
+}
+message GetOrdersResponse {
+  repeated DeliveryOrder orders = 1;
+}
+
+message DispatchRouteRequest {
+  string organization_id = 1;
+  repeated string order_ids = 2;
+  string driver_id = 3;
+}
+message DispatchRouteResponse {
+  Route route = 1;
+}
+
+message UpdateDriverLocationRequest {
+  string organization_id = 1;
+  string driver_id = 2;
+  Location location = 3;
+}
+message UpdateDriverLocationResponse {
+  bool success = 1;
+}
+
+message GetDriverLocationRequest {
+  string organization_id = 1;
+  string driver_id = 2;
+}
+message GetDriverLocationResponse {
+  Location location = 1;
+}
+
+message MarkOrderDeliveredRequest {
+  string organization_id = 1;
+  string order_id = 2;
+  string photo_url = 3;
+}
+message MarkOrderDeliveredResponse {
+  DeliveryOrder order = 1;
+}
+
+service DeliveryService {
+  rpc ToggleDelivery(ToggleDeliveryRequest) returns (ToggleDeliveryResponse);
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse);
+  rpc DispatchRoute(DispatchRouteRequest) returns (DispatchRouteResponse);
+  rpc UpdateDriverLocation(UpdateDriverLocationRequest) returns (UpdateDriverLocationResponse);
+  rpc GetDriverLocation(GetDriverLocationRequest) returns (GetDriverLocationResponse);
+  rpc MarkOrderDelivered(MarkOrderDeliveredRequest) returns (MarkOrderDeliveredResponse);
+}
