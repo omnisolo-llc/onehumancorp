@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
-  const [referralLink, setReferralLink] = useState("ohc://join?ref=DEFAULT");
+  const [referralLink, setReferralLink] = useState("https://ohc.store/join?ref=DEFAULT");
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {

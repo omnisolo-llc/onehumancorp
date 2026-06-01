@@ -43,7 +43,7 @@ export default function MilestonesPage() {
     }
   ];
 
-  const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: ohc://join?ref=milestone";
+  const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: https://ohc.store/join?ref=milestone";
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">

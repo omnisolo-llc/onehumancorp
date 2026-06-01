@@ -9,7 +9,7 @@ test.describe('Branding Growth Loop', () => {
         await page.reload();
 
         // We can test the presence of the footer directly
-        const footerLink = page.locator('a[href^="ohc://join?ref="]');
+        const footerLink = page.locator('a[href^="https://ohc.store/join?ref="]');
         await expect(footerLink).toBeVisible();
         await expect(footerLink).toContainText('Powered by');
         await expect(footerLink).toContainText('OHC');
@@ -19,7 +19,7 @@ test.describe('Branding Growth Loop', () => {
         await page.goto('http://localhost:3000/website-builder');
         await page.evaluate(() => localStorage.setItem('ohc_builder_status', 'draft'));
         await page.reload();
-        const footerLink = page.locator('a[href^="ohc://join?ref="]');
+        const footerLink = page.locator('a[href^="https://ohc.store/join?ref="]');
         await expect(footerLink).toBeVisible();
     });
 });
