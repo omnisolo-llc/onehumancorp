@@ -2828,7 +2828,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
-        .with_state(mesh_transport)
+        .with_state(mesh_transport.clone())
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
             { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
@@ -3015,6 +3015,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone(), mesh_transport.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 

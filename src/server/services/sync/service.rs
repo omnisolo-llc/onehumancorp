@@ -1,15 +1,18 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::sync_service_server::SyncService;
+use ohc_builtin_agent::mesh::transport::MeshTransport;
+use std::sync::Arc;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
     pool: sqlx::PgPool,
+    mesh_transport: Arc<dyn MeshTransport>,
 }
 
 impl MySyncService {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        MySyncService { pool }
+    pub fn new(pool: sqlx::PgPool, mesh_transport: Arc<dyn MeshTransport>) -> Self {
+        MySyncService { pool, mesh_transport }
     }
 }
 
@@ -131,7 +134,7 @@ impl SyncService for MySyncService {
                     WHERE agent_missions.updated_at < excluded.updated_at
                 ";
 
-                if let Err(e) = sqlx::query(query)
+                match sqlx::query(query)
                     .bind(id)
                     .bind(status)
                     .bind(payload)
@@ -141,7 +144,27 @@ impl SyncService for MySyncService {
                     .execute(&mut *tx)
                     .await
                 {
-                    tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
+                    Ok(_) => {
+                        let channel = format!("sync:power:{}", tenant_id);
+                        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+                            agent_id: "system".to_string(),
+                            action: "power_sync".to_string(),
+                            status: "ok".to_string(),
+                            payload: serde_json::to_vec(&serde_json::json!({
+                                "tenant_id": tenant_id,
+                                "payload": item,
+                            })).unwrap_or_default(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+
+                        let transport_clone = self.mesh_transport.clone();
+                        tokio::spawn(async move {
+                            let _ = transport_clone.publish(&channel, msg).await;
+                        });
+                    }
+                    Err(e) => {
+                        tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
+                    }
                 }
             }
         }
@@ -276,6 +299,28 @@ impl SyncService for MySyncService {
             {
                 Ok(_) => {
                     synced_count += 1;
+
+                    let channel = format!("sync:crdt:{}", tenant_id);
+                    let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+                        agent_id: "system".to_string(),
+                        action: "crdt_delta".to_string(),
+                        status: "ok".to_string(),
+                        payload: serde_json::to_vec(&serde_json::json!({
+                            "tenant_id": tenant_id,
+                            "payload": {
+                                "id": delta.id,
+                                "entity_id": delta.entity_id,
+                                "data": delta.data,
+                                "updated_at": delta.updated_at
+                            }
+                        })).unwrap_or_default(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                    };
+
+                    let transport_clone = self.mesh_transport.clone();
+                    tokio::spawn(async move {
+                        let _ = transport_clone.publish(&channel, msg).await;
+                    });
                 }
                 Err(e) => {
                     tracing::error!("failed to upsert CRDT delta: error={}", e);
@@ -357,13 +402,15 @@ impl SyncService for MySyncService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
@@ -374,7 +421,7 @@ mod tests {
     async fn test_power_sync_push() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
@@ -395,7 +442,7 @@ mod tests {
         #[allow(unused_variables)]
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await;
         // The query fails because migrations are not run on dummy. Thus it returns internal error.
@@ -415,7 +462,7 @@ mod tests {
 
             .connect(&database_url).await.unwrap();
 
-        let service = MySyncService::new(pool.clone());
+        let service = MySyncService::new(pool.clone(), Arc::new(InProcessTransport::new()));
 
         let mission_id = "test_mission_push_pull";
         let payload_json = serde_json::json!([{
@@ -455,7 +502,7 @@ mod tests {
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
         let resp = service.sync_mcp_deltas(req).await.unwrap();
@@ -466,7 +513,7 @@ mod tests {
     async fn test_sync_escalation_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
@@ -476,7 +523,7 @@ mod tests {
     async fn test_vector_sync() {
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        let service = MySyncService::new(pool);
+        let service = MySyncService::new(pool, Arc::new(InProcessTransport::new()));
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
