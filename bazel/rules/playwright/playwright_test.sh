@@ -77,7 +77,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
-      exit 0
+      exit 1
   fi
 fi
 
@@ -103,7 +103,7 @@ cp "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 if [[ ! -d "$workspace_root/node_modules" ]]; then
   echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
   echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
-  exit 0
+  exit 1
 fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
@@ -147,12 +147,12 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
 fi
 if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   echo "[playwright] Error: Playwright CLI not found in node_modules"
-  exit 0
+  exit 1
 fi
 
-if ! docker info >/dev/null 2>&1; then
+if [[ -z "${SKIP_DOCKER:-}" ]] && ! docker info >/dev/null 2>&1; then
   echo "[playwright] Error: Docker is required for Bazel Playwright E2E tests."
-  exit 0
+  exit 1
 fi
 
 # Unique container names for parallel isolation
@@ -238,8 +238,8 @@ postgres_exec() {
 
 
 echo "[playwright] Initializing database roles..."
-true
-true
+postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
+postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -302,7 +302,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   done
 else
   echo "[playwright] Error: server binary not found"
-  exit 0
+  exit 1
 fi
 
 export CI=true
@@ -333,6 +333,7 @@ fi
 if [[ -n "${SKIP_DOCKER:-}" ]]; then
   echo "[playwright] Tests skipped because SKIP_DOCKER is set."
   echo "Tests passed (Skipped)" > "$PLAYWRIGHT_OUTPUT_DIR/skipped.txt"
+  exit 0
 elif (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
   LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"

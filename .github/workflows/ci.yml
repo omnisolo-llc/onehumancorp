@@ -362,8 +362,7 @@ jobs:
           docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright E2E suite
-        # Set SKIP_DOCKER to bypass local docker startup since Postgres is already accessible (or mock locally)
-        run: bazelisk test --test_env=SKIP_DOCKER=1 //src/e2e:playwright --local_test_jobs="$(nproc)"
+        run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
 
   kind-e2e:
     name: Kind E2E
