@@ -2,8 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { useRouter } from 'next/navigation';
 
 export default function OnboardingWizard() {
+  const router = useRouter();
   const {
     step, setStep,
     chatStep, setChatStep,
@@ -179,7 +181,7 @@ export default function OnboardingWizard() {
       const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
-      setStep(5); // Go to "You're Live" screen
+      router.push('/dashboard');
 
     } catch (err: any) {
       console.error(err);
@@ -513,41 +515,6 @@ export default function OnboardingWizard() {
              </div>
           )}
 
-          {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
-                {startResult.message || "Your business has been successfully launched."}
-              </p>
-
-              <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
-                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
-                   <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
-                   </div>
-                </div>
-
-                <a
-                  href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  Go to Dashboard
-                </a>
-                <a
-                  href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  Preview Storefront
-                </a>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

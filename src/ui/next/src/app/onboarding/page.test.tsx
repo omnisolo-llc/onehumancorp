@@ -2,6 +2,13 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
+
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
@@ -135,10 +142,9 @@ describe('OnboardingWizard', () => {
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
 
-    // Verify it transitions to Step 5 (Live Screen) on success
+    // Wait for the navigation to change
     await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 
@@ -298,21 +304,4 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Step 5: Shows Live Screen with correct links', async () => {
-    act(() => {
-      useOnboardingStore.setState({
-        step: 5,
-        startResult: { message: "Your business has been successfully launched." }
-      });
-    });
-
-    render(<OnboardingWizard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
-    });
-  });
 });

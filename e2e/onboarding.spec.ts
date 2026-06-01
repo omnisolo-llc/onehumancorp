@@ -47,9 +47,10 @@ test.describe('Onboarding Wizard CUJ', () => {
     // 7. Owner launches store
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
-    // 8. Verify it transitions to Live Screen
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('link', { name: /Go to Dashboard/i })).toBeVisible();
+    // 8. Verify it transitions to Activation Dashboard
+    await expect(page.getByRole('heading', { name: /First Sale Checklist/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Share your store")).toBeVisible();
+    await expect(page.getByText("Connect bank")).toBeVisible();
   });
 
   // Test 2: Ensure validation fails on small name

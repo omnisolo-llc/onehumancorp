@@ -533,6 +533,41 @@ export default function Dashboard() {
            </div>
          </section>
 
+         {/* First Sale Checklist (Activation Dashboard) */}
+         <section className="mb-6 animate-fade-in">
+           <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
+             <div className="flex items-center gap-3 mb-2">
+               <div className="text-2xl">🚀</div>
+               <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>First Sale Checklist</h2>
+             </div>
+             <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+               Good morning {businessName}! Your storefront is live. Let's get your first sale.
+             </p>
+             <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4 p-4 border rounded-xl bg-white shadow-sm">
+                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">1</div>
+                   <div className="flex-1">
+                      <h3 className="font-bold text-gray-900">Share your store</h3>
+                      <p className="text-sm text-gray-500">Copy your link and share it on social media to get visitors.</p>
+                   </div>
+                   <button className="px-4 py-2 font-bold text-white bg-[#0066FF] hover:bg-[#0052cc] rounded-lg shadow-sm transition-transform active:scale-[0.98]">
+                      Copy Link
+                   </button>
+                </div>
+                <div className="flex items-center gap-4 p-4 border rounded-xl bg-white shadow-sm">
+                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">2</div>
+                   <div className="flex-1">
+                      <h3 className="font-bold text-gray-900">Connect bank</h3>
+                      <p className="text-sm text-gray-500">Set up your payouts to accept payments online.</p>
+                   </div>
+                   <button className="px-4 py-2 font-bold text-white bg-[#34C759] hover:bg-[#2eb350] rounded-lg shadow-sm transition-transform active:scale-[0.98]">
+                      Connect Bank
+                   </button>
+                </div>
+             </div>
+           </div>
+         </section>
+
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">
