@@ -1,7 +1,7 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency, record_harness_io_bytes};
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
 
 
 use super::network_proxy::NetworkProxy;
@@ -57,8 +57,6 @@ impl LocalShellTask {
         let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
         record_bubblewrap_execution_latency(agent_id, task_id, latency_ms);
 
-        let io_bytes = (output.stdout.len() + output.stderr.len()) as u64;
-        record_harness_io_bytes(agent_id, task_id, io_bytes);
         let latency_seconds = start.elapsed().as_secs_f64();
         record_harness_execution_latency(latency_seconds);
 

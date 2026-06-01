@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Help Components', () => {
   // Tests using the Help Center as a host page for the floating components
   test.beforeEach(async ({ page }) => {
-    // E2E overrides NEXT_PUBLIC_E2E which hides components, so we need to inject/mock if needed
-    // However, the components are hidden explicitly by `if (process.env.NEXT_PUBLIC_E2E === 'true') return null;`
+    // E2E overrides OHC_E2E which hides components, so we need to inject/mock if needed
+    // However, the components are hidden explicitly by `if (process.env.OHC_E2E === 'true') return null;`
     // The test environment might have this set. We will navigate to a page and check for components.
 
     // Instead of overriding env here, we will trust the components load in regular Next.js dev server if E2E is false
