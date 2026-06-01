@@ -171,10 +171,11 @@ pub async fn cost_dashboard_handler(
 
 pub async fn list_split_rules_handler(
     _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<Vec<SplitPaymentRule>>, axum::http::StatusCode> {
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) => auth.tenant_id.clone(),
+        Some(auth) => auth.org_id.clone(),
         None => return Err(axum::http::StatusCode::UNAUTHORIZED),
     };
 
@@ -204,18 +205,20 @@ pub async fn list_split_rules_handler(
 
 pub async fn create_split_rule_handler(
     _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
     request: axum::extract::Request,
     axum::extract::Json(payload): axum::extract::Json<SplitPaymentRule>,
 ) -> Result<Json<SplitPaymentRule>, axum::http::StatusCode> {
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) => auth.tenant_id.clone(),
+        Some(auth) => auth.org_id.clone(),
         None => return Err(axum::http::StatusCode::UNAUTHORIZED),
     };
 
     let pool = crate::db::get_pool();
     let id = if payload.id.is_empty() { uuid::Uuid::new_v4().to_string() } else { payload.id.clone() };
 
-    let split_value_decimal: sqlx::types::BigDecimal = payload.split_value.parse().unwrap_or_default();
+    // Simply cast to float and then to Postgres double precision mapping, or pass string
+    let split_value_float = payload.split_value.parse::<f64>().unwrap_or(0.0);
 
     let query_result = sqlx::query!(
         "INSERT INTO split_payment_rules (id, tenant_id, product_id, partner_id, partner_phone_or_email, split_type, split_value) VALUES ($1, $2, $3, $4, $5, $6, $7)",
@@ -225,7 +228,7 @@ pub async fn create_split_rule_handler(
         payload.partner_id,
         payload.partner_phone_or_email,
         payload.split_type,
-        split_value_decimal
+        split_value_float
     )
     .execute(&pool)
     .await;

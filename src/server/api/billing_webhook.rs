@@ -51,7 +51,6 @@ pub async fn stripe_webhook_handler(
                         id: uuid::Uuid::new_v4().to_string(),
                         tenant_id: tenant_id.to_string(),
                         event_type: "tenant.payment.received".to_string(),
-                        source: "stripe_webhook".to_string(),
                         payload: obj.clone(),
                     };
                     let _ = orchestrator.dispatch_event(event).await;

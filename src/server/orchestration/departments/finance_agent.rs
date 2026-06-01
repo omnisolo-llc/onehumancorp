@@ -49,13 +49,13 @@ impl Department for FinanceAgent {
                 if let Ok(rules) = rule_query.fetch_all(&db_pool).await {
                     for rule in rules {
                         let mut partner_cents: i64 = 0;
+                        // Use f64 mapping directly instead of BigDecimal for simplicity across tests
+                        let split_value_f64: f64 = rule.split_value;
+
                         if rule.split_type == "percentage" {
-                            // Ensure precision handling. e.g. "30" means 30%
-                            let percentage = sqlx::types::BigDecimal::to_string(&rule.split_value).parse::<f64>().unwrap_or(0.0);
-                            partner_cents = ((amount_cents as f64) * (percentage / 100.0)).round() as i64;
+                            partner_cents = ((amount_cents as f64) * (split_value_f64 / 100.0)).round() as i64;
                         } else if rule.split_type == "flat" {
-                            let flat_amount = sqlx::types::BigDecimal::to_string(&rule.split_value).parse::<f64>().unwrap_or(0.0);
-                            partner_cents = (flat_amount * 100.0).round() as i64;
+                            partner_cents = (split_value_f64 * 100.0).round() as i64;
                         }
 
                         if partner_cents > 0 {
@@ -78,7 +78,6 @@ impl Department for FinanceAgent {
                                     id: uuid::Uuid::new_v4().to_string(),
                                     tenant_id: event.tenant_id.clone(),
                                     event_type: "tenant.notification.send_sms".to_string(),
-                                    source: "finance_agent".to_string(),
                                     payload: serde_json::json!({
                                         "phone_number": rule.partner_phone_or_email,
                                         "message": format!("You've been added to a job on OHC! Tap here to tell us where to send your {} cents cut: https://ohc.app/onboard/partner/{}", partner_cents, rule.partner_id)
@@ -92,7 +91,6 @@ impl Department for FinanceAgent {
                                 id: uuid::Uuid::new_v4().to_string(),
                                 tenant_id: event.tenant_id.clone(),
                                 event_type: "tenant.briefing.generated".to_string(),
-                                source: "finance_agent".to_string(),
                                 payload: serde_json::json!({
                                     "message": format!("A split payment of {} cents was processed for your partner {}.", partner_cents, rule.partner_id)
                                 }),
