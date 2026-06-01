@@ -41,6 +41,15 @@ export default function InboxPage() {
       date: 'Yesterday',
       draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
     },
+    {
+      id: 4,
+      sender: 'TikTok User',
+      source: 'TikTok',
+      icon: '🎵',
+      content: 'Do you have a physical store?',
+      date: '2 hours ago',
+      draft: 'Yes, we are located downtown!'
+    },
   ]);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -54,11 +63,12 @@ export default function InboxPage() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
-  const [twilioChannels, setTwilioChannels] = useState({
+  const [channelSettings, setChannelSettings] = useState({
     whatsapp: true,
     instagram: true,
     facebook: true,
     sms: true,
+    tiktok: true,
   });
 
   const sendReply = (msgId?: number) => {
@@ -78,9 +88,9 @@ export default function InboxPage() {
     setEditingId(null);
   };
 
-  const toggleChannel = (key: keyof typeof twilioChannels) => {
+  const toggleChannel = (key: keyof typeof channelSettings) => {
 
-    setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
+    setChannelSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSchedulePost = () => {
@@ -195,11 +205,11 @@ export default function InboxPage() {
             )}
 
             <div className="space-y-3">
-              {Object.entries(twilioChannels).map(([key, value]) => (
+              {Object.entries(channelSettings).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
                   <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
                   <button
-                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
+                    onClick={() => toggleChannel(key as keyof typeof channelSettings)}
                     className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                   >
                     <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
