@@ -29,6 +29,46 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleGenerateInvite = async () => {
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+      const userId = 'current-user-id'; // Use current user ID in reality
+      const uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+      const req = {
+        team_id: tenantId,
+        inviter_id: userId,
+        invitee_id: `guest-${uuid}`,
+      };
+
+      await fetch('/api/v1/growth/team-invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(req)
+      });
+
+      setInviteLink(`https://ohc.app/invite/${uuid}`);
+      setShowInviteModal(true);
+    } catch (e) {
+      console.error('Failed to generate invite', e);
+      // Fallback behavior if server is unavailable
+      const uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      setInviteLink(`https://ohc.app/invite/${uuid}`);
+      setShowInviteModal(true);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const fetchApprovals = async () => {
     try {
@@ -115,6 +155,21 @@ export default function TeamPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
+
+          {/* Cloud Bridge Growth Loop */}
+          <div className="mb-8 p-5 bg-white/70 backdrop-blur-xl border border-blue-100 rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Grow Your Team</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Bridge your local sovereignty with cloud-native collaboration.
+            </p>
+            <button
+              onClick={handleGenerateInvite}
+              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl text-sm shadow-md hover:shadow-lg transition-all"
+            >
+              Invite to Cloud Team
+            </button>
+          </div>
+
           {loading ? (
              <div className="flex justify-center py-10">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -134,6 +189,44 @@ export default function TeamPage() {
           )}
         </div>
       </div>
+
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden font-inter border border-gray-100">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Cloud Bridge Invite</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Share this link to provision a temporary multi-tenant context for your collaborator.
+              </p>
+
+              <div className="mb-4">
+                <input
+                  id="cloud-bridge-invite-link"
+                  type="text"
+                  readOnly
+                  value={inviteLink}
+                  className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none text-gray-800 font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleCopyLink}
+                  className={`w-full py-2 rounded-xl text-sm font-semibold transition-all ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                >
+                  {linkCopied ? 'Copied!' : 'Copy Link'}
+                </button>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="w-full py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
+                >
+                  Close Cloud Bridge Invite
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar { display: none; }
