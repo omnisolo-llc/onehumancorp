@@ -242,9 +242,9 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto">
+    <div className="flex flex-col items-center justify-center min-h-screen py-0 sm:py-8 bg-[#F5F5F7] dark:bg-[#16161a] font-inter">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-none sm:rounded-[16px] overflow-hidden mac-glass-container">
+        <div className="p-6 pb-[120px] flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
@@ -293,7 +293,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6">
+                  <div className="absolute bottom-0 left-0 w-full p-6 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-white/20 dark:border-white/10">
                     <button
                       onClick={() => setChatStep(2)}
                       disabled={!businessName.trim()}
@@ -337,7 +337,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6">
+                  <div className="absolute bottom-0 left-0 w-full p-6 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-white/20 dark:border-white/10">
                     <button
                       onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
@@ -382,7 +382,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6">
+                  <div className="absolute bottom-0 left-0 w-full p-6 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-white/20 dark:border-white/10">
                     <button
                       onClick={handleIntake}
                       disabled={!location.trim() || isLoading}
@@ -459,9 +459,9 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
-                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                        inputMode="decimal"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -469,7 +469,7 @@ export default function OnboardingWizard() {
               </div>
 
               {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-              <div className="mt-auto pt-6">
+              <div className="absolute bottom-0 left-0 w-full p-6 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-white/20 dark:border-white/10">
                 <button
                   onClick={() => {
                     if (businessName.trim().length < 3) {
@@ -567,7 +567,7 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              <div className="mt-auto pt-6">
+              <div className="absolute bottom-0 left-0 w-full p-6 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-white/20 dark:border-white/10">
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
