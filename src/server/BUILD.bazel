@@ -245,6 +245,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:memory.rs",
     "//src/server/workers:migration_worker.rs",
     "//src/server/workers:mod.rs",
+    "//src/server/api:pos.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules

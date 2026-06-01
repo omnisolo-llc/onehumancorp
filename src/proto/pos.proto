@@ -1,0 +1,33 @@
+syntax = "proto3";
+package pos;
+option go_package = "ohc/pos";
+
+message PosItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+}
+
+message TerminalSessionRequest {
+  string organization_id = 1;
+  string device_id = 2;
+}
+
+message TerminalSessionResponse {
+  string session_token = 1;
+  string expires_at = 2;
+}
+
+message RecordTransactionRequest {
+  string organization_id = 1;
+  string session_token = 2;
+  repeated PosItem items = 3;
+  double total_amount = 4;
+  string currency = 5;
+  string payment_method = 6;
+}
+
+message RecordTransactionResponse {
+  bool success = 1;
+  string transaction_id = 2;
+}

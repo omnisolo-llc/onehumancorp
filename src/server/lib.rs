@@ -2452,6 +2452,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
+        .route("/api/v1/pos/session", axum::routing::post(api::pos::create_session_handler))
+        .route("/api/v1/pos/transaction", axum::routing::post(api::pos::record_transaction_handler).with_state(mesh_transport.clone()))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
