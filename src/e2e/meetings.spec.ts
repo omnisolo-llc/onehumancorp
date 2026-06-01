@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Meetings Page', () => {
   test('shows upcoming meeting and scheduler', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto('/'); await page.getByRole('button', { name: 'Meetings' }).click();
     await expect(page.locator('#meetings-screen')).toBeVisible();
     await expect(page.getByRole('button', { name: /\+ Schedule New Appointment/ })).toBeVisible();
     await expect(page.getByText('Team Sync - 14:00')).toBeVisible();
@@ -16,7 +16,7 @@ test.describe('Meetings Page', () => {
   });
 
   test('opens meeting room controls', async ({ page }) => {
-    await page.goto('/meetings');
+    await page.goto('/'); await page.getByRole('button', { name: 'Meetings' }).click();
     await page.getByRole('button', { name: 'Join Start' }).click();
 
     await expect(page.locator('#meeting-room-screen')).toBeVisible();
