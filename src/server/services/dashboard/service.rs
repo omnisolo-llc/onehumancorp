@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<Option<::server_ohc::app::OnboardingState>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -516,6 +517,12 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
+        let cache_key = format!("hub:onboarding:{}", org_id);
+        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        if let Some(Some(state)) = cache.get(&cache_key).await {
+            return Ok(Response::new(GetOnboardingStateResponse { state: Some(state) }));
+        }
+
         use sqlx::Row;
         let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
             .bind(&org_id)
@@ -527,13 +534,18 @@ impl DashboardService for MyDashboardService {
             let state_json: serde_json::Value = row
                 .try_get("state_json")
                 .unwrap_or_else(|_| serde_json::json!({}));
+
+            let state = OnboardingState {
+                organization_id: org_id,
+                user_id: row.try_get("user_id").unwrap_or_default(),
+                current_step: row.try_get("current_step").unwrap_or_default(),
+                state_json: state_json.to_string(),
+            };
+
+            cache.set(&cache_key, Some(state.clone()), std::time::Duration::from_secs(3600)).await;
+
             Ok(Response::new(GetOnboardingStateResponse {
-                state: Some(OnboardingState {
-                    organization_id: org_id,
-                    user_id: row.try_get("user_id").unwrap_or_default(),
-                    current_step: row.try_get("current_step").unwrap_or_default(),
-                    state_json: state_json.to_string(),
-                }),
+                state: Some(state),
             }))
         } else {
             Err(Status::not_found("Onboarding state not found"))
@@ -603,7 +615,12 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
+            Ok(Ok(_)) => {
+                let cache_key = format!("hub:onboarding:{}", state.organization_id);
+                let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                cache.invalidate(&cache_key).await;
+                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+            },
             Ok(Err(e)) => {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.

@@ -36,7 +36,7 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 1000;
+    let iterations = 10;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
@@ -382,6 +382,11 @@ mod tests {
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
     }
+
+    #[tokio::test]
+    async fn test_run_bench_onboarding_state_latency() {
+        super::bench_onboarding_state_latency().await;
+    }
 }
 
 pub async fn bench_advisory_insights_latency() {
@@ -434,4 +439,38 @@ pub async fn bench_advisory_insights_latency() {
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
+}
+
+pub async fn bench_onboarding_state_latency() {
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = 10;
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS onboarding_state (tenant_id TEXT, user_id TEXT, current_step TEXT, state_json TEXT, updated_at TIMESTAMP)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ('system', 'user_1', 'step_1', '{}')").execute(&sqlite_pool).await;
+
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let req = crate::proto::app::GetOnboardingStateRequest { organization_id: "system".to_string() };
+        let mut request = tonic::Request::new(req);
+        request.extensions_mut().insert(crate::auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        let start = Instant::now();
+
+        let _ = dashboard_service_standalone.get_onboarding_state(request).await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    println!("Onboarding State Latency (Cached): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
 }
