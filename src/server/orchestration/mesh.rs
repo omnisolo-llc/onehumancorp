@@ -275,10 +275,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)
             .unwrap();
@@ -459,7 +459,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(pg_url) = std::env::var("OHC_DATABASE_URL") {
+            if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
                     match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
                         Ok(transport) => {

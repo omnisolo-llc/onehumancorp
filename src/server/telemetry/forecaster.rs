@@ -39,14 +39,7 @@ impl Forecaster {
             let mut lr = self.last_run_time.write().unwrap();
             let val = *lr;
             *lr = now;
-
-            // Limit lookback to a maximum of 1 hour to prevent excessive memory usage
-            let one_hour_ago = now - chrono::Duration::hours(1);
-            if val < one_hour_ago {
-                one_hour_ago
-            } else {
-                val
-            }
+            val
         };
 
         // 1. Fetch recent token usage from telemetry_buffer
@@ -125,7 +118,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_test_db() -> PgPool {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         PgPool::connect(&db_url).await.unwrap()
     }
 
