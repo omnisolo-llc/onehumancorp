@@ -47,7 +47,7 @@ sequenceDiagram
     participant Queue as PG Job Queue (SKIP LOCKED)
     participant Worker as AI Advisor Worker
     participant LLM as Gemini / GPT-4o
-    participant App as Mobile App (Tauri)
+    participant App as Mobile App (Flutter)
 
     Cron->>Queue: Enqueue nightly advisory tasks for active Tenants
     Worker->>Queue: Dequeue task (Lock record)
