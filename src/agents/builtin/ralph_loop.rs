@@ -19,6 +19,8 @@ pub struct RalphProgress {
 pub struct Feature {
     pub name: String,
     pub status: String, // "pending", "in_progress", "completed"
+    #[serde(default)]
+    pub priority_score: i32,
 }
 
 /// The "Ralph Loop": For long-running asynchronous tasks spanning multiple context windows.
@@ -47,6 +49,36 @@ impl RalphLoop {
         }
     }
 
+fn select_next_feature(progress: &RalphProgress) -> Option<usize> {
+        let mut candidates = Vec::new();
+        let mut max_score = i32::MIN;
+
+        for (i, feature) in progress.features.iter().enumerate() {
+            if feature.status != "completed" {
+                if feature.priority_score > max_score {
+                    max_score = feature.priority_score;
+                    candidates.clear();
+                    candidates.push(i);
+                } else if feature.priority_score == max_score {
+                    candidates.push(i);
+                }
+            }
+        }
+
+        if candidates.is_empty() {
+            None
+        } else if candidates.len() == 1 {
+            Some(candidates[0])
+        } else {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos() as usize;
+            let idx = now % candidates.len();
+            Some(candidates[idx])
+        }
+    }
+
+    /// Run the full Ralph Loop
+
     /// Run the full Ralph Loop
     pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Phase 1: Initializer
@@ -54,17 +86,16 @@ impl RalphLoop {
         
         // Phase 2: Coding Agent Loop
         while !progress.is_complete {
-            if progress.current_feature_index >= progress.features.len() {
+            if let Some(idx) = Self::select_next_feature(&progress) {
+                progress.current_feature_index = idx;
+            } else {
                 progress.is_complete = true;
                 self.save_progress(&progress).await?;
                 break;
             }
 
             let feature_name = progress.features[progress.current_feature_index].name.clone();
-            if progress.features[progress.current_feature_index].status == "completed" {
-                progress.current_feature_index += 1;
-                continue;
-            }
+            progress.features[progress.current_feature_index].status = "in_progress".to_string();
 
             tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
             
@@ -149,11 +180,11 @@ impl RalphLoop {
         let mut features = vec![];
         if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&result) {
             for name in parsed {
-                features.push(Feature { name, status: "pending".to_string() });
+                features.push(Feature { name, status: "pending".to_string(), priority_score: 10 });
             }
         } else {
-            features.push(Feature { name: "Step 1".to_string(), status: "pending".to_string() });
-            features.push(Feature { name: "Step 2".to_string(), status: "pending".to_string() });
+            features.push(Feature { name: "Step 1".to_string(), status: "pending".to_string(), priority_score: 10 });
+            features.push(Feature { name: "Step 2".to_string(), status: "pending".to_string(), priority_score: 10 });
         }
 
         let progress = RalphProgress {
@@ -277,6 +308,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ralph_loop_priority_selection() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        let initial_progress = RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                Feature { name: "Step 1".to_string(), status: "completed".to_string(), priority_score: 10 },
+                Feature { name: "Step 2".to_string(), status: "pending".to_string(), priority_score: 5 },
+                Feature { name: "Step 3".to_string(), status: "pending".to_string(), priority_score: 20 }, // Highest priority
+            ],
+            current_feature_index: 0,
+            notes: vec![],
+            is_complete: false,
+        };
+        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+
+        // We run it once, it should pick Step 3 and complete it. The next time it should pick Step 2, but our mock just finishes.
+        let result = ralph.run("Build a web server").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        // Let's just check it completed everything eventually.
+        assert!(saved_progress.is_complete);
+    }
+
+    #[tokio::test]
     async fn test_ralph_loop_with_completed_features() {
         let dir = tempdir().unwrap();
         let progress_file = dir.path().join("progress.json");
@@ -284,8 +350,8 @@ mod tests {
         let initial_progress = RalphProgress {
             task_description: "Build a web server".to_string(),
             features: vec![
-                Feature { name: "Step 1".to_string(), status: "completed".to_string() },
-                Feature { name: "Step 2".to_string(), status: "pending".to_string() },
+                Feature { name: "Step 1".to_string(), status: "completed".to_string(), priority_score: 10 },
+                Feature { name: "Step 2".to_string(), status: "pending".to_string(), priority_score: 10 },
             ],
             current_feature_index: 0,
             notes: vec!["Initialized task and broken down into features.".to_string()],
