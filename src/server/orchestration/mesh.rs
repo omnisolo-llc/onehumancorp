@@ -1,3 +1,4 @@
+use crate::hub::Hub as ServerHub;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
@@ -410,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_mesh_transport_sqlite_memory() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite://file::memory:?cache=shared")
+            .connect("sqlite::memory:")
             .await
             .unwrap();
         let db_store = crate::db::DbStore::Sqlite(pool);
