@@ -259,14 +259,33 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => {
+                      setOpen(false);
+                      router.push("/dashboard");
+                      // Delay the walkthrough so it runs on the new page
+                      setTimeout(() => {
+                        startWalkthrough([{ targetId: "dashboard-header-target", title: "Welcome to your Dashboard!", message: "This is where you can see an overview of your store's performance and recent activity.", position: "bottom" }]);
+                      }, 500);
+                    }} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
+                  <button onClick={() => {
+                      setOpen(false);
+                      router.push("/checkout");
+                      setTimeout(() => {
+                        startWalkthrough([{ targetId: "checkout-header-target", title: "Checkout Overview", message: "Here is where you and your customers can safely process payments.", position: "bottom" }]);
+                      }, 500);
+                    }} className="w-full text-left bg-green-50 p-3 rounded-xl shadow-sm border border-green-100 hover:bg-green-100 transition-colors">
+                    <span className="font-bold text-green-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
+                  <button onClick={() => {
+                      setOpen(false);
+                      router.push("/agents");
+                      setTimeout(() => {
+                        startWalkthrough([{ targetId: "agents-header-target", title: "AI Support Agent", message: "Manage and activate your AI helpers from this page.", position: "bottom" }]);
+                      }, 500);
+                    }} className="w-full text-left bg-purple-50 p-3 rounded-xl shadow-sm border border-purple-100 hover:bg-purple-100 transition-colors">
+                    <span className="font-bold text-purple-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>

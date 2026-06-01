@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
@@ -136,7 +137,8 @@ export default function AgentsPage() {
       <div className="w-full max-w-[375px] bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col">
         {/* Header */}
         <header className="px-5 pt-8 pb-4 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-20 border-b border-gray-100">
-          <div className="flex justify-between items-center mb-4">
+          <WalkthroughTarget id="agents-header-target" className="absolute top-0 left-0 w-full h-full pointer-events-none" />
+          <div className="flex justify-between items-center mb-4 relative z-10">
             <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
