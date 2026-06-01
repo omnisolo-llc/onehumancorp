@@ -1173,8 +1173,9 @@ async fn handle_trial_status(
         .await
     {
         Ok(row) => {
-            let trial_days_left: Option<i32> = sqlx::Row::try_get(&row, "trial_days_left").unwrap_or(Some(14));
-            let twitter_shared: Option<bool> = sqlx::Row::try_get(&row, "twitter_shared").unwrap_or(Some(false));
+            use sqlx::Row;
+            let trial_days_left: Option<i32> = row.try_get("trial_days_left").unwrap_or(Some(14));
+            let twitter_shared: Option<bool> = row.try_get("twitter_shared").unwrap_or(Some(false));
             Ok(Json(serde_json::json!({
                 "trial_days_left": trial_days_left.unwrap_or(14),
                 "twitter_shared": twitter_shared.unwrap_or(false)
