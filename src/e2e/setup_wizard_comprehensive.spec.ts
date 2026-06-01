@@ -9,9 +9,13 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
     }, id);
-    await page.goto('/website-builder');
+    await page.goto('/onboarding');
 
+    await page.waitForSelector('button:has-text("Start My Business Next")');
+    await page.waitForTimeout(500);
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await page.waitForTimeout(500);
+    await page.waitForSelector('button:has-text("Online Store")');
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
