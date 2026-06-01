@@ -866,16 +866,12 @@ pub async fn record_mcp_proxy_connections_active(
     spiffe_id: &str,
     delta: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
     buffer_metric(
         pool,
         "ohc_mcp_proxy_connections_active",
         "gauge",
         delta,
-        serde_json::json!({
-            "spiffe_id": spiffe_id,
-            "deployment_mode": deployment_mode,
-        }),
+        serde_json::json!({ "spiffe_id": spiffe_id }),
     )
     .await
 }

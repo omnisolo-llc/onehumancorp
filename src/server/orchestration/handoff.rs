@@ -171,7 +171,7 @@ mod tests {
         ));
 
         // Use SQLite memory db for the test to avoid mock postgres failure and handle ack
-        let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared")
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .unwrap()
             .create_if_missing(true);
 
@@ -270,7 +270,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_listener() {
-        let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared")
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .unwrap()
             .create_if_missing(true);
 
@@ -407,7 +407,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_listener_shared_tasks() {
-        let conn_opts = SqliteConnectOptions::from_str("sqlite://file::memory:?cache=shared")
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .unwrap()
             .create_if_missing(true);
 
