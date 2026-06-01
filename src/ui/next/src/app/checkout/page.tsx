@@ -187,6 +187,12 @@ export default function CheckoutPage() {
               >
                 Continue to Dashboard
               </button>
+
+              <div className="mt-6 text-center">
+                <a href={referralLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest">
+                  ⚡ Powered by OHC
+                </a>
+              </div>
             </div>
           </div>
         </div>
