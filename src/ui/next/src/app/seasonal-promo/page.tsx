@@ -30,8 +30,19 @@ export default function SeasonalPromoPage() {
     setIsGenerating(false);
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+
+    try {
+      await fetch('/api/v1/growth/trial-extension', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'x' })
+      });
+    } catch (e) {
+      console.error('Failed to claim extension:', e);
+    }
+
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
@@ -108,9 +119,10 @@ export default function SeasonalPromoPage() {
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-white/40 text-center" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(30px) saturate(210%)' }}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-bl-full -z-10 blur-xl opacity-60"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-100 rounded-tr-full -z-10 blur-xl opacity-60"></div>
 
             <div className="flex justify-end mb-2">
               <button
@@ -129,21 +141,21 @@ export default function SeasonalPromoPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
-              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
             >
               Upgrade to Pro
             </button>
 
-            <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+            <div className="my-4 text-gray-500 font-medium text-sm">OR</div>
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-              style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 hover:bg-white/80"
+              style={{ color: '#1DA1F2', border: '2px solid rgba(29, 161, 242, 0.4)', background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(10px)' }}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
+              Share on X to claim 14 Days Free
             </button>
           </div>
         </div>
