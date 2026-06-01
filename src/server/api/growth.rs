@@ -88,6 +88,7 @@ where
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
+        .route("/referrals/metrics", get(handle_referral_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -153,6 +154,16 @@ pub struct ReferralGenerateResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralMetricsResponse {
+    pub active_referrals: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetReferralMetricsQuery {
+    pub tenant_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -504,6 +515,23 @@ async fn handle_get_team_invites(
             Ok(Json(TeamInvitesResponse { invites, next_cursor }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_referral_metrics(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetReferralMetricsQuery>,
+) -> Result<Json<ReferralMetricsResponse>, StatusCode> {
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM referrals WHERE tenant_id = $1")
+        .bind(&query.tenant_id)
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(active_referrals) => Ok(Json(ReferralMetricsResponse { active_referrals })),
+        Err(e) => {
+            tracing::error!("Failed to fetch referral metrics: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 
