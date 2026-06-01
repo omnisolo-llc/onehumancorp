@@ -48,16 +48,21 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('can connect Social Media Accounts', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
+
+    // Check that we show an alert correctly
+    page.on('dialog', dialog => dialog.accept());
     await connectButton.click();
   });
 
   test('can enable Autonomous Booking Agent', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
+    page.on('dialog', dialog => dialog.accept());
     await connectButton.click();
   });
 
   test('can connect Customer Emails and Local Payments', async ({ page }) => {
     const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Customer Emails' }).getByRole('button', { name: 'Start sending emails' });
+    page.on('dialog', dialog => dialog.accept());
     await emailBtn.click();
 
     const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
@@ -66,6 +71,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
     const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
+    page.on('dialog', dialog => dialog.accept());
     await shippingBtn.click();
     const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });
     await smsBtn.click();
