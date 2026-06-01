@@ -39,6 +39,33 @@ describe('OnboardingWizard', () => {
     expect(button).toBeDisabled();
   });
 
+  it('Step 1: Has correct mobile keyboard hints on inputs', async () => {
+    render(<OnboardingWizard />);
+
+    // Check first chat step (Business Name)
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    expect(nameInput).toHaveAttribute('autoComplete', 'organization');
+    expect(nameInput).toHaveAttribute('autoCapitalize', 'words');
+    expect(nameInput).toHaveAttribute('enterKeyHint', 'next');
+
+    const user = userEvent.setup({ delay: null });
+    await user.type(nameInput, 'Test Store');
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+
+    // Check second chat step (What you sell)
+    const sellTextarea = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    expect(sellTextarea).toHaveAttribute('enterKeyHint', 'next');
+
+    await user.type(sellTextarea, 'Test Items');
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+
+    // Check third chat step (Location)
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    expect(locInput).toHaveAttribute('autoComplete', 'address-level2');
+    expect(locInput).toHaveAttribute('autoCapitalize', 'words');
+    expect(locInput).toHaveAttribute('enterKeyHint', 'done');
+  });
+
   it('Handles multi-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
