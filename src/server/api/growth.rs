@@ -92,6 +92,7 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
+        .route("/team-invites/generate-link", post(handle_generate_cloud_bridge_link))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
@@ -649,6 +650,27 @@ async fn handle_referral_generate(
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_generate_cloud_bridge_link(
+    Extension(state): Extension<GrowthState>,
+    auth_info_ext: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
+    let invite_id = uuid::Uuid::new_v4().to_string();
+    let team_id = auth_info_ext.map(|e| e.org_id.clone()).unwrap_or_else(|| "DEFAULT_ORG".to_string());
+
+    if let Ok(event) = serde_json::to_string(&serde_json::json!({ "invite_id": invite_id, "team_id": team_id })) {
+        let msg = crate::hub::HubEvent {
+            r#type: "growth.cloud_bridge_invite_generated".to_string(),
+            payload: event,
+            occurred_at: chrono::Utc::now(),
+        };
+        state.hub.append_recent_event(msg);
+    }
+
+    Ok(Json(CloudBridgeInviteResponse {
+        invite_link: format!("https://ohc.app/invite/{}", invite_id),
+    }))
 }
 
 async fn handle_team_invite_accept(

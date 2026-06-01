@@ -31,6 +31,8 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [loadingLink, setLoadingLink] = useState(false);
 
   const fetchApprovals = async () => {
     try {
@@ -124,7 +126,25 @@ export default function TeamPage() {
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
               <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
               <button
-                onClick={() => setShowInviteModal(true)}
+                onClick={async () => {
+                setShowInviteModal(true);
+                if (!inviteLink) {
+                  setLoadingLink(true);
+                  try {
+                    const res = await fetch("/api/v1/growth/team-invites/generate-link", {
+                      method: "POST"
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setInviteLink(data.invite_link);
+                    }
+                  } catch (e) {
+                    console.error("Failed to generate invite link", e);
+                  } finally {
+                    setLoadingLink(false);
+                  }
+                }
+              }}
                 className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
               >
                 Invite to Cloud Team
@@ -178,14 +198,14 @@ export default function TeamPage() {
                   id="cloud-bridge-invite-link"
                   type="text"
                   readOnly
-                  value="https://ohc.app/invite/team-default"
+                  value={loadingLink ? "Generating link..." : inviteLink || "https://ohc.app/invite/team-default"}
                   className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
                 />
               </div>
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText("https://ohc.app/invite/team-default");
+                  navigator.clipboard.writeText(inviteLink || "https://ohc.app/invite/team-default");
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}

@@ -16,7 +16,7 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByText('Share this link to provision a temporary multi-tenant context')).toBeVisible();
 
     // Verify loading spinner (optional) and then the generated link
-    await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/.*/);
+    await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/[a-f0-9\-]+/);
 
     // Test copy button interaction
     await page.getByRole('button', { name: 'Copy Link' }).click();
