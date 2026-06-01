@@ -17,7 +17,6 @@ export default function Integrations() {
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Unified Instagram and Facebook Inbox." },
-    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Unified omnichannel inbox aggregating messages across all channels." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
   ]);
 
@@ -49,7 +48,7 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
-    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
+    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
@@ -91,8 +90,13 @@ export default function Integrations() {
 
             <div className="space-y-4 mb-6">
               {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
+                <div key={key} className={`flex items-center justify-between p-3 rounded-xl border ${key === 'whatsapp' ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-center gap-2">
+                    {key === 'whatsapp' && <span className="text-green-600 text-lg">💬</span>}
+                    <span className={`text-sm font-semibold capitalize ${key === 'whatsapp' ? 'text-green-900' : 'text-gray-800'}`}>
+                      {key === 'whatsapp' ? 'WhatsApp Business API' : key}
+                    </span>
+                  </div>
                   <button
                     onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
                     className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}

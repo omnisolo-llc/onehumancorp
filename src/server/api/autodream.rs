@@ -50,7 +50,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
 
             let limit = params.limit.unwrap_or(5);
 
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
 
             let embedding = match client.generate_embedding(&params.text).await {

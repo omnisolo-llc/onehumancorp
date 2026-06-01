@@ -2,7 +2,6 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
-use std::time::Instant;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -23,33 +22,12 @@ impl HybridSyncDaemon {
         loop {
             if let Err(e) = self.sync_step().await {
                 error!("Hybrid sync daemon error: {}", e);
-                let _ = ::server_telemetry::record_sync_daemon_error_total(
-                    &self.pg_pool,
-                    1.0,
-                    ::server_telemetry::get_deployment_mode(),
-                    "sync_step_error",
-                )
-                .await;
             }
             if let Err(e) = self.sync_cloud_escalations().await {
                 error!("Hybrid sync cloud escalations error: {}", e);
-                let _ = ::server_telemetry::record_sync_daemon_error_total(
-                    &self.pg_pool,
-                    1.0,
-                    ::server_telemetry::get_deployment_mode(),
-                    "sync_cloud_escalations_error",
-                )
-                .await;
             }
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
-                let _ = ::server_telemetry::record_sync_daemon_error_total(
-                    &self.pg_pool,
-                    1.0,
-                    ::server_telemetry::get_deployment_mode(),
-                    "sync_telemetry_error",
-                )
-                .await;
             }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
@@ -118,31 +96,19 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let start = Instant::now();
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
             .fetch_all(&self.sqlite_pool)
             .await?;
-
-        let mut total_payload_size = 0;
-        let batch_size = rows.len();
 
         for row in rows {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
-            total_payload_size += payload.len();
 
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
                 Err(e) => {
                     warn!("Failed to begin pg transaction: {}", e);
-                    let _ = ::server_telemetry::record_sync_daemon_error_total(
-                        &self.pg_pool,
-                        1.0,
-                        ::server_telemetry::get_deployment_mode(),
-                        "pg_transaction_begin_failed",
-                    )
-                    .await;
                     continue;
                 }
             };
@@ -157,18 +123,6 @@ impl HybridSyncDaemon {
                 Ok(_) => {
                     if let Err(e) = tx.commit().await {
                         warn!("Failed to commit pg transaction for mission {}: {}", id, e);
-                        let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                                .bind(e.to_string())
-                                .bind(&id)
-                                .execute(&self.sqlite_pool)
-                                .await;
-                        let _ = ::server_telemetry::record_sync_daemon_error_total(
-                            &self.pg_pool,
-                            1.0,
-                            ::server_telemetry::get_deployment_mode(),
-                            "pg_mission_commit_failed",
-                        )
-                        .await;
                         continue;
                     }
 
@@ -197,55 +151,21 @@ impl HybridSyncDaemon {
                 Err(e) => {
                     let _ = tx.rollback().await;
                     warn!("Failed to sync agent_mission to pg: {}", e);
-                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(e.to_string())
-                            .bind(&id)
-                            .execute(&self.sqlite_pool)
-                            .await;
-                    let _ = ::server_telemetry::record_sync_daemon_error_total(
-                        &self.pg_pool,
-                        1.0,
-                        ::server_telemetry::get_deployment_mode(),
-                        "pg_mission_insert_failed",
-                    )
-                    .await;
                     continue;
                 }
             }
         }
 
-        let _ = ::server_telemetry::record_sync_latency(
-            &self.pg_pool,
-            start.elapsed().as_millis() as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
-        let _ = ::server_telemetry::record_sync_daemon_batch_size(
-            &self.pg_pool,
-            batch_size as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
-        let _ = ::server_telemetry::record_sync_payload_size(
-            &self.pg_pool,
-            total_payload_size as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
-
         Ok(())
     }
 
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let start = Instant::now();
         // Find tasks requiring cloud escalation
         let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
         let mut success_count = 0;
-        let mut total_payload_size = 0;
-        let batch_size = rows.len();
 
         for row in rows {
             let id: String = row.get("memory_id");
@@ -260,7 +180,6 @@ impl HybridSyncDaemon {
                 "memory_id": id,
                 "context": sanitized
             });
-            total_payload_size += payload.to_string().len();
 
             let queue_id = Uuid::new_v4().to_string();
             let now = Utc::now().naive_utc();
@@ -278,13 +197,6 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
-                    let _ = ::server_telemetry::record_sync_daemon_error_total(
-                        &self.pg_pool,
-                        1.0,
-                        ::server_telemetry::get_deployment_mode(),
-                        "pg_transaction_begin_failed",
-                    )
-                    .await;
                     continue;
                 }
             };
@@ -351,35 +263,9 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
-                    let _ = ::server_telemetry::record_sync_daemon_error_total(
-                        &self.pg_pool,
-                        1.0,
-                        ::server_telemetry::get_deployment_mode(),
-                        "sync_escalation_error",
-                    )
-                    .await;
                 }
             }
         }
-
-        let _ = ::server_telemetry::record_sync_latency(
-            &self.pg_pool,
-            start.elapsed().as_millis() as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
-        let _ = ::server_telemetry::record_sync_daemon_batch_size(
-            &self.pg_pool,
-            batch_size as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
-        let _ = ::server_telemetry::record_sync_payload_size(
-            &self.pg_pool,
-            total_payload_size as f32,
-            ::server_telemetry::get_deployment_mode(),
-        )
-        .await;
 
         if success_count > 0 {
             if let Err(e) = ::server_telemetry::record_sync_escalation(
