@@ -4454,7 +4454,8 @@
         "x": 0,
         "y": 200
       },
-      "id": 9991
+      "id": 9991,
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -4485,7 +4486,8 @@
         "x": 12,
         "y": 200
       },
-      "id": 9992
+      "id": 9992,
+      "transparent": true
     },
     {
       "id": 69025,

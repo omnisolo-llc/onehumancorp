@@ -7,6 +7,7 @@ use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::local_proxy::server::LocalProxyServer;
 use crate::tools::config_sync::server::ConfigSyncServer;
+use crate::tools::edgeoffloadmcp::server::EdgeOffloadMcpServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -15,6 +16,7 @@ pub struct MyMcpService {
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     local_proxy_server: Arc<LocalProxyServer>,
     config_sync_server: Arc<ConfigSyncServer>,
+    edge_offload_server: Arc<EdgeOffloadMcpServer>,
 }
 
 impl MyMcpService {
@@ -26,6 +28,7 @@ impl MyMcpService {
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
             local_proxy_server: Arc::new(LocalProxyServer::new()),
             config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
+            edge_offload_server: Arc::new(EdgeOffloadMcpServer::new()),
         }
     }
 }
@@ -73,6 +76,8 @@ impl McpService for MyMcpService {
         tools.extend(local_proxy_tools);
         let config_sync_tools = self.config_sync_server.get_tools();
         tools.extend(config_sync_tools);
+        let edge_offload_tools = self.edge_offload_server.get_tools();
+        tools.extend(edge_offload_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -223,6 +228,12 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
+            "mcp_inference_router" => {
+                match self.edge_offload_server.invoke_tool(&req).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
+            }
             "local_stateful_proxy" => {
                 match self.local_proxy_server.invoke_tool(&req).await {
                     Ok(resp) => Ok(Response::new(resp)),
@@ -248,7 +259,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
-        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
+        let ctx_root = std::env::var("OHC_CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
         } else {

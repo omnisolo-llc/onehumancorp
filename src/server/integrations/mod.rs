@@ -1,7 +1,7 @@
 pub mod catalog;
 pub mod registry;
 pub mod chat;
-pub use ::server_integrations_chatwoot as chatwoot;
+pub mod chatwoot;
 pub mod githubissues;
 pub mod imessage;
 pub mod jira;
@@ -19,7 +19,6 @@ pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
 pub use ::server_integrations_shippo as shippo;
 pub use ::server_integrations_zoom as zoom;
-pub use ::server_integrations_daily as daily;
 pub use ::server_integrations_calendly as calendly;
 pub use ::server_integrations_mailchimp as mailchimp;
 pub use ::server_integrations_ayrshare as ayrshare;
@@ -27,6 +26,8 @@ pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_easypost as easypost;
 pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;
+
+pub use ::server_integrations_mcp_config_sync as mcp_config_sync;
 
 pub use ::server_integrations_razorpay as razorpay;
 pub use ::server_integrations_manychat as manychat;

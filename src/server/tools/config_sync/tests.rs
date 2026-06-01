@@ -43,7 +43,7 @@ async fn test_config_sync_invalid_tool_id() {
 
 #[test]
 fn test_config_sync_push_too_large() {
-    temp_env::with_vars(vec![("MAX_CONFIG_SIZE", Some("100"))], || {
+    temp_env::with_vars(vec![("OHC_MAX_CONFIG_SIZE", Some("100"))], || {
         tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
             if std::env::var("OHC_DATABASE_URL").is_err() { return; }
             let pool = crate::db::get_pool();

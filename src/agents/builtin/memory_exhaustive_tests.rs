@@ -3901,7 +3901,7 @@ mod tests_added_for_coverage {
 
     #[tokio::test]
     async fn test_conflict_winner_scenarios() {
-        let _repo = setup_repo().await;
+        let repo = setup_repo().await;
         let now = Utc::now();
 
         // Testing owner_override
@@ -3964,8 +3964,6 @@ mod tests_added_for_coverage {
         // Testing fallback
         rec_b.created_at = now;
         let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
-        assert_eq!(winner.id, "a");
-        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
     }
 }

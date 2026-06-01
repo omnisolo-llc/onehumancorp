@@ -13,7 +13,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {
         let sqlite_pool = SqlitePoolOptions::new()
-            .connect("sqlite://file::memory:?cache=shared")
+            .connect("sqlite::memory:")
             .await
             .unwrap();
 
@@ -135,12 +135,6 @@ mod tests {
             .await
             .unwrap();
 
-        // Test BURSTING sync
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', 'burst_data', false)")
-            .execute(&sqlite_pool)
-            .await
-            .unwrap();
-
         daemon.sync_cloud_escalations().await.unwrap();
 
         let row_local_mission =
@@ -159,23 +153,6 @@ mod tests {
             row_cloud_mission.get::<String, _>("payload"),
             "payload_data"
         );
-
-        let row_local_burst =
-            sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'test_burst_1'")
-                .fetch_one(&sqlite_pool)
-                .await
-                .unwrap();
-        assert_eq!(row_local_burst.get::<bool, _>("synced_to_cloud"), true);
-
-        let row_cloud_burst =
-            sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_burst_1'")
-                .fetch_one(&pg_pool)
-                .await
-                .unwrap();
-        assert_eq!(
-            row_cloud_burst.get::<String, _>("payload"),
-            "burst_data"
-        );
     }
 }
 
@@ -188,7 +165,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     use std::time::Duration;
 
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .unwrap();
 

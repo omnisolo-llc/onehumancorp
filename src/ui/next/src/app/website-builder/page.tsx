@@ -18,7 +18,6 @@ export default function WebsiteBuilderPage() {
 
   // Wizard state bindings
   const [businessName, setBusinessName] = useState("");
-  const [businessDescription, setBusinessDescription] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [hasPhysicalProducts, setHasPhysicalProducts] = useState(false);
   const [hasDigitalProducts, setHasDigitalProducts] = useState(false);
@@ -252,7 +251,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 2 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
-                  <div id="step-3" className="mt-6 flex flex-col gap-4">
+                  <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
                       className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
@@ -260,14 +259,6 @@ export default function WebsiteBuilderPage() {
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya's Cakes"
-                      value={businessDescription}
-                      onChange={(e) => setBusinessDescription(e.target.value)}
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
@@ -282,7 +273,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 3 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
-                  <div id="step-4" className="mt-6 flex flex-col gap-4">
+                  <div className="mt-6 flex flex-col gap-4">
                     <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
                       <input
                         type="checkbox"
@@ -314,7 +305,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 4 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
-                  <div id="step-5" className="mt-6 flex flex-col gap-4">
+                  <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
                       className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
@@ -364,7 +355,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 6 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
-                  <div id="step-7" className="mt-6 flex flex-col gap-4">
+                  <div className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
                       className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
@@ -402,7 +393,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 7 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
-                  <div id="step-8" className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
@@ -435,7 +426,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 8 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
-                  <div id="step-9" className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep('8.5')}
