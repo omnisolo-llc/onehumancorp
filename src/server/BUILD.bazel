@@ -43,6 +43,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
+    "//src/server/api:oauth/mod.rs",
+    "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:telemetry.rs",
@@ -188,8 +190,12 @@ SERVER_RS_SRCS = [
     "//src/server/services/growth:quota.rs",
     "//src/server/services/growth:referral_api.rs",
     "//src/server/services/growth:referrals.rs",
+
+
+
     "//src/server/services/growth:service.rs",
     "//src/server/services/growth:viral_loop.rs",
+    "//src/server/services/growth:event_listener.rs",
     "//src/server/services/integration:mod.rs",
     "//src/server/services/integration:service.rs",
     "//src/server/services/mcp:mod.rs",
