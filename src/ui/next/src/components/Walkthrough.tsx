@@ -53,6 +53,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
   if (!isOpen || steps.length === 0) return null;
 
+
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
 
