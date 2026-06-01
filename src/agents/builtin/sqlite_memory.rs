@@ -38,6 +38,23 @@ impl SqliteMemoryStore {
     }
 }
 
+impl SqliteMemoryStore {
+    pub async fn retrieve_fts5(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        // FTS5 session search for long term memory retrieval
+        let search_pattern = format!("\"{}\"", query);
+        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
+            .bind(search_pattern)
+            .bind(limit as i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let raw_results: Vec<String> = rows.into_iter().map(|r| r.0).collect();
+
+        Ok(raw_results)
+    }
+}
+
 #[async_trait]
 impl LongTermMemory for SqliteMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
@@ -52,16 +69,7 @@ impl LongTermMemory for SqliteMemoryStore {
     }
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        // FTS5 session search for long term memory retrieval
-        let search_pattern = format!("\"{}\"", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
-            .bind(search_pattern)
-            .bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let raw_results: Vec<String> = rows.into_iter().map(|r| r.0).collect();
+        let raw_results = self.retrieve_fts5(query, limit).await?;
 
         if raw_results.is_empty() {
             return Ok(vec![]);
@@ -105,7 +113,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_sqlite_memory_store() {
+    async fn test_sqlite_memory_fts5_search() {
         use crate::types::{ChatRequest, ChatResponse, Usage, Message};
         use std::sync::Arc;
 
@@ -130,8 +138,48 @@ mod tests {
         store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
         store.store("The weather is sunny", vec!["weather".to_string()]).await.unwrap();
 
+        let results = store.retrieve_fts5("secret", 10).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], "The secret code is 42");
+
+        let results_weather = store.retrieve_fts5("weather", 10).await.unwrap();
+        assert_eq!(results_weather.len(), 1);
+        assert_eq!(results_weather[0], "The weather is sunny");
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_memory_fts5_summarization() {
+        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let user_msg = req.messages.first().unwrap().content.clone();
+                assert!(user_msg.contains("The secret code is 42"));
+                assert!(user_msg.contains("Another secret memory"));
+
+                Ok(ChatResponse {
+                    message: Message::assistant("Summarized cross-session recall about secrets"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![])
+            }
+        }
+        let llm = Arc::new(MockLlm);
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+
+        store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
+        store.store("Another secret memory is that I love cats", vec!["secret".to_string(), "cats".to_string()]).await.unwrap();
+        store.store("The weather is sunny", vec!["weather".to_string()]).await.unwrap();
+
         let results = store.retrieve("secret", 10).await.unwrap();
         assert_eq!(results.len(), 1);
-        assert!(results[0].contains("Summarized cross-session recall"));
+        assert!(results[0].contains("Summarized cross-session recall about secrets"));
     }
 }
