@@ -77,7 +77,7 @@ impl KvMcpServer {
     }
 
     fn is_standalone(&self) -> bool {
-        std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true" || self.redis_client.is_none()
+        std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true" || self.redis_client.is_none()
     }
 
     pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {
@@ -242,7 +242,7 @@ impl KvMcpServer {
                     }
                 }.instrument(tracing::info_span!("kv_list")).await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

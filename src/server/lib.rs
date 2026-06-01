@@ -1,5 +1,7 @@
+pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
+pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -30,6 +32,35 @@ struct CreateWorkflowRequest {
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
+static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
+
+static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+
+pub fn is_standalone_runtime() -> bool {
+    fn parse_bool(value: &str) -> Option<bool> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "y" | "on" => Some(true),
+            "0" | "false" | "no" | "n" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
+    if let Ok(value) = std::env::var("OHC_STANDALONE_MODE") {
+        if let Some(parsed) = parse_bool(&value) {
+            return parsed;
+        }
+    }
+    if let Ok(value) = std::env::var("OHC_SOURCE_MODE") {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "standalone" | "desktop" => return true,
+            "cloud" | "cluster" | "headless" => return false,
+            _ => {}
+        }
+    }
+
+    true
+}
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -61,7 +92,26 @@ fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
 fn workflow_agent_binary() -> String {
     std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
-        .unwrap_or_else(|_| "ohc_builtin_agent".to_string())
+        .unwrap_or_else(|_| {
+            if is_standalone_runtime() {
+                if let Ok(exe_path) = std::env::current_exe() {
+                    return exe_path.to_string_lossy().to_string();
+                }
+            }
+            if let Ok(exe_path) = std::env::current_exe() {
+                let agent_name = if cfg!(windows) {
+                    "ohc-builtin-agent.exe"
+                } else {
+                    "ohc-builtin-agent"
+                };
+                let agent_path = exe_path.with_file_name(agent_name);
+                agent_path.to_string_lossy().to_string()
+            } else if cfg!(windows) {
+                "ohc-builtin-agent.exe".to_string()
+            } else {
+                "ohc-builtin-agent".to_string()
+            }
+        })
 }
 
 fn workflow_agent_task(task: &str) -> String {
@@ -92,6 +142,32 @@ fn dispatch_workflow(record: WorkflowRecord) {
     let task = workflow_agent_task(&record.task);
 
     tokio::spawn(async move {
+        if is_standalone_runtime() {
+            if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
+                use ohc_builtin_agent::proto::agent_service::agent_service_server::AgentService;
+                let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
+                    task: task.clone(),
+                    working_dir: String::new(),
+                    parent_context_json: String::new(),
+                    ..Default::default()
+                };
+                match svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                    Ok(resp) => {
+                        let inner = resp.into_inner();
+                        if !inner.error.is_empty() {
+                            set_workflow_result(&id, "failed", Some(inner.result), Some(inner.error));
+                        } else {
+                            set_workflow_result(&id, "completed", Some(inner.result), None);
+                        }
+                    }
+                    Err(e) => {
+                        set_workflow_result(&id, "failed", None, Some(format!("In-process agent error: {}", e)));
+                    }
+                }
+                return;
+            }
+        }
+
         let output = tokio::process::Command::new(&binary)
             .arg("--task")
             .arg(task)
@@ -444,28 +520,28 @@ async fn http_metrics_handler(
 
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
+            }
         }
     );
 
@@ -680,30 +756,84 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
+    let db_org = db.clone();
+    let db_orders = db.clone();
+    let tenant_id_org = tenant_id.clone();
+    let tenant_id_orders = tenant_id.clone();
+
     let (org_res, active_orders_res) = tokio::join!(
-        async {
-            sqlx::query_as::<_, (String, String)>(
-                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-            )
-            .bind(&tenant_id)
-            .fetch_optional(&db.pool)
-            .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id_org);
+            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(org) = cache.get(&cache_key).await {
+                return Ok(org);
+            }
+
+            let result = match &db_org.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id_org)
+                    .fetch_optional(&db_org.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id_org)
+                    .fetch_optional(pool)
+                    .await
+                }
+            };
+
+            if let Ok(ref org) = result {
+                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+            }
+            result
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
+            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(orders) = cache.get(&cache_key).await {
+                return Ok(orders);
+            }
+
+            let result = match &db_orders.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id_orders)
+                    .fetch_one(&db_orders.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id_orders)
+                    .fetch_one(pool)
+                    .await
+                }
+            };
+
+            if let Ok(orders) = result {
+                cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
+            }
+            result
+        })
     );
 
-    let (business_name, industry) = org_res
+    let org_data = org_res.unwrap_or(Ok(None));
+    let orders_data = active_orders_res.unwrap_or(Ok(0));
+
+    let (business_name, industry) = org_data
         .unwrap_or(None)
         .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
-    let active_orders = active_orders_res.unwrap_or(0);
+    let active_orders = orders_data.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
@@ -2004,7 +2134,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Ensure local database permissions are secure in standalone mode
-    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+    if is_standalone_runtime() {
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -2070,7 +2200,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start Mesh API server
-    let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+    let is_cloud = !is_standalone_runtime();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
         std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
@@ -2139,62 +2269,97 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             monitor_mesh,
             monitor_hub,
             is_cloud,
-            std::time::Duration::from_secs(30)
-        ).await;
+            std::time::Duration::from_secs(30),
+        )
+        .await;
     });
 
-    // Start Builtin Agent
-    let builtin_transport = mesh_transport.clone();
-    let builtin_mesh = handoff_mesh.clone();
-    tokio::spawn(async move {
-        let agent_id = std::env::var("OHC_AGENT_ID").unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
-
-        // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
-        let heartbeat_transport = builtin_transport.clone();
-        let heartbeat_agent_id = agent_id.clone();
+    // In standalone desktop mode the agent is bundled into the local server
+    // process. Cluster/cloud deployments run the agent as a separate binary.
+    if is_standalone_runtime() {
+        let builtin_transport = mesh_transport.clone();
+        let builtin_mesh = handoff_mesh.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
-            loop {
-                interval.tick().await;
-                if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "online", 60).await {
-                    tracing::error!("Failed to register builtin agent presence: {}", e);
+            let agent_id = std::env::var("OHC_AGENT_ID")
+                .unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
+
+            // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
+            let heartbeat_transport = builtin_transport.clone();
+            let heartbeat_agent_id = agent_id.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+                loop {
+                    interval.tick().await;
+                    if let Err(e) = heartbeat_transport
+                        .register_presence(&heartbeat_agent_id, "online", 60)
+                        .await
+                    {
+                        tracing::error!("Failed to register builtin agent presence: {}", e);
+                    }
                 }
-            }
-        });
+            });
 
-        let _health_cancel = builtin_mesh.start_health_responder().await;
+            let _health_cancel = builtin_mesh.start_health_responder().await;
 
-        let cfg = ohc_builtin_agent::service::AgentConfig {
-            llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
-            model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
-            llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
-            system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
-            max_tokens: {
-                let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
-                if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
-            },
-            temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
-            max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
-            max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
-        };
-        let auth = ohc_builtin_agent::auth::auth_mode_from_env();
-        let agent_id_clone = agent_id.clone();
-        let mut svc_impl = ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
-        svc_impl.init_memory().await;
-        let svc = std::sync::Arc::new(svc_impl);
+            let cfg = ohc_builtin_agent::service::AgentConfig {
+                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+                model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
+                llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+                system_prompt: ::server_pricing::compression::reduce_tokens(
+                    &std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+                ),
+                max_tokens: {
+                    let parsed = std::env::var("OHC_MAX_TOKENS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(2048);
+                    if parsed > 4096 {
+                        4096
+                    } else if parsed == 0 {
+                        2048
+                    } else {
+                        parsed
+                    }
+                },
+                temperature: std::env::var("OHC_TEMPERATURE")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0.0),
+                max_iterations: std::env::var("OHC_MAX_ITERATIONS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(100),
+                max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(80),
+            };
+            let auth = ohc_builtin_agent::auth::auth_mode_from_env();
+            let agent_id_clone = agent_id.clone();
+            let mut svc_impl =
+                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+            svc_impl.init_memory().await;
+            let svc = std::sync::Arc::new(svc_impl);
+            let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());
 
-        let heartbeat_transport = builtin_transport.clone();
-        tokio::spawn(async move {
-            loop {
-                if let Err(e) = heartbeat_transport.register_presence(&agent_id_clone, "active", 30).await {
-                    tracing::error!("Failed to register presence: {}", e);
+            let heartbeat_transport = builtin_transport.clone();
+            tokio::spawn(async move {
+                loop {
+                    if let Err(e) = heartbeat_transport
+                        .register_presence(&agent_id_clone, "active", 30)
+                        .await
+                    {
+                        tracing::error!("Failed to register presence: {}", e);
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(15)).await;
                 }
-                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
-            }
-        });
+            });
 
-        ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
-    });
+            ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+        });
+    } else {
+        tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
+    }
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
@@ -2281,7 +2446,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let is_standalone = is_standalone_runtime();
     let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {
@@ -4549,14 +4714,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- Meta Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Meta...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4569,14 +4734,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
                             </div>
 
-                            <!-- MailerLite Integration -->
+                            <!-- Mailchimp Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Customer Emails</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mailchimp...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -4599,6 +4764,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
                             </div>
 
+                            <!-- Front Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Omnichannel Inbox</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📥</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Front...')">Connect Front</button>
+                            </div>
+
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -4609,14 +4784,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Whereby Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4772,7 +4947,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
+                    <div id="my-plan-screen" class="screen glass">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -4793,7 +4968,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
+                    <div id="cost-dashboard-screen" class="screen glass">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">

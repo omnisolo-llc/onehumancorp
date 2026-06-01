@@ -13,7 +13,7 @@ static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
-        let database_url = std::env::var("DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| {
@@ -57,8 +57,14 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| {
+                let cfg = crate::config::get();
+                cfg.database_url.clone().unwrap_or_else(|| {
+                    let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
+                    format!("sqlite://{}", default_path.to_string_lossy())
+                })
+            });
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
@@ -117,6 +123,14 @@ impl DB {
                     use std::fs::OpenOptions;
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
+
+                    if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
+                        if sym_meta.file_type().is_symlink() {
+                            tracing::error!("Security error: DB path is a symlink. Aborting.");
+                            return Err("Security error: DB path is a symlink.".into());
+                        }
+                    }
+
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
@@ -160,9 +174,9 @@ impl DB {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
                 std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
-                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
+                    let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
-                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return bytes.trim().to_string();
                             }
@@ -180,7 +194,7 @@ impl DB {
                         use std::os::unix::fs::OpenOptionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
-                            .create(true)
+                            .create_new(true)
                             .mode(0o600)
                             .open(secret_path)
                         {
@@ -494,6 +508,14 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
+                        tenant_id TEXT NOT NULL,
+                        year_month TEXT NOT NULL,
+                        actions_used INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, year_month)
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
                         tenant_id TEXT NOT NULL,
@@ -1164,7 +1186,7 @@ mod tests {
         temp_env::with_vars(
             vec![
                 (
-                    "DATABASE_URL",
+                    "OHC_DATABASE_URL",
                     Some("postgres://localhost:54321/nonexistent"),
                 ),
                 ("OHC_DB_CONNECT_MAX_ATTEMPTS", Some("1")),
@@ -1189,19 +1211,12 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1227,18 +1242,11 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1285,18 +1293,11 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1411,7 +1412,7 @@ mod security_tests_final {
 
         temp_env::with_vars(
             vec![
-                ("DATABASE_URL", Some(&*database_url)),
+                ("OHC_DATABASE_URL", Some(&*database_url)),
                 ("OHC_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
@@ -1476,19 +1477,12 @@ mod security_tests_final {
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let _pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1515,13 +1509,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1541,7 +1528,7 @@ mod e2e_tenant_isolation_tests {
     async fn test_before_acquire_resets_tenant() {
         // Security Regression Test: Ensure PgPoolOptions are created
         // with a global before_acquire that sets app.current_tenant to ''
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
@@ -1585,7 +1572,7 @@ mod e2e_tenant_isolation_tests {
 mod e2e_tenant_isolation_swarm_tasks_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -1627,5 +1614,33 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             })
             .connect_lazy(database_url)
             .unwrap();
+
+        // 1) Clear out swarm_tasks
+        sqlx::query("DELETE FROM swarm_tasks").execute(&_pool).await.unwrap();
+
+        let unique_mission_id = format!("mission_{}", uuid::Uuid::new_v4());
+
+        // 2) Insert as tenant_1
+        sqlx::query("INSERT INTO swarm_tasks (mission_id, title, tenant_id) VALUES ($1, 'secret task', 'tenant_1')")
+            .bind(&unique_mission_id)
+            .execute(&_pool)
+            .await
+            .unwrap();
+
+        // 3) Verify tenant_1 can see it
+        let count_t1: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool)
+            .await
+            .unwrap();
+        assert_eq!(count_t1.0, 1, "tenant_1 should see their own task");
+
+        // 4) Verify tenant_2 cannot see it
+        let count_t2: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool2)
+            .await
+            .unwrap();
+        assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }
