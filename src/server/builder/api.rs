@@ -81,6 +81,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
         .route("/sites", get(list_sites).post(create_site))
+        .route("/sites/{site_id}", get(get_site))
 
         .route("/sites/{site_id}/pages", get(list_pages).post(create_page))
         .route(
@@ -158,6 +159,50 @@ async fn create_site(
     Ok(Json(SiteResponse {
         id: site.id,
         domain: site.domain,
+    }))
+}
+
+async fn get_site(
+    State(pool): State<PgPool>,
+    Path(site_id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+) -> Result<Json<SiteStructureResponse>, axum::http::StatusCode> {
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    let site = db::get_site(&pool, tenant_id, site_id)
+        .await
+        .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
+
+    let pages = db::list_pages(&pool, tenant_id, site.id)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut site_pages = Vec::new();
+    for page in pages {
+        let blocks = db::list_blocks(&pool, tenant_id, page.id)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let block_responses = blocks.into_iter().map(|b| BlockResponse {
+            id: b.id,
+            block_type: b.block_type,
+            content: b.content,
+            sort_order: b.sort_order,
+        }).collect();
+
+        site_pages.push(SitePageResponse {
+            id: page.id,
+            path: page.path,
+            title: page.title,
+            seo_metadata: page.seo_metadata,
+            blocks: block_responses,
+        });
+    }
+
+    Ok(Json(SiteStructureResponse {
+        id: site.id,
+        domain: site.domain,
+        pages: site_pages,
     }))
 }
 
@@ -261,13 +306,28 @@ async fn create_page(
     }))
 }
 
-#[derive(Serialize)]
-#[derive(serde::Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BlockResponse {
     pub id: Uuid,
     pub block_type: String,
     pub content: Value,
     pub sort_order: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SitePageResponse {
+    pub id: Uuid,
+    pub path: String,
+    pub title: String,
+    pub seo_metadata: Value,
+    pub blocks: Vec<BlockResponse>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SiteStructureResponse {
+    pub id: Uuid,
+    pub domain: Option<String>,
+    pub pages: Vec<SitePageResponse>,
 }
 
 #[derive(Deserialize)]
@@ -402,7 +462,7 @@ async fn generate_storefront(
 ) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let _tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     // Step 1: The Advisor extracts metadata

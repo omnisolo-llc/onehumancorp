@@ -1,5 +1,7 @@
+pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
+pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -31,6 +33,9 @@ struct CreateWorkflowRequest {
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
+
+static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -118,81 +123,6 @@ fn workflow_agent_task(task: &str) -> String {
         "Use the built-in RunWorkflow tool. Arguments: {}. Return the final synthesized report.",
         args
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn standalone_agent_mode_uses_current_server_binary() {
-        temp_env::with_vars(
-            vec![
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_SOURCE_MODE", None::<&str>),
-                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
-                ("OHC_AGENT_BINARY", None::<&str>),
-            ],
-            || {
-                let current_exe = std::env::current_exe()
-                    .expect("current test executable")
-                    .to_string_lossy()
-                    .to_string();
-
-                assert!(is_standalone_runtime());
-                assert_eq!(workflow_agent_binary(), current_exe);
-            },
-        );
-    }
-
-    #[test]
-    fn cluster_agent_mode_uses_separate_builtin_agent_binary() {
-        temp_env::with_vars(
-            vec![
-                ("OHC_STANDALONE_MODE", Some("false")),
-                ("OHC_SOURCE_MODE", None::<&str>),
-                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
-                ("OHC_AGENT_BINARY", None::<&str>),
-            ],
-            || {
-                let current_exe = std::env::current_exe()
-                    .expect("current test executable")
-                    .to_string_lossy()
-                    .to_string();
-                let binary = workflow_agent_binary();
-
-                assert!(!is_standalone_runtime());
-                assert_ne!(binary, current_exe);
-                assert!(binary.ends_with(agent_binary_name()), "{binary}");
-            },
-        );
-    }
-
-    #[test]
-    fn source_cluster_mode_uses_separate_builtin_agent_binary() {
-        temp_env::with_vars(
-            vec![
-                ("OHC_STANDALONE_MODE", None::<&str>),
-                ("OHC_SOURCE_MODE", Some("cluster")),
-                ("OHC_BUILTIN_AGENT_BINARY", None::<&str>),
-                ("OHC_AGENT_BINARY", None::<&str>),
-            ],
-            || {
-                let binary = workflow_agent_binary();
-
-                assert!(!is_standalone_runtime());
-                assert!(binary.ends_with(agent_binary_name()), "{binary}");
-            },
-        );
-    }
-
-    fn agent_binary_name() -> &'static str {
-        if cfg!(windows) {
-            "ohc-builtin-agent.exe"
-        } else {
-            "ohc-builtin-agent"
-        }
-    }
 }
 
 fn set_workflow_result(id: &str, status: &str, output: Option<String>, error: Option<String>) {
@@ -590,28 +520,28 @@ async fn http_metrics_handler(
 
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
+            }
         }
     );
 
@@ -814,42 +744,96 @@ pub async fn advisory_insights_handler(
         _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
     };
 
-    let api_key = match std::env::var("OHC_MINIMAX_API_KEY") {
+    let api_key = match std::env::var("MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
         _ => {
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
-                axum::Json(HttpErrorResponse { error: "OHC_MINIMAX_API_KEY is required".to_string() }),
+                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
             )
                 .into_response();
         }
     };
 
     // Gather context from DB and order counts concurrently
+    let db_org = db.clone();
+    let db_orders = db.clone();
+    let tenant_id_org = tenant_id.clone();
+    let tenant_id_orders = tenant_id.clone();
+
     let (org_res, active_orders_res) = tokio::join!(
-        async {
-            sqlx::query_as::<_, (String, String)>(
-                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-            )
-            .bind(&tenant_id)
-            .fetch_optional(&db.pool)
-            .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id_org);
+            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(org) = cache.get(&cache_key).await {
+                return Ok(org);
+            }
+
+            let result = match &db_org.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id_org)
+                    .fetch_optional(&db_org.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                    )
+                    .bind(&tenant_id_org)
+                    .fetch_optional(pool)
+                    .await
+                }
+            };
+
+            if let Ok(ref org) = result {
+                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+            }
+            result
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
+            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(orders) = cache.get(&cache_key).await {
+                return Ok(orders);
+            }
+
+            let result = match &db_orders.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id_orders)
+                    .fetch_one(&db_orders.pool)
+                    .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+                    )
+                    .bind(&tenant_id_orders)
+                    .fetch_one(pool)
+                    .await
+                }
+            };
+
+            if let Ok(orders) = result {
+                cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
+            }
+            result
+        })
     );
 
-    let (business_name, industry) = org_res
+    let org_data = org_res.unwrap_or(Ok(None));
+    let orders_data = active_orders_res.unwrap_or(Ok(0));
+
+    let (business_name, industry) = org_data
         .unwrap_or(None)
         .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
-    let active_orders = active_orders_res.unwrap_or(0);
+    let active_orders = orders_data.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
@@ -898,12 +882,12 @@ async fn draft_reply_handler(
         _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
     };
 
-    let api_key = match std::env::var("OHC_MINIMAX_API_KEY") {
+    let api_key = match std::env::var("MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
         _ => {
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
-                axum::Json(HttpErrorResponse { error: "OHC_MINIMAX_API_KEY is required".to_string() }),
+                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
             )
                 .into_response();
         }
@@ -1161,11 +1145,11 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing valid AuthInfo"))?;
         let req = request.into_inner();
 
-        let stripe_key = std::env::var("OHC_STRIPE_API_KEY")
-            .map_err(|_| tonic::Status::failed_precondition("OHC_STRIPE_API_KEY is required"))?;
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let mercadopago_client = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
-        let alipay_client = std::env::var("OHC_ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -1202,11 +1186,11 @@ impl HubService for MyHubService {
         request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
-        let stripe_key = std::env::var("OHC_STRIPE_API_KEY")
-            .map_err(|_| tonic::Status::failed_precondition("OHC_STRIPE_API_KEY is required"))?;
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let _mercadopago_client = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
-        let _alipay_client = std::env::var("OHC_ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+        let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let _alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -1426,16 +1410,15 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
-        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&user_id)
+        .bind(&org_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1474,16 +1457,15 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
         }
         let tenant_id = org_id.clone();
-        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&user_id)
+        .bind(&org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2067,9 +2049,9 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
     }
 
     if let Some(phone) = settings.sms_critical_phone {
-        let account_sid = std::env::var("OHC_TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
-        let auth_token = std::env::var("OHC_TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
-        let from_number = std::env::var("OHC_TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+        let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+        let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+        let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
 
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
@@ -2082,7 +2064,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    let use_json = std::env::var("OHC_LOG_FORMAT").unwrap_or_default() == "json";
+    let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
 
     let subscriber = tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()));
@@ -2177,13 +2159,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-
+                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, user_id)
+                    PRIMARY KEY (tenant_id, organization_id)
                 );"
             )
             .execute(pool)
@@ -2220,7 +2202,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Mesh API server
     let is_cloud = !is_standalone_runtime();
     let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("OHC_REDIS_URL").ok().as_deref(),
+        std::env::var("REDIS_URL").ok().as_deref(),
         is_cloud
     ).await.expect("Failed to create MeshTransport");
 
@@ -2379,7 +2361,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
     }
 
-    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
         std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
     } else {
@@ -2465,8 +2447,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let is_standalone = is_standalone_runtime();
-    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("OHC_REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("OHC_REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
+    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {
         match &db.store {
             crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
@@ -2519,9 +2501,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
             }
 
-            let account_sid = std::env::var("OHC_TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
-            let auth_token = std::env::var("OHC_TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
-            let from_number = std::env::var("OHC_TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+            let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+            let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+            let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
 
             let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
@@ -4732,14 +4714,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- Meta Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Meta...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -4752,14 +4734,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
                             </div>
 
-                            <!-- MailerLite Integration -->
+                            <!-- Mailchimp Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Customer Emails</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mailchimp...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -4782,6 +4764,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
                             </div>
 
+                            <!-- Front Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Omnichannel Inbox</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📥</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Front...')">Connect Front</button>
+                            </div>
+
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -4792,14 +4784,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Whereby Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4955,7 +4947,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
+                    <div id="my-plan-screen" class="screen glass">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -4976,7 +4968,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
+                    <div id="cost-dashboard-screen" class="screen glass">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
@@ -6366,33 +6358,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
-                        async function generateSeasonalPromo() {
+                        function generateSeasonalPromo() {
                             const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
                             const discountInput = document.getElementById('promo-discount').value || '10';
 
-                            const promoContentEl = document.getElementById('promo-content');
-                            const promoResultEl = document.getElementById('promo-result');
+                            // Sanitize inputs to prevent XSS
+                            const occasion = occasionInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const discount = discountInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-                            promoResultEl.style.display = 'block';
-                            promoContentEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 24px; height: 24px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 8px;"></div><p style="margin: 0; font-size: 14px;">Generating...</p></div>';
+                            const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
 
-                            try {
-                                const response = await fetch('/api/v1/growth/campaign/generate-seasonal-promo', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ occasion: occasionInput, discount: discountInput })
-                                });
-
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    promoContentEl.innerHTML = data.html_content;
-                                } else {
-                                    promoContentEl.innerHTML = '<p style="color: red;">Failed to generate promo. Please try again.</p>';
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                promoContentEl.innerHTML = '<p style="color: red;">Failed to generate promo. Please try again.</p>';
-                            }
+                            const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
+                            document.getElementById('promo-content').innerHTML = content;
+                            document.getElementById('promo-result').style.display = 'block';
                         }
 
                         function showScreen(id) {

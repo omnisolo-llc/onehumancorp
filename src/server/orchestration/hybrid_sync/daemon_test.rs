@@ -17,7 +17,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -73,7 +73,9 @@ mod tests {
                 id VARCHAR PRIMARY KEY,
                 status VARCHAR NOT NULL,
                 payload TEXT,
-                tenant_id VARCHAR
+                tenant_id VARCHAR,
+                sync_error TEXT,
+                last_synced_at TIMESTAMP
             )",
         )
         .execute(&pg_pool)
@@ -135,6 +137,12 @@ mod tests {
             .await
             .unwrap();
 
+        // Test BURSTING sync
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', 'burst_data', false)")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
         daemon.sync_cloud_escalations().await.unwrap();
 
         let row_local_mission =
@@ -153,6 +161,23 @@ mod tests {
             row_cloud_mission.get::<String, _>("payload"),
             "payload_data"
         );
+
+        let row_local_burst =
+            sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'test_burst_1'")
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap();
+        assert_eq!(row_local_burst.get::<bool, _>("synced_to_cloud"), true);
+
+        let row_cloud_burst =
+            sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_burst_1'")
+                .fetch_one(&pg_pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            row_cloud_burst.get::<String, _>("payload"),
+            "burst_data"
+        );
     }
 }
 
@@ -169,7 +194,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());

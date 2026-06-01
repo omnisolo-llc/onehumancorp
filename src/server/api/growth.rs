@@ -81,7 +81,6 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
-        .route("/campaign/generate-seasonal-promo", post(handle_generate_seasonal_promo))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -136,17 +135,6 @@ pub struct GenerateCartRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
     pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateSeasonalPromoRequest {
-    pub occasion: String,
-    pub discount: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateSeasonalPromoResponse {
-    pub html_content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -216,42 +204,6 @@ async fn handle_generate_review(
 
     Json(GenerateReviewResponse {
         message: generated,
-    })
-}
-
-async fn handle_generate_seasonal_promo(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateSeasonalPromoRequest>,
-) -> impl IntoResponse {
-    // Basic sanitization
-    let occasion = req.occasion.replace("<", "&lt;").replace(">", "&gt;");
-    let discount = req.discount.replace("<", "&lt;").replace(">", "&gt;");
-
-    let code_occasion: String = occasion
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
-        .collect::<String>()
-        .to_uppercase()
-        .chars()
-        .take(8)
-        .collect();
-
-    let code_discount: String = discount
-        .chars()
-        .filter(|c| c.is_ascii_digit())
-        .collect();
-
-    let code = format!("{}{}", code_occasion, code_discount);
-
-    let hashtag_occasion = occasion.replace(" ", "");
-
-    let html_content = format!(
-        "🎉 <b>{} Special!</b><br><br>Get ready for our amazing {} deals! For a limited time, enjoy <b>{}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>{}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #{}",
-        occasion, occasion, discount, code, hashtag_occasion
-    );
-
-    Json(GenerateSeasonalPromoResponse {
-        html_content,
     })
 }
 
@@ -770,7 +722,7 @@ mod tests {
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -838,7 +790,7 @@ mod tests {
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -888,7 +840,7 @@ mod tests {
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -929,7 +881,7 @@ mod tests {
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -990,32 +942,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_seasonal_promo() {
-        let pool = setup_db().await;
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = GenerateSeasonalPromoRequest {
-            occasion: "Summer Sale".to_string(),
-            discount: "20".to_string(),
-        };
-        let res = handle_generate_seasonal_promo(Extension(state.clone()), Json(req)).await;
-
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GenerateSeasonalPromoResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert!(res_json.html_content.contains("Summer Sale"));
-        assert!(res_json.html_content.contains("20% OFF"));
-        assert!(res_json.html_content.contains("SUMMERSA20"));
-        assert!(res_json.html_content.contains("#SummerSale"));
-    }
-
-    #[tokio::test]
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -1050,7 +980,7 @@ mod tests {
     async fn test_onboarding_metrics() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 

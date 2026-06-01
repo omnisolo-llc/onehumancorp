@@ -5,8 +5,6 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
-  const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -116,19 +114,21 @@ export default function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
+  const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
     async function checkMilestones() {
-      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
+      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
-        const res = await fetch("/api/v1/growth/milestones/check");
+        const res = await fetch('/api/v1/growth/milestones/check');
         const data = await res.json();
         if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
-            localStorage.setItem("10th_order_milestone_shown", "true");
+            localStorage.setItem('10th_order_milestone_shown', 'true');
           }
         }
       } catch (e) {
@@ -136,9 +136,7 @@ export default function Dashboard() {
       }
     }
     checkMilestones();
-  }, []);
 
-  useEffect(() => {
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
@@ -288,11 +286,12 @@ export default function Dashboard() {
 
     fetchMetrics();
 
-    return () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", updateOfflineStatus);
         window.removeEventListener("storage", handleStorage);
         clearInterval(queueCheckInterval);
+
+    return () => {
         if (ws) ws.close();
     };
   }, []);
