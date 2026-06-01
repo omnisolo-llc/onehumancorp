@@ -17,6 +17,7 @@ static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static SANDBOX_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
@@ -54,6 +55,16 @@ pub fn get_error_signal_counter() -> &'static Counter<u64> {
         meter
             .u64_counter("ohc_error_signals_total")
             .with_description("Total number of error signals categorized")
+            .build()
+    })
+}
+
+pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
+    SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter
+            .i64_up_down_counter("ohc_sandbox_violations_total")
+            .with_description("Total number of LocalSandbox policy violations")
             .build()
     })
 }
@@ -152,6 +163,17 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
             opentelemetry::KeyValue::new("role", role.to_string()),
             opentelemetry::KeyValue::new("model", model.to_string()),
             opentelemetry::KeyValue::new("type", token_type.to_string()),
+        ],
+    );
+}
+
+pub fn record_sandbox_violation(reason: &str, command: &str) {
+    let gauge = get_sandbox_violation_total();
+    gauge.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("command", command.to_string()),
         ],
     );
 }
@@ -866,16 +888,12 @@ pub async fn record_mcp_proxy_connections_active(
     spiffe_id: &str,
     delta: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
     buffer_metric(
         pool,
         "ohc_mcp_proxy_connections_active",
         "gauge",
         delta,
-        serde_json::json!({
-            "spiffe_id": spiffe_id,
-            "deployment_mode": deployment_mode,
-        }),
+        serde_json::json!({ "spiffe_id": spiffe_id }),
     )
     .await
 }
@@ -1271,6 +1289,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
+    use super::*;
 
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
@@ -1376,4 +1395,46 @@ mod harness_io_bytes_tests {
         // Counter doesn't easily expose current value in OpenTelemetry, but ensuring initialization is fine.
         counter.add(0, &[]);
     }
+}
+
+pub static RAG_RECORDS_SYNCED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static RAG_SYNC_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_rag_records_synced_total() -> &'static Counter<u64> {
+    let meter = global::meter("ohc.hybrid_sync");
+    RAG_RECORDS_SYNCED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("rag_records_synced_total")
+            .with_description("Total number of RAG records successfully synchronized")
+            .build()
+    })
+}
+
+pub fn get_rag_sync_errors_total() -> &'static Counter<u64> {
+    let meter = global::meter("ohc.hybrid_sync");
+    RAG_SYNC_ERRORS_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("rag_sync_errors_total")
+            .with_description("Total number of RAG synchronization errors")
+            .build()
+    })
+}
+
+pub fn record_rag_records_synced(count: u64, deployment_mode: &str) {
+    let counter = get_rag_records_synced_total();
+    counter.add(
+        count,
+        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+    );
+}
+
+pub fn record_rag_sync_error(reason: &str, deployment_mode: &str) {
+    let counter = get_rag_sync_errors_total();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
 }

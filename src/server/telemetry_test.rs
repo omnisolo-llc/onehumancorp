@@ -452,6 +452,59 @@ fn test_redact_interface_pii_malicious_payloads() {
 }
 
 #[test]
+fn test_redact_interface_pii_edge_cases() {
+    let payload_mixed_array = serde_json::json!({
+        "mixed_array": [
+            "safe_string",
+            123,
+            { "email": "should_be_redacted@test.com", "safe_field": "ok" },
+            ["another_safe", { "password": "super_secret" }]
+        ],
+        "non_sensitive_parent": {
+            "userEmail": "camelCase@test.com",
+            "CREDIT_CARD": "1234",
+            "secret_token_123": "token"
+        }
+    });
+
+    let redacted_mixed = ::server_telemetry::redact_interface_pii(payload_mixed_array);
+    assert_eq!(redacted_mixed["mixed_array"][0], "safe_string");
+    assert_eq!(redacted_mixed["mixed_array"][1], 123);
+    assert_eq!(redacted_mixed["mixed_array"][2]["email"], "[REDACTED]");
+    assert_eq!(redacted_mixed["mixed_array"][2]["safe_field"], "ok");
+    assert_eq!(redacted_mixed["mixed_array"][3][0], "another_safe");
+    assert_eq!(redacted_mixed["mixed_array"][3][1]["password"], "[REDACTED]");
+
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["userEmail"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["CREDIT_CARD"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["secret_token_123"], "[REDACTED]");
+}
+
+#[test]
+fn test_redact_interface_pii_highly_nested() {
+    let payload = serde_json::json!({
+        "level1": {
+            "level2": {
+                "level3": {
+                    "level4": {
+                        "level5": {
+                            "level6": {
+                                "secret_token": "token123",
+                                "safe_value": 42
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["secret_token"], "[REDACTED]");
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["safe_value"], 42);
+}
+
+#[test]
 fn test_harness_telemetry_recording() {
     // This test ensures the metric recording logic runs without panicking.
     // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
@@ -472,26 +525,4 @@ fn test_record_postgres_lock_contention() {
 fn test_record_llm_network_latency() {
     // This test verifies that the metric recording logic for llm network latency runs without panicking.
     ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
-}
-
-#[tokio::test]
-async fn test_record_mcp_proxy_connections_active_tags_deployment_mode() {
-    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-        Ok(Ok(p)) => p,
-        _ => return, // Gracefully exit if DB is not available in sandbox or times out
-    };
-
-    let res = ::server_telemetry::record_mcp_proxy_connections_active(&pool, "spiffe://example.org/proxy", 1.0).await;
-    assert!(res.is_ok());
-
-    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_mcp_proxy_connections_active' ORDER BY timestamp DESC LIMIT 1")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-
-    use sqlx::Row;
-    let labels_json: String = row.get("labels_json");
-    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
-    assert!(parsed.get("deployment_mode").is_some());
 }

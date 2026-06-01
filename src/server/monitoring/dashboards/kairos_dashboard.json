@@ -64,33 +64,18 @@
   "version": 1,
   "panels": [
     {
-      "id": 999,
-      "type": "text",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #FFF;\">\n<h1 style=\"margin: 0; font-size: 24px;\">KAIROS Dashboard</h1>\n</div>"
-      },
-      "transparent": true
-    },
-    {
       "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "id": 1,
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"color: #000; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID DASHBOARD</h1>\n  <p style=\"color: #000; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
+        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"color: #fff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID DASHBOARD</h1>\n  <p style=\"color: #fff; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
       },
       "transparent": true
     },
@@ -102,7 +87,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -191,7 +176,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -280,7 +265,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 11
       },
       "datasource": {
         "type": "prometheus",

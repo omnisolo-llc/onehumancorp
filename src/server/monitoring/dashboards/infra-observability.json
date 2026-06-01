@@ -44,8 +44,8 @@
   "liveNow": false,
   "panels": [
     {
-      "id": 999,
       "type": "text",
+      "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -54,22 +54,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #FFF;\">\n<h1 style=\"margin: 0; font-size: 24px;\">OHC Infra Observability</h1>\n</div>"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
       },
       "transparent": true
     },
@@ -82,11 +67,11 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "id": 1,
       "options": {
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"margin: 0; color: #000; font-size: 24px;\">OHC Infrastructure & Observability Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #000; font-size: 14px;\">Cloud & Standalone Core Metrics</p>\n</div>",
+        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">OHC Infrastructure & Observability Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #fff; font-size: 14px;\">Cloud & Standalone Core Metrics</p>\n</div>",
         "mode": "html"
       },
       "pluginVersion": "10.0.0",
@@ -154,7 +139,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -245,7 +230,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 3
       },
       "id": 3,
       "options": {

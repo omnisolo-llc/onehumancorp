@@ -10,8 +10,8 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
-    maxReplicas: 200
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   resources:
@@ -19,8 +19,8 @@ backend:
       cpu: "100m"
       memory: "128Mi"
     limits:
-      cpu: "500m"
-      memory: "4Gi"
+      cpu: "1000m"
+      memory: "2Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -55,8 +55,8 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
-    maxReplicas: 200
+    minReplicas: 3
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   resources:
@@ -64,21 +64,46 @@ ohcCore:
       cpu: "50m"
       memory: "64Mi"
     limits:
-      cpu: "250m"
+      cpu: "500m"
       memory: "1Gi"
 
-# Redis subchart (Bitnami) – used for session caching and pub/sub
-redis:
+# Valkey - Redis-compatible cache and pub/sub service
+valkey:
   enabled: true
-  architecture: standalone
-  auth:
-    enabled: false
   image:
-    registry: public.ecr.aws
-    repository: bitnami/redis
-global:
-  security:
-    allowInsecureImages: true
+    registry: docker.io
+    repository: valkey/valkey
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  dataStorage:
+    enabled: false
+    requestedSize: 1Gi
+    className: ""
+    accessModes:
+      - ReadWriteOnce
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "250m"
+      memory: "512Mi"
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - "ALL"
+  podSecurityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
 
 # CloudNative PostgreSQL operator cluster
 # Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
@@ -102,11 +127,11 @@ chatwoot:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
-    minReplicas: 5
-    maxReplicas: 50
+    minReplicas: 1
+    maxReplicas: 10
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
   resources:
@@ -114,15 +139,15 @@ chatwoot:
       cpu: "50m"
       memory: "128Mi"
     limits:
-      cpu: "250m"
+      cpu: "500m"
       memory: "1Gi"
   # Admin credentials used by OHC backend to auto-configure the inbox.
   adminEmail: admin@ohc.local
   # PostgreSQL connection for Chatwoot's own schema.
   # When cnpg.enabled=true, override this to point to the CNPG cluster.
   databaseUrl: ""   # defaults to in-cluster postgres service
-  # Redis URL – defaults to the same Redis as the OHC backend.
-  redisUrl: ""      # defaults to in-cluster redis service
+  # Redis-compatible URL - defaults to the in-cluster Valkey service.
+  redisUrl: ""
 
 # Multi-tenant configuration.
 # When multiTenant.enabled is true the backend uses the TenantRegistry so
@@ -145,11 +170,11 @@ powersync:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
-    minReplicas: 5
-    maxReplicas: 50
+    minReplicas: 1
+    maxReplicas: 10
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
   resources:
@@ -157,7 +182,7 @@ powersync:
       cpu: "50m"
       memory: "128Mi"
     limits:
-      cpu: "250m"
+      cpu: "500m"
       memory: "1Gi"
 
 # Kube-Prometheus-Stack for Cloud Observability
