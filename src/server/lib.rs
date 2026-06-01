@@ -1,7 +1,6 @@
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
-pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -518,37 +517,46 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let db1 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let db2 = db.clone();
+    let tenant_id2 = tenant_id.clone();
+    let db3 = db.clone();
+    let tenant_id3 = tenant_id.clone();
+    let db4 = db.clone();
+    let tenant_id4 = tenant_id.clone();
+
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+        tokio::spawn(async move {
+            match &db1.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id1).fetch_one(&db1.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id1).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db2.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id2).fetch_one(&db2.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id2).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db3.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id3).fetch_one(&db3.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id3).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db4.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id4).fetch_one(&db4.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id4).fetch_one(pool).await,
             }
-        }
+        })
     );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
+    let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(Ok(0.0)).unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
 
     (
         StatusCode::OK,
@@ -1110,13 +1118,13 @@ impl HubService for MyHubService {
                 let rev = auditor.get_total_revenue();
                 (llm, rev)
             }),
-            async move {
+            tokio::spawn(async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
-            }
+            })
         );
 
         let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
-        let storage_bytes = storage_bytes_res.unwrap_or(0);
+        let storage_bytes = storage_bytes_res.unwrap_or(Ok(0)).unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2565,7 +2573,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
-        .route("/brand-studio", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/team", axum::routing::get(ui_handler))
@@ -3722,7 +3729,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
-                        <a onclick="showScreen('brand-studio-screen')" id="nav-brand-studio">Brand Studio</a>
                         <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                         <a onclick="showScreen('inbox-screen')">Inbox</a>
@@ -3927,7 +3933,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
-                            <button onclick="showScreen('brand-studio-screen')">Create Brand Toolbox</button>
                             <button onclick="showScreen('calendar-screen')">Calendar</button>
                             <button onclick="showScreen('calendar-screen')">Calendar 📅</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -4787,14 +4792,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Zoom Integration -->
+                            <!-- Jitsi Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4950,7 +4955,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass">
+                    <div id="my-plan-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -4971,7 +4976,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass">
+                    <div id="cost-dashboard-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
@@ -5225,43 +5230,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
 
-                    <!-- Brand Studio Screen -->
-                    <div id="brand-studio-screen" class="screen glass" style="display: none; max-width: 1180px; margin: 32px auto; padding: 24px;">
-                        <div style="display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 24px; align-items: start;">
-                            <section class="card glass" style="margin: 0;">
-                                <p style="margin: 0 0 6px 0; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;">Brand Studio</p>
-                                <h1 style="margin: 0 0 12px 0;">Create Brand Toolbox</h1>
-                                <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Build a Brand DNA, logo directions, brand book, product catalog, photoshoot plan, campaign assets, and website draft from one business brief.</p>
-
-                                <label for="brand-toolbox-description" style="display:block; font-weight:700; margin-bottom:8px;">Business</label>
-                                <textarea id="brand-toolbox-description" style="width:100%; min-height:130px; box-sizing:border-box; resize:vertical; border-radius:8px; border:1px solid var(--border); padding:12px; margin-bottom:14px;">I run a local bakery called Luna Loaf that sells custom cakes and weekend dessert boxes.</textarea>
-
-                                <label for="brand-toolbox-website" style="display:block; font-weight:700; margin-bottom:8px;">Website URL</label>
-                                <input id="brand-toolbox-website" type="url" placeholder="https://example.com" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
-
-                                <label for="brand-toolbox-product" style="display:block; font-weight:700; margin-bottom:8px;">Product URL</label>
-                                <input id="brand-toolbox-product" type="url" placeholder="https://example.com/product" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
-
-                                <label for="brand-toolbox-campaign" style="display:block; font-weight:700; margin-bottom:8px;">Campaign Goal</label>
-                                <input id="brand-toolbox-campaign" type="text" value="launch a weekend dessert box offer" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:18px;" />
-
-                                <button id="brand-toolbox-generate" onclick="generateBrandToolbox(this)" style="width:100%; border-radius:8px;">Generate Toolbox</button>
-                                <button id="brand-toolbox-publish" class="secondary" onclick="publishBrandToolboxWebsite(this)" disabled style="width:100%; border-radius:8px; margin-top:10px;">Publish Website</button>
-                                <p id="brand-toolbox-status" role="status" style="min-height:22px; margin:14px 0 0 0; color: var(--text-secondary); font-size:14px;"></p>
-                            </section>
-
-                            <section class="card glass" id="brand-toolbox-results" style="margin: 0; min-height: 640px;">
-                                <div id="brand-toolbox-empty" style="display:flex; min-height:560px; align-items:center; justify-content:center; text-align:center; border:1px dashed var(--border); border-radius:12px;">
-                                    <div>
-                                        <h2 style="margin-bottom:8px;">Brand output will appear here</h2>
-                                        <p style="max-width:520px; color: var(--text-secondary);">Generate a complete toolbox for brand creation, website drafting, product presentation, campaigns, and channel-ready creative.</p>
-                                    </div>
-                                </div>
-                                <div id="brand-toolbox-content" style="display:none;"></div>
-                            </section>
-                        </div>
-                    </div>
-
                     <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
                         <div class="builder-container">
@@ -5486,221 +5454,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
-                        let currentBrandToolbox = null;
-
-                        function brandEscapeHtml(value) {
-                            return (value || '').toString()
-                                .replace(/&/g, '&amp;')
-                                .replace(/</g, '&lt;')
-                                .replace(/>/g, '&gt;')
-                                .replace(/"/g, '&quot;')
-                                .replace(/'/g, '&#039;');
-                        }
-
-                        function renderBrandList(items, renderItem) {
-                            return (items || []).map(renderItem).join('');
-                        }
-
-                        function syncWebsiteDraftToBuilder(draft) {
-                            currentSiteDraft = draft;
-                            if (draft && draft.pages && draft.pages.length > 0) {
-                                storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
-                                    id: 'brand-toolbox-' + index,
-                                    type: block.block_type,
-                                    content: block.content || {}
-                                }));
-                            }
-                        }
-
-                        function renderBrandToolbox(toolbox) {
-                            const empty = document.getElementById('brand-toolbox-empty');
-                            const content = document.getElementById('brand-toolbox-content');
-                            if (!empty || !content) return;
-
-                            empty.style.display = 'none';
-                            content.style.display = 'block';
-                            const dna = toolbox.brand_dna || {};
-                            const colors = dna.colors || [];
-                            const websiteBlocks = toolbox.website_draft && toolbox.website_draft.pages && toolbox.website_draft.pages[0]
-                                ? toolbox.website_draft.pages[0].blocks || []
-                                : [];
-
-                            content.innerHTML = `
-                                <div class="card" style="margin:0 0 16px 0; border-left:4px solid var(--primary);">
-                                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-                                        <div>
-                                            <p style="margin:0 0 4px 0; color:var(--primary); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;">Brand DNA</p>
-                                            <h2 id="brand-toolbox-name" style="margin:0 0 8px 0;">${brandEscapeHtml(dna.name)}</h2>
-                                            <p style="margin:0; color:var(--text-secondary);">${brandEscapeHtml(dna.positioning)}</p>
-                                        </div>
-                                        <div id="brand-toolbox-colors" aria-label="Brand colors" style="display:flex; gap:8px; align-items:flex-start;">
-                                            ${colors.map(color => `<span title="${brandEscapeHtml(color)}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:${brandEscapeHtml(color)};"></span>`).join('')}
-                                        </div>
-                                    </div>
-                                    <p style="margin:12px 0 0 0; color:var(--text-secondary);"><strong>Voice:</strong> ${brandEscapeHtml((dna.tone_of_voice || []).join(', '))}</p>
-                                </div>
-
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-                                    <section class="card" style="margin:0;">
-                                        <h2>Brand Book</h2>
-                                        ${renderBrandList(toolbox.brand_book, section => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(section.title)}</h3>
-                                                <p>${brandEscapeHtml((section.guidance || []).join(' '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Logo Concepts</h2>
-                                        ${renderBrandList(toolbox.logo_concepts, logo => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(logo.title)}</h3>
-                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${logo.svg || ''}</div>
-                                                <p>${brandEscapeHtml((logo.usage_notes || []).join(' '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Starter Catalog</h2>
-                                        ${renderBrandList(toolbox.catalog, item => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <div style="display:flex; justify-content:space-between; gap:12px;">
-                                                    <h3>${brandEscapeHtml(item.name)}</h3>
-                                                    <strong>${brandEscapeHtml(item.price)}</strong>
-                                                </div>
-                                                <p>${brandEscapeHtml(item.description)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.seo_title)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Campaign Ideas</h2>
-                                        ${renderBrandList(toolbox.campaign_ideas, idea => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(idea.title)}</h3>
-                                                <p>${brandEscapeHtml(idea.hook)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml((idea.channels || []).join(' / '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Social Calendar</h2>
-                                        ${renderBrandList(toolbox.social_calendar, item => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(item.day)} / ${brandEscapeHtml(item.channel)}</p>
-                                                <p>${brandEscapeHtml(item.caption)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.call_to_action)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Creative Assets</h2>
-                                        ${renderBrandList(toolbox.assets, asset => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(asset.asset_type)} / ${brandEscapeHtml(asset.channel)}</p>
-                                                <h3>${brandEscapeHtml(asset.title)}</h3>
-                                                <p>${brandEscapeHtml(asset.copy)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Photoshoot</h2>
-                                        <p>${brandEscapeHtml(toolbox.photoshoot && toolbox.photoshoot.product_source)}</p>
-                                        ${renderBrandList(toolbox.photoshoot ? toolbox.photoshoot.shots : [], shot => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(shot.title)}</h3>
-                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${shot.mockup_svg || ''}</div>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(shot.format)} / ${brandEscapeHtml(shot.usage)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Website Draft</h2>
-                                        <p>${websiteBlocks.length} ready-to-edit website blocks generated from the Brand DNA.</p>
-                                        <button class="secondary" onclick="showScreen('storefront-builder-screen'); renderStorefrontPreview();" style="width:100%; border-radius:8px;">Open Website Draft</button>
-                                        <p id="brand-toolbox-published-domain" style="margin-top:12px; font-weight:700;"></p>
-                                    </section>
-                                </div>
-                            `;
-                        }
-
-                        async function generateBrandToolbox(btn) {
-                            const description = document.getElementById('brand-toolbox-description').value.trim();
-                            const websiteUrl = document.getElementById('brand-toolbox-website').value.trim();
-                            const productUrl = document.getElementById('brand-toolbox-product').value.trim();
-                            const campaignPrompt = document.getElementById('brand-toolbox-campaign').value.trim();
-                            const status = document.getElementById('brand-toolbox-status');
-                            const publishBtn = document.getElementById('brand-toolbox-publish');
-
-                            if (description.length < 8) {
-                                status.textContent = 'Add a little more detail about the business first.';
-                                return;
-                            }
-
-                            btn.disabled = true;
-                            publishBtn.disabled = true;
-                            status.textContent = 'Generating brand toolbox...';
-
-                            try {
-                                const response = await fetch('/api/v1/builder/brand_toolbox/generate', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        description,
-                                        website_url: websiteUrl || null,
-                                        product_url: productUrl || null,
-                                        campaign_prompt: campaignPrompt || null,
-                                        uploaded_asset_names: []
-                                    })
-                                });
-
-                                if (!response.ok) throw new Error('Brand toolbox generation failed');
-                                currentBrandToolbox = await response.json();
-                                renderBrandToolbox(currentBrandToolbox);
-                                syncWebsiteDraftToBuilder(currentBrandToolbox.website_draft);
-                                publishBtn.disabled = !currentBrandToolbox.id;
-                                status.textContent = 'Brand toolbox ready.';
-                            } catch (e) {
-                                console.error(e);
-                                status.textContent = 'Could not generate the brand toolbox.';
-                            } finally {
-                                btn.disabled = false;
-                            }
-                        }
-
-                        async function publishBrandToolboxWebsite(btn) {
-                            const status = document.getElementById('brand-toolbox-status');
-                            if (!currentBrandToolbox || !currentBrandToolbox.id) {
-                                status.textContent = 'Generate a brand toolbox before publishing.';
-                                return;
-                            }
-
-                            btn.disabled = true;
-                            status.textContent = 'Publishing website...';
-
-                            try {
-                                const response = await fetch(`/api/v1/builder/brand_toolbox/${currentBrandToolbox.id}/publish_website`, {
-                                    method: 'POST'
-                                });
-                                if (!response.ok) throw new Error('Website publish failed');
-                                const site = await response.json();
-                                const domain = site.domain || 'Website published';
-                                const domainEl = document.getElementById('brand-toolbox-published-domain');
-                                if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
-                                status.textContent = 'Website published at ' + domain;
-                            } catch (e) {
-                                console.error(e);
-                                status.textContent = 'Could not publish the website.';
-                                btn.disabled = false;
-                            }
-                        }
 
                         function renderStorefrontPreview() {
                             const container = document.getElementById('builder-preview-container');
@@ -6212,7 +5965,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
                             'setup-screen': '/website-builder',
-                            'brand-studio-screen': '/brand-studio',
                             'storefront-builder-screen': '/storefront-builder',
                             'settings-screen': '/settings',
                             'checkout-screen': '/checkout',
@@ -6607,8 +6359,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setMainNavLabels(id) {
                             const labels = id === 'setup-screen'
-                                ? ['Overview', 'AI Assistants', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools']
-                                : ['Dashboard', 'Agents', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools'];
+                                ? ['Overview', 'AI Assistants', 'Setup', 'KAIROS', 'Connect Tools']
+                                : ['Dashboard', 'Agents', 'Setup', 'KAIROS', 'Connect Tools'];
                             document.querySelectorAll('#main-nav a').forEach((link, index) => {
                                 if (labels[index]) link.textContent = labels[index];
                             });
@@ -6839,7 +6591,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -6902,7 +6654,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 '/changelog': 'changelog-screen',
                                 '/builder': 'storefront-builder-screen',
                                 '/calendar': 'calendar-screen',
-                                '/brand-studio': 'brand-studio-screen',
                                 '/website-builder': 'setup-screen',
                                 '/services/new': 'services-screen',
                                 '/review-campaigns': 'seasonal-promo-screen',
