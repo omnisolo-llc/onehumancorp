@@ -99,8 +99,6 @@ impl LocalProxyClient {
                                                 details
                                             ).await;
 
-                                            ::server_telemetry::record_sandbox_violation(&e.reason, &e.command);
-
                                             (false, "".to_string(), error_msg)
                                         }
                                     }
