@@ -320,7 +320,7 @@ impl MiniMaxiProvider {
 #[async_trait]
 impl Provider for MiniMaxiProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::MiniMaxi }
-    fn description(&self) -> String { "MiniMaxi — cloud AI API with Anthropic-compatible and OpenAI-compatible endpoints. Can be used for any role (SWE, legal, sales, etc.).".to_string() }
+    fn description(&self) -> String { "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.).".to_string() }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "CEO".to_string(), "PRODUCT_MANAGER".to_string(), "SOFTWARE_ENGINEER".to_string(), "ENGINEERING_DIRECTOR".to_string(),
