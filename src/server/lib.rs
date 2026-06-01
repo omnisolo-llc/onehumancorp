@@ -2821,7 +2821,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
-        .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+                .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/v1/orders", api::orders::router(db.pool.clone(), hub.clone()))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -3683,7 +3684,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
+
+                            <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
+                            <a onclick="showScreen('orders-screen')" id="nav-orders">Orders</a>
+
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
                         <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
@@ -3693,7 +3697,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </nav>
 
                     <div id="mobile-bottom-nav">
+
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
+                        <button class="nav-item" onclick="showScreen('orders-screen')">📦<br>Orders</button>
+
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
@@ -5268,6 +5275,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
 <!-- Login Screen -->
+
+                    <div id="orders-screen" class="screen glass">
+                        <header>
+                            <h2>Orders & Shipping</h2>
+                        </header>
+
+                        <div id="orders-list-container" style="display: flex; flex-direction: column; gap: 16px; margin-top: 24px;">
+                            <!-- Seeded order for demo/e2e -->
+                            <div class="card glass" id="order-card-demo-123">
+                                <h3>Order #DEMO-123</h3>
+                                <p>Status: <span id="order-status-demo-123">Pending</span></p>
+                                <p>Customer: Carlos (123 Main St)</p>
+                                <p>Items: 2x Artisanal Coffee Roast</p>
+                                <div id="order-tracking-info-demo-123" style="display: none; margin-top: 10px; font-size: 14px;">
+                                    <p>Tracking: <span id="tracking-num-demo-123"></span></p>
+                                    <a id="tracking-label-demo-123" href="#" target="_blank" style="color: #0066FF;">Print Label</a>
+                                </div>
+
+                                <div id="shipping-actions-demo-123" style="margin-top: 16px;">
+                                    <button onclick="requestShippingRates('demo-123')" style="width: 100%;">Create Shipping Label</button>
+                                </div>
+
+                                <div id="shipping-rates-container-demo-123" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <h4>Available Rates</h4>
+                                    <ul id="rates-list-demo-123" style="list-style: none; padding: 0;"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="login-screen" class="screen glass">
                         <h1>Login</h1>
                         <h2 class="outfit">One Human Corp</h2>
@@ -5898,6 +5935,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
+                            'orders-screen': '/orders',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
@@ -6538,7 +6576,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'orders-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
