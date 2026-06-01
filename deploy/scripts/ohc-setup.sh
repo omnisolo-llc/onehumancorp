@@ -20,14 +20,14 @@ if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is req
 if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
 if ! command -v xvfb-run >/dev/null 2>&1; then echo -e "${PURPLE}xvfb-run is required for headless UI tests. Please install it.${RESET}"; fi
 
-echo -e "${DIM}[1/4] Checking environment configuration...${RESET}"
+echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
 if [ ! -f .env ]; then
   echo "Creating default .env file..."
   cat << 'ENV' > .env
 # Default Local Config
-OHC_LOG_LEVEL=info
-OHC_LOG_FORMAT=json
-OHC_PORT=8080
+LOG_LEVEL=info
+LOG_FORMAT=json
+PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
@@ -38,13 +38,13 @@ ENV
   chmod 0600 .env
 fi
 
-echo -e "${DIM}[2/4] Verifying Standalone Mode...${RESET}"
+echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 bazelisk test //src/server/api/...
 
-echo -e "${DIM}[3/4] Verifying Cloud Mode...${RESET}"
+echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
@@ -53,7 +53,14 @@ bazelisk test //src/server/api/...
 echo -e "${DIM}[X] Verifying .env setup...${RESET}"
 bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }
 
-echo -e "${DIM}[4/4] Generating Local Memory Log...${RESET}"
+echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
+if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
+    bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
+else
+    echo -e "${DIM}Audit script not found, skipping.${RESET}"
+fi
+
+echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
@@ -69,6 +76,7 @@ observations:
   - Developer executed ohc-setup.sh
 actions_taken:
   - Verified local environment
+  - Ran Day One audits
 resolution: Developer environment successfully initialized.
 MEM
 
