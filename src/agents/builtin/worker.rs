@@ -265,8 +265,8 @@ mod tests {
         let start = std::time::Instant::now();
         // Since we cannot mock the entire Tonic client easily, we mock the timeout mechanism logic
         // This validates the ML-Resilience 60s rule boundary by simulating a timeout
-        let result = tokio::time::timeout(Duration::from_millis(60), async {
-            tokio::time::sleep(Duration::from_millis(100)).await;
+        let result = tokio::time::timeout(Duration::from_millis(50), async {
+            tokio::time::sleep(Duration::from_millis(150)).await;
             Ok::<(), String>(())
         }).await;
 
