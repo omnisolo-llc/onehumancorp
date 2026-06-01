@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type WorkflowStatus = 'queued' | 'running' | 'completed' | 'failed';
 
