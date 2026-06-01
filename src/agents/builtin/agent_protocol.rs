@@ -7,12 +7,16 @@ use std::sync::Arc;
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct TaskRequest {
     pub input: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_input: Option<serde_json::Value>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct TaskResponse {
     pub task_id: String,
     pub input: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_input: Option<serde_json::Value>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -26,6 +30,13 @@ pub struct StepResponse {
     pub step_id: String,
     pub output: String,
     pub is_last: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifacts: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ErrorResponse {
+    pub error: String,
 }
 
 pub struct AgentProtocolServer {
@@ -41,7 +52,11 @@ impl AgentProtocolServer {
     pub async fn create_task(&self, req_json: &str) -> String {
         let req: TaskRequest = match serde_json::from_str(req_json) {
             Ok(r) => r,
-            Err(_) => return r#"{"error": "Invalid request"}"#.to_string(),
+            Err(_) => {
+                return serde_json::to_string(&ErrorResponse {
+                    error: "Invalid request".to_string(),
+                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+            }
         };
 
         // For simplicity, we just generate a task ID
@@ -50,16 +65,21 @@ impl AgentProtocolServer {
         let resp = TaskResponse {
             task_id,
             input: req.input,
+            additional_input: req.additional_input,
         };
 
-        serde_json::to_string(&resp).unwrap()
+        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
     pub async fn execute_step(&self, task_id: &str, req_json: &str) -> String {
         let req: StepRequest = match serde_json::from_str(req_json) {
             Ok(r) => r,
-            Err(_) => return r#"{"error": "Invalid request"}"#.to_string(),
+            Err(_) => {
+                return serde_json::to_string(&ErrorResponse {
+                    error: "Invalid request".to_string(),
+                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+            }
         };
 
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
@@ -72,11 +92,14 @@ impl AgentProtocolServer {
                     step_id: uuid::Uuid::new_v4().to_string(),
                     output: result,
                     is_last: true,
+                    artifacts: None,
                 };
-                serde_json::to_string(&resp).unwrap()
+                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
             Err(e) => {
-                format!(r#"{{"error": "{}"}}"#, e)
+                serde_json::to_string(&ErrorResponse {
+                    error: e.to_string(),
+                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
         }
     }
@@ -125,5 +148,56 @@ mod tests {
         assert_eq!(step_resp.task_id, task_id);
         assert_eq!(step_resp.output, "agent protocol success");
         assert!(step_resp.is_last);
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_create_task_invalid_json() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let req_json = r#"{"input": "do this task", "#; // Invalid JSON
+        let resp_json = server.create_task(req_json).await;
+
+        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(err_resp.error, "Invalid request");
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_execute_step_invalid_json() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let req_json = r#"{"input": "step 1", "#; // Invalid JSON
+        let resp_json = server.execute_step("task-123", req_json).await;
+
+        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(err_resp.error, "Invalid request");
+    }
+
+    struct FailingMockLlmClient;
+
+    #[async_trait::async_trait]
+    impl LlmClient for FailingMockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Err("LLM execution failed".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_execute_step_runner_failure() {
+        let client = Arc::new(FailingMockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let req_json = r#"{"input": "step 1"}"#;
+        let resp_json = server.execute_step("task-123", req_json).await;
+
+        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        assert!(err_resp.error.contains("LLM execution failed"));
     }
 }
