@@ -36,56 +36,9 @@ test.describe('Onboarding Wizard CUJ', () => {
     const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
     await generateBtn.click();
 
-    // 5. Verify it transitions to Step 2: Review Details
-    // Depending on backend speed we may need to increase timeout or just await visibility
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
-
-    // 6. Owner continues to Step 3: Style & Team
-    await page.getByRole('button', { name: /Continue/i }).click();
-    await expect(page.getByText('Style & Team')).toBeVisible();
-
-    // 7. Owner launches store
-    await page.getByRole('button', { name: /Launch Store/i }).click();
-
-    // 8. Verify it transitions to Live Screen
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    // 5. Verify it transitions to Live Screen (bypasses Step 2 and 3)
+    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 30000 });
     await expect(page.getByRole('link', { name: /Go to Dashboard/i })).toBeVisible();
-  });
-
-  // Test 2: Ensure validation fails on small name
-  test('Persona: Business Owner fails validation on short business name', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
-
-    // Owner enters short business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
-    await nameInput.fill('M');
-    await page.getByRole('button', { name: /Next/i }).click();
-    // In UI tests, name validation check returns true on short name when generating business, not next.
-    // Let's test the entire intake workflow error boundary
-
-    // We enter what they sell
-    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
-    await sellInput.fill('Cakes');
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // We enter location
-    const locInput = page.getByPlaceholder(/Portland, OR/i);
-    await locInput.fill('NY');
-
-    // Click generate, expect validation failure message
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
-    await generateBtn.click();
-
-    // Wait for step 2 (Review Details)
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
-
-    // In step 2, name is small, so try to continue, validation should fail
-    await page.getByRole('button', { name: /Continue/i }).click();
-    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
   });
 
   // Test 3: Validate missing location blocks progression
@@ -125,32 +78,5 @@ test.describe('Onboarding Wizard CUJ', () => {
     const backBtn = page.getByRole('button', { name: /Back/i });
     await backBtn.click();
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
-  });
-
-  // Test 5: Can cancel from Style & Team
-  test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
-
-    await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya Bakery');
-    await page.getByRole('button', { name: /Next/i }).click();
-    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
-    await page.getByRole('button', { name: /Next/i }).click();
-    await page.getByPlaceholder(/Portland, OR/i).fill('NY');
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
-
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: /Continue/i }).click();
-
-    await expect(page.getByText('Style & Team')).toBeVisible();
-
-    // Toggle auto-respond
-    const autoRespondToggle = page.getByRole('checkbox', { name: /Have my AI team automatically/i });
-    await expect(autoRespondToggle).toBeChecked();
-    await autoRespondToggle.uncheck();
-    await expect(autoRespondToggle).not.toBeChecked();
   });
 });

@@ -152,6 +152,7 @@ export default function OnboardingWizard() {
   const handleIntake = async () => {
     setIsLoading(true);
     setError('');
+    setStep(4); // Go to loading screen immediately
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -181,24 +182,7 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred processing details');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleStartOnboarding = async () => {
-    setIsLoading(true);
-    setError('');
-    setStep(4); // Go to loading screen
-
-    try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
+      // Immediately launch
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
         headers: {
@@ -207,17 +191,17 @@ export default function OnboardingWizard() {
           'X-User-ID': userId,
         },
         body: JSON.stringify({
-          business_type: businessType,
-          company_name: businessName,
+          business_type: intakeData.business_type || businessType,
+          company_name: intakeData.business_name || businessName,
           company_description: businessDescription || whatYouSell,
-          selling_categories: categories,
+          selling_categories: intakeData.categories || categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
           admin_name: 'Admin',
           admin_password: 'password123',
           website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
+          first_product_name: intakeData.initial_products?.[0]?.name || firstProductName,
+          first_product_price: intakeData.initial_products?.[0]?.price || firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed'
         })
@@ -227,19 +211,18 @@ export default function OnboardingWizard() {
         throw new Error('Failed to start onboarding');
       }
 
-      const result = await startRes.json();
-      setStartResult(result);
-      localStorage.setItem('has_onboarded', 'true');
-      setStep(5); // Go to "You're Live" screen
-
+      const startData = await startRes.json();
+      setStartResult(startData);
+      setStep(5); // Go to live screen
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An error occurred during onboarding');
-      setStep(3); // Go back to last input screen on error
+      setError(err.message || 'An error occurred processing details');
+      setStep(1); // Go back to start if there's an error
     } finally {
       setIsLoading(false);
     }
   };
+
 
   if (!isLoaded) return null;
 
@@ -395,209 +378,6 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Here's what our AI figured out. Feel free to tweak these.
-                </p>
-                <button
-                  onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                  Save Draft
-                </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
-                        type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                </div>
-              </div>
-
-              {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={() => {
-                    if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
-                      return;
-                    }
-                    setValidationError('');
-                    setStep(3);
-                  }}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
-                </p>
-                <button
-                  onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                  Save Draft
-                </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
-                      <div
-                        key={template}
-                        onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold text-sm">{template}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Domain Choice</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['subdomain', 'custom'].map(domain => (
-                      <div
-                        key={domain}
-                        onClick={() => setDomainChoice(domain)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === domain ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold text-sm capitalize">
-                          {domain === 'subdomain' ? 'Free Subdomain' : 'Custom Domain'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mt-2">
-                    {domainChoice === 'subdomain' ? 'Get a free .ohc.store domain instantly.' : 'Connect a domain you already own (e.g. mybusiness.com).'}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
-                       return (
-                         <div
-                           key={agent}
-                           onClick={() => {
-                             if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
-                             } else {
-                               setAiAgents([...aiAgents, agent]);
-                             }
-                           }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white'}`}
-                         >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                           </div>
-                         </div>
-                       );
-                    })}
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white">
-                    <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={aiAutoRespond}
-                      onChange={(e) => setAiAutoRespond(e.target.checked)}
-                    />
-                    <div className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'} relative`}>
-                       <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Launch Store
-                </button>
-              </div>
             </div>
           )}
 
