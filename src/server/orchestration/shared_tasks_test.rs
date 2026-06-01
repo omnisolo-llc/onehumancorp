@@ -460,10 +460,8 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
     let db = std::sync::Arc::new(db);
     let orchestrator = std::sync::Arc::new(SharedTaskOrchestrator::new(db.clone()));
 
-    // Ensure telemetry init is called to fulfill Observability heartbeat requirements
     let _ = crate::telemetry::get_error_signal_counter();
 
-    // Create 50 tasks
     for i in 0..50 {
         let task = SharedTaskV4 {
             id: format!("task_concurrent_{}", i),
@@ -489,7 +487,6 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
 
     let claimed_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    // Spawn 10 concurrent claimers
     for agent_id in 0..10 {
         let orch = orchestrator.clone();
         let count = claimed_count.clone();
@@ -497,7 +494,7 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
             let mut local_claims = 0;
             loop {
                 let agent_str = format!("agent_{}", agent_id);
-                if let Ok(Some(task)) = orch.claim_task("org_concurrent", &agent_str).await {
+                if let Ok(Some(_)) = orch.claim_task("org_concurrent", &agent_str).await {
                     local_claims += 1;
                 } else {
                     break;

@@ -290,7 +290,6 @@ mod tests {
     async fn test_process_closed_tasks_concurrently() {
         let _ = crate::telemetry::get_error_signal_counter();
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        // We test only when db is present to ensure test actually runs in CI
         if database_url == "dummy" { return; }
 
         let pool = sqlx::postgres::PgPoolOptions::new()
