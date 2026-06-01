@@ -11,7 +11,6 @@ pub struct PythonNativeExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
-#[derive(Default, Debug, Clone)]
 
 #[async_trait::async_trait]
 impl CodeNativeTool for PythonNativeExecutor {
