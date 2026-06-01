@@ -135,9 +135,9 @@ impl OpenAIClientConfig {
     pub fn minimax(api_key: impl Into<String>, base_url: Option<String>) -> Self {
         Self {
             api_key: api_key.into(),
-            base_url: base_url.unwrap_or_else(|| "https://api.minimax.chat/v1".to_string()),
+            base_url: base_url.unwrap_or_else(|| "https://api.minimaxi.com/v1".to_string()),
             default_model: Some(
-                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string()),
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string()),
             ),
             embedding_model: std::env::var("MINIMAX_EMBEDDING_MODEL")
                 .unwrap_or_else(|_| "embo-01".to_string()),
@@ -217,9 +217,22 @@ fn normalize_api_base_url(base_url: &str) -> String {
     let trimmed = base_url.trim().trim_end_matches('/').to_string();
     for suffix in ["/chat/completions", "/embeddings"] {
         if let Some(root) = trimmed.strip_suffix(suffix) {
-            return root.trim_end_matches('/').to_string();
+            return normalize_api_base_url(root);
         }
     }
+
+    if let Some(root) = trimmed.strip_suffix("/anthropic/v1") {
+        return format!("{}/v1", root.trim_end_matches('/'));
+    }
+
+    if let Some(root) = trimmed.strip_suffix("/anthropic") {
+        return format!("{}/v1", root.trim_end_matches('/'));
+    }
+
+    if trimmed == "https://api.minimax.io" || trimmed == "https://api.minimaxi.com" {
+        return format!("{}/v1", trimmed);
+    }
+
     trimmed
 }
 
@@ -643,7 +656,31 @@ mod tests {
         let client = OpenAIClient::minimax("key", None);
         assert_eq!(
             client.chat_completions_url(),
-            "https://api.minimax.chat/v1/chat/completions"
+            "https://api.minimaxi.com/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn normalizes_minimaxi_root_urls() {
+        assert_eq!(
+            normalize_api_base_url("https://api.minimaxi.com"),
+            "https://api.minimaxi.com/v1"
+        );
+        assert_eq!(
+            normalize_api_base_url("https://api.minimax.io"),
+            "https://api.minimax.io/v1"
+        );
+    }
+
+    #[test]
+    fn normalizes_minimaxi_anthropic_urls_to_openai_compatible_root() {
+        assert_eq!(
+            normalize_api_base_url("https://api.minimaxi.com/anthropic"),
+            "https://api.minimaxi.com/v1"
+        );
+        assert_eq!(
+            normalize_api_base_url("https://api.minimax.io/anthropic/v1"),
+            "https://api.minimax.io/v1"
         );
     }
 }
