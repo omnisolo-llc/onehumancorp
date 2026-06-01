@@ -17,7 +17,7 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
+        const mercadoCard = page.locator('.rounded-\\[16px\\]').filter({ hasText: 'Mercado Pago' }).first();
         const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
 
         // Mock window alert
@@ -28,7 +28,7 @@ test.describe('Integrations Loop', () => {
         await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
 
         // Let's connect Zoom
-        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
+        const zoomCard = page.locator('.rounded-\\[16px\\]').filter({ hasText: 'ZoomAutomated' }).first();
         const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
         await connectZoomButton.click();
 

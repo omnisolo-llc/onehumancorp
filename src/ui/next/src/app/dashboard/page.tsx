@@ -123,7 +123,7 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+        if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
@@ -137,29 +137,9 @@ export default function Dashboard() {
     }
     checkMilestones();
   }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
   useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
-      try {
-        const res = await fetch('/api/v1/growth/milestones/check');
-        const data = await res.json();
-        if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-
-    setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
+    setBannerDismissed(typeof localStorage !== 'undefined' ? localStorage.getItem('milestone_banner_dismissed') === 'true' : false);
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -178,7 +158,7 @@ export default function Dashboard() {
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
-        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        const queue = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]") : [];
         setOfflineQueueCount(queue.length);
       } catch(e) {}
     };
@@ -186,7 +166,7 @@ export default function Dashboard() {
     const handleOnline = async () => {
       setIsOffline(false);
       try {
-        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        const queue = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]") : [];
         if (queue.length > 0) {
           const res = await fetch("/api/v1/sync/offline", {
             method: "POST",
@@ -194,7 +174,7 @@ export default function Dashboard() {
             body: JSON.stringify({ mutations: queue })
           });
           if (res.ok) {
-            localStorage.setItem("ohc_offline_queue", "[]");
+            if (typeof localStorage !== 'undefined') localStorage.setItem("ohc_offline_queue", "[]");
             setOfflineQueueCount(0);
           }
         }
@@ -219,7 +199,7 @@ export default function Dashboard() {
     const queueCheckInterval = setInterval(() => {
       if (!navigator.onLine) {
          try {
-           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           const queue = typeof localStorage !== 'undefined' ? JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]") : [];
            if (queue.length !== offlineQueueCount) setOfflineQueueCount(queue.length);
          } catch(e) {}
       }
@@ -274,8 +254,8 @@ export default function Dashboard() {
 
     const fetchMetrics = async () => {
         try {
-            const token = localStorage.getItem('token') || 'test-token';
-            const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+            const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') || 'test-token' : 'test-token';
+            const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
 
             const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
@@ -308,12 +288,11 @@ export default function Dashboard() {
 
     fetchMetrics();
 
+    return () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", updateOfflineStatus);
         window.removeEventListener("storage", handleStorage);
         clearInterval(queueCheckInterval);
-
-    return () => {
         if (ws) ws.close();
     };
   }, []);
@@ -647,11 +626,11 @@ export default function Dashboard() {
                      </div>
                      <button
                          onClick={() => {
-                             const tenant = localStorage.getItem('tenant') || 'DEFAULT';
+                             const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'DEFAULT' : 'DEFAULT';
                              const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
-                             localStorage.setItem('milestone_banner_dismissed', 'true');
+                             if (typeof localStorage !== 'undefined') localStorage.setItem('milestone_banner_dismissed', 'true');
                              setBannerDismissed(true);
                              fetch('/api/v1/growth/referrals/click', {
                                  method: 'POST',

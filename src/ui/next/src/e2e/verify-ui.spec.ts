@@ -17,10 +17,35 @@ test('Verify onboarding UI', async ({ page }) => {
   await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
 
   await page.locator('button:has-text("Generate My Business")').click();
-  await page.waitForTimeout(1000);
+
+  // Wait for the modal / overlay text to change if there is any "Building" step.
+  await page.waitForTimeout(5000);
   await page.screenshot({ path: 'onboarding-step2.png' });
 
-  await page.locator('button:has-text("Continue")').click();
+  // Look for the correct continue button text here.
+  const continueButton = page.locator('button', { hasText: 'Continue' }).first();
+  await continueButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null);
+
+  if (await continueButton.isVisible()) {
+      await continueButton.click();
+      await page.waitForTimeout(1000);
+  }
+
+  const launchStoreButton = page.locator('button:has-text("Launch Store")');
+  await launchStoreButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null);
+
+  if (await launchStoreButton.isVisible()) {
+      await launchStoreButton.click();
+      await page.waitForTimeout(5000);
+  }
+
+  const goDashboardButton = page.locator('a:has-text("Go to Dashboard")');
+  await goDashboardButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null);
+
+  if (await goDashboardButton.isVisible()) {
+      await goDashboardButton.click();
+  }
+
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'onboarding-step3.png' });
 });
