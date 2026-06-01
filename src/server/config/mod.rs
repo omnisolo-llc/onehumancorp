@@ -46,9 +46,7 @@ pub struct AppConfig {
 static INSTANCE: OnceLock<AppConfig> = OnceLock::new();
 
 pub fn get() -> &'static AppConfig {
-    INSTANCE.get_or_init(|| {
-        load().expect("Failed to load configuration")
-    })
+    INSTANCE.get_or_init(|| load().expect("Failed to load configuration"))
 }
 
 pub fn load() -> Result<AppConfig, ::config::ConfigError> {
@@ -67,14 +65,11 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .set_default("headless", false)?
         .set_default("agent_auth_disabled", false)?
         .set_default("telemetry_enabled", false)?
-
         // Optional file
         .add_source(::config::File::with_name("ohc").required(false))
         .add_source(::config::File::with_name("~/.openclaw/ohc").required(false))
-
         // Env vars with OHC_ prefix
         .add_source(::config::Environment::with_prefix("OHC"))
-
         // Env vars without prefix (for standard ones like DATABASE_URL)
         .add_source(::config::Environment::default())
         .build()?;
@@ -92,7 +87,6 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 
     Ok(cfg)
 }
-
 
 pub fn get_safe_user_dir() -> std::path::PathBuf {
     let dir = if let Ok(home) = std::env::var("USERPROFILE") {
@@ -114,12 +108,12 @@ pub struct StandaloneModeEnforcer;
 
 impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
-        let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
+        let is_test =
+            std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
         let env_standalone =
             std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
-        let is_standalone = env_standalone
-            || cfg.standalone
-            || (!is_test && cfg.database_url.is_none());
+        let is_standalone =
+            env_standalone || cfg.standalone || (!is_test && cfg.database_url.is_none());
 
         if !is_standalone {
             return cfg;
@@ -148,12 +142,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
                 base_sqlite_url.clone()
-            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
                 base_sqlite_url.clone()
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
             base_sqlite_url.clone()
         } else {
             base_sqlite_url
@@ -168,13 +162,20 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 use std::os::unix::fs::OpenOptionsExt;
                 use std::os::unix::fs::PermissionsExt;
 
-                let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
+                let db_path = sqlite_url
+                    .strip_prefix("sqlite://")
+                    .unwrap_or(sqlite_url.as_str())
+                    .split('?')
+                    .next()
+                    .unwrap_or("ohc-standalone.db");
                 if let Some(parent) = std::path::Path::new(db_path).parent() {
                     if !parent.as_os_str().is_empty() {
-                        #[cfg(unix)] use std::os::unix::fs::DirBuilderExt;
+                        #[cfg(unix)]
+                        use std::os::unix::fs::DirBuilderExt;
                         let mut builder = std::fs::DirBuilder::new();
                         builder.recursive(true);
-                        #[cfg(unix)] builder.mode(0o700);
+                        #[cfg(unix)]
+                        builder.mode(0o700);
                         let _ = builder.create(parent);
                     }
                 }
@@ -192,7 +193,8 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
                                     tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
-                                    panic!("Failed to securely update existing standalone database file permissions: {}", e); // Fail-closed gracefully
+                                    panic!("Failed to securely update existing standalone database file permissions: {}", e);
+                                    // Fail-closed gracefully
                                 }
                             }
                         }
@@ -208,7 +210,9 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.multitenant = false;
 
         // Strict opt-in constraint for local sovereignty in standalone
-        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED")
+            .unwrap_or_else(|_| "false".to_string())
+            == "true";
         if explicit_opt_in {
             tracing::info!("standalone: Telemetry explicitly opted-in by user.");
             cfg.telemetry_enabled = true;
@@ -218,7 +222,6 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg
     }
 }
-
 
 #[cfg(test)]
 mod tests {

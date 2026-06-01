@@ -1,15 +1,23 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
-use std::sync::Arc;
-use std::path::{Path, PathBuf};
-use regex::Regex;
 use once_cell::sync::Lazy;
+use regex::Regex;
+use serde_json::{json, Value};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
-static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").unwrap());
-static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").unwrap());
-static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap());
+static RS_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)",
+    )
+    .unwrap()
+});
+static PY_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").unwrap());
+static TS_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap()
+});
 
 /// SOTA Harness Pattern: Aider's RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -65,13 +73,21 @@ impl RepoMapExecutor {
             let name = entry.file_name().to_string_lossy().to_string();
 
             // Skip common hidden or build directories
-            if name.starts_with('.') || name == "target" || name == "node_modules" || name == "dist" || name == "build" {
+            if name.starts_with('.')
+                || name == "target"
+                || name == "node_modules"
+                || name == "dist"
+                || name == "build"
+            {
                 continue;
             }
 
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
-                map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix))?);
+                map.push_str(&Self::generate_map_recursive(
+                    path,
+                    format!("{}  ", prefix),
+                )?);
             } else {
                 map.push_str(&format!("{}📄 {}\n", prefix, name));
 
@@ -79,11 +95,16 @@ impl RepoMapExecutor {
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         let sigs = Self::extract_signatures(&content, ext);
-                        for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
+                        for sig in sigs.iter().take(10) {
+                            // Limit to top 10 signatures per file to keep it compact
                             map.push_str(&format!("{}  │ {}\n", prefix, sig));
                         }
                         if sigs.len() > 10 {
-                            map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
+                            map.push_str(&format!(
+                                "{}  │ ... ({} more)\n",
+                                prefix,
+                                sigs.len() - 10
+                            ));
                         }
                     }
                 }
@@ -108,27 +129,36 @@ impl ToolExecutor for RepoMapExecutor {
         // Fix path traversal: canonicalize both paths and verify target is within workspace
         let abs_workspace = std::fs::canonicalize(&self.workspace_path)
             .unwrap_or_else(|_| self.workspace_path.clone());
-        let abs_target = std::fs::canonicalize(&target_path)
-            .map_err(|_| ToolError::LlmRecoverable(format!("Path does not exist: {}", target_path.display())))?;
+        let abs_target = std::fs::canonicalize(&target_path).map_err(|_| {
+            ToolError::LlmRecoverable(format!("Path does not exist: {}", target_path.display()))
+        })?;
 
         if !abs_target.starts_with(&abs_workspace) {
-            return Err(ToolError::LlmRecoverable("Path Traversal Denied: target path is outside the workspace directory.".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "Path Traversal Denied: target path is outside the workspace directory."
+                    .to_string(),
+            ));
         }
 
         if !abs_target.exists() {
-             return Err(ToolError::LlmRecoverable(format!("Path does not exist: {}", abs_target.display())));
+            return Err(ToolError::LlmRecoverable(format!(
+                "Path does not exist: {}",
+                abs_target.display()
+            )));
         }
 
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string()))
-            .await
-            .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
-            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        let map = tokio::task::spawn_blocking(move || {
+            RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string())
+        })
+        .await
+        .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
+        .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let mut final_output = format!("RepoMap for {}:\n", target_path.display());
         if map.is_empty() {
-             final_output.push_str("(Empty or access denied)");
+            final_output.push_str("(Empty or access denied)");
         } else {
-             final_output.push_str(&map);
+            final_output.push_str(&map);
         }
 
         Ok(final_output)
@@ -156,8 +186,8 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_repomap_generation() {
@@ -169,10 +199,18 @@ mod tests {
         fs::create_dir(&src_dir).unwrap();
 
         let rs_file = src_dir.join("main.rs");
-        fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").unwrap();
+        fs::write(
+            &rs_file,
+            "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n",
+        )
+        .unwrap();
 
         let py_file = src_dir.join("utils.py");
-        fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").unwrap();
+        fs::write(
+            &py_file,
+            "def do_something():\n  pass\n\nclass Data:\n  pass\n",
+        )
+        .unwrap();
 
         let ts_file = src_dir.join("app.ts");
         fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").unwrap();
