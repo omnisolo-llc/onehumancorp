@@ -28,6 +28,7 @@ pub struct IntegrationsRegistry {
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
     pub razorpay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>>>,
     pub manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
+    pub messagebird_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::messagebird::provider::MessagebirdProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     pub daily_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::daily::provider::DailyProvider>>>,
@@ -70,6 +71,7 @@ impl IntegrationsRegistry {
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            messagebird_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -153,6 +155,23 @@ impl IntegrationsRegistry {
                              tokio::spawn(async move {
                                  if let Err(e) = client.send_sms(&to, &from, &text).await {
                                      tracing::error!("Failed to send Twilio SMS: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 "messagebird" => {
+                     if !creds.from_phone.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let from = creds.from_phone.clone();
+                         let text = content.to_string();
+
+                         let clients = self.messagebird_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                     tracing::error!("Failed to send Messagebird SMS: {}", e);
                                  }
                              });
                          }
@@ -295,6 +314,11 @@ impl IntegrationsRegistry {
         if integration_id == "easypost" {
             let mut clients = self.easypost_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "messagebird" {
+            let mut clients = self.messagebird_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::messagebird::provider::MessagebirdProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "manychat" {
@@ -473,7 +497,7 @@ impl IntegrationsRegistry {
 
 
     pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
-        let client = {
+        let client_manychat = {
             if integration_id == "manychat" {
                 let clients = self.manychat_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -481,7 +505,19 @@ impl IntegrationsRegistry {
                 None
             }
         };
-        if let Some(c) = client {
+        if let Some(c) = client_manychat {
+            return c.fetch_conversations().await;
+        }
+
+        let client_messagebird = {
+            if integration_id == "messagebird" {
+                let clients = self.messagebird_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_messagebird {
             return c.fetch_conversations().await;
         }
         Err("integration not found or not supported".to_string())
@@ -548,6 +584,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+        if integration_id == "messagebird" {
+            let clients = self.messagebird_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_sms(to, from, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "twilio" {
                 let clients = self.twilio_clients.read().unwrap();
