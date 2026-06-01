@@ -58,7 +58,7 @@ pub struct S3BlobProvider {
 
 impl S3BlobProvider {
     pub fn new() -> Self {
-        let endpoint = env::var("OHC_S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
+        let endpoint = env::var("S3_ENDPOINT").unwrap_or_else(|_| "https://s3.amazonaws.com".to_string());
         Self {
             bucket: "ohc-multi-tenant-blobs".to_string(),
             endpoint,
