@@ -159,7 +159,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_api_call_cost_total{organization_id=\"$tenant\"}[5m])) by (entity)",
+          "expr": "sum(rate(ohc_api_call_cost{organization_id=\"$tenant\"}[5m])) by (entity)",
           "interval": "",
           "legendFormat": "{{entity}}",
           "refId": "A"
@@ -234,7 +234,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_storage_rw_cost_total{organization_id=\"$tenant\"}[5m])) by (operation)",
+          "expr": "sum(rate(ohc_storage_rw_cost{organization_id=\"$tenant\"}[5m])) by (operation)",
           "interval": "",
           "legendFormat": "{{operation}}",
           "refId": "A"
@@ -309,7 +309,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_email_send_cost_total{organization_id=\"$tenant\"}[5m]))",
+          "expr": "sum(rate(ohc_email_send_cost{organization_id=\"$tenant\"}[5m]))",
           "interval": "",
           "legendFormat": "Emails",
           "refId": "A"
