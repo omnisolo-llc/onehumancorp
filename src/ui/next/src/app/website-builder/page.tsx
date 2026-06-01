@@ -250,27 +250,13 @@ export default function WebsiteBuilderPage() {
   };
 
   if (status === "idle") {
-    const handleBack = () => {
-      if (wizardStep === 1) setWizardStep(0);
-      else if (wizardStep === 2) setWizardStep(1);
-      else if (wizardStep === 3) setWizardStep(2);
-      else if (wizardStep === 4) setWizardStep(3);
-      else if (wizardStep === 5) setWizardStep(4);
-      else if (wizardStep === 6) setWizardStep(5);
-      else if (wizardStep === 7) setWizardStep(6);
-      else if (wizardStep === '7.5') setWizardStep(7);
-      else if (wizardStep === 8) setWizardStep('7.5');
-      else if (wizardStep === '8.5') setWizardStep(8);
-      else if (wizardStep === 9) setWizardStep('8.5');
-      else if (wizardStep === 'instant-build') setWizardStep(0);
-    };
-
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
         <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
           <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
           <div  id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+
 
           <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
 
@@ -296,12 +282,12 @@ export default function WebsiteBuilderPage() {
 
             <div className={`animate-fade-in ${wizardStep !== 0 ? 'mt-10' : 'mt-4'}`} style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
 
+
               {wizardStep === 0 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
-                  <h2 className="text-xl font-semibold font-outfit text-gray-800 dark:text-[#e5e5e7] mb-2">Your business, live in minutes.</h2>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
+                    Review and add any extra details to help our AI generate the perfect store.
                   </p>
 
                   <div className="flex flex-col gap-4">
