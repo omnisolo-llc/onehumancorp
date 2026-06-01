@@ -4,12 +4,23 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
+import { useEffect } from 'react';
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [tier, setTier] = useState("Starter");
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tierParam = searchParams.get('tier');
+    if (tierParam) {
+      setTier(tierParam);
+    }
+  }, []);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -39,11 +50,11 @@ export default function CheckoutPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout - {tier} Plan</h1>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <p className="text-gray-700">Please enter your payment details below for the {tier} plan.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
