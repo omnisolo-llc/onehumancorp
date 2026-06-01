@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+  const [actionFeed, setActionFeed] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
@@ -138,6 +139,17 @@ export default function Dashboard() {
     checkMilestones();
 
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
+    async function fetchActionFeed() {
+      try {
+        const res = await fetch('/api/agents/approvals/activity');
+        const data = await res.json();
+        if (data && data.pending_approvals) {
+          setActionFeed(data.pending_approvals);
+        }
+      } catch (e) {
+        console.error("Failed to fetch activity feed", e);
+      }
+    }
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -150,6 +162,7 @@ export default function Dashboard() {
       }
     }
     fetchApprovals();
+    fetchActionFeed();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
@@ -603,6 +616,52 @@ export default function Dashboard() {
                                     <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
                                         <div className="text-gray-400 mb-1">Technical Payload:</div>
                                         <pre>{payload}</pre>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </section>
+         )}
+
+         {/* Action Feed (Recent Activities) */}
+         {(actionFeed.length > 0) && (
+            <section className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Feed</h2>
+                </div>
+                <div className="flex flex-col gap-4">
+                    {actionFeed.map(activity => {
+                        return (
+                            <div key={activity.id} className="p-4 shadow-sm flex flex-col gap-2" style={{ background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(0, 0, 0, 0.05)', borderRadius: '12px' }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-md" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+                                        {activity.department === 'customer_success' || activity.department === 'CustomerSuccess' ? '🤝' : activity.department === 'operations' || activity.department === 'Operations' ? '⚙️' : '🤖'}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-sm font-outfit text-gray-900 capitalize">
+                                            {activity.status === 'Approved' ? 'Approved by' : activity.status === 'Rejected' ? 'Rejected by' : 'Auto-Executed by'} {activity.department === 'customer_success' || activity.department === 'CustomerSuccess' ? 'CustomerSuccess' : activity.department}
+                                        </h3>
+                                        <p className="text-gray-600 font-inter text-sm">{activity.description}</p>
+                                    </div>
+                                </div>
+                                {activity.status === 'PendingApproval' && (
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            onClick={() => handleApprove(activity.id, false)}
+                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            onClick={() => handleApprove(activity.id, true)}
+                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                            style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
+                                        >
+                                            Review & Send
+                                        </button>
                                     </div>
                                 )}
                             </div>
