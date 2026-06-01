@@ -33,10 +33,8 @@ impl ConfigSyncServer {
             return Err(tonic::Status::invalid_argument("Invalid tool_id"));
         }
 
-        let parsed = ::server_auth::parse_spiffe_id(&req.spiffe_id).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
-        if tenant_id.is_empty() {
-            return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
+        if req.spiffe_id.is_empty() {
+            return Err(tonic::Status::unauthenticated("Missing SPIFFE ID"));
         }
 
         let params: SyncParams = serde_json::from_str(&req.params)
@@ -55,7 +53,7 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "hash": hash,
-                })).unwrap_or_else(|_| "".to_string());
+                })).unwrap();
                 Ok(McpInvokeResponse { payload: resp_payload })
             }
             "push_config" => {
@@ -73,7 +71,7 @@ impl ConfigSyncServer {
                     }
                 }
 
-                let config_str = serde_json::to_string(&payload).unwrap_or_else(|_| "".to_string());
+                let config_str = serde_json::to_string(&payload).unwrap();
                 if config_str.len() > max_size {
                     return Err(tonic::Status::invalid_argument("Config payload too large"));
                 }
@@ -105,7 +103,7 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "merged": true,
-                })).unwrap_or_else(|_| "".to_string());
+                })).unwrap();
                 Ok(McpInvokeResponse { payload: resp_payload })
             }
             _ => Err(tonic::Status::invalid_argument("Invalid action")),

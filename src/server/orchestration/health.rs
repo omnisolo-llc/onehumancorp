@@ -41,7 +41,7 @@ pub async fn run_health_monitor(
 
             if let Some(sync_queue) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
                 if sync_queue > 100 {
-                    tracing::trace!("HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}", sync_queue);
+                    tracing::warn!("HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}", sync_queue);
                 }
             }
         }
@@ -53,14 +53,13 @@ pub async fn run_health_monitor(
                     tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
-                let mut active_agent_ids = std::collections::HashSet::with_capacity(agents.len());
+                let mut active_agent_ids = std::collections::HashSet::new();
                 for (agent_id, _status) in agents {
                     active_agent_ids.insert(agent_id.clone());
                 }
 
-                let hub_agents = monitor_hub.get_agents().await;
-                let mut to_fire = Vec::with_capacity(hub_agents.len());
-                for agent in hub_agents.iter() {
+                let mut to_fire = Vec::new();
+                for agent in monitor_hub.get_agents().await.iter() {
                     // Fire agents that are missing from active agents mesh list OR if ping failed
                     if !active_agent_ids.contains(&agent.id) || !ping_ok {
                         to_fire.push(agent.id.clone());
@@ -101,13 +100,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
@@ -164,13 +163,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -205,13 +204,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
         if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
