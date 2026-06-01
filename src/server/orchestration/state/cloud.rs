@@ -10,6 +10,14 @@ use chrono::Utc;
 use crate::orchestration::mesh::TeammateMesh;
 use super::MeshLockGuard;
 
+fn state_manager_timeout() -> std::time::Duration {
+    std::env::var("OHC_STATE_MANAGER_TIMEOUT_MS")
+        .ok()
+        .and_then(|raw| raw.parse::<u64>().ok())
+        .map(std::time::Duration::from_millis)
+        .unwrap_or_else(|| std::time::Duration::from_secs(2))
+}
+
 pub struct CloudStateManager {
     db: Arc<DB>,
     mesh: Arc<dyn TeammateMesh>,
@@ -142,7 +150,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
         };
 
-        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
+        match tokio::time::timeout(state_manager_timeout(), transition_future).await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -152,7 +160,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
-                let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
+                let _lock_guard = match tokio::time::timeout(state_manager_timeout(), acquire_future).await {
             Ok(Ok(guard)) => guard,
             Ok(Err(e)) => {
                 if e.contains("is currently locked") || e.contains("Timeout") {
@@ -188,7 +196,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         .bind(limit)
         .fetch_all(&mut *tx);
 
-        let rows = match tokio::time::timeout(std::time::Duration::from_secs(2), rows_future).await {
+        let rows = match tokio::time::timeout(state_manager_timeout(), rows_future).await {
             Ok(Ok(rows)) => rows,
             Ok(Err(e)) => return Err(e.to_string()),
             Err(_) => {
