@@ -65,7 +65,7 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -77,7 +77,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -652,22 +652,19 @@ mod tests {
             let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
             assert!(res.is_ok());
 
-            // Verify STUCK mission was marked FAILED
-            let row_stuck = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_id'")
+            // Verify STUCK mission was deleted
+            let count_stuck: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'stuck_mission_id'")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-            use sqlx::Row;
-            let status_stuck: String = row_stuck.get("status");
-            assert_eq!(status_stuck, "FAILED");
+            assert_eq!(count_stuck, 0);
 
-            // Verify stale PENDING mission was marked FAILED
-            let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
+            // Verify stale PENDING mission was deleted
+            let count_stale: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'stale_pending_mission_id'")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-            let status_stale: String = row_stale.get("status");
-            assert_eq!(status_stale, "FAILED");
+            assert_eq!(count_stale, 0);
 
             // Verify normal PENDING mission is still PENDING
             let row_normal = sqlx::query("SELECT status FROM agent_missions WHERE id = 'normal_pending_mission_id'")
