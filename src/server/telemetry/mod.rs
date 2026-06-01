@@ -95,7 +95,7 @@ pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
     HARNESS_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.harness");
         meter
-            .f64_histogram("harness_execution_latency")
+            .f64_histogram("ohc_harness_command_duration_seconds")
             .with_description("Execution latency for Harness")
             .build()
     })
@@ -1042,6 +1042,11 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("ip_address")
         || k.contains("mac_address")
         || k.contains("geolocation")
+        || k.contains("medical")
+        || k.contains("health")
+        || k.contains("salary")
+        || k.contains("tax")
+        || k.contains("social_security")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1157,7 +1162,7 @@ pub fn get_bubblewrap_spawn_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_SPAWN_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("BubblewrapSpawnTotal")
+            .i64_up_down_counter("ohc_harness_executions_total")
             .with_description("Total number of Bubblewrap process spawns")
             .build()
     })
@@ -1167,7 +1172,7 @@ pub fn get_bubblewrap_execution_latency() -> &'static Histogram<f64> {
     BUBBLEWRAP_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .f64_histogram("BubblewrapExecutionLatency")
+            .f64_histogram("ohc_harness_execution_duration_ms")
             .with_description("Execution latency of Bubblewrap processes")
             .build()
     })
@@ -1177,7 +1182,7 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("BubblewrapViolationTotal")
+            .i64_up_down_counter("ohc_harness_security_violation_total")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })
@@ -1262,12 +1267,109 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    use super::*;
 
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
+    }
+}
+
+pub async fn record_sync_completed_count(
+    pool: &PgPool,
+    count: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_autodream_sync_completed_total",
+        "counter",
+        count,
+        serde_json::json!({}),
+    )
+    .await
+}
+
+pub async fn record_sync_failed_count(
+    pool: &PgPool,
+    count: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_autodream_sync_failed_total",
+        "counter",
+        count,
+        serde_json::json!({}),
+    )
+    .await
+}
+pub static TASKS_COMPLETED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_FAILED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASKS_TRANSITIONS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_tasks_completed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_COMPLETED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_completed_total")
+            .with_description("Total number of successfully completed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_failed_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_FAILED_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_failed_total")
+            .with_description("Total number of failed shared tasks")
+            .build()
+    })
+}
+
+pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
+    let meter = global::meter("orchestration_state_machine");
+    TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
+        meter
+            .u64_counter("tasks_transitions_total")
+            .with_description("Total number of task state transitions")
+            .build()
+    })
+}
+
+static HARNESS_IO_BYTES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_harness_io_bytes_total() -> &'static Counter<u64> {
+    HARNESS_IO_BYTES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .u64_counter("ohc_harness_io_bytes_total")
+            .with_description("Total I/O bytes recorded by Harness")
+            .build()
+    })
+}
+
+pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
+    let counter = get_harness_io_bytes_total();
+    counter.add(
+        bytes,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+            opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+        ],
+    );
+}
+
+#[cfg(test)]
+mod harness_io_bytes_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_harness_io_bytes() {
+        // Just calling it ensures it doesn't panic
+        record_harness_io_bytes("test_agent", "test_task", 1024);
+        let counter = get_harness_io_bytes_total();
+        // Counter doesn't easily expose current value in OpenTelemetry, but ensuring initialization is fine.
+        counter.add(0, &[]);
     }
 }

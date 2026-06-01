@@ -31,7 +31,7 @@ impl CloudSyncService {
 #[async_trait::async_trait]
 impl SyncDeltas for CloudSyncService {
     async fn sync_deltas(&self, deltas: Vec<SyncDelta>) -> Result<(), String> {
-        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
         let telemetry_enabled = env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
 
         if is_standalone && !telemetry_enabled {
@@ -88,7 +88,6 @@ impl SyncDeltas for CloudSyncService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // We mock the DB for tests, but doing so via integration tests is better.
     // For unit testing here, we avoid starting a full postgres instance by relying on standard traits or a simple mock.

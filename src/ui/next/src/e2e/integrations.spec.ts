@@ -4,11 +4,36 @@ test.describe('Integrations Loop', () => {
     test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {
         await page.goto('http://localhost:3000/integrations');
 
-        const connectMercadoPagoButton = page.locator('button:has-text("Connect")').nth(3);
-        await expect(connectMercadoPagoButton).toBeVisible();
+        // Verify all 10 integrations exist with their respective names and descriptions
+        await expect(page.locator('h3:has-text("Ayrshare")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Cal.com")')).toBeVisible();
+        await expect(page.locator('h3:has-text("MailerLite")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Mercado Pago")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Shippo")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Twilio Conversations")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Whereby")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
-        const connectCalComButton = page.locator('button:has-text("Connect")').nth(1);
-        await expect(connectCalComButton).toBeVisible();
+        // Let's connect Mercado Pago
+        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
+        const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
+
+        // Mock window alert
+        page.on('dialog', dialog => dialog.accept());
+        await connectMercadoPagoButton.click();
+
+        // Verify state changed
+        await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
+
+        // Let's connect Zoom
+        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
+        const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
+        await connectZoomButton.click();
+
+        // Verify state changed
+        await expect(zoomCard.locator('button:has-text("Manage")')).toBeVisible();
 
     });
 

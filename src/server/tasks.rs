@@ -483,7 +483,6 @@ impl TaskManager {
 mod tests {
     use super::*;
     #[test]
-    #[test]
     fn test_task_manager_mesh_broadcast() {
         let tm = TaskManager::new();
         let broadcast_called = std::sync::Arc::new(std::sync::Mutex::new(false));
@@ -509,8 +508,9 @@ mod tests {
         assert_eq!(*event_type_captured.lock().unwrap(), "task_status_updated");
         assert!(!payload_captured.lock().unwrap().is_empty(), "Payload should not be empty");
     }
+    #[tokio::test]
 
-    fn test_create_and_get_task() {
+    async fn test_create_and_get_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
         
@@ -665,6 +665,34 @@ mod tests {
             .bind(&task.id)
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
+    }
+
+
+    #[test]
+    fn test_poll_tasks() {
+        let tm = TaskManager::new();
+
+        let mut task1 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 1".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        task1.status = "PENDING".to_string();
+        tm.insert_task(task1.clone());
+
+        let mut task2 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 2".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        task2.status = "PENDING".to_string();
+        task2.approval_status = Some("PENDING".to_string());
+        tm.insert_task(task2.clone());
+
+        let mut task3 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 3".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        task3.status = "IN_PROGRESS".to_string();
+        tm.insert_task(task3.clone());
+
+        let tasks = tm.poll_tasks("agent1", 10);
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].id, task1.id);
+
+        let fetched_task1 = tm.get_task(&task1.id).unwrap();
+        assert_eq!(fetched_task1.status, "IN_PROGRESS");
+        assert_eq!(fetched_task1.assigned_agent_id, Some("agent1".to_string()));
     }
 
 }

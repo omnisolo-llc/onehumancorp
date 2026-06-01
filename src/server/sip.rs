@@ -65,7 +65,7 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -219,20 +219,7 @@ impl SipDB {
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
-
         let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
-            let _permit = if is_standalone {
-                match get_sqlite_limiter().try_acquire() {
-                    Ok(p) => Some(p),
-                    Err(_) => {
-                        let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "delegate_mission_with_tx").await;
-                        Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
-                    }
-                }
-            } else {
-                None
-            };
             self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
         }).await;
 
@@ -248,7 +235,7 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
@@ -362,7 +349,7 @@ mod tests {
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -509,7 +496,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_logic_success() {
-        let database_url = match std::env::var("DATABASE_URL") {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
@@ -597,9 +584,9 @@ mod tests {
         assert!(res_dummy.is_err());
 
         // Now, if a real database is available, test the actual logic.
-        let database_url = match std::env::var("DATABASE_URL") {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no DATABASE_URL
+            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
         };
 
         if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
@@ -629,6 +616,26 @@ mod tests {
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stuck_mission_id")
                 .bind("STUCK")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_running_mission_id")
+                .bind("RUNNING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_in_progress_mission_id")
+                .bind("IN_PROGRESS")
                 .bind("{}")
                 .bind("test_org")
                 .bind(old_time.naive_utc())
@@ -674,6 +681,22 @@ mod tests {
             let status_stuck: String = row_stuck.get("status");
             assert_eq!(status_stuck, "FAILED");
 
+            // Verify stuck RUNNING mission was marked FAILED
+            let row_running = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_running_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_running: String = row_running.get("status");
+            assert_eq!(status_running, "FAILED");
+
+            // Verify stuck IN_PROGRESS mission was marked FAILED
+            let row_in_progress = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_in_progress_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_in_progress: String = row_in_progress.get("status");
+            assert_eq!(status_in_progress, "FAILED");
+
             // Verify stale PENDING mission was marked FAILED
             let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
                 .fetch_one(&pool)
@@ -692,7 +715,7 @@ mod tests {
 
             // Clean up using a transaction
             let mut tx_clean = pool.begin().await.unwrap();
-            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stuck_running_mission_id', 'stuck_in_progress_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();
@@ -702,7 +725,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_drain_mission_queue_success() {
-        let database_url = match std::env::var("DATABASE_URL") {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
