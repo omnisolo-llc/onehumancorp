@@ -58,7 +58,6 @@ impl LocalProxyClient {
                 "shell".to_string(),
                 "fs_read".to_string(),
                 "fs_write".to_string(),
-                "local_fs_sync".to_string(),
             ],
         };
         let _ = tx
@@ -166,17 +165,6 @@ impl LocalProxyClient {
                                             "".to_string(),
                                             "Invalid params for fs_write".to_string(),
                                         )
-                                    }
-                                }
-
-                                "local_fs_sync" => {
-                                    let tool = LocalFSSyncTool::new(
-                                        std::env::var("HOME")
-                                            .unwrap_or_else(|_| "/tmp".to_string()),
-                                    );
-                                    match tool.execute(&req.params).await {
-                                        Ok((s, r, e)) => (s, r, e),
-                                        Err(err) => (false, "".to_string(), err),
                                     }
                                 }
                                 _ => (
