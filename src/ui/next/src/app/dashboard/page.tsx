@@ -1181,6 +1181,34 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Link-in-Bio Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Social Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #fdfbfb, #ebedee)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Connect Your Socials</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Instantly generate a beautiful, mobile-optimized link-in-bio page for your TikTok or Instagram. It automatically syncs with your OHC bookings and products.</p>
+                    <Link
+                        href="/link-in-bio"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                    >
+                        <span>📱 Preview Link-in-Bio</span>
+                    </Link>
+                </div>
+                <div className="w-full md:w-1/3 bg-white rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px] shadow-sm">
+                    <div className="text-4xl mb-3">🔗</div>
+                    <span className="text-sm font-medium text-gray-600 text-center">+30% higher conversion</span>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
