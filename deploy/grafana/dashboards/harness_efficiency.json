@@ -119,7 +119,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_bucket[5m])) by (le, deployment_mode))",
+          "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_seconds_bucket[5m])) by (le, deployment_mode))",
           "legendFormat": "{{deployment_mode}} P95",
           "range": true,
           "refId": "A"
@@ -211,8 +211,8 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_bucket[5m])) by (le, deployment_mode))",
-          "legendFormat": "{{deployment_mode}} P95",
+          "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_seconds_bucket[5m])) by (le, deployment_mode, operation))",
+          "legendFormat": "{{deployment_mode}} {{operation}} P95",
           "range": true,
           "refId": "A"
         }
@@ -304,7 +304,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_harness_execution_duration_ms_bucket[5m])) by (le, deployment_mode))",
           "legendFormat": "{{deployment_mode}} P95",
           "range": true,
           "refId": "A"
