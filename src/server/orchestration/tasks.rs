@@ -92,15 +92,6 @@ impl TaskDecompositionService {
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
-
-                for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)")
-                        .bind(&task.id)
-                        .bind(dep)
-                        .execute(&self.db.pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let deps_str =
@@ -138,22 +129,13 @@ impl TaskDecompositionService {
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
-
-                for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
-                        .bind(&task.id)
-                        .bind(dep)
-                        .execute(sqlite_pool)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
             }
         }
 
         Ok(task)
     }
 
-    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, String> {
+    pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
         let mut attempt = 0;
         let max_attempts = 3;
         let timeout = task_claim_timeout();
@@ -163,7 +145,7 @@ impl TaskDecompositionService {
         loop {
             attempt += 1;
             let now = Utc::now();
-            let claim_future = self.claim_task_inner(organization_id, agent_id, now);
+            let claim_future = self.claim_task_inner(agent_id, now);
             match tokio::time::timeout(timeout, claim_future).await {
                 Ok(res) => return res,
                 Err(_) => {
@@ -184,7 +166,6 @@ impl TaskDecompositionService {
 
     async fn claim_task_inner(
         &self,
-        organization_id: &str,
         agent_id: &str,
         now: chrono::DateTime<Utc>,
     ) -> Result<Option<SharedTask>, String> {
@@ -199,18 +180,17 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     SELECT st.id FROM shared_tasks_decomposition st
-                    WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                     AND NOT EXISTS (
                         SELECT 1
-                        FROM task_dependencies std
-                        JOIN shared_tasks_decomposition parent ON parent.id = std.depends_on_task_id
-                        WHERE std.task_id = st.id AND parent.status != 'COMPLETED'
+                        FROM json_array_elements_text(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
+                        WHERE parent.status != 'COMPLETED'
                     )
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED
                     "#,
                 )
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -229,7 +209,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
+                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
                     WHERE id = $3
                     "#,
                 )
@@ -245,7 +225,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'EXECUTING', $3, $4)
+                    VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
                     "#
                 )
                 .bind(trans_id)
@@ -303,15 +283,15 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                    SET status = 'IN_PROGRESS', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
-                        WHERE st.organization_id = ? AND (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                        WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                         AND NOT EXISTS (
                             SELECT 1
-                            FROM task_dependencies std
-                            JOIN shared_tasks_decomposition parent ON parent.id = std.depends_on_task_id
-                            WHERE std.task_id = st.id AND parent.status != 'COMPLETED'
+                            FROM json_each(st.dependencies) AS dep_id
+                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
+                            WHERE parent.status != 'COMPLETED'
                         )
                         LIMIT 1
                     )
@@ -320,7 +300,6 @@ impl TaskDecompositionService {
                 )
                 .bind(agent_id)
                 .bind(now.to_rfc3339())
-                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -339,7 +318,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'EXECUTING', ?, ?)
+                    VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
                     "#
                 )
                 .bind(trans_id)
@@ -894,12 +873,6 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
@@ -1001,7 +974,7 @@ mod tests {
         // Simulate some time in queue
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
+        let claimed_opt = service.claim_task("agent-1").await.unwrap();
         assert!(claimed_opt.is_some());
 
         // Simulate execution time
@@ -1054,12 +1027,6 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1185,12 +1152,12 @@ mod tests {
         service.create_task(task2).await.unwrap();
 
         // Attempt to claim. Should get task 1 because task 2 is blocked.
-        let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
+        let claimed_opt = service.claim_task("agent-1").await.unwrap();
         assert!(claimed_opt.is_some());
         assert_eq!(claimed_opt.unwrap().id, "task-1");
 
         // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
-        let claimed_opt2 = service.claim_task("org-123", "agent-2").await.unwrap();
+        let claimed_opt2 = service.claim_task("agent-2").await.unwrap();
         assert!(claimed_opt2.is_none());
 
         // Complete task 1
@@ -1200,7 +1167,7 @@ mod tests {
             .unwrap();
 
         // Attempt to claim. Should get task 2 now.
-        let claimed_opt3 = service.claim_task("org-123", "agent-2").await.unwrap();
+        let claimed_opt3 = service.claim_task("agent-2").await.unwrap();
         assert!(claimed_opt3.is_some());
         assert_eq!(claimed_opt3.unwrap().id, "task-2");
     }
@@ -1348,12 +1315,12 @@ mod tests {
             service.create_task(task2).await.unwrap();
 
             // Attempt to claim. Should get task 1 because task 2 is blocked.
-            let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
+            let claimed_opt = service.claim_task("agent-1").await.unwrap();
             assert!(claimed_opt.is_some());
             assert_eq!(claimed_opt.unwrap().id, "task-pg-1");
 
             // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
-            let claimed_opt2 = service.claim_task("org-123", "agent-2").await.unwrap();
+            let claimed_opt2 = service.claim_task("agent-2").await.unwrap();
             assert!(claimed_opt2.is_none());
 
             // Complete task 1
@@ -1363,7 +1330,7 @@ mod tests {
                 .unwrap();
 
             // Attempt to claim. Should get task 2 now.
-            let claimed_opt3 = service.claim_task("org-123", "agent-2").await.unwrap();
+            let claimed_opt3 = service.claim_task("agent-2").await.unwrap();
             assert!(claimed_opt3.is_some());
             assert_eq!(claimed_opt3.unwrap().id, "task-pg-2");
         }
@@ -1569,12 +1536,6 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
@@ -1590,7 +1551,7 @@ mod chaos_tests {
 
         // Insert 100 tasks
         for i in 0..100 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies, organization_id) VALUES (?, 'PENDING', '[]', 'test_org')")
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_{}", i))
                 .execute(&pool).await.unwrap();
         }
@@ -1601,7 +1562,7 @@ mod chaos_tests {
             handles.push(tokio::spawn(async move {
                 let agent_id = format!("agent_{}", i);
                 let start = std::time::Instant::now();
-                let res = svc_clone.claim_task("test_org", &agent_id).await;
+                let res = svc_clone.claim_task(&agent_id).await;
                 let elapsed = start.elapsed();
                 (res, elapsed.as_micros() as u64)
             }));
@@ -1664,12 +1625,6 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
-        ).execute(&pool).await.unwrap();
-        sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
@@ -1685,7 +1640,7 @@ mod chaos_tests {
 
         // Insert 10 tasks
         for i in 0..10 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies, organization_id) VALUES (?, 'PENDING', '[]', 'test_org')")
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_sa_{}", i))
                 .execute(&pool).await.unwrap();
         }
@@ -1696,7 +1651,7 @@ mod chaos_tests {
             handles.push(tokio::spawn(async move {
                 let agent_id = format!("agent_sa_{}", i);
                 let start = std::time::Instant::now();
-                let res = svc_clone.claim_task("test_org", &agent_id).await;
+                let res = svc_clone.claim_task(&agent_id).await;
                 let elapsed = start.elapsed();
                 (res, elapsed.as_micros() as u64)
             }));

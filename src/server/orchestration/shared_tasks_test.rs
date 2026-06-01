@@ -68,7 +68,7 @@ async fn test_shared_task_orchestrator() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_sqlite() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .unwrap();
 
@@ -146,7 +146,7 @@ async fn test_shared_task_orchestrator_sqlite() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_sqlite_dependencies() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .unwrap();
 
@@ -244,7 +244,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
 #[tokio::test]
 async fn test_shared_task_orchestrator_update_and_list_sqlite() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .unwrap();
 
@@ -413,4 +413,104 @@ async fn test_shared_task_orchestrator_dependencies() {
         let claimed_none = orchestrator.claim_task("org_123_pg", "agent_2_pg").await.unwrap();
         assert!(claimed_none.is_none());
     }
+}
+
+#[tokio::test]
+async fn test_shared_task_orchestrator_concurrent_claim() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite://file::memory:?cache=shared")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id VARCHAR PRIMARY KEY,
+            organization_id VARCHAR NOT NULL,
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'PENDING',
+            agent_id VARCHAR,
+            priority VARCHAR NOT NULL DEFAULT 'P2',
+            payload TEXT,
+            parent_plan_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            transitioned_at TEXT
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let db = crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool) };
+    let db = std::sync::Arc::new(db);
+    let orchestrator = std::sync::Arc::new(SharedTaskOrchestrator::new(db.clone()));
+
+    let _ = crate::telemetry::get_error_signal_counter();
+
+    for i in 0..50 {
+        let task = SharedTaskV4 {
+            id: format!("task_concurrent_{}", i),
+            organization_id: "org_concurrent".to_string(),
+            title: format!("Concurrent Task {}", i),
+            description: None,
+            status: "PENDING".to_string(),
+            agent_id: None,
+            priority: "P1".to_string(),
+            payload: None,
+            parent_plan_id: None,
+            dependencies: "[]".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: None,
+        };
+        orchestrator.create_task(task).await.unwrap();
+    }
+
+    let mut handles = vec![];
+
+    let claimed_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+    for agent_id in 0..10 {
+        let orch = orchestrator.clone();
+        let count = claimed_count.clone();
+        handles.push(tokio::spawn(async move {
+            let mut local_claims = 0;
+            loop {
+                let agent_str = format!("agent_{}", agent_id);
+                if let Ok(Some(_)) = orch.claim_task("org_concurrent", &agent_str).await {
+                    local_claims += 1;
+                } else {
+                    break;
+                }
+            }
+            count.fetch_add(local_claims, std::sync::atomic::Ordering::SeqCst);
+        }));
+    }
+
+    for handle in handles {
+        let _ = handle.await;
+    }
+
+    assert_eq!(claimed_count.load(std::sync::atomic::Ordering::SeqCst), 50);
+
+    let list = orchestrator.list_tasks("org_concurrent").await.unwrap();
+    let assigned_tasks = list.iter().filter(|t| t.status == "ASSIGNED").count();
+    assert_eq!(assigned_tasks, 50);
 }

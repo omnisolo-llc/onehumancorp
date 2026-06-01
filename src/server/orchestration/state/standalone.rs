@@ -9,13 +9,6 @@ use std::sync::Arc;
 use super::MeshLockGuard;
 use crate::orchestration::mesh::TeammateMesh;
 
-fn state_manager_timeout() -> std::time::Duration {
-    std::env::var("OHC_STATE_MANAGER_TIMEOUT_MS")
-        .ok()
-        .and_then(|raw| raw.parse::<u64>().ok())
-        .map(std::time::Duration::from_millis)
-        .unwrap_or_else(|| std::time::Duration::from_secs(2))
-}
 
 pub struct StandaloneStateManager {
     db: Arc<DB>,
@@ -67,7 +60,7 @@ impl StandaloneStateManager {
             .unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
-        if to_state == "EXECUTING" {
+        if to_state == "IN_PROGRESS" {
             let deps_str: String = row
                 .try_get("dependencies")
                 .unwrap_or_else(|_| "[]".to_string());
@@ -181,7 +174,7 @@ impl StateManager for StandaloneStateManager {
             .await
         };
 
-        match tokio::time::timeout(state_manager_timeout(), transition_future).await {
+        match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), transition_future).await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -236,7 +229,7 @@ impl StateManager for StandaloneStateManager {
         };
 
         let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
-            state_manager_timeout(),
+            crate::orchestration::state::state_manager_timeout(),
             acquire_and_fetch,
         )
         .await
