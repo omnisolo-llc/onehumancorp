@@ -1,7 +1,6 @@
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
-pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -285,7 +284,6 @@ pub use ::server_common as common;
 pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
-pub mod voice;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -1048,8 +1046,8 @@ impl HubService for MyHubService {
 
     async fn get_my_plan(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
@@ -1082,7 +1080,7 @@ impl HubService for MyHubService {
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
@@ -1094,8 +1092,8 @@ impl HubService for MyHubService {
 
     async fn get_cost_dashboard(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
@@ -1125,7 +1123,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -1138,8 +1136,8 @@ impl HubService for MyHubService {
 
     async fn select_plan(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::SelectPlanRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::SelectPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
                 let tenant_id = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .map(|a| a.org_id.clone())
             .filter(|id| !id.is_empty())
@@ -1176,7 +1174,7 @@ impl HubService for MyHubService {
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::SelectPlanResponse {
             success: true,
             checkout_url: url,
         }))
@@ -1184,8 +1182,8 @@ impl HubService for MyHubService {
 
     async fn cancel_subscription(
         &self,
-        request: tonic::Request<crate::ohc::orchestration::CancelSubscriptionRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
@@ -1196,16 +1194,16 @@ impl HubService for MyHubService {
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(crate::ohc::orchestration::CancelSubscriptionResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::CancelSubscriptionResponse {
             success: true,
         }))
     }
 
     async fn download_invoice(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
-        Ok(tonic::Response::new(crate::ohc::orchestration::DownloadInvoiceResponse {
+        _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::orchestration::DownloadInvoiceResponse {
             pdf_url: "https://invoice.stripe.com/...".to_string(),
         }))
     }
@@ -1226,8 +1224,8 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -1237,8 +1235,8 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -1621,7 +1619,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<crate::ohc::orchestration::SharedTask>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -1631,7 +1629,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(crate::ohc::orchestration::SharedTask {
+        Ok(Response::new(::server_ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -1655,7 +1653,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -1664,8 +1662,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<crate::ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(crate::ohc::orchestration::SharedTask {
+        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -1746,7 +1744,7 @@ async fn get_pending_approvals(
         let limit = 100;
         let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
 
-        let mapped_tasks: Vec<crate::ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
             let mut proposed_content = "".to_string();
             if let Some(payload) = &task.payload {
                 if let Some(draft) = payload.get("draft_copy") {
@@ -1763,7 +1761,7 @@ async fn get_pending_approvals(
                 proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
             }
 
-            crate::ohc::orchestration::SharedTask {
+            ::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.tenant_id,
                 parent_plan_id: "".to_string(),
@@ -1903,7 +1901,7 @@ async fn get_pending_approvals(
 
     async fn publish_mesh_event(
         &self,
-        request: Request<crate::ohc::orchestration::PublishMeshEventRequest>,
+        request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(event) = req.event {
@@ -2015,10 +2013,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<crate::ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(tonic::Response::new(crate::ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
@@ -2239,7 +2237,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
         };
-        let msg = crate::ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "system".to_string(),
             action: event_type,
             status: "ok".to_string(),
@@ -2488,7 +2486,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
-        .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -2848,13 +2845,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3047,10 +3043,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
+        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
-        .add_service(crate::ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;
@@ -3735,7 +3731,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
+                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                         <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
@@ -3780,61 +3776,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
 
                         <script>
-                            async function saveCatalogItem() {
+                            function saveCatalogItem() {
                                 const name = document.getElementById('item-name').value;
-                                const price = document.getElementById('item-price').value;
-                                const duration = document.getElementById('item-duration').value;
-                                const description = document.getElementById('item-desc').value;
-                                const item_type = document.querySelector('input[name="item_type"]:checked').value;
-
                                 if (!name) {
                                     alert('Please enter a name.');
                                     return;
                                 }
-
-                                try {
-                                    const response = await fetch('/api/v1/catalog/product', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
-                                    });
-
-                                    if (response.status === 402) {
-                                        const errorData = await response.json();
-                                        if (errorData.error === 'LIMIT_EXCEEDED') {
-                                            document.getElementById('upgrade-modal-message').innerText = errorData.message || "You've reached your product limit. Upgrade to Starter to add up to 100 products.";
-                                            document.getElementById('upgrade-modal').style.display = 'flex';
-                                            return;
-                                        }
-                                    }
-
-                                    if (response.ok) {
-                                        alert('Saved ' + name + ' successfully!');
-                                        document.getElementById('item-name').value = '';
-                                        document.getElementById('item-price').value = '';
-                                        document.getElementById('item-duration').value = '';
-                                        document.getElementById('item-desc').value = '';
-                                        showScreen('dashboard-screen');
-                                    } else {
-                                        alert('Error saving product');
-                                    }
-                                } catch (e) {
-                                    console.error(e);
-                                    alert('Error saving product');
-                                }
+                                alert('Saved ' + name + ' successfully!');
+                                document.getElementById('item-name').value = '';
+                                document.getElementById('item-price').value = '';
+                                document.getElementById('item-duration').value = '';
+                                document.getElementById('item-desc').value = '';
+                                showScreen('dashboard-screen');
                             }
                         </script>
-                    </div>
-
-
-                    <!-- Upgrade Modal -->
-                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
-                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
-                            <h2 style="margin-top: 0;">Limit Reached</h2>
-                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
-                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
-                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
-                        </div>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -4055,7 +4010,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
+                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
@@ -4394,15 +4349,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>AI Departments</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
-
-                        <div class="card glass" id="voice-ai-config" style="display:block; margin-bottom: 20px;">
-                            <h2>Select an AI Voice</h2>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
-                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
-                            <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
-                        </div>
 
                         <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
                             <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
@@ -4837,14 +4783,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Zoom Integration -->
+                            <!-- Jitsi Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -5000,7 +4946,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass">
+                    <div id="my-plan-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -5021,7 +4967,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass">
+                    <div id="cost-dashboard-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
@@ -5157,25 +5103,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">Online Store</button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">Service Business</button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">Restaurant / Food</button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">Creative</button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -5183,7 +5129,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -5194,7 +5140,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -5202,20 +5148,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Create your account</h1>
                             <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -5226,17 +5172,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
@@ -5253,13 +5199,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -5268,7 +5214,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-launch-ai" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
@@ -5352,8 +5298,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="domain-setup active" id="domain-step-1">
                                 <p>Choose your domain option:</p>
-                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">Free OHC Subdomain</button>
-                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">Connect Custom Domain</button>
+                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
                             </div>
                             <div class="domain-setup" id="domain-step-free">
                                 <p>Your free domain:</p>
