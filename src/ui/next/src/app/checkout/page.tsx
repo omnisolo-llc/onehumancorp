@@ -114,6 +114,17 @@ export default function CheckoutPage() {
         </div>
       </main>
 
+      {/* Powered by OHC Viral Badge */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+        <a
+          href="ohc://join?ref=checkout-viral"
+          className="group flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-gray-200/50 dark:border-white/10 rounded-full shadow-lg text-sm text-gray-500 hover:text-[#1D1D1F] dark:hover:text-white transition-all hover:scale-105 hover:shadow-xl cursor-pointer"
+        >
+          <span className="font-inter font-medium tracking-wide">⚡ Powered by</span>
+          <span className="font-outfit font-bold tracking-tight">OHC</span>
+        </a>
+      </div>
+
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
