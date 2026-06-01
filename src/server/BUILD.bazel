@@ -594,6 +594,7 @@ test_suite(
         "chaos",
         "db",
         "hub",
+        "minimax",
         "msgbus",
         "pipeline",
         "powersync",
