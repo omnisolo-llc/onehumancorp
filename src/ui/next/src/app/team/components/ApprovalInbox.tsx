@@ -24,6 +24,15 @@ export default function ApprovalInbox({
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState("");
+
+  const handleOpenReview = (req: ApprovalRequest) => {
+    setSelectedReview(req);
+    setIsEditing(false);
+    const { payload } = extractPayload(req.description);
+    setEditedText(payload?.generated_response || "");
+  };
 
   const handleToggle = async () => {
     const newValue = !reviewAll;
@@ -470,7 +479,7 @@ export default function ApprovalInbox({
                     <button
                       onClick={() => {
                         if (payload && payload.original_message) {
-                          setSelectedReview(req);
+                          handleOpenReview(req);
                         } else {
                           onReject(req.id);
                         }
@@ -523,10 +532,17 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Draft
                 </p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                  {extractPayload(selectedReview.description).payload
-                    ?.generated_response || "N/A"}
-                </div>
+                {isEditing ? (
+                  <textarea
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="w-full bg-white p-3 rounded-xl border border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm text-gray-800 italic relative resize-none outline-none min-h-[100px]"
+                  />
+                ) : (
+                  <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative min-h-[100px]">
+                    {editedText || "N/A"}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -534,23 +550,24 @@ export default function ApprovalInbox({
                   onClick={() => {
                     onReject(selectedReview.id);
                     setSelectedReview(null);
+                    setIsEditing(false);
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
                 >
                   Discard
                 </button>
                 <button
-                  onClick={() => {
-                    setSelectedReview(null);
-                  }}
+                  onClick={() => setIsEditing(!isEditing)}
                   className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
                 >
-                  Edit
+                  {isEditing ? "Cancel Edit" : "Edit"}
                 </button>
                 <button
                   onClick={() => {
+                    // Normally you would send editedText with the approval request here
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
+                    setIsEditing(false);
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
                 >

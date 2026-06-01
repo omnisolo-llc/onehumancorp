@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+import ActionFeed from './components/ActionFeed';
 
 export type ApprovalRequest = {
   id: string;
@@ -114,24 +115,30 @@ export default function TeamPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
-          {loading ? (
-             <div className="flex justify-center py-10">
-               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-             </div>
-          ) : (
-            DEPARTMENTS.map(dept => {
-              const pendingCount = approvals.filter(a => a.department === dept.id).length;
-              return (
-                <DepartmentCard
-                  key={dept.id}
-                  name={dept.name}
-                  pendingCount={pendingCount}
-                  onClick={() => setSelectedDepartment(dept.id)}
-                />
-              );
-            })
-          )}
+        <div className="flex-1 overflow-y-auto pb-24 hide-scrollbar">
+          <div className="px-4 py-6">
+            {loading ? (
+               <div className="flex justify-center py-10">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+               </div>
+            ) : (
+              DEPARTMENTS.map(dept => {
+                const pendingCount = approvals.filter(a => a.department === dept.id).length;
+                return (
+                  <DepartmentCard
+                    key={dept.id}
+                    name={dept.name}
+                    pendingCount={pendingCount}
+                    onClick={() => setSelectedDepartment(dept.id)}
+                  />
+                );
+              })
+            )}
+          </div>
+
+          <div className="mt-2 bg-gray-50/50 border-t border-gray-200/50 pt-4 pb-8">
+             <ActionFeed />
+          </div>
         </div>
       </div>
 
