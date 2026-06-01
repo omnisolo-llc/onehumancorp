@@ -121,4 +121,77 @@ test.describe('Onboarding Wizard Flow', () => {
     // Verify template selection
     await page.locator('text="Minimal"').click();
   });
+
+  test('validates business name inline during review step', async ({ page }) => {
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details Step
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+
+    // Find the business name input in the Review Details step
+    const businessNameInput = page.locator('input[autocomplete="organization"]').first();
+    await businessNameInput.fill('A'); // less than 3 characters
+
+    // Click Continue
+    await page.locator('button:has-text("Continue")').click();
+
+    // Verify validation error is shown and we do NOT proceed to the next step
+    await expect(page.locator('text="Business Name must be at least 3 characters."')).toBeVisible();
+    await expect(page.locator('text="Review Details"')).toBeVisible();
+
+    // Fix the business name
+    await businessNameInput.fill('Awesome Business');
+    await page.locator('button:has-text("Continue")').click();
+
+    // Verify we proceeded to the next step
+    await expect(page.locator('text="Style & Team"')).toBeVisible();
+  });
+
+  test('navigates back and forth between steps correctly', async ({ page }) => {
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Chat Step 1
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Chat Step 2
+    await expect(page.locator('text="What do you sell?"')).toBeVisible();
+    await page.locator('button:has-text("Back")').click();
+
+    // Verify back to Chat Step 1
+    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+
+    // Go forward again
+    await page.locator('button:has-text("Next")').click();
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Chat Step 3
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+
+    // Generate Business
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details Step (Step 2)
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+
+    // Go back to Step 1 (Chat Step 3 will be shown)
+    await page.locator('button:has-text("Back")').click();
+    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+  });
 });
