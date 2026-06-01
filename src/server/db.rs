@@ -497,7 +497,8 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         auto_dreamed BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        tenant_id TEXT NOT NULL DEFAULT 'system'
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
                         tenant_id TEXT PRIMARY KEY,
@@ -935,7 +936,7 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -943,7 +944,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25 FOR UPDATE SKIP LOCKED").fetch_all(&mut *tx).await?;
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");

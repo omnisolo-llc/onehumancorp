@@ -14,5 +14,11 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     auto_dreamed BOOLEAN DEFAULT FALSE,
     _sync_status TEXT DEFAULT 'pending',
-    version INTEGER DEFAULT 1
+    version INTEGER DEFAULT 1,
+    tenant_id TEXT NOT NULL DEFAULT 'system'
 );
+CREATE INDEX IF NOT EXISTS idx_swarm_tasks_status ON swarm_tasks(status);
+
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
+CREATE POLICY tenant_isolation_swarm_tasks ON swarm_tasks USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));

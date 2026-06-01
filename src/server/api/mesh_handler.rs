@@ -69,7 +69,13 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+
+    let mut topic = payload.topic.clone();
+    // Validate or enforce the topic is one of the allowed Centrifuge channels
+    if topic != "mesh:tasks" && topic != "mesh:coordination" && !topic.starts_with("mesh:") {
+        topic = "mesh:tasks".to_string();
+    }
+    match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -95,7 +101,13 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+
+    let mut topic = payload.topic.clone();
+    // Validate or enforce the topic is one of the allowed Centrifuge channels
+    if topic != "mesh:tasks" && topic != "mesh:coordination" && !topic.starts_with("mesh:") {
+        topic = "mesh:tasks".to_string();
+    }
+    match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
