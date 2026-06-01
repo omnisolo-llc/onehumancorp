@@ -14,13 +14,35 @@ global.fetch = mockFetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockFetch.mockImplementation(async (url: string) => {
+    if (url.includes('/api/agents/approvals/activity')) {
+      return { ok: true, json: async () => [] };
+    }
+    if (url.includes('/api/agents/workflows') && !url.includes('POST')) {
+      return { ok: true, json: async () => [] };
+    }
+    if (url.includes('/api/agents/approvals') && !url.includes('POST')) {
+      return {
+        ok: true,
+        json: async () => ({
+          pending_approvals: [
+            {
+              id: '123',
+              department: 'customer_success',
+              description: 'Draft reply to customer',
+              status: 'pending'
+            }
+          ],
+          next_cursor: null
+        })
+      };
+    }
+    return { ok: true, json: async () => ({ success: true }) };
+  });
 });
 
 test('renders AI Departments heading', async () => {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
-  });
+
 
   render(<AgentsPage />);
 
@@ -30,10 +52,7 @@ test('renders AI Departments heading', async () => {
 });
 
 test('switches tabs correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
-  });
+
 
   render(<AgentsPage />);
 
@@ -49,20 +68,7 @@ test('switches tabs correctly', async () => {
 });
 
 test('renders approvals tab correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      pending_approvals: [
-        {
-          id: '123',
-          department: 'customer_success',
-          description: 'Draft reply to customer',
-          status: 'pending'
-        }
-      ],
-      next_cursor: null
-    }),
-  });
+
 
   render(<AgentsPage />);
 
@@ -76,10 +82,7 @@ test('renders approvals tab correctly', async () => {
 });
 
 test('renders feed tab correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
-  });
+
 
   render(<AgentsPage />);
 
@@ -91,20 +94,7 @@ test('renders feed tab correctly', async () => {
 });
 
 test('approves a draft successfully', async () => {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({
-      pending_approvals: [
-        {
-          id: '123',
-          department: 'customer_success',
-          description: 'Draft reply to customer',
-          status: 'pending'
-        }
-      ],
-      next_cursor: null
-    }),
-  });
+
 
   render(<AgentsPage />);
 
@@ -114,10 +104,7 @@ test('approves a draft successfully', async () => {
     expect(screen.getByText('Approve & Send')).toBeDefined();
   });
 
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ success: true }),
-  });
+
 
   fireEvent.click(screen.getByText('Approve & Send'));
 
