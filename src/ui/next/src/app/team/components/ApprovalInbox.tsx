@@ -160,6 +160,43 @@ export default function ApprovalInbox({
                     {desc}
                   </p>
 
+                  {req.payload?.feature_type === "service_quote" && (
+                    <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-100 flex flex-col gap-3 relative">
+                      <div className="flex items-center gap-2 text-green-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Booking Request & Quote
+                      </div>
+
+                      <div className="text-xs text-green-700">
+                        Estimated Price:{" "}
+                        <span className="font-semibold">{req.payload.estimated_price}</span> |{" "}
+                        Proposed Time:{" "}
+                        <span className="font-semibold">{req.payload.proposed_time}</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-green-100 relative mt-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
+                          AI Draft
+                        </div>
+                        <p className="text-sm text-gray-800 italic pr-12">
+                          "{req.payload.generated_response}"
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "ambassador_reply" && (
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">

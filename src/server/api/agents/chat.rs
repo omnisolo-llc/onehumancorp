@@ -46,6 +46,12 @@ pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Valu
             "Draft marketing content from team chat".to_string(),
             serde_json::json!({ "original_request": msg, "action": "create_content" })
         )
+    } else if lower_msg.contains("book") || lower_msg.contains("appointment") || lower_msg.contains("schedule") {
+        (
+            DepartmentType::Receptionist,
+            "Draft booking request from team chat".to_string(),
+            serde_json::json!({ "original_request": msg, "action": "draft_booking" })
+        )
     } else if lower_msg.contains("quote") || lower_msg.contains("lead") || lower_msg.contains("discount") || lower_msg.contains("pricing") {
         (
             DepartmentType::Sales,
@@ -105,6 +111,12 @@ mod tests {
     fn test_chat_routing_sales() {
         let (dept, _, _) = determine_routing("Give me a quote for roofing");
         assert_eq!(dept, DepartmentType::Sales);
+    }
+
+    #[test]
+    fn test_chat_routing_receptionist() {
+        let (dept, _, _) = determine_routing("I need to book an appointment for tomorrow");
+        assert_eq!(dept, DepartmentType::Receptionist);
     }
 
     #[test]

@@ -309,3 +309,59 @@ mod tests {
         assert!(has_case_study_draft, "Marketing Agent should draft a case study when a job is completed with media.");
     }
 }
+
+#[tokio::test]
+async fn test_receptionist_booking_request() {
+    use crate::orchestration::departments::orchestrator::Department;
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let db = std::sync::Arc::new(crate::db::DB::new().await.unwrap());
+    let transport = std::sync::Arc::new(ohc_builtin::mesh::transport::InProcessTransport::new());
+    let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+    let orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), mesh));
+    let rec_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::receptionist_agent::ReceptionistAgent::new(orchestrator.clone())));
+    orchestrator.register_department(rec_agent.clone()).await;
+
+    let tenant_id = "test-tenant-rec-123".to_string();
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                .bind(&tenant_id)
+                .execute(&db.pool)
+                .await;
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                .bind(&tenant_id)
+                .execute(pool)
+                .await;
+        }
+    }
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.message.received".to_string(),
+        payload: serde_json::json!({"message": "I would like to book an appointment."}),
+    };
+
+    let res = orchestrator.dispatch_event(event).await;
+    assert!(res.is_ok());
+
+    let mut has_draft = false;
+    let mut draft_request_id = String::new();
+    for _ in 0..10 {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        if let Some(req) = pending.iter().find(|req| req.description.contains("Draft service quote and booking request for review")) {
+            has_draft = true;
+            draft_request_id = req.id.clone();
+            break;
+        }
+    }
+    assert!(has_draft, "Should generate a draft service quote and booking request");
+}

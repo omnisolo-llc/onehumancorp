@@ -23,6 +23,7 @@ const DEPARTMENTS = [
   { id: 'legal', name: 'The Protector' },
   { id: 'business_advisory', name: 'The Advisor' },
   { id: 'discovery', name: 'The Scout' },
+  { id: 'receptionist', name: 'The Receptionist' },
 ];
 
 export default function TeamPage() {
