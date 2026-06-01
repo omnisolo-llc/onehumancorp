@@ -263,136 +263,40 @@ export default function OnboardingWizard() {
                 Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
               </p>
 
-              {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Our AI will instantly generate your storefront, products, and back-office agents.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={handleSaveDraft}
+                    className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto"
+                  >
+                    Save Draft
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
+                </div>
 
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <textarea
-                        autoFocus
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
+                <div className="space-y-4 flex-1">
+                  <div>
+                    <textarea
+                      autoFocus
+                      value={businessDescription}
+                      onChange={(e) => setBusinessDescription(e.target.value)}
+                      placeholder="e.g. I am Maya. I bake custom vegan cakes in Austin. Prices start at $50..."
+                      className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-48 resize-none transition-all shadow-inner"
+                    />
                   </div>
                 </div>
-              )}
 
-              {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                <div className="mt-auto pt-6">
+                  <button
+                    onClick={handleIntake}
+                    disabled={!businessDescription.trim() || isLoading}
+                    className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Building...' : 'Build My Store'}
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
-                    </button>
-                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
