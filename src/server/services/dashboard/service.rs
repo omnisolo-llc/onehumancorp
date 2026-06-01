@@ -295,34 +295,24 @@ impl DashboardService for MyDashboardService {
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let products = if req.mobile_optimized {
-            products
-                .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
-                })
-                .collect()
-        } else {
-            products
-        };
+        let mut products = products;
+        if req.mobile_optimized {
+            for p in products.iter_mut() {
+                p.description.clear();
+                p.metadata_json.clear();
+                p.fulfillment_strategy.clear();
+                p.currency.clear();
+            }
+        }
 
-        let orders = if req.mobile_optimized {
-            orders
-                .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
-                })
-                .collect()
-        } else {
-            orders
-        };
+        let mut orders = orders;
+        if req.mobile_optimized {
+            for o in orders.iter_mut() {
+                o.product_id.clear();
+                o.status.clear();
+                o.organization_id.clear();
+            }
+        }
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
@@ -347,7 +337,12 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let mut final_meetings = out_meetings;
+        if req.mobile_optimized {
+            for m in final_meetings.iter_mut() {
+                m.transcript.clear();
+            }
+        }
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -467,18 +462,16 @@ impl DashboardService for MyDashboardService {
 
         }
 
-        let org = if req.mobile_optimized {
-            org.map(|mut o| {
-                o.domain = String::new();
-                o.members = vec![];
-                o.role_profiles = vec![];
-                o.ceo_id = String::new();
+        let mut org = org;
+        if req.mobile_optimized {
+            if let Some(ref mut o) = org {
+                o.domain.clear();
+                o.members.clear();
+                o.role_profiles.clear();
+                o.ceo_id.clear();
                 o.created_at_unix = 0;
-                o
-            })
-        } else {
-            org
-        };
+            }
+        }
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
