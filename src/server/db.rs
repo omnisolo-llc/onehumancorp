@@ -1224,13 +1224,6 @@ mod autodream_db_tests {
                     Ok(true)
                 })
             })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(database_url)
             .unwrap();
@@ -1254,13 +1247,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1312,13 +1298,6 @@ mod autodream_db_tests {
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1511,13 +1490,6 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -1530,13 +1502,6 @@ mod e2e_tenant_isolation_tests {
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1649,5 +1614,33 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             })
             .connect_lazy(database_url)
             .unwrap();
+
+        // 1) Clear out swarm_tasks
+        sqlx::query("DELETE FROM swarm_tasks").execute(&_pool).await.unwrap();
+
+        let unique_mission_id = format!("mission_{}", uuid::Uuid::new_v4());
+
+        // 2) Insert as tenant_1
+        sqlx::query("INSERT INTO swarm_tasks (mission_id, title, tenant_id) VALUES ($1, 'secret task', 'tenant_1')")
+            .bind(&unique_mission_id)
+            .execute(&_pool)
+            .await
+            .unwrap();
+
+        // 3) Verify tenant_1 can see it
+        let count_t1: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool)
+            .await
+            .unwrap();
+        assert_eq!(count_t1.0, 1, "tenant_1 should see their own task");
+
+        // 4) Verify tenant_2 cannot see it
+        let count_t2: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool2)
+            .await
+            .unwrap();
+        assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }

@@ -8,7 +8,7 @@ test.describe('Onboarding Wizard Flow', () => {
     // Step 1: Business Name
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
@@ -55,6 +55,51 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
   });
 
+  test('Maya the Home Baker Persona CUJ', async ({ page }) => {
+    // This test simulates Maya, a home baker, setting up her custom cake business.
+    // Business: "Maya's Dream Cakes"
+    // Sell: "Custom vegan and gluten-free cakes for weddings and birthdays."
+    // Location: "Portland, OR"
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill("Maya's Dream Cakes");
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Custom vegan and gluten-free cakes for weddings and birthdays.');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input[value="Maya\'s Dream Cakes"]')).toBeVisible();
+
+    // Continue
+    await page.locator('button:has-text("Continue")').click();
+
+    // Style & Team
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
+    await page.locator('text="Minimal"').click();
+
+    // Enable Support Agent explicitly
+    const supportAgent = page.locator('text="Support Agent"');
+    await supportAgent.click();
+
+    // Launch
+    await page.locator('button:has-text("Launch Store")').click();
+
+    // Verification
+    await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text="Maya\'s Dream Cakes"')).toBeVisible();
+  });
+
   test('fails gracefully when intake API returns error', async ({ page }) => {
     // Mock intake API to return 500 error
     await page.route('**/api/onboarding/intake', route => route.fulfill({
@@ -65,11 +110,11 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
@@ -87,11 +132,11 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
