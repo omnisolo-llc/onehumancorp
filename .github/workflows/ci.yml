@@ -108,8 +108,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -174,8 +172,7 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf \
-            pkg-config \
-            libglib2.0-dev
+            pkg-config
           sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
             || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
 
@@ -261,8 +258,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -327,8 +322,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -403,8 +396,6 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache
 
       - name: Install Kubernetes tools
         run: |
