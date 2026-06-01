@@ -30,6 +30,22 @@ export default function TeamPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState('https://ohc.app/invite?ref=my-store&bridge=true');
+
+  useEffect(() => {
+    const tenant = localStorage.getItem('tenant') || 'my-store';
+    setInviteLink(`https://ohc.app/invite?ref=${tenant}&bridge=true`);
+  }, []);
+
+
+
+
+
+
+
+
   const fetchApprovals = async () => {
     try {
       const response = await fetch('/api/agents/approvals');
@@ -104,13 +120,27 @@ export default function TeamPage() {
             <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Your Team</h1>
             <p className="text-gray-500 text-sm mt-1">Invisible specialized AI teams</p>
           </div>
-          <button
-            onClick={() => window.location.href = '/team/chat'}
-            className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
-            aria-label="Team Chat"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-          </button>
+
+          <div className="flex gap-2">
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="px-4 h-10 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold rounded-full flex items-center justify-center transition-all border border-indigo-200 shadow-sm active:scale-[0.98]"
+            >
+              + Invite
+            </button>
+            <button
+              onClick={() => window.location.href = '/team/chat'}
+              className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
+              aria-label="Team Chat"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+            </button>
+          </div>
+
+          </div>
+
         </div>
 
         {/* Content */}
@@ -133,9 +163,68 @@ export default function TeamPage() {
             })
           )}
         </div>
+
       </div>
 
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-indigo-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+                🤝
+              </div>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteCopied(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Invite Collaborator</h2>
+            <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+              Share a specific agentic output or dashboard with a team member.
+            </p>
+
+            <div className="bg-green-50 text-green-800 p-3 rounded-lg mb-6 text-xs font-medium border border-green-200">
+              <strong className="block mb-1">Zero Data Leakage 🔒</strong>
+              This invite dynamically provisions a secure, temporary Cloud bridge. Your original source data remains strictly on your local machine via SQLite.
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Viral Referral Link</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={inviteLink}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteLink);
+                      setInviteCopied(true);
+                      setTimeout(() => setInviteCopied(false), 2000);
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${inviteCopied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                  >
+                    {inviteCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
+
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
