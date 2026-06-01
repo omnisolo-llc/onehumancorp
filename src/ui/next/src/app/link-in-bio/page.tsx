@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function LinkInBioPage() {
   const router = useRouter();
-  const [tenant, setTenant] = useState('Store');
+  const [tenant, setTenant] = useState('');
   const [bio, setBio] = useState('Welcome to my business! Check out my offerings below.');
   const [links, setLinks] = useState<{ id: string, title: string, url: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ export default function LinkInBioPage() {
           t = localStorage.getItem('tenant');
         }
         if (!t) t = 'my-store';
+        if (!tenant) setTenant(t);
 
         setTenant(t);
 

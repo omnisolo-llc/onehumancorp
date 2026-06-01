@@ -16,12 +16,14 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
+        setCurrentTenant(localStorage.getItem('tenant') || 'my-store');
     }
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+  const [currentTenant, setCurrentTenant] = useState<string>('my-store');
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
@@ -86,7 +88,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    setReferralLink(`https://ohc.store/join?ref=${currentTenant}`);
   }, []);
 
   const openReferralModal = async () => {
@@ -102,12 +104,12 @@ export default function Dashboard() {
         }
       } else {
         // Fallback to local storage tenant if API fails or no auth
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const tenant = currentTenant;
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const tenant = currentTenant;
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
@@ -1023,7 +1025,7 @@ export default function Dashboard() {
                             setShowPromoModal(true);
                             setIsGeneratingPromo(true);
                             try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                const tenant = currentTenant;
                                 const response = await fetch("/api/v1/growth/promotions/generate", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -1120,7 +1122,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${currentTenant} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1140,7 +1142,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${currentTenant} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
@@ -1919,7 +1921,7 @@ export default function Dashboard() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    const tenant = currentTenant;
                                     await fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -2167,12 +2169,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value={`https://ohc.store/bio/${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`}
+                    value={`https://ohc.store/bio/${currentTenant}`}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all font-medium"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`https://ohc.store/bio/${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+                      navigator.clipboard.writeText(`https://ohc.store/bio/${currentTenant}`);
                       setLinkInBioCopied(true);
                       setTimeout(() => setLinkInBioCopied(false), 2000);
                     }}
@@ -2185,7 +2187,7 @@ export default function Dashboard() {
 
               <div className="pt-4 flex gap-3">
                  <button
-                   onClick={() => window.open(`/link-in-bio?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`, '_blank')}
+                   onClick={() => window.open(`/link-in-bio?tenant=${currentTenant}`, '_blank')}
                    className="flex-1 px-4 py-3 bg-purple-50 text-purple-700 rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2 border border-purple-200"
                  >
                    Preview Page
@@ -2225,13 +2227,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${currentTenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${currentTenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}
