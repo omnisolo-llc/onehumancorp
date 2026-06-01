@@ -3376,15 +3376,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             left: 20px;
                             max-width: 760px;
                             margin: 0 auto;
-                            background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
-                            border: 1px solid rgba(255,255,255,0.74);
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255,255,255,0.4);
                             border-radius: 18px;
                             justify-content: space-around;
                             padding: 8px;
                             z-index: 1000;
                             box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
+                        }
+                        #mobile-bottom-nav .nav-item {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                            color: var(--text-primary);
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            min-width: 44px;
+                            min-height: 44px;
+                            padding: 8px;
+                            font-size: 11px;
+                            font-weight: 600;
+                            line-height: 1.2;
+                            gap: 4px;
+                        }
+                        #mobile-bottom-nav .nav-item:hover, #mobile-bottom-nav .nav-item:active {
+                            background: rgba(0, 0, 0, 0.05);
+                            border-radius: 12px;
                         }
                         @media (max-width: 768px) {
                             #mobile-bottom-nav { display: flex; }
@@ -3581,6 +3602,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
             #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
             #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+            @media (max-width: 768px) {
+                #global-help-btn { bottom: 100px; right: 16px; width: 48px; height: 48px; }
+                #global-chat-btn { bottom: 100px; right: 76px; height: 48px; }
+            }
             #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
@@ -3696,13 +3721,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
-                        <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
-                        <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
-                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
-                        <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
-                        <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
+                        <button class="nav-item" onclick="showScreen('meetings-screen')">📅<br>Calendar</button>
+                        <button class="nav-item" onclick="showScreen('storefront-builder-screen')">🛠️<br>Setup</button>
                     </div>
 
 
@@ -3971,18 +3991,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="glass" role="navigation" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
-                            <button class="nav-item">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Stats</button>
-                            <button class="nav-item">Distribute</button>
-                        </div>
                     </div>
 
                     <!-- Seasonal Promos Generator -->
