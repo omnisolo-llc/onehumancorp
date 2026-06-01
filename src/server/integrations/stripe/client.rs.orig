@@ -63,8 +63,8 @@ impl StripeClient {
         }
     }
 
-    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
-        let cost = if subscription_id.starts_with("sub_test_") { 0.00 } else { 0.01 };
+    pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+        let cost = if _subscription_id.starts_with("sub_test_") { 0.00 } else { 0.01 };
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",
