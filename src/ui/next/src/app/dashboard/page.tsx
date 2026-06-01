@@ -225,7 +225,7 @@ export default function Dashboard() {
                        const stringMatches = str.match(/[a-zA-Z0-9\s_\-\.\:\,]{8,}/g);
                        if (stringMatches && stringMatches.length > 0) {
                            // Filter out base64 padding or noise
-                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing mesh task..." };
+                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing update..." };
                        } else {
                            return; // Unprocessable binary
                        }
@@ -548,7 +548,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>View Details</span>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
                             className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
@@ -601,7 +601,7 @@ export default function Dashboard() {
                                 </div>
                                 {showAdvanced && payload && (
                                     <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
-                                        <div className="text-gray-400 mb-1">Technical Payload:</div>
+                                        <div className="text-gray-400 mb-1">System details:</div>
                                         <pre>{payload}</pre>
                                     </div>
                                 )}
