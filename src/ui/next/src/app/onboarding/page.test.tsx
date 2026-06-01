@@ -81,6 +81,12 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn2);
 
     // Chat Step 3
+    const audInput = screen.getByPlaceholderText(/Local brides and party planners/i);
+    await user.type(audInput, 'Locals');
+
+    const nextBtn3 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn3);
+
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
@@ -144,6 +150,12 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn2);
 
     // Chat Step 3
+    const audInput = screen.getByPlaceholderText(/Local brides and party planners/i);
+    await user.type(audInput, 'Locals');
+
+    const nextBtn3 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn3);
+
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
@@ -198,7 +210,7 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 3,
+        chatStep: 4,
         businessName: 'A',
         location: 'NY',
         businessType: 'Bakery',

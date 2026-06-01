@@ -7,6 +7,7 @@ interface OnboardingState {
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
+  targetAudience: string;
   location: string;
   businessType: string;
   categories: string[];
@@ -24,6 +25,7 @@ interface OnboardingState {
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;
+  setTargetAudience: (audience: string) => void;
   setLocation: (location: string) => void;
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
@@ -46,6 +48,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
+      targetAudience: '',
       location: '',
       businessType: 'Online Store',
       categories: [],
@@ -63,6 +66,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
+      setTargetAudience: (targetAudience) => set({ targetAudience }),
       setLocation: (location) => set({ location }),
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
