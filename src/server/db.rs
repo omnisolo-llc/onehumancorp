@@ -357,9 +357,11 @@ impl DB {
 
         match &self.store {
             DbStore::Postgres => {
-                sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-                    .execute(&self.pool)
-                    .await?;
+                if std::env::var("E2E_SKIP_PGVECTOR").unwrap_or_default() != "1" {
+                    sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&self.pool).await?;
+                } else {
+                    sqlx::query("CREATE DOMAIN vector AS text;").execute(&self.pool).await.ok();
+                }
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
@@ -367,6 +369,20 @@ impl DB {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
+                    CREATE TABLE IF NOT EXISTS agent_approvals (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        action_risk TEXT NOT NULL,
+                        payload TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
