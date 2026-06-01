@@ -199,8 +199,9 @@ pub async fn create_budget_alert_handler(
 
     // We store ai_budget in the tenants table. If it doesn't exist for a test, we handle it gracefully or do an upsert if needed.
     // However, tenants table exists. So we just update.
-    let _ = sqlx::query("UPDATE tenants SET ai_budget = $1 WHERE tenant_id = $2")
-        .bind(payload.threshold_usd as i32)
+    // Budget is stored in cents (to match token costs/points)
+    let _ = sqlx::query("UPDATE tenants SET ai_budget = $1 WHERE id = $2")
+        .bind((payload.threshold_usd * 100.0) as i32)
         .bind(&tenant_id)
         .execute(&hub.pool)
         .await
