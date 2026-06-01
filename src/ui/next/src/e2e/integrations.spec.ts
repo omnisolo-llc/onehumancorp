@@ -4,21 +4,18 @@ test.describe('Integrations Loop', () => {
     test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {
         await page.goto('http://localhost:3000/integrations');
 
-        // Verify all 10 integrations exist with their respective names and descriptions
-        await expect(page.locator('h3:has-text("Ayrshare")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Cal.com")')).toBeVisible();
-        await expect(page.locator('h3:has-text("MailerLite")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Mercado Pago")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Shippo")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Twilio Conversations")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Whereby")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
+        // Verify all 7 integrations exist with their respective names and descriptions
+        await expect(page.locator('h3:has-text("Unified Inbox")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Autonomous Booking Agent")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Shipping Labels")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Local Payments")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Customer Emails")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Online Meetings")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Text Notifications")')).toBeVisible();
 
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
-        const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
+        const mercadoCard = page.locator('div').filter({ hasText: 'Local Payments' }).first();
+        const connectMercadoPagoButton = mercadoCard.locator('button').filter({ hasText: /^Connect|Accept local payments$/i });
 
         // Mock window alert
         page.on('dialog', dialog => dialog.accept());
@@ -28,8 +25,8 @@ test.describe('Integrations Loop', () => {
         await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
 
         // Let's connect Zoom
-        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
-        const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
+        const zoomCard = page.locator('div').filter({ hasText: 'Online Meetings' }).first();
+        const connectZoomButton = zoomCard.locator('button').filter({ hasText: /^Connect|Create my meeting room$/i });
         await connectZoomButton.click();
 
         // Verify state changed
