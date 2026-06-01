@@ -26,4 +26,40 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await page.getByRole('button', { name: 'Close Cloud Bridge Invite' }).click();
     await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).not.toBeVisible();
   });
+
+  test('should allow interacting with multiple invite workflows without issue', async ({ page }) => {
+    await page.goto('/team');
+    await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+    await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close Cloud Bridge Invite' }).click();
+    await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).not.toBeVisible();
+    await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+    await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
+  });
+
+  test('should show correct text and styling when modal is open', async ({ page }) => {
+     await page.goto('/team');
+     await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+     const copyButton = page.getByRole('button', { name: 'Copy Link' });
+     await expect(copyButton).toBeVisible();
+     await expect(copyButton).toHaveClass(/w-full.*bg-blue-600/);
+  });
+
+  test('copied state resets after 2 seconds', async ({ page }) => {
+      await page.goto('/team');
+      await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+      await page.getByRole('button', { name: 'Copy Link' }).click();
+      await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
+      await page.waitForTimeout(2100);
+      await expect(page.getByRole('button', { name: 'Copy Link' })).toBeVisible();
+  });
+
+  test('does not break rest of team page functionality when modal interacts', async ({ page }) => {
+      await page.goto('/team');
+      // wait for departments to load
+      await expect(page.getByText('The Manager')).toBeVisible();
+      await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+      await page.getByRole('button', { name: 'Close Cloud Bridge Invite' }).click();
+      await expect(page.getByText('The Manager')).toBeVisible();
+  });
 });
