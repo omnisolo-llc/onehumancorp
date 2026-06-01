@@ -30,6 +30,8 @@
 /code_review_reply.json
 /mcp_code_review_response.md
 /.[jJ]ules
+*.key
+*.certSigningRequest
 
 # Test binary, built with `go test -c`
 *.test

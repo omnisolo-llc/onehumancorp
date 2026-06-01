@@ -30,20 +30,20 @@ ISSUES=0
 
 echo -e "${DIM}Auditing parameters...${RESET}"
 
-# Check PORT
-if [ -z "$PORT" ]; then
-    echo -e "${RED}✗ PORT is not set.${RESET}"
+# Check OHC_PORT
+if [ -z "$OHC_PORT" ]; then
+    echo -e "${RED}✗ OHC_PORT is not set.${RESET}"
     ISSUES=$((ISSUES+1))
 else
-    echo -e "${GREEN}✓ PORT is set to ${PORT}.${RESET}"
+    echo -e "${GREEN}✓ OHC_PORT is set to ${OHC_PORT}.${RESET}"
 fi
 
-# Check LOG_LEVEL
-if [ -z "$LOG_LEVEL" ]; then
-    echo -e "${RED}✗ LOG_LEVEL is not set.${RESET}"
+# Check OHC_LOG_LEVEL
+if [ -z "$OHC_LOG_LEVEL" ]; then
+    echo -e "${RED}✗ OHC_LOG_LEVEL is not set.${RESET}"
     ISSUES=$((ISSUES+1))
 else
-    echo -e "${GREEN}✓ LOG_LEVEL is set to ${LOG_LEVEL}.${RESET}"
+    echo -e "${GREEN}✓ OHC_LOG_LEVEL is set to ${OHC_LOG_LEVEL}.${RESET}"
 fi
 
 # Check OHC_SOURCE_MODE
@@ -84,8 +84,8 @@ cat << MDEOF > "${MD_FILE}"
 - Found ${ISSUES} issues
 
 ## Configuration Values
-- **PORT:** ${PORT:-Unset}
-- **LOG_LEVEL:** ${LOG_LEVEL:-Unset}
+- **OHC_PORT:** ${OHC_PORT:-Unset}
+- **OHC_LOG_LEVEL:** ${OHC_LOG_LEVEL:-Unset}
 - **OHC_SOURCE_MODE:** ${OHC_SOURCE_MODE:-Unset}
 MDEOF
 

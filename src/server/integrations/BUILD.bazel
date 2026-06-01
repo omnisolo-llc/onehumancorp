@@ -90,6 +90,7 @@ rust_library(
         "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
+        "//src/server/integrations/resend:server_integrations_resend",
         "//src/server/integrations/shippo:server_integrations_shippo",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",

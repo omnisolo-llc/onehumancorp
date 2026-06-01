@@ -9,7 +9,7 @@ use super::{Tool, ToolExecutor};
 
 static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").unwrap());
 static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").unwrap());
-static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap());
+static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:default\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap());
 
 /// SOTA Harness Pattern: Aider's RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -175,7 +175,7 @@ mod tests {
         fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").unwrap();
 
         let ts_file = src_dir.join("app.ts");
-        fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").unwrap();
+        fs::write(&ts_file, "export function init() {}\ninterface Config {}\nexport default class Main {}\nexport default async function run() {}\n").unwrap();
 
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
@@ -200,6 +200,8 @@ mod tests {
         assert!(result.contains("📄 app.ts"));
         assert!(result.contains("│ export function init() {}"));
         assert!(result.contains("│ interface Config {}"));
+        assert!(result.contains("│ export default class Main {}"));
+        assert!(result.contains("│ export default async function run() {}"));
 
         assert!(!result.contains(".git"));
         assert!(!result.contains("target"));

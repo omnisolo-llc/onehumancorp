@@ -1,33 +1,22 @@
-# Technical Overview
+# Technical Documentation
 
-Use this section as the engineering entry point for the monorepo. It links to setup, architecture, APIs, feature specs, operations runbooks, research, and walkthroughs.
+This section contains all technical documentation for the One Human Corp (OHC) platform.
 
-## Primary Paths
+## Contents
 
-<div class="grid cards" markdown>
+- [Architecture](architecture/index.md) - System architecture and design documents
+- [Developer Guide](developer/index.md) - Setup guides and development documentation
+- [API Reference](api/index.md) - API documentation and reference
+- [Features & CUJs](features/index.md) - Feature documentation and Critical User Journeys
+- [Operations](operations/index.md) - Operational documentation and runbooks
+- [Research](research/index.md) - Technical research and analysis
+- [Reports](reports/index.md) - Technical reports and audits
+- [Walkthroughs](walkthroughs/index.md) - Step-by-step technical guides
 
-- **Developer workflow**
-  Install dependencies, run the repo, and follow the local development conventions.
-  [Developer setup](developer/setup.md)
+- [MCP Protocol](mcp/hybrid-mcp-playbook.md) - Model Context Protocol documentation
 
-- **Architecture**
-  Understand the system shape before editing shared platform behavior.
-  [Architecture overview](architecture/index.md)
+## Quick Links
 
-- **Feature specs**
-  Find capability-level design docs, CUJs, user guides, and test plans.
-  [Feature index](features/index.md)
-
-- **Operational guides**
-  Use runbooks for task tracking, releases, reliability, and migrations.
-  [Operations](operations/index.md)
-
-</div>
-
-## Reference Areas
-
-- [API reference](api/index.md)
-- [Hybrid MCP playbook](mcp/hybrid-mcp-playbook.md)
-- [Technical reports](reports/index.md)
-- [Technical research](research/index.md)
-- [Walkthroughs](walkthroughs/index.md)
+- [System Design](architecture/system-design.md)
+- [KAIROS Orchestration](architecture/index.md)
+- [Hybrid MCP Protocol](mcp/hybrid-mcp-playbook.md)

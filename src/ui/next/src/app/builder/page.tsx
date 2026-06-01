@@ -102,9 +102,7 @@ export default function BuilderPage() {
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
               b.block_type === 'ServiceBookingBlock' ? 'Booking' :
-              b.block_type === 'TestimonialBlock' ? 'Testimonials' :
-              b.block_type === 'BookingCalendarBlock' ? 'BookingCalendar' :
-              b.block_type === 'ContactFormBlock' ? 'ContactForm' : b.block_type,
+              b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
         props: b.content
       }));
 
