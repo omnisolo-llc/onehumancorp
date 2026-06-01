@@ -2853,6 +2853,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3733,7 +3734,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                        <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
                         <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
@@ -3778,20 +3779,61 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
 
                         <script>
-                            function saveCatalogItem() {
+                            async function saveCatalogItem() {
                                 const name = document.getElementById('item-name').value;
+                                const price = document.getElementById('item-price').value;
+                                const duration = document.getElementById('item-duration').value;
+                                const description = document.getElementById('item-desc').value;
+                                const item_type = document.querySelector('input[name="item_type"]:checked').value;
+
                                 if (!name) {
                                     alert('Please enter a name.');
                                     return;
                                 }
-                                alert('Saved ' + name + ' successfully!');
-                                document.getElementById('item-name').value = '';
-                                document.getElementById('item-price').value = '';
-                                document.getElementById('item-duration').value = '';
-                                document.getElementById('item-desc').value = '';
-                                showScreen('dashboard-screen');
+
+                                try {
+                                    const response = await fetch('/api/v1/catalog/product', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
+                                    });
+
+                                    if (response.status === 402) {
+                                        const errorData = await response.json();
+                                        if (errorData.error === 'LIMIT_EXCEEDED') {
+                                            document.getElementById('upgrade-modal-message').innerText = errorData.message || "You've reached your product limit. Upgrade to Starter to add up to 100 products.";
+                                            document.getElementById('upgrade-modal').style.display = 'flex';
+                                            return;
+                                        }
+                                    }
+
+                                    if (response.ok) {
+                                        alert('Saved ' + name + ' successfully!');
+                                        document.getElementById('item-name').value = '';
+                                        document.getElementById('item-price').value = '';
+                                        document.getElementById('item-duration').value = '';
+                                        document.getElementById('item-desc').value = '';
+                                        showScreen('dashboard-screen');
+                                    } else {
+                                        alert('Error saving product');
+                                    }
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('Error saving product');
+                                }
                             }
                         </script>
+                    </div>
+
+
+                    <!-- Upgrade Modal -->
+                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
+                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
+                            <h2 style="margin-top: 0;">Limit Reached</h2>
+                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
+                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
+                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -4012,7 +4054,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                            <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
