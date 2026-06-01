@@ -8,19 +8,52 @@ export default function UpgradeROIPage() {
   const [monthlyOrders, setMonthlyOrders] = useState<number>(50);
   const [averageOrderValue, setAverageOrderValue] = useState<number>(40);
 
-  // Growth assumptions with Pro Plan (Advanced AI Marketing + SEO + Review Automation)
-  const conversionUplift = 0.25; // 25% increase in conversions
-  const aovUplift = 0.15; // 15% increase in Average Order Value from AI cross-selling
-  const proPlanCost = 79; // $79/mo
+  const [roiData, setRoiData] = useState<{
+    currentRevenue: number;
+    projectedRevenue: number;
+    netProfitIncrease: number;
+    conversionUplift: number;
+    aovUplift: number;
+  } | null>(null);
 
-  const currentRevenue = monthlyOrders * averageOrderValue;
+  React.useEffect(() => {
+    const abortController = new AbortController();
+    const calculateROI = async () => {
+      try {
+        const res = await fetch(`/api/v1/growth/roi?monthly_orders=${monthlyOrders}&average_order_value=${averageOrderValue}`, {
+          signal: abortController.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setRoiData({
+            currentRevenue: data.current_revenue,
+            projectedRevenue: data.projected_revenue,
+            netProfitIncrease: data.net_profit_increase,
+            conversionUplift: data.conversion_uplift,
+            aovUplift: data.aov_uplift,
+          });
+        }
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') {
+          console.error('Failed to compute ROI', e);
+        }
+      }
+    };
+    calculateROI();
 
+    return () => {
+      abortController.abort();
+    };
+  }, [monthlyOrders, averageOrderValue]);
+
+  // Fallback defaults while loading
+  const conversionUplift = roiData?.conversionUplift ?? 0.25;
+  const aovUplift = roiData?.aovUplift ?? 0.15;
+  const currentRevenue = roiData?.currentRevenue ?? (monthlyOrders * averageOrderValue);
   const projectedOrders = Math.round(monthlyOrders * (1 + conversionUplift));
   const projectedAOV = averageOrderValue * (1 + aovUplift);
-  const projectedRevenue = projectedOrders * projectedAOV;
-
-  const revenueIncrease = projectedRevenue - currentRevenue;
-  const netProfitIncrease = revenueIncrease - proPlanCost;
+  const projectedRevenue = roiData?.projectedRevenue ?? (projectedOrders * projectedAOV);
+  const netProfitIncrease = roiData?.netProfitIncrease ?? (projectedRevenue - currentRevenue - 79);
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">

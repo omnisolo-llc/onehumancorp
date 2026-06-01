@@ -95,6 +95,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/roi", get(handle_get_roi))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -153,6 +154,45 @@ pub struct ReferralGenerateResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoiRequest {
+    pub monthly_orders: f64,
+    pub average_order_value: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RoiResponse {
+    pub current_revenue: f64,
+    pub projected_revenue: f64,
+    pub net_profit_increase: f64,
+    pub conversion_uplift: f64,
+    pub aov_uplift: f64,
+}
+
+pub async fn handle_get_roi(
+    axum::extract::Query(req): axum::extract::Query<RoiRequest>,
+) -> Result<Json<RoiResponse>, StatusCode> {
+    let conversion_uplift = 0.25;
+    let aov_uplift = 0.15;
+    let pro_plan_cost = 79.0;
+
+    let current_revenue = req.monthly_orders * req.average_order_value;
+    let projected_orders = (req.monthly_orders * (1.0 + conversion_uplift)).round();
+    let projected_aov = req.average_order_value * (1.0 + aov_uplift);
+    let projected_revenue = projected_orders * projected_aov;
+
+    let revenue_increase = projected_revenue - current_revenue;
+    let net_profit_increase = revenue_increase - pro_plan_cost;
+
+    Ok(Json(RoiResponse {
+        current_revenue,
+        projected_revenue,
+        net_profit_increase,
+        conversion_uplift,
+        aov_uplift,
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -997,6 +1037,27 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_roi() {
+        let req = super::RoiRequest {
+            monthly_orders: 50.0,
+            average_order_value: 40.0,
+        };
+        let res = super::handle_get_roi(axum::extract::Query(req)).await;
+        assert!(res.is_ok());
+        let roi = res.unwrap().0;
+
+        assert_eq!(roi.current_revenue, 2000.0);
+        assert_eq!(roi.conversion_uplift, 0.25);
+        assert_eq!(roi.aov_uplift, 0.15);
+
+        // Projected orders = 50 * 1.25 = 62.5 -> 63
+        // Projected AOV = 40 * 1.15 = 46
+        // Projected Revenue = 63 * 46 = 2898
+        assert_eq!(roi.projected_revenue, 2898.0);
+        assert_eq!(roi.net_profit_increase, 2898.0 - 2000.0 - 79.0);
     }
 }
 
