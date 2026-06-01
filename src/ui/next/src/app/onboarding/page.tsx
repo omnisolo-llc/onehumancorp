@@ -229,7 +229,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -263,7 +263,7 @@ export default function OnboardingWizard() {
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -298,7 +298,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -335,7 +335,7 @@ export default function OnboardingWizard() {
                     autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   />
                 </div>
                 <div>
@@ -344,7 +344,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   />
                 </div>
                 <div>
@@ -353,7 +353,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -363,7 +363,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                       />
                    </div>
                    <div>
@@ -373,7 +373,7 @@ export default function OnboardingWizard() {
                         inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                       />
                    </div>
                 </div>

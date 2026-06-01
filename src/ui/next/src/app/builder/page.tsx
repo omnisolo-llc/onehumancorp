@@ -183,7 +183,7 @@ export default function BuilderPage() {
   if (status === "selection") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
               <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
@@ -231,7 +231,7 @@ export default function BuilderPage() {
   if (status === "onboarding") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
@@ -272,7 +272,7 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -434,7 +434,7 @@ export default function BuilderPage() {
   if (status === "generating") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
               <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
@@ -454,7 +454,7 @@ export default function BuilderPage() {
   if (status === "live") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] mac-glass-container shadow-2xl px-6 pt-12 pb-8">
+        <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] mac-glass-container shadow-2xl px-6 pt-12 pb-8">
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
@@ -578,7 +578,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+      <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
