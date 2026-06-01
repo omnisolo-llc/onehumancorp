@@ -6266,6 +6266,46 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const description = descInput ? descInput.value : '';
                             nextStep('generating');
                             try {
+                                // 1. Process Intake
+                                const intakeResponse = await fetch('/api/onboarding/intake', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ description })
+                                });
+                                let intakeData = null;
+                                if (intakeResponse.ok) {
+                                    intakeData = await intakeResponse.json();
+                                }
+
+                                // 2. Setup backend with zero-click config payload
+                                const payload = {
+                                    business_type: intakeData?.business_type || "Store",
+                                    company_name: intakeData?.business_name || "My Store",
+                                    company_description: intakeData ? JSON.stringify(intakeData) : description,
+                                    selling_categories: intakeData?.categories || [],
+                                    first_product_name: intakeData?.initial_products?.[0]?.name || "Sample Product",
+                                    first_product_price: intakeData?.initial_products?.[0]?.price || "10.00",
+                                    website_template: "Modern",
+                                    domain_choice: "free",
+                                    admin_email: "admin@ohc.app",
+                                    admin_name: "Admin",
+                                    admin_password: "password123",
+                                    price_type: "fixed",
+                                    payment_pref: "online"
+                                };
+
+                                const startRes = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (startRes.ok) {
+                                    const startData = await startRes.json();
+                                    localStorage.setItem('tenant_id', startData.organization_id);
+                                }
+
+                                // 3. Generate UI Storefront Draft
                                 const response = await fetch('/api/v1/builder/generate', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },

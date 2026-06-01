@@ -9,6 +9,10 @@ pub struct IntakeData {
     pub business_type: String,
     pub categories: Vec<String>,
     pub initial_products: Vec<IntakeProduct>,
+    pub location: Option<String>,
+    pub delivery_zones: Option<Vec<String>>,
+    pub tax_configuration: Option<String>,
+    pub sms_notifications_enabled: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,7 +41,8 @@ impl OnboardingAgent {
 
         let prompt = format!(
             "Extract structured business information from the following user description.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string), location (string), delivery_zones (array of strings), tax_configuration (string), and sms_notifications_enabled (boolean).
+            If location is provided, deduce the standard delivery zones (e.g., zip codes, city names) and the tax configuration (e.g., 'Washington State Tax 6.5%'). Always set sms_notifications_enabled to true for this setup.
 
             Description: \"{}\"
 
@@ -49,7 +54,11 @@ impl OnboardingAgent {
               \"initial_products\": [
                 {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\"}},
                 {{\"name\": \"Vanilla Cupcake\", \"price\": \"3.50\"}}
-              ]
+              ],
+              \"location\": \"Seattle\",
+              \"delivery_zones\": [\"Seattle Metro Area\", \"Bellevue\", \"Redmond\"],
+              \"tax_configuration\": \"Washington State Sales Tax\",
+              \"sms_notifications_enabled\": true
             }}",
             input
         );
@@ -129,6 +138,11 @@ impl OnboardingAgent {
 
         // Use organization id as tenant id if not provided
         let _tenant_id = org_id.clone();
+
+        let mut parsed_intake_data: Option<IntakeData> = None;
+        if let Ok(data) = serde_json::from_str::<IntakeData>(&req.company_description) {
+            parsed_intake_data = Some(data);
+        }
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
@@ -293,6 +307,19 @@ impl OnboardingAgent {
         }
         if req.selling_categories.contains(&"subscriptions".to_string()) {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
+        }
+
+        // Include zero-click AI generated context if available
+        if let Some(intake) = parsed_intake_data {
+            if let Some(zones) = intake.delivery_zones {
+                flags.insert("delivery_zones".to_string(), json!(zones));
+            }
+            if let Some(tax) = intake.tax_configuration {
+                flags.insert("tax_configuration".to_string(), json!(tax));
+            }
+            if let Some(sms) = intake.sms_notifications_enabled {
+                flags.insert("sms_notifications_enabled".to_string(), json!(sms));
+            }
         }
 
         // Add initial artifact placeholders to state
