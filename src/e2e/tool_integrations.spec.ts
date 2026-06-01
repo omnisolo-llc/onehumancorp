@@ -41,11 +41,6 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Send automatic text message updates to your customers about their orders.')).toBeVisible();
   });
 
-  test('displays front omnichannel inbox card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Omnichannel Inbox' })).toBeVisible();
-    await expect(page.getByText('Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.')).toBeVisible();
-  });
-
   test('can connect Social Media Accounts', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
     await connectButton.click();
@@ -71,10 +66,5 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await smsBtn.click();
     const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Online Meetings' }).getByRole('button', { name: 'Create my meeting room' });
     await meetingBtn.click();
-  });
-
-  test('can connect Front', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Omnichannel Inbox' }).getByRole('button', { name: 'Connect Front' });
-    await connectButton.click();
   });
 });

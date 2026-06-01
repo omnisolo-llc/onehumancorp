@@ -93,3 +93,9 @@ mod tests {
         assert_eq!(integration.metadata.id, "messagebird");
     }
 }
+
+impl MessagebirdProvider {
+    pub async fn fetch_conversations(&self) -> Result<Vec<String>, String> {
+        Ok(vec![])
+    }
+}
