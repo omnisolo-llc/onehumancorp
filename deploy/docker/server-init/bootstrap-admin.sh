@@ -7,16 +7,16 @@
 # installation.  Subsequent restarts exit immediately after detecting the marker.
 #
 # Environment variables consumed:
-#   SERVER_URL                  — base URL of the OHC server (default: http://server:8080)
-#   SETUP_ADMIN_INIT_USERNAME   — desired admin username          (default: admin)
-#   SETUP_ADMIN_INIT_PASSWORD   — desired admin password          (default: admin)
+#   OHC_SERVER_URL                  — base URL of the OHC server (default: http://server:8080)
+#   OHC_SETUP_ADMIN_INIT_USERNAME   — desired admin username          (default: admin)
+#   OHC_SETUP_ADMIN_INIT_PASSWORD   — desired admin password          (default: admin)
 
 set -eu
 
 MARKER="/data/.admin_initialized"
-SERVER_URL="${SERVER_URL:-http://server:8080}"
-USERNAME="${SETUP_ADMIN_INIT_USERNAME:-admin}"
-PASSWORD="${SETUP_ADMIN_INIT_PASSWORD:-admin}"
+SERVER_URL="${OHC_SERVER_URL:-http://server:8080}"
+USERNAME="${OHC_SETUP_ADMIN_INIT_USERNAME:-admin}"
+PASSWORD="${OHC_SETUP_ADMIN_INIT_PASSWORD:-admin}"
 MAX_RETRIES=60
 RETRY_INTERVAL=5
 
