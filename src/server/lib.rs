@@ -33,6 +33,9 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
+static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
         match value.trim().to_ascii_lowercase().as_str() {
@@ -752,54 +755,84 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
+    let db_org = db.clone();
+    let db_orders = db.clone();
+    let tenant_id_org = tenant_id.clone();
+    let tenant_id_orders = tenant_id.clone();
+
     let (org_res, active_orders_res) = tokio::join!(
-        async {
-            match &db.store {
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id_org);
+            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(org) = cache.get(&cache_key).await {
+                return Ok(org);
+            }
+
+            let result = match &db_org.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
+                    .bind(&tenant_id_org)
+                    .fetch_optional(&db_org.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id_org)
                     .fetch_optional(pool)
                     .await
                 }
+            };
+
+            if let Ok(ref org) = result {
+                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
-        },
-        async {
-            match &db.store {
+            result
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
+            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            if let Some(orders) = cache.get(&cache_key).await {
+                return Ok(orders);
+            }
+
+            let result = match &db_orders.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
+                    .bind(&tenant_id_orders)
+                    .fetch_one(&db_orders.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id_orders)
                     .fetch_one(pool)
                     .await
                 }
+            };
+
+            if let Ok(orders) = result {
+                cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
-        }
+            result
+        })
     );
 
-    let (business_name, industry) = org_res
+    let org_data = org_res.unwrap_or(Ok(None));
+    let orders_data = active_orders_res.unwrap_or(Ok(0));
+
+    let (business_name, industry) = org_data
         .unwrap_or(None)
         .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
-    let active_orders = active_orders_res.unwrap_or(0);
+    let active_orders = orders_data.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
