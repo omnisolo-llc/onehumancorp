@@ -30,8 +30,6 @@ impl InteropProtocol {
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
-
         let lock_resource = format!("handoff:{}", mission_id);
 
         // Wait for lock with a timeout to prevent deadlocks and apply backoff.
@@ -41,7 +39,6 @@ impl InteropProtocol {
                 if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
                     break;
                 }
-                tracing::debug!(mission_id = %mission_id, "Waiting to acquire handoff lock");
                 retries += 1;
                 let sleep_ms = 50 * retries;
                 sleep(Duration::from_millis(sleep_ms)).await;
@@ -49,7 +46,6 @@ impl InteropProtocol {
         };
 
         if timeout(Duration::from_secs(5), acquire_future).await.is_err() {
-            tracing::error!(mission_id = %mission_id, "Timeout waiting for handoff lock");
             return Err("Timeout waiting for lock".to_string());
         }
 
@@ -221,8 +217,6 @@ impl InteropProtocol {
         use prost::Message as ProstMessage;
         use std::sync::atomic::{AtomicBool, Ordering};
 
-        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
-
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
@@ -244,10 +238,7 @@ impl InteropProtocol {
         };
 
         let mut buf = Vec::new();
-        if let Err(e) = dispatch.encode(&mut buf) {
-            tracing::error!(job_id = %job_id, error = %e, "Failed to encode job dispatch message");
-            return Err(e.to_string());
-        }
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg = Message {
             topic: format!("system:job_dispatch:{}", tenant_id),
@@ -259,14 +250,10 @@ impl InteropProtocol {
         let mut delay_ms = 100;
         loop {
             match self.bus.publish(msg.clone()).await {
-                Ok(_) => {
-                    tracing::debug!(job_id = %job_id, "Successfully published job dispatch message");
-                    break;
-                },
+                Ok(_) => break,
                 Err(e) => {
                     if retries >= 5 {
                         cancel();
-                        tracing::error!(job_id = %job_id, error = %e, "Failed to publish job dispatch after max retries");
                         return Err(format!("Failed to publish job dispatch after retries: {}", e));
                     }
                     retries += 1;
@@ -281,14 +268,12 @@ impl InteropProtocol {
         while start.elapsed().as_millis() < timeout_ms as u128 {
             if received.load(Ordering::SeqCst) {
                 cancel();
-                tracing::info!(job_id = %job_id, "Job dispatch acknowledged");
                 return Ok(true);
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
 
         cancel();
-        tracing::warn!(job_id = %job_id, timeout_ms = %timeout_ms, "Job dispatch timeout waiting for acknowledgment");
         Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
     }
 

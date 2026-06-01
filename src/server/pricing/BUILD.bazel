@@ -4,7 +4,6 @@ rust_library(
     name = "server_pricing",
     srcs = [
         "budget.rs",
-        "dynamic.rs",
         "cache.rs",
         "calculator.rs",
         "compression.rs",

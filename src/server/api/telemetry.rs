@@ -70,12 +70,6 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = crate::telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
-                        let cost_cents = (cost_usd * 100.0).round() as i64;
-                        let labels_cents = serde_json::json!({
-                            "tenant_id": tenant_id.clone(),
-                            "model": model_string.clone()
-                        });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }
@@ -107,12 +101,6 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = crate::telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
-                        let cost_cents = (cost_usd * 100.0).round() as i64;
-                        let labels_cents = serde_json::json!({
-                            "tenant_id": tenant_id.clone(),
-                            "api": api_string.clone()
-                        });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }

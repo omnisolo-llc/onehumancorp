@@ -50,8 +50,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -78,9 +76,7 @@ export default function OnboardingWizard() {
       categories,
       websiteTemplate,
       firstProductName,
-      firstProductPrice,
-      aiAgents,
-      aiAutoRespond
+      firstProductPrice
     };
 
     const timer = setTimeout(() => {
@@ -88,14 +84,13 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      })?.catch(err => console.error('Failed to sync onboarding state', err));
+      }).catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, isLoaded
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -158,7 +153,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription || whatYouSell,
+          company_description: businessDescription,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -228,7 +223,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -295,7 +290,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>

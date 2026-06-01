@@ -36,10 +36,6 @@ impl ManychatProvider {
     pub async fn fetch_conversations(&self) -> Result<Vec<String>, String> {
         self._client.fetch_conversations().await
     }
-
-    pub async fn send_message(&self, subscriber_id: &str, message: &str) -> Result<(), String> {
-        self._client.send_message(subscriber_id, message).await
-    }
 }
 
 #[cfg(test)]
@@ -58,12 +54,5 @@ mod tests {
         let provider = ManychatProvider::new("test_token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "manychat");
-    }
-
-    #[tokio::test]
-    async fn test_manychat_provider_send_message() {
-        let provider = ManychatProvider::new("test_token".to_string());
-        let result = provider.send_message("sub_123", "Hello").await;
-        assert!(result.is_ok());
     }
 }

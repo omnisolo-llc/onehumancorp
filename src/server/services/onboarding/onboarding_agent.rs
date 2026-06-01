@@ -2573,7 +2573,7 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
             .bind(&org_id_service)
             .fetch_one(&db.pool)
             .await
@@ -2609,7 +2609,7 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
             .bind(&org_id_food)
             .fetch_one(&db.pool)
             .await
