@@ -495,18 +495,18 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm border rounded-2xl flex flex-col justify-center glassmorphism">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
                </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm border rounded-2xl flex flex-col justify-center glassmorphism">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
                </div>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
-           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+           <div className="relative p-6 shadow-sm border rounded-2xl overflow-hidden glassmorphism">
                <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
                <div className="filter blur-sm select-none opacity-50">
                    <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
@@ -698,7 +698,7 @@ export default function Dashboard() {
          {/* Plain-Language Weekly Financial Brief */}
          <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+            <div className="p-6 shadow-sm border rounded-2xl border-blue-100 relative overflow-hidden glassmorphism">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
                 <div className="flex items-start gap-4">
                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
