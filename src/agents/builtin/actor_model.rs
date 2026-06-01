@@ -81,24 +81,38 @@ impl Actor for AgentActor {
             while let Some(msg) = receiver.recv().await {
                 debug!("Actor {} received message from {}: {}", name, msg.sender, msg.content);
 
-                // Replace classic ReAct loop with message-based trigger
+                // Replace classic ReAct loop with message-based trigger.
+                // In true Actor-model message passing, the agent can route its output to specific actors.
                 let mut on_event = |_e| {};
                 let result = agent.run(&config, &msg.content, &mut on_event).await;
 
-                let reply_content = match result {
-                    Ok(res) => res,
-                    Err(e) => format!("Error: {}", e),
+                let (target_recipient, actual_content) = match result {
+                    Ok(res) => {
+                        // Routing convention: if the response starts with "@ActorName ", route it to that actor.
+                        if res.starts_with('@') {
+                            if let Some(space_idx) = res.find(' ') {
+                                let recipient = res[1..space_idx].to_string();
+                                let content = res[space_idx+1..].to_string();
+                                (recipient, content)
+                            } else {
+                                (msg.sender.clone(), res)
+                            }
+                        } else {
+                            (msg.sender.clone(), res)
+                        }
+                    },
+                    Err(e) => (msg.sender.clone(), format!("Error: {}", e)),
                 };
 
-                // Send reply back to the sender
+                // Send reply back to the target recipient
                 let reply_msg = ActorMessage {
                     sender: name.clone(),
-                    recipient: msg.sender.clone(),
-                    content: reply_content,
+                    recipient: target_recipient.clone(),
+                    content: actual_content,
                 };
 
                 if let Err(e) = system.send(reply_msg).await {
-                    error!("Actor {} failed to send reply: {}", name, e);
+                    error!("Actor {} failed to send reply to {}: {}", name, target_recipient, e);
                 }
             }
             info!("Actor {} stopped", name);
@@ -109,7 +123,7 @@ impl Actor for AgentActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use crate::llm::LlmClient;
 
     struct MockLlm {

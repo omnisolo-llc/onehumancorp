@@ -33,14 +33,14 @@ CREATE TABLE IF NOT EXISTS builder_blocks (
 -- RLS for builder_sites
 ALTER TABLE builder_sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE builder_sites FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_builder_sites ON builder_sites USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_builder_sites ON builder_sites USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- RLS for builder_pages
 ALTER TABLE builder_pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE builder_pages FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_builder_pages ON builder_pages USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_builder_pages ON builder_pages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- RLS for builder_blocks
 ALTER TABLE builder_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE builder_blocks FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_builder_blocks ON builder_blocks USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_builder_blocks ON builder_blocks USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
