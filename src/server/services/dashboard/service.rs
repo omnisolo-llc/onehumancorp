@@ -1,14 +1,17 @@
-use ::server_ohc::app::dashboard_service_server::DashboardService;
-use ::server_ohc::app::*;
+use crate::proto::app::dashboard_service_server::DashboardService;
+use crate::proto::app::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
-static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
-static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<crate::proto::organization::Product>>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<HybridCache<Vec<crate::proto::app::Order>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<crate::proto::organization::Organization>>> = OnceLock::new();
+static AGENTS_CACHE: OnceLock<HybridCache<Vec<crate::proto::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Vec<crate::proto::orchestration::MeetingRoom>>> = OnceLock::new();
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -59,11 +62,15 @@ impl DashboardService for MyDashboardService {
         let org_id1 = req.organization_id.clone();
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
+        let org_id_meetings = req.organization_id.clone();
+        let org_id_cost = req.organization_id.clone();
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
         let hub_agents = self.hub.clone();
+        let hub_meetings = self.hub.clone();
+        let hub_cost = self.hub.clone();
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
@@ -81,15 +88,35 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let cache_key = format!("hub:meetings:{}", org_id_meetings);
+                let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(hub_meetings.redis_client.clone()));
+
+                if let Some(meetings) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(meetings.clone());
+                }
+
+                let meetings = hub2.get_meetings().await;
+                cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(meetings.clone())
             }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
-                    cost_auditor.get_total_tokens(),
-                    cost_auditor.get_agent_costs_snapshot(),
-                ))
+            tokio::spawn(async move {
+                let cache_key = format!("hub:cost:{}", org_id_cost);
+                let cache = COST_CACHE.get_or_init(|| HybridCache::new(hub_cost.redis_client.clone()));
+
+                if let Some(cost) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(cost);
+                }
+
+                let res = tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub3.get_cost_auditor();
+                    (
+                        cost_auditor.get_total_cost(),
+                        cost_auditor.get_total_tokens(),
+                        cost_auditor.get_agent_costs_snapshot(),
+                    )
+                }).await.unwrap_or_else(|e| panic!("Spawn blocking failed: {}", e));
+                cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(60)).await;
+                Ok::<_, String>(res)
             }),
             tokio::spawn(async move {
                 let org_id = org_id1;
@@ -111,7 +138,7 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Postgres => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
+                                let p = crate::proto::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
                                         .try_get("organization_id")
@@ -137,7 +164,7 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Sqlite(pool) => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
+                                let p = crate::proto::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
                                         .try_get("organization_id")
@@ -186,7 +213,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = crate::proto::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),
@@ -202,7 +229,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                                let o = ::server_ohc::app::Order {
+                                let o = crate::proto::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r.try_get("tenant_id").unwrap_or_default(),
                                     product_id: "".to_string(),
@@ -240,7 +267,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(Some(row)) =
                             sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
                         {
-                            org = Some(::server_ohc::organization::Organization {
+                            org = Some(crate::proto::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
                                 domain: "".to_string(),
@@ -256,7 +283,7 @@ impl DashboardService for MyDashboardService {
                         if let Ok(Some(row)) =
                             sqlx::query(q).bind(&org_id).fetch_optional(pool).await
                         {
-                            org = Some(::server_ohc::organization::Organization {
+                            org = Some(crate::proto::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),
                                 name: row.try_get("business_name").unwrap_or_default(),
                                 domain: "".to_string(),
@@ -298,7 +325,7 @@ impl DashboardService for MyDashboardService {
         let products = if req.mobile_optimized {
             products
                 .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
+                .map(|p| crate::proto::organization::Product {
                     description: String::new(),
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
@@ -313,7 +340,7 @@ impl DashboardService for MyDashboardService {
         let orders = if req.mobile_optimized {
             orders
                 .into_iter()
-                .map(|o| ::server_ohc::app::Order {
+                .map(|o| crate::proto::app::Order {
                     product_id: String::new(),
                     status: String::new(),
                     organization_id: String::new(),
@@ -324,12 +351,12 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        let mut out_meetings: Vec<crate::proto::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
                 for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
+                    transcript.push(crate::proto::agent::AgentMessage {
                         id: msg.id.clone(),
                         from_agent_id: msg.from_agent.clone(),
                         to_agent_id: msg.to_agent.clone(),
@@ -340,7 +367,7 @@ impl DashboardService for MyDashboardService {
                     });
                 }
             }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+            out_meetings.push(crate::proto::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
@@ -351,7 +378,7 @@ impl DashboardService for MyDashboardService {
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+        let _filtered_agents: Vec<crate::proto::orchestration::Agent> = agents
             .iter()
             .filter(|a| {
                 a.organization_id == req.organization_id
@@ -364,17 +391,17 @@ impl DashboardService for MyDashboardService {
             .into_iter()
             .map(|a| {
                 let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                    "IDLE" => crate::proto::common::AgentStatus::Idle as i32,
+                    "ACTIVE" => crate::proto::common::AgentStatus::Active as i32,
+                    "IN_MEETING" => crate::proto::common::AgentStatus::InMeeting as i32,
+                    "BLOCKED" => crate::proto::common::AgentStatus::Blocked as i32,
+                    _ => crate::proto::common::AgentStatus::Idle as i32,
                 };
 
                 let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
+                    "SOFTWARE_ENGINEER" => crate::proto::common::Role::SoftwareEngineer as i32,
+                    "QA_TESTER" => crate::proto::common::Role::QaTester as i32,
+                    _ => crate::proto::common::Role::Unspecified as i32,
                 };
 
                 let name = if req.mobile_optimized {
@@ -383,7 +410,7 @@ impl DashboardService for MyDashboardService {
                     ::server_pricing::compression::reduce_tokens(&a.name)
                 };
 
-                ::server_ohc::agent::Agent {
+                crate::proto::agent::Agent {
                     id: a.id,
                     name,
                     role: role_val,
@@ -445,7 +472,7 @@ impl DashboardService for MyDashboardService {
 
             let mut agent_summaries = Vec::new();
             for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                agent_summaries.push(crate::proto::billing::AgentCostSummary {
                     agent_id,
                     cost_usd,
                     token_used: tokens_used,
@@ -456,7 +483,7 @@ impl DashboardService for MyDashboardService {
                 });
             }
 
-            final_cost_summary = Some(::server_ohc::billing::CostSummary {
+            final_cost_summary = Some(crate::proto::billing::CostSummary {
                 organization_id: req.organization_id.clone(),
                 total_cost_usd: total_cost,
                 total_tokens: optimized_total_tokens,
@@ -621,8 +648,8 @@ impl DashboardService for MyDashboardService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_ohc::app::GetDashboardRequest;
-    use ::server_ohc::app::dashboard_service_server::DashboardService;
+    use crate::proto::app::GetDashboardRequest;
+    use crate::proto::app::dashboard_service_server::DashboardService;
     use ::server_auth::orchestration::AuthInfo;
     use tonic::Request;
     use std::sync::Arc;
@@ -650,7 +677,7 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
         // Add agents
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(crate::proto::orchestration::Agent {
             id: "agent_1".to_string(),
             name: "A detailed assistant that is very helpful and provides lots of information about everything".to_string(), // Redundant words to test compression
             role: "assistant".to_string(),
@@ -662,7 +689,7 @@ mod tests {
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
         hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string());
-        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
+        let _ = hub.clone().publish(crate::proto::orchestration::Message {
             id: "msg_1".to_string(),
             from_agent: "agent_1".to_string(),
             to_agent: "all".to_string(),
