@@ -1,7 +1,6 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
-
     [
         "experiments.rs",
         "invites.rs",
@@ -11,9 +10,7 @@ exports_files(
         "referrals.rs",
         "service.rs",
         "viral_loop.rs",
-        "event_listener.rs",
     ],
-
     visibility = ["//visibility:public"],
 )
 
