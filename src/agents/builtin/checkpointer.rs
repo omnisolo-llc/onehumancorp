@@ -118,8 +118,8 @@ impl CheckpointSaver for GitCheckpointer {
             return Ok(None);
         }
 
-        let content = String::from_utf8_lossy(&output.stdout);
-        let cp: Checkpoint = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        let decompressed_data = decompress_data(&output.stdout)?;
+        let cp: Checkpoint = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
 
         Ok(Some(cp))
     }
@@ -127,8 +127,9 @@ impl CheckpointSaver for GitCheckpointer {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
         let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);
 
-        let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
-        tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
+        let json_data = serde_json::to_vec_pretty(&checkpoint).map_err(|e| e.to_string())?;
+        let compressed_data = compress_data(&json_data)?;
+        tokio::fs::write(&file_path, compressed_data).await.map_err(|e| e.to_string())?;
 
         // Structured scratchpad
         let mut scratchpad = ProgressFile::default();
@@ -579,7 +580,11 @@ mod tests {
 
         // Verify the checkpoint file was restored
         let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-restore"));
-        let content = std::fs::read_to_string(&progress_path).unwrap();
-        assert!(content.contains(r#""state": "1""#));
+        let content = std::fs::read(&progress_path).unwrap();
+
+        let decompressed = decompress_data(&content).unwrap();
+        let decompressed_str = String::from_utf8_lossy(&decompressed);
+
+        assert!(decompressed_str.contains(r#""state": "1""#));
     }
 }
