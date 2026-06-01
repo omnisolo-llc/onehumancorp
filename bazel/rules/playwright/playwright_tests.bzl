@@ -26,6 +26,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "e2e",
         "no-remote-exec",
         "requires-docker",
+        "local",
         "no-sandbox",
     ]
     if manual:
@@ -37,7 +38,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "args": ["$(rootpath {})".format(spec) for spec in spec_args],
         "data": spec_args + common_data,
         "env": {
-            "OHC_BASE_URL": "http://localhost:18789",
+            "BASE_URL": "http://localhost:18789",
             "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             "PLAYWRIGHT_RETRIES": "0",
         },
