@@ -298,12 +298,12 @@ impl DashboardService for MyDashboardService {
         let products = if req.mobile_optimized {
             products
                 .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
+                .map(|mut p| {
+                    p.description = String::new();
+                    p.metadata_json = String::new();
+                    p.fulfillment_strategy = String::new();
+                    p.currency = String::new();
+                    p
                 })
                 .collect()
         } else {
@@ -313,11 +313,11 @@ impl DashboardService for MyDashboardService {
         let orders = if req.mobile_optimized {
             orders
                 .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
+                .map(|mut o| {
+                    o.product_id = String::new();
+                    o.status = String::new();
+                    o.organization_id = String::new();
+                    o
                 })
                 .collect()
         } else {
