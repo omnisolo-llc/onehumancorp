@@ -89,6 +89,7 @@ impl LocalProxyClient {
                                             let details = serde_json::json!({
                                                 "reason": e.reason,
                                                 "command": e.command,
+                                                "deployment_mode": ::server_telemetry::get_deployment_mode(),
                                             });
 
                                             let _ = ::server_telemetry::buffer_metric(
@@ -98,8 +99,6 @@ impl LocalProxyClient {
                                                 1.0,
                                                 details
                                             ).await;
-
-                                            ::server_telemetry::record_sandbox_violation(&e.reason, &e.command);
 
                                             (false, "".to_string(), error_msg)
                                         }
