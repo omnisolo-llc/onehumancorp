@@ -1,8 +1,7 @@
 use axum::{
-    extract::Query,
+    extract::Json,
     response::IntoResponse,
-    Json,
-    routing::{post, get},
+    routing::post,
     Router,
 };
 use serde::{Deserialize, Serialize};
@@ -11,15 +10,20 @@ use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
 pub struct QueryRequest {
-    pub text: String,
+    pub query_text: String,
     pub limit: Option<i32>,
+}
+
+#[derive(Deserialize)]
+pub struct SyncRequest {
+    pub force_reindex: Option<bool>,
 }
 
 #[derive(Serialize)]
 pub struct SearchResult {
-    pub id: String,
+    pub memory_id: String,
     pub content: String,
-    pub score: f32,
+    pub distance: f32,
 }
 
 #[derive(Serialize)]
@@ -37,14 +41,15 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
     let worker_query = worker.clone();
 
     Router::new()
-        .route("/sync", post(move || async move {
+        .route("/sync", post(move |payload: Option<Json<SyncRequest>>| async move {
+            let _force_reindex = payload.map(|p| p.force_reindex.unwrap_or(false)).unwrap_or(false);
             match worker_sync.consolidate_epoch().await {
                 Ok(_) => Json(SyncResponse { status: "success".to_string() }).into_response(),
                 Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
             }
         }))
-        .route("/query", get(move |Query(params): Query<QueryRequest>| async move {
-            if params.text.is_empty() {
+        .route("/query", post(move |Json(params): Json<QueryRequest>| async move {
+            if params.query_text.is_empty() {
                 return (axum::http::StatusCode::BAD_REQUEST, "query_text is required".to_string()).into_response();
             }
 
@@ -53,7 +58,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
 
-            let embedding = match client.generate_embedding(&params.text).await {
+            let embedding = match client.generate_embedding(&params.query_text).await {
                 Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
                 Err(e) => {
                     tracing::error!("AutoDream API: failed to generate embedding: {}", e);
@@ -64,9 +69,9 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
             match worker_query.search_memories(&embedding, limit).await {
                 Ok(results) => {
                     let res = results.into_iter().map(|r| SearchResult {
-                        id: r.id,
+                        memory_id: r.id,
                         content: r.content,
-                        score: r.score as f32,
+                        distance: 1.0 - (r.score as f32), // assuming score is cosine similarity, converting to distance for the spec
                     }).collect();
                     Json(QueryResponse { results: res }).into_response()
                 },
@@ -96,6 +101,23 @@ mod tests {
         let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let worker = Arc::new(AutoDreamWorker::new(db));
 
-        let _app: Router<()> = router(worker);
+        let app: Router<()> = router(worker);
+
+        let req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/sync")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let _ = tower::ServiceExt::oneshot(app.clone(), req).await.unwrap();
+
+        let req2 = axum::http::Request::builder()
+            .method("POST")
+            .uri("/query")
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from("{\"query_text\": \"test\", \"limit\": 5}"))
+            .unwrap();
+
+        let _ = tower::ServiceExt::oneshot(app, req2).await.unwrap();
     }
 }
