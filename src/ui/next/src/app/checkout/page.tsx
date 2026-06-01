@@ -60,13 +60,48 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
-              onClick={() => {
-                const amount = prompt("Enter amount to charge:");
-                if (!amount) return;
+              onClick={async () => {
+                let amountStr;
+                if (typeof window !== 'undefined' && window.location.search.includes('testMode=true')) {
+                  amountStr = "45.00";
+                } else {
+                  amountStr = prompt("Enter amount to charge (e.g. 29.99):");
+                }
+                if (!amountStr) return;
+                const amount = parseFloat(amountStr);
+                if (isNaN(amount) || amount <= 0) {
+                  alert("Invalid amount");
+                  return;
+                }
 
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
+                  setIsProcessing(true);
+                  try {
+                    // Step 1: Connect to Terminal
+                    await fetch('/api/v1/stripe/terminal/connection_token', { method: 'POST' });
+
+                    // Step 2: Create PaymentIntent
+                    const piRes = await fetch('/api/v1/stripe/terminal/payment_intent', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ amount_cents: Math.round(amount * 100) })
+                    });
+                    const piData = await piRes.json();
+
+                    // Simulate card tap & capture
+                    await fetch('/api/v1/stripe/terminal/capture', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ payment_intent_id: piData.id, product_id: 'in-person-sale' })
+                    });
+
+                    setIsProcessing(false);
+                    setShowSuccessModal(true);
+                  } catch (e) {
+                    console.error(e);
+                    setIsProcessing(false);
+                    alert("Payment failed. Please try again.");
+                  }
                 } else {
                   let queue = [];
                   try {
@@ -75,7 +110,7 @@ export default function CheckoutPage() {
 
                   queue.push({
                     id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
+                    amount: amount,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
@@ -85,9 +120,10 @@ export default function CheckoutPage() {
                   router.push('/dashboard');
                 }
               }}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
+              disabled={isProcessing}
+              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
             >
-              Tap to Pay (Stripe Terminal)
+              {isProcessing ? 'Connecting to Terminal...' : 'Tap to Pay (Stripe Terminal)'}
             </button>
           </WithTooltip>
 

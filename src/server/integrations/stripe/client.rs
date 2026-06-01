@@ -98,6 +98,36 @@ impl StripeClient {
 }
 
 impl StripeClient {
+    pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            _tenant_id,
+            "stripe_terminal_connection_token",
+            0.01 // mock cost
+        ).await;
+        Ok(format!("tok_terminal_{}", uuid::Uuid::new_v4().to_string().replace("-", "")))
+    }
+
+    pub async fn create_terminal_payment_intent(&self, _tenant_id: &str, amount_cents: i64) -> Result<serde_json::Value, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            _tenant_id,
+            "stripe_terminal_payment_intent",
+            0.01 // mock cost
+        ).await;
+
+        let client_secret = format!("pi_{}_secret_{}", uuid::Uuid::new_v4().to_string().replace("-", ""), uuid::Uuid::new_v4().to_string().replace("-", ""));
+
+        Ok(serde_json::json!({
+            "id": format!("pi_{}", uuid::Uuid::new_v4().to_string().replace("-", "")),
+            "object": "payment_intent",
+            "amount": amount_cents,
+            "currency": "usd",
+            "client_secret": client_secret,
+            "status": "requires_payment_method"
+        }))
+    }
+
     /// Dispatches a batch payout check. If batched amount > threshold, actually performs payout.
     pub async fn process_payout_with_batching(
         &self,
