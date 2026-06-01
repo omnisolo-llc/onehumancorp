@@ -463,18 +463,18 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm border rounded-2xl mac-glass-container flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
                </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <div className="p-6 shadow-sm border rounded-2xl mac-glass-container flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
                </div>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
-           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+           <div className="relative p-6 shadow-sm border rounded-2xl mac-glass-container overflow-hidden">
                <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
                <div className="filter blur-sm select-none opacity-50">
                    <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
@@ -666,7 +666,7 @@ export default function Dashboard() {
          {/* Plain-Language Weekly Financial Brief */}
          <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+            <div className="p-6 shadow-sm border rounded-2xl mac-glass-container border-blue-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
                 <div className="flex items-start gap-4">
                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -731,7 +731,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
@@ -1102,7 +1102,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
@@ -1121,7 +1121,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px]">
-                    <div className="bg-white p-6 rounded-2xl shadow-xl border border-yellow-100 text-center max-w-sm flex flex-col items-center animate-fade-in" style={{ transform: 'translateY(10px)' }}>
+                    <div className="mac-glass-container p-6 rounded-2xl shadow-xl border border-yellow-100 text-center max-w-sm flex flex-col items-center animate-fade-in" style={{ transform: 'translateY(10px)' }}>
                         <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mb-3">
                             🔒
                         </div>
@@ -1143,7 +1143,7 @@ export default function Dashboard() {
          <section className="mb-8 mt-8">
             <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
+                    <div className="w-16 h-16 mac-glass-container rounded-2xl shadow-sm flex items-center justify-center text-3xl">
                         🎉
                     </div>
                     <div>
@@ -1230,7 +1230,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
@@ -1290,7 +1290,7 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong className="text-gray-900">{trialDaysLeft} days left</strong> in your free trial. Complete these quick tasks to earn more time and get the most out of OHC.</p>
 
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between mac-glass-container p-3 rounded-[8px] shadow-sm border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -1314,7 +1314,7 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between mac-glass-container p-3 rounded-[8px] shadow-sm border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
@@ -1338,7 +1338,7 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between mac-glass-container p-3 rounded-[8px] shadow-sm border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -1455,7 +1455,7 @@ export default function Dashboard() {
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
@@ -1479,7 +1479,7 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Share Your Success</span></div>
+                <div className="relative flex justify-center"><span className="bg-transparent backdrop-blur-sm px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Share Your Success</span></div>
               </div>
 
               {/* Social Share Buttons */}
@@ -1520,7 +1520,7 @@ export default function Dashboard() {
       {/* Add Item Modal */}
       {showAddItemModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
               <button
@@ -1593,7 +1593,7 @@ export default function Dashboard() {
       {/* Paywall Modal */}
       {showPaywallModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
 
@@ -1635,7 +1635,7 @@ export default function Dashboard() {
       {/* Promo Modal */}
       {showPromoModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
@@ -1691,7 +1691,7 @@ export default function Dashboard() {
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Directly</span></div>
+                <div className="relative flex justify-center"><span className="bg-transparent backdrop-blur-sm px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Directly</span></div>
               </div>
 
               <a
@@ -1711,7 +1711,7 @@ export default function Dashboard() {
       {/* Abandoned Cart Modal */}
       {showCartModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-red-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-red-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-red-600">
@@ -1787,7 +1787,7 @@ export default function Dashboard() {
       {/* Review Request Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-blue-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-blue-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-blue-600">
@@ -1867,7 +1867,7 @@ export default function Dashboard() {
       {/* Customer Referral Modal */}
       {showCustomerReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
@@ -1934,7 +1934,7 @@ export default function Dashboard() {
       {/* Wall of Love Modal */}
       {showWallOfLoveModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+          <div className="mac-glass-container w-full max-w-2xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-purple-100/50 to-transparent rounded-bl-full -z-10"></div>
 
@@ -1959,7 +1959,7 @@ export default function Dashboard() {
             <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Preview</h3>
-                  <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+                  <div className="mac-glass-container border border-gray-200 p-4 rounded-lg shadow-sm">
                       <div className="flex gap-4">
                           <div className="flex-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
                               <div className="flex text-yellow-400 text-xs mb-1">★★★★★</div>
@@ -2020,7 +2020,7 @@ export default function Dashboard() {
       {/* SaaS Conversion: Upgrade Modal (Soft Paywall) */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
@@ -2080,7 +2080,7 @@ export default function Dashboard() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">
@@ -2123,7 +2123,7 @@ export default function Dashboard() {
       {/* Embed Modal */}
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
@@ -2173,7 +2173,7 @@ export default function Dashboard() {
       {/* Referral Modal */}
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
@@ -2223,7 +2223,7 @@ export default function Dashboard() {
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
+                <div className="relative flex justify-center"><span className="bg-transparent backdrop-blur-sm px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
               </div>
 
               {/* Social Share Buttons */}
