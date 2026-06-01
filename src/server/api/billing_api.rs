@@ -137,7 +137,11 @@ pub async fn cost_dashboard_handler(
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
-        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue())
+        (
+            auditor.get_tenant_cost(&tenant_id_clone_2),
+            auditor.get_tenant_revenue(&tenant_id_clone_2),
+            auditor.get_tenant_payment_fees(&tenant_id_clone_2)
+        )
     });
 
     let storage_future = tokio::task::spawn(async move {
@@ -147,20 +151,19 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
+    let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-    let payment_fees_f64 = total_revenue_f64 * 0.029;
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
     Json(CostDashboardResponse {
-        total_revenue: (total_revenue_f64 * 100.0) as i64,
-        total_costs: (total_costs_f64 * 100.0) as i64,
-        llm_cost: (llm_cost_f64 * 100.0) as i64,
-        storage_cost: (storage_cost_f64 * 100.0) as i64,
-        payment_fees: (payment_fees_f64 * 100.0) as i64,
+        total_revenue: (total_revenue_f64 * 100.0).round() as i64,
+        total_costs: (total_costs_f64 * 100.0).round() as i64,
+        llm_cost: (llm_cost_f64 * 100.0).round() as i64,
+        storage_cost: (storage_cost_f64 * 100.0).round() as i64,
+        payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         period_start,
         period_end,
     })
