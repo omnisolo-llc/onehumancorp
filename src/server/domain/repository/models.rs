@@ -123,3 +123,14 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct VoiceAgentConfig {
+    pub id: String,
+    pub tenant_id: String,
+    pub phone_number: String,
+    pub is_enabled: bool,
+    pub primary_language: String,
+    pub custom_instructions: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
