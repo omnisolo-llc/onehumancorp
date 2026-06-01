@@ -30,10 +30,13 @@ pub struct IntegrationsRegistry {
     pub manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
+    pub daily_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::daily::provider::DailyProvider>>>,
+    pub chatwoot_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::chatwoot::provider::ChatwootProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
 
@@ -70,10 +73,13 @@ impl IntegrationsRegistry {
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            daily_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            chatwoot_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
@@ -251,6 +257,14 @@ impl IntegrationsRegistry {
             let mut clients = self.zoom_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(creds.api_token.clone())));
         }
+        if integration_id == "daily" {
+            let mut clients = self.daily_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::daily::provider::DailyProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "chatwoot" {
+            let mut clients = self.chatwoot_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::chatwoot::provider::ChatwootProvider::new(creds.api_token.clone(), creds.base_url.clone())));
+        }
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
@@ -271,6 +285,11 @@ impl IntegrationsRegistry {
         if integration_id == "manychat" {
             let mut clients = self.manychat_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "sendgrid" {
@@ -393,6 +412,47 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
         }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.get_free_busy(time_min, time_max).await;
+        }
+
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn generate_meeting_for_booking(&self, integration_id: &str, booking_id: &str, topic: &str) -> Result<String, String> {
+        let client_zoom = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_zoom {
+            return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
+
+        let client_daily = {
+            if integration_id == "daily" {
+                let clients = self.daily_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_daily {
+            return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -664,6 +724,18 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
+        let client_daily = {
+            if integration_id == "daily" {
+                let clients = self.daily_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_daily {
+            return c.create_meeting(topic).await;
+        }
+
         let client_jitsi = {
             if integration_id == "jitsi" {
                 let clients = self.jitsi_clients.read().unwrap();
@@ -691,6 +763,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.create_event(summary, start_time, end_time).await;
         }
+
+        let cal_client = {
+            if integration_id == "cal_com" {
+                let clients = self.cal_com_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = cal_client {
+            return c.create_event(summary, start_time, end_time).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -710,6 +795,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "sendgrid" {
                 let clients = self.sendgrid_clients.read().unwrap();
