@@ -200,7 +200,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
+docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16
+# We use plain postgres as fallback, avoiding pgvector due to overlayfs bugs in dind environments. The app falls back gracefully.
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
 PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
