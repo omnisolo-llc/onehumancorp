@@ -12,9 +12,9 @@ type JudgeResult = {
 };
 
 export async function judgeGeneratedOutput(testInfo: TestInfo, input: JudgeInput): Promise<JudgeResult> {
-  const apiKey = process.env.MINIMAX_API_KEY;
+  const apiKey = process.env.OHC_MINIMAX_API_KEY;
   if (!apiKey) {
-    return { score: 10, reason: 'Mock score because MINIMAX_API_KEY was missing.' };
+    return { score: 10, reason: 'Mock score because OHC_MINIMAX_API_KEY was missing.' };
   }
 
   const response = await fetch('https://api.minimax.chat/v1/chat/completions', {
