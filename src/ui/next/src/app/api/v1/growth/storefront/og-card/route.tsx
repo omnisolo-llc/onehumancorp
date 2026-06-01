@@ -18,7 +18,7 @@ export async function GET(request: Request) {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#111827',
+            backgroundImage: 'linear-gradient(to bottom right, #111827, #1e1b4b, #312e81)',
             fontFamily: 'sans-serif',
           }}
         >
@@ -45,14 +45,14 @@ export async function GET(request: Request) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#1f2937',
-              border: '2px solid #374151',
-              borderRadius: 30,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: 40,
               padding: '10px 40px',
             }}
           >
             <span style={{ fontSize: 24, color: '#d1d5db', fontWeight: 'bold' }}>
-              ⚡ Powered by OHC
+              ⚡ Powered by OHC: Launch your free AI store in 30s
             </span>
           </div>
         </div>
