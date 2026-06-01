@@ -563,26 +563,6 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Web Address</label>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div
-                      onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Free Subdomain</span>
-                      <span className="text-[10px] opacity-70">your-name.ohc.store</span>
-                    </div>
-                    <div
-                      onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Custom Domain</span>
-                      <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
                   <div className="space-y-2">
                     {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
