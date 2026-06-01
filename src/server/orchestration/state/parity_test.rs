@@ -320,4 +320,99 @@ mod parity_tests {
             assert_eq!(created_at.timestamp(), dt.timestamp());
         }
     }
+
+    #[tokio::test]
+    async fn test_parity_jsonb_handling() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "key": "value",
+            "nested": { "a": 1, "b": true },
+            "list": [1, 2, 3]
+        });
+        let payload_str = payload.to_string();
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, payload) VALUES (?, 'm1', 't1', ?)")
+                .bind(&task_id)
+                .bind(&payload_str)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let retrieved: String = sqlx::query_scalar("SELECT payload FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            let retrieved_json: serde_json::Value = serde_json::from_str(&retrieved).unwrap();
+            assert_eq!(retrieved_json, payload);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, payload) VALUES ($1, 'm1', 't1', $2)")
+                .bind(parsed_id)
+                .bind(&payload) // sqlx handles Value -> JSONB
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let retrieved: serde_json::Value = sqlx::query_scalar("SELECT payload FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(retrieved, payload);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_strict_timestamps() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let ts = chrono::Utc::now();
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, created_at) VALUES (?, 'm1', 't1', ?)")
+                .bind(&task_id)
+                .bind(ts)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let retrieved: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            // Allow small difference due to precision truncation in string storage
+            assert!((retrieved - ts).num_seconds() == 0);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, created_at) VALUES ($1, 'm1', 't1', $2)")
+                .bind(parsed_id)
+                .bind(ts)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let retrieved: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(retrieved.timestamp(), ts.timestamp());
+        }
+    }
 }

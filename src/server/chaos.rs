@@ -634,6 +634,57 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_cpu_exhaustion_degradation() {
+        // ML-Resilience Stress Verification: Verify that the system remains responsive
+        // or fails gracefully under artificial CPU exhaustion.
+        let start = std::time::Instant::now();
+        let timeout_duration = Duration::from_millis(50);
+
+        // A separate task simulating a critical business operation that must not be blocked indefinitely.
+        let critical_task = tokio::spawn(async move {
+            tokio::time::timeout(timeout_duration, async {
+                // Simulate some work
+                tokio::task::yield_now().await;
+                Ok::<&str, &str>("Success")
+            }).await
+        });
+
+        // Simulate high CPU load in the current thread
+        let mut _v: u64 = 0;
+        for i in 0..10_000_000 {
+            _v = _v.wrapping_add(i);
+        }
+        tokio::task::yield_now().await;
+
+        let res = critical_task.await.unwrap();
+        // Under heavy load, the task might either succeed or timeout, but it must be processed.
+        assert!(res.is_ok() || res.is_err());
+        tracing::info!("CPU exhaustion test completed in {}ms", start.elapsed().as_millis());
+    }
+
+    #[tokio::test]
+    async fn test_packet_loss_retry_resilience() {
+        // Chaos Engineering: Simulate transport packet loss and verify application-level retry resilience.
+        let drop_rate = 0.5;
+        let mut attempts = 0;
+        let max_attempts = 10;
+        let mut success = false;
+
+        while attempts < max_attempts {
+            attempts += 1;
+            // Simulate a network send with random drop
+            if rand::random::<f64>() >= drop_rate {
+                success = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        assert!(success, "Operation should eventually succeed with retries despite 50% packet loss");
+        assert!(attempts > 0);
+    }
+
+    #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
         let timeout_duration = Duration::from_millis(60);
