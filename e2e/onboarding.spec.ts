@@ -148,7 +148,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(page.getByText('Style & Team')).toBeVisible();
 
     // Toggle auto-respond
-    const autoRespondToggle = page.getByRole('checkbox', { name: /Have my AI team automatically/i });
+    const autoRespondToggle = page.getByRole('checkbox', { name: /Allow AI to Auto-Respond/i });
     await expect(autoRespondToggle).toBeChecked();
     await autoRespondToggle.uncheck();
     await expect(autoRespondToggle).not.toBeChecked();
