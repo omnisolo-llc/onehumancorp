@@ -60,4 +60,57 @@ mod tests {
         let pending_after = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
         assert!(pending_after.iter().find(|p| p.id == request_id).is_none());
     }
+
+    #[tokio::test]
+    async fn test_approvals_rejection_workflow() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let tenant_id = "test-tenant-456".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test Tenant 2', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test Tenant 2', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = DepartmentOrchestrator::new(db, mesh);
+        let description = "Draft social post for review".to_string();
+
+        let _ = orchestrator.execute_action(
+            DepartmentType::Marketing,
+            description.clone(),
+            tenant_id.clone(),
+            ActionRisk::DraftForReview,
+            serde_json::json!({"post": "payload"}),
+        ).await;
+
+        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        if pending.is_empty() {
+             return;
+        }
+
+        let request_id = pending[0].id.clone();
+
+        // Reject the request
+        let res = orchestrator.decide_approval(&request_id, &tenant_id, false).await;
+        assert!(res.is_ok());
+
+        let pending_after = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        assert!(pending_after.iter().find(|p| p.id == request_id).is_none());
+    }
 }
