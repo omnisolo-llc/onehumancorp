@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static DASHBOARD_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -47,6 +48,15 @@ impl DashboardService for MyDashboardService {
             return Err(Status::permission_denied(
                 "You do not have permission to view this organization's dashboard.",
             ));
+        }
+
+        let overall_cache_key = format!("hub:dashboard:{}:{}", req.organization_id, req.mobile_optimized);
+        let overall_cache = DASHBOARD_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if std::env::var("ENABLE_DASHBOARD_CACHING").unwrap_or_default() == "true" {
+            if let Some(cached_snapshot) = overall_cache.get(&overall_cache_key).await {
+                return Ok(Response::new(cached_snapshot));
+            }
         }
 
         let hub1 = self.hub.clone();
@@ -480,7 +490,7 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-        Ok(Response::new(DashboardSnapshot {
+        let snapshot = DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
             meetings: final_meetings,
@@ -489,7 +499,13 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
-        }))
+        };
+
+        if std::env::var("ENABLE_DASHBOARD_CACHING").unwrap_or_default() == "true" {
+            overall_cache.set(&overall_cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
+        }
+
+        Ok(Response::new(snapshot))
     }
 
     async fn get_onboarding_state(
