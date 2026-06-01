@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
+  const [tenant, setTenant] = useState<string>('my-store');
 
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
@@ -81,7 +82,11 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    if (typeof window !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant') || localStorage.getItem('tenant_id') || 'my-store';
+      setTenant(storedTenant);
+      setReferralLink(`https://ohc.store/join?ref=${storedTenant}`);
+    }
   }, []);
 
   const openReferralModal = async () => {
@@ -1241,7 +1246,7 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
                         <div className="flex gap-2 items-center">
-                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
+                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
                             <button
                                 onClick={() => setShowEmbedModal(true)}
                                 className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
@@ -2153,13 +2158,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}
