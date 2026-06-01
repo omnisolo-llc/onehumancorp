@@ -2376,6 +2376,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let webhook_router = axum::Router::new()
+        .nest("/api/webhooks/voice", api::voice_webhook::router())
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .route("/api/v1/webhooks/razorpay", axum::routing::post(api::billing_webhook::razorpay_webhook_handler))
@@ -2855,6 +2856,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/voice-config", api::voice_config::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -4397,11 +4399,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
                             <h2>Select an AI Voice</h2>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
-                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" id="voice-ai-active" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" id="voice-ai-book" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" id="voice-ai-links" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
+
+                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Primary Language</label>
+                            <select id="voice-primary-language" style="width: 100%; margin-bottom: 16px; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                                <option value="English">English</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="Arabic">Arabic</option>
+                            </select>
+
+                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Custom Instructions</label>
+                            <textarea id="voice-custom-instructions" rows="3" style="width: 100%; margin-bottom: 16px; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);" placeholder="What should the agent know? (e.g., 'Tell callers to park in the back')"></textarea>
+
+                            <button onclick="saveVoiceSettings()">Save Voice Settings</button>
                             <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
+                        </div>
+
+                        <div class="card glass" id="voice-logs-container" style="margin-bottom: 20px;">
+                            <h2 class="outfit" style="margin-top: 0;">Call History & Transcripts</h2>
+                            <div id="voice-logs-list" style="display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Call logs will be populated here by JS -->
+                            </div>
                         </div>
 
                         <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
@@ -4607,6 +4627,79 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     ${workflow.error ? `<p style="font-size: 13px; color: #b91c1c; margin-bottom: 0;">${workflow.error}</p>` : ''}
                                 </div>
                             `).join('');
+                        }
+
+                        async function fetchVoiceSettings() {
+                            try {
+                                const res = await fetch('/api/voice-config', {
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    document.getElementById('voice-ai-active').checked = data.is_enabled;
+                                    document.getElementById('voice-ai-book').checked = data.allow_booking;
+                                    document.getElementById('voice-ai-links').checked = data.allow_sms_links;
+                                    document.getElementById('voice-primary-language').value = data.primary_language || 'English';
+                                    document.getElementById('voice-custom-instructions').value = data.custom_instructions || '';
+                                }
+                            } catch (e) { console.error('Error fetching voice config', e); }
+                        }
+
+                        async function saveVoiceSettings() {
+                            const payload = {
+                                is_enabled: document.getElementById('voice-ai-active').checked,
+                                allow_booking: document.getElementById('voice-ai-book').checked,
+                                allow_sms_links: document.getElementById('voice-ai-links').checked,
+                                primary_language: document.getElementById('voice-primary-language').value,
+                                custom_instructions: document.getElementById('voice-custom-instructions').value
+                            };
+                            try {
+                                const res = await fetch('/api/voice-config', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (res.ok) {
+                                    const msg = document.getElementById('voice-ai-save-msg');
+                                    msg.style.display = 'block';
+                                    setTimeout(() => msg.style.display = 'none', 3000);
+                                }
+                            } catch (e) { console.error('Error saving voice config', e); }
+                        }
+
+                        async function fetchVoiceLogs() {
+                            try {
+                                const res = await fetch('/api/voice-logs', {
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const logs = await res.json();
+                                    const container = document.getElementById('voice-logs-list');
+                                    if (!container) return;
+                                    container.innerHTML = '';
+                                    if (logs.length === 0) {
+                                        container.innerHTML = '<p style="color: var(--text-secondary);">No calls yet.</p>';
+                                        return;
+                                    }
+                                    logs.forEach(log => {
+                                        const card = document.createElement('div');
+                                        card.style = "padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); cursor: pointer;";
+                                        const duration = log.end_time ? "Completed" : "In Progress";
+                                        card.innerHTML = `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                <strong>${log.caller_phone}</strong>
+                                                <span style="font-size: 0.8rem; color: var(--text-secondary);">${duration}</span>
+                                            </div>
+                                            <p style="margin: 0; font-size: 0.9rem;">${log.summary}</p>
+                                        `;
+                                        card.onclick = () => alert('Showing transcript for ' + log.session_id);
+                                        container.appendChild(card);
+                                    });
+                                }
+                            } catch (e) { console.error('Error fetching voice logs', e); }
                         }
 
                         async function fetchWorkflows() {
@@ -6429,6 +6522,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
+
+                            if (id === 'team-screen') {
+                                fetchVoiceSettings();
+                                fetchVoiceLogs();
+                            }
 
                             if (id === 'api-docs-screen' || id === 'api-screen') {
                                 if (window.SwaggerUIBundle) {

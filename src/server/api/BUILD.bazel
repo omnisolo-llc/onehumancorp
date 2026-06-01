@@ -18,6 +18,8 @@ exports_files(
         "offline_sync.rs",
         "telemetry.rs",
         "catalog.rs",
+        "voice_config.rs",
+        "voice_webhook.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -42,6 +44,8 @@ rust_library(
         "offline_sync.rs",
         "telemetry.rs",
         "catalog.rs",
+        "voice_config.rs",
+        "voice_webhook.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
