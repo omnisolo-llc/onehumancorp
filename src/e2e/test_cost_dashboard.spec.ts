@@ -9,7 +9,7 @@ test.describe('CUJ: Cost Transparency Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // The user navigates to their "My Plan" page
-    await page.goto('/plan');
+    await page.goto('/my-plan');
 
     // Wait for the plan page to render
     await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
@@ -22,10 +22,10 @@ test.describe('CUJ: Cost Transparency Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
 
     // Verify the presence of specific cost elements
-    await expect(page.getByText('Total Costs')).toBeVisible();
-    await expect(page.getByText('LLM Usage')).toBeVisible();
-    await expect(page.getByText('Storage')).toBeVisible();
-    await expect(page.getByText('Payment Fees')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Costs' })).toBeVisible();
+    await expect(page.getByText('LLM Inference Cost')).toBeVisible();
+    await expect(page.getByText('Storage & CDN')).toBeVisible();
+    await expect(page.getByText('Payment Processor Fees')).toBeVisible();
 
     // Check that dollar amounts are rendered (basic regex match for $x.xx)
     const costPattern = /\$\d+\.\d{2}/;
