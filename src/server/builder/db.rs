@@ -18,16 +18,6 @@ pub async fn list_sites(pool: &PgPool, tenant_id: Uuid) -> Result<Vec<Site>, sql
     .await
 }
 
-pub async fn get_site(pool: &PgPool, tenant_id: Uuid, site_id: Uuid) -> Result<Site, sqlx::Error> {
-    sqlx::query_as::<_, Site>(
-        "SELECT id, tenant_id, domain FROM builder_sites WHERE tenant_id = $1 AND id = $2",
-    )
-    .bind(tenant_id)
-    .bind(site_id)
-    .fetch_one(pool)
-    .await
-}
-
 pub async fn create_site(pool: &PgPool, tenant_id: Uuid, domain: Option<String>) -> Result<Site, sqlx::Error> {
     sqlx::query_as::<_, Site>(
         "INSERT INTO builder_sites (tenant_id, domain) VALUES ($1, $2) RETURNING id, tenant_id, domain",
