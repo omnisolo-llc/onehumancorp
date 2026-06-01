@@ -419,7 +419,12 @@ impl VectorRepository {
                 (b, a)
             }
         } else {
-            (a, b) // Fallback, just pick 'a'
+            // Fallback, make it deterministic by ID
+            if a.id < b.id {
+                (a, b)
+            } else {
+                (b, a)
+            }
         }
     }
 
@@ -2308,8 +2313,13 @@ mod determine_conflict_winner_tests {
         let a = create_test_record("a", false, 50, 5);
         let mut b = create_test_record("b", false, 50, 5); // identical stats
         b.created_at = a.created_at; // Ensure created_at is identical
+
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a"); // fallback to a
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a"); // fallback to a, because a.id < b.id
         assert_eq!(loser.id, "b");
     }
 }
