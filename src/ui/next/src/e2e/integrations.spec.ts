@@ -1,21 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Integrations Loop', () => {
-    test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {
+    test('Integrations loop connects Mercado Pago and Jitsi Meet', async ({ page }) => {
         await page.goto('http://localhost:3000/integrations');
 
-        // Verify all 10 integrations exist with their respective names and descriptions
+        // Verify all integrations exist with their respective names and descriptions
         await expect(page.locator('h3:has-text("Ayrshare")')).toBeVisible();
         await expect(page.locator('h3:has-text("Cal.com")')).toBeVisible();
-        await expect(page.locator('h3:has-text("MailerLite")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Listmonk")')).toBeVisible();
         await expect(page.locator('h3:has-text("Mercado Pago")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Shippo")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Twilio Conversations")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Whereby")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Front")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
+        await expect(page.locator('h3:has-text("EasyPost")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Twilio")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Jitsi Meet")')).toBeVisible();
 
         // Let's connect Mercado Pago
         const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
@@ -28,13 +24,13 @@ test.describe('Integrations Loop', () => {
         // Verify state changed
         await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
 
-        // Let's connect Zoom
-        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
-        const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
-        await connectZoomButton.click();
+        // Let's connect Jitsi Meet
+        const jitsiCard = page.locator('div').filter({ hasText: 'Jitsi Meet' }).first();
+        const connectJitsiButton = jitsiCard.locator('button:has-text("Connect")');
+        await connectJitsiButton.click();
 
         // Verify state changed
-        await expect(zoomCard.locator('button:has-text("Manage")')).toBeVisible();
+        await expect(jitsiCard.locator('button:has-text("Manage")')).toBeVisible();
 
     });
 
