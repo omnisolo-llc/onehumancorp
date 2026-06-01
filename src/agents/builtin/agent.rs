@@ -759,6 +759,23 @@ impl Agent {
                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
                         }
+                        Err(crate::types::ToolError::UserFixable(msg)) => {
+                            // User-fixable: interrupt execution and ask user for input
+                            let err_msg = format!("User intervention required: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            // LLM-recoverable: return the raw error as a ToolMessage directly to the model so it can self-correct
+                            let err_str = format!("Recoverable error: {}", msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: err_str.clone(),
+                                iteration: turn_count,
+                            });
+                            tool_results[i].error = err_str;
+                        }
                         Err(e) => {
                             let err_str = e.to_string();
                             on_event(AgentEvent::ToolCall {
@@ -3506,6 +3523,107 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
+    }
+
+
+    #[tokio::test]
+    async fn test_tao_termination_user_fixable() {
+        struct UserFixableTool;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Need login".to_string()))
+            }
+        }
+
+        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::json!({}) }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        let tool = ohc_builtin_agent_tools::Tool {
+            name: "user_fixable_tool".to_string(),
+            description: "Fails requiring user fix".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: std::sync::Arc::new(UserFixableTool),
+        };
+
+        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.project_trusted = true;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User intervention required: Need login"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_llm_recoverable_feedback() {
+        struct LlmRecoverableTool;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for LlmRecoverableTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::LlmRecoverable("Missing parameter".to_string()))
+            }
+        }
+
+        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::json!({}) }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("I will fix it!"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        let tool = ohc_builtin_agent_tools::Tool {
+            name: "llm_recoverable_tool".to_string(),
+            description: "Fails recoverably".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: std::sync::Arc::new(LlmRecoverableTool),
+        };
+
+        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.project_trusted = true;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "I will fix it!");
     }
 
     #[tokio::test]
