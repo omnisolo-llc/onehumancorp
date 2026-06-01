@@ -48,6 +48,23 @@ export default function InboxPage() {
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
 
+  const [connectedPlatforms, setConnectedPlatforms] = useState({
+    Facebook: false,
+    Instagram: false,
+    WhatsApp: true,
+  });
+
+  const [showOAuthPopup, setShowOAuthPopup] = useState<string | null>(null);
+
+  const simulateOAuth = (platform: string) => {
+    setShowOAuthPopup(platform);
+    setTimeout(() => {
+      setConnectedPlatforms(prev => ({ ...prev, [platform]: true }));
+      setShowOAuthPopup(null);
+    }, 1500);
+  };
+
+
   const generateDraft = () => {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
@@ -65,7 +82,11 @@ export default function InboxPage() {
     let contentToSend = replyInput;
     if (msgId) {
        const msg = messages.find(m => m.id === msgId);
-       if (msg && msg.draft) contentToSend = msg.draft;
+       if (editingId === msgId) {
+           contentToSend = replyInput;
+       } else if (msg && msg.draft) {
+           contentToSend = msg.draft;
+       }
     }
 
     if (!contentToSend) return;
@@ -172,12 +193,13 @@ export default function InboxPage() {
         </div>
       )}
 
+
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
+              <h2 className="text-xl font-bold text-gray-900">Connect Platforms</h2>
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-1"
@@ -186,7 +208,7 @@ export default function InboxPage() {
               </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
+            <p className="text-sm text-gray-500 mb-4">Connect your social accounts to view and reply to messages from a central feed.</p>
 
             {channelError && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
@@ -195,24 +217,57 @@ export default function InboxPage() {
             )}
 
             <div className="space-y-3">
-              {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
-                  <button
-                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
+              {['Instagram', 'Facebook', 'WhatsApp'].map(platform => (
+                <div key={platform} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-800 capitalize">{platform}</span>
+                  {connectedPlatforms[platform as keyof typeof connectedPlatforms] ? (
+                     <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-md">Connected</span>
+                  ) : (
+                    <button
+                      onClick={() => simulateOAuth(platform)}
+                      className="px-4 py-1.5 bg-[#0066FF] text-white text-xs font-bold rounded-md hover:bg-[#005bb5] transition-colors shadow-sm"
+                    >
+                      Connect {platform}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Twilio Channels</h3>
+                <div className="space-y-2">
+                  {Object.entries(twilioChannels).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-white">
+                      <span className="text-xs font-semibold text-gray-600 capitalize">{key}</span>
+                      <button
+                        onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+            </div>
+
           </div>
         </div>
       )}
 
+      {/* OAuth Mock Popup */}
+      {showOAuthPopup && (
+         <div className="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs flex flex-col items-center">
+                 <div className="w-12 h-12 border-4 border-t-[#0066FF] border-blue-200 rounded-full animate-spin mb-4"></div>
+                 <h3 className="font-bold text-gray-900 text-lg">Connecting {showOAuthPopup}...</h3>
+                 <p className="text-xs text-gray-500 mt-2 text-center">Please wait while we securely authenticate with {showOAuthPopup}.</p>
+             </div>
+         </div>
+      )}
+
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
-        {messages.map(msg => (
+        {messages.filter(msg => msg.source === 'Me' || connectedPlatforms[msg.source as keyof typeof connectedPlatforms]).map(msg => (
           <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
             <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
               {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
