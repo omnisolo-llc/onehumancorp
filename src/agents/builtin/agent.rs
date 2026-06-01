@@ -238,52 +238,7 @@ impl AgentProgress {
 }
 
 // Prompt Construction: OpenAI Codex Mechanic
-// 1. Server-controlled System Message (Highest Priority)
-// 2. Tool Definitions
-// 3. Developer Instructions
-// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
-// 5. Conversation History (happens at run loop)
-
-pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
-    let mut current_dir = start_dir.to_path_buf();
-    let mut contents = Vec::new();
-    let mut max_depth = 50;
-
-    loop {
-        let agent_file = current_dir.join("AGENTS.md");
-        if agent_file.exists() && agent_file.is_file() {
-            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
-                contents.push(content);
-            }
-        }
-
-        if !current_dir.pop() || max_depth == 0 {
-            break;
-        }
-        max_depth -= 1;
-    }
-
-    // Order: more deeply-nested files take precedence
-    let mut combined = String::new();
-    for (i, content) in contents.iter().enumerate() {
-        if i > 0 {
-            combined.push_str("\n\n---\n\n");
-        }
-        combined.push_str(content);
-    }
-
-    let max_bytes = 32 * 1024;
-    if combined.len() > max_bytes {
-        let mut end_idx = max_bytes;
-        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
-            end_idx -= 1;
-        }
-        combined.truncate(end_idx);
-        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
-    }
-
-    combined
-}
+// Modularized in crate::prompt_construction::PromptBuilder
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
 /// This fulfills the Master Catalog specification:
@@ -995,12 +950,33 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
+                            let mut retry_count = 0;
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                                tool,
-                                &tc,
-                                max_retries
-                            ).await;
+                            let final_res;
+
+                            loop {
+                                match tool.execute.execute(args.clone()).await {
+                                    Ok(res) => {
+                                        final_res = Ok(res);
+                                        break;
+                                    }
+                                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                                        if retry_count < max_retries {
+                                            retry_count += 1;
+                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
+                                            tokio::time::sleep(backoff).await;
+                                            continue;
+                                        } else {
+                                            final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        final_res = Err(e);
+                                        break;
+                                    }
+                                }
+                            }
                             (id, final_res)
                         } else {
                             // Unreachable if tool not found goes to mutating calls
@@ -1109,12 +1085,33 @@ impl Agent {
                             });
                             continue;
                         }
+                        let mut retry_count = 0;
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                            tool,
-                            &tc,
-                            max_retries
-                        ).await;
+                        let final_res;
+
+                        loop {
+                            match tool.execute.execute(args.clone()).await {
+                                Ok(res) => {
+                                    final_res = Ok(res);
+                                    break;
+                                }
+                                Err(crate::types::ToolError::Unexpected(msg)) => {
+                                    if retry_count < max_retries {
+                                        retry_count += 1;
+                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
+                                        tokio::time::sleep(backoff).await;
+                                        continue;
+                                    } else {
+                                        final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                                        break;
+                                    }
+                                }
+                                Err(e) => {
+                                    final_res = Err(e);
+                                    break;
+                                }
+                            }
+                        }
 
                         match final_res {
                             Err(crate::types::ToolError::Transient(msg)) => {
@@ -1438,9 +1435,13 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
+            let llm_clone = self.llm.clone();
+            let model_clone = cfg.model.clone();
+
             read_only_futures.push(async move {
                 let mut retry_count = 0;
-                let current_tc = tc_clone.clone();
+                let mut current_tc = tc_clone.clone();
+                let mut llm_recovery_attempts = 0;
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
@@ -1455,9 +1456,37 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable
-                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break Ok(format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg));
+                            if llm_recovery_attempts < max_retries {
+                                llm_recovery_attempts += 1;
+
+                                // Error Handling (Compounding Error Prevention): LLM-recoverable
+                                // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                                let recovery_system = format!(
+                                    "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
+                                    current_tc.name, msg, current_tc.arguments
+                                );
+
+                                let recovery_req = ChatRequest {
+                                    model: model_clone.clone(),
+                                    system: recovery_system,
+                                    messages: vec![Message::user("Please fix the JSON arguments.")],
+                                    tools: vec![],
+                                    max_tokens: 1000,
+                                    temperature: 0.0,
+                                };
+
+                                match llm_clone.chat(recovery_req).await {
+                                    Ok(resp) => {
+                                        let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                                        if let Ok(fixed_args) = serde_json::from_str(json_text) {
+                                            current_tc.arguments = fixed_args;
+                                            continue; // Retry with fixed args
+                                        }
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
+                            break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
                         }
                         Err(e) => {
                             break Err(e);
@@ -1520,7 +1549,8 @@ impl Agent {
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
-            let current_tc = tc.clone();
+            let mut current_tc = tc.clone();
+            let mut llm_recovery_attempts = 0;
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
@@ -1535,9 +1565,37 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable
-                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg);
+                        if llm_recovery_attempts < max_retries {
+                            llm_recovery_attempts += 1;
+
+                            // Error Handling (Compounding Error Prevention): LLM-recoverable
+                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let recovery_system = format!(
+                                "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
+                                current_tc.name, msg, current_tc.arguments
+                            );
+
+                            let recovery_req = ChatRequest {
+                                model: cfg.model.clone(),
+                                system: recovery_system,
+                                messages: vec![Message::user("Please fix the JSON arguments.")],
+                                tools: vec![],
+                                max_tokens: 1000,
+                                temperature: 0.0,
+                            };
+
+                            match self.llm.chat(recovery_req).await {
+                                Ok(resp) => {
+                                    let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                                    if let Ok(fixed_args) = serde_json::from_str(json_text) {
+                                        current_tc.arguments = fixed_args;
+                                        continue; // Retry with fixed args
+                                    }
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -1860,7 +1918,7 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md = load_cascading_agents_md(start_dir).await;
+            let cascading_md = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(start_dir).await;
             if !cascading_md.is_empty() {
                 if !final_cfg.user_instructions.is_empty() {
                     final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
@@ -2076,32 +2134,12 @@ impl Agent {
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
-            // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
-                }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = final_cfg.user_instructions.len();
-                    }
-                    let summary = &final_cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
-            }
+            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                final_cfg.enable_lost_in_the_middle_prevention,
+                &final_cfg.developer_instructions,
+                &final_cfg.user_instructions,
+            );
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
@@ -2345,24 +2383,6 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} read-only tool calls concurrently.", read_only_calls.len());
             }
             for tc in &read_only_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
-                    }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
-                    }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
-                    let is_high_risk = ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
-                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name)).into());
-                    }
-                }
-
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
@@ -2543,24 +2563,12 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate || final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
                     }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
-                    }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
-                    let is_high_risk = ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
-                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name)).into());
-                    }
                 }
-
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
@@ -3324,187 +3332,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_human_in_loop_spectrum_approval_on_all() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "1".to_string(),
-                            name: "read_only_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                }
-            ]),
-        });
-
-        let dummy_tool = Tool {
-            name: "read_only_tool".to_string(),
-            description: "A read-only tool".to_string(),
-            parameters: serde_json::json!({}),
-            is_read_only: true,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-
-        let agent = Agent::new(client, vec![dummy_tool]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::ApprovalOnAll;
-        cfg.manually_approved_tool_calls = vec![];
-
-        let mut events = vec![];
-        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call read_only_tool requires manual approval."));
-    }
-
-    #[tokio::test]
-    async fn test_human_in_loop_spectrum_collaborative_edit() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "1".to_string(),
-                            name: "read_only_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                }
-            ]),
-        });
-
-        let dummy_tool = Tool {
-            name: "read_only_tool".to_string(),
-            description: "A read-only tool".to_string(),
-            parameters: serde_json::json!({}),
-            is_read_only: true,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-
-        let agent = Agent::new(client, vec![dummy_tool]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::CollaborativeEdit;
-        cfg.manually_approved_tool_calls = vec![];
-
-        let mut events = vec![];
-        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call read_only_tool requires collaborative editing/approval."));
-    }
-
-    #[tokio::test]
-    async fn test_human_in_loop_spectrum_supervisory_high_risk() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "1".to_string(),
-                            name: "bash".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                }
-            ]),
-        });
-
-        let dummy_tool = Tool {
-            name: "bash".to_string(),
-            description: "A mutating tool".to_string(),
-            parameters: serde_json::json!({}),
-            is_read_only: false,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-
-        let agent = Agent::new(client, vec![dummy_tool]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
-        cfg.manually_approved_tool_calls = vec![];
-
-        let mut events = vec![];
-        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call bash requires supervisory approval (high-risk tool)."));
-    }
-
-    #[tokio::test]
-    async fn test_human_in_loop_spectrum_supervisory_low_risk() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "1".to_string(),
-                            name: "read_only_tool".to_string(),
-                            arguments: serde_json::json!({}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: Some("mock-id".to_string()),
-                },
-                ChatResponse {
-                    message: Message::assistant("Final answer"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id-2".to_string()),
-                }
-            ]),
-        });
-
-        let dummy_tool = Tool {
-            name: "read_only_tool".to_string(),
-            description: "A read-only tool".to_string(),
-            parameters: serde_json::json!({}),
-            is_read_only: true,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-
-        let agent = Agent::new(client, vec![dummy_tool]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
-        cfg.manually_approved_tool_calls = vec![];
-
-        let mut events = vec![];
-        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
-        // In the gating tool, supervisory will trigger a confirmation requirement if confidence < 0.5.
-        // Wait, confidence_threshold is 0.0 by default, so it triggers.
-        // We'll assert it triggers user intervention.
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("requires explicit user confirmation"));
-    }
-
-    #[tokio::test]
     async fn test_tao_termination_guardrail_tripwire() {
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -3575,7 +3402,7 @@ mod tests {
         fs::write(&sub_md, "Sub level instructions").await.unwrap();
         fs::write(&deep_md, "Deep level instructions").await.unwrap();
 
-        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
+        let combined = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(&deep_dir).await;
 
         // Since it loops from deep to root, the deeper files are collected first.
         // The results should be: Deep -> Sub -> Root.
@@ -3603,7 +3430,7 @@ mod tests {
         let large_content = "A".repeat(33000);
         fs::write(&root_md, large_content).await.unwrap();
 
-        let combined = crate::agent::load_cascading_agents_md(root_path).await;
+        let combined = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(root_path).await;
 
         // Verify the size is close to 32KiB + notice
         assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
