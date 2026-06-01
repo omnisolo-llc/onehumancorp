@@ -1,12 +1,13 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HelpCenterPage from './page';
 import userEvent from '@testing-library/user-event';
 
 describe('HelpCenterPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve([
         { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started" },
         { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }

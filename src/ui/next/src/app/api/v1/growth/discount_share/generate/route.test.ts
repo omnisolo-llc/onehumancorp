@@ -8,12 +8,12 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
 
     beforeEach(() => {
         process.env = { ...originalEnv };
-        global.fetch = jest.fn();
+        global.fetch = vi.fn();
     });
 
     afterEach(() => {
         process.env = originalEnv;
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('should successfully proxy the request to the backend and return data', async () => {
