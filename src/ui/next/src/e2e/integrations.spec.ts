@@ -14,6 +14,7 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Whereby")')).toBeVisible();
         await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
         await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
+        await expect(page.locator('h3:has-text("Front")')).toBeVisible();
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
         // Let's connect Mercado Pago
