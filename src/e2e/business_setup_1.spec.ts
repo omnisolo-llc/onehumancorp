@@ -56,6 +56,6 @@ test.describe('Business Setup Wizard', () => {
 
     await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Launch My Business/ })).toBeVisible();
-    await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
+    await expect(page.locator("p", { hasText: "You're set up! Here's what to do next:" }).first()).toBeVisible();
   });
 });
