@@ -27,18 +27,25 @@ pub async fn handle_oauth_callback(
         let parts: Vec<&str> = state.splitn(3, '_').collect();
         if parts.len() == 3 {
             let tunnel_id = parts[1];
-            let actual_state = parts[2];
 
-            // Redirect to the standalone instance via the tunnel proxy
-            let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
-                .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
+            // Validate tunnel_id to prevent path traversal or open redirect.
+            // It should only contain alphanumeric characters, hyphens, and underscores.
+            let is_valid_tunnel_id = !tunnel_id.is_empty() && tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
 
-            let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
-                tunnel_base_url, tunnel_id, query.code, actual_state);
-            for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", k, v));
+            if is_valid_tunnel_id {
+                let actual_state = parts[2];
+
+                // Redirect to the standalone instance via the tunnel proxy
+                let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
+                    .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
+
+                let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
+                    tunnel_base_url, tunnel_id, query.code, actual_state);
+                for (k, v) in query.extra {
+                    redirect_url.push_str(&format!("&{}={}", k, v));
+                }
+                return Redirect::temporary(&redirect_url).into_response();
             }
-            return Redirect::temporary(&redirect_url).into_response();
         }
     }
 

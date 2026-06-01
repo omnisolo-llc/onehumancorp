@@ -29,12 +29,18 @@ where
             .execute(executor)
             .await?;
     } else {
-        if org_id.trim().is_empty() && ::server_config::get().multitenant {
-            return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
-        }
+        let safe_org_id = if org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
+                return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
+            }
+            "unauthenticated_system"
+        } else {
+            org_id
+        };
+
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
         query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(org_id)
+            .bind(safe_org_id)
             .execute(executor)
             .await?;
     }
