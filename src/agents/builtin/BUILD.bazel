@@ -49,6 +49,7 @@ rust_library(
         "agent_protocol.rs",
         "auth.rs",
         "autogen.rs",
+        "agentic_seek.rs",
         "checkpointer.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
