@@ -517,8 +517,8 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
-            .bind(&org_id)
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2 LIMIT 1")
+            .bind(&req.organization_id).bind(&req.user_id)
             .fetch_optional(&self.db.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -593,11 +593,11 @@ impl DashboardService for MyDashboardService {
 
         let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3"
+                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3 AND user_id = $4"
             )
             .bind(state.current_step)
             .bind(state_json_val)
-            .bind(&state.organization_id)
+            .bind(&state.organization_id).bind(&state.user_id)
             .execute(&self.db.pool)
             .await
         }).await;

@@ -2574,7 +2574,7 @@ mod tests {
 
         use sqlx::Row;
         let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
-            .bind(&org_id_service)
+            .bind(&org_id_service).bind("default_user")
             .fetch_one(&db.pool)
             .await
             .unwrap();
@@ -2583,7 +2583,7 @@ mod tests {
         assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
 
         let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
-            .bind(&org_id_service)
+            .bind(&org_id_service).bind("default_user")
             .fetch_all(&agent.db.pool)
             .await
             .unwrap();
@@ -2610,7 +2610,7 @@ mod tests {
         let org_id_food = res_food.organization_id;
 
         let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
-            .bind(&org_id_food)
+            .bind(&org_id_food).bind("default_user")
             .fetch_one(&db.pool)
             .await
             .unwrap();
