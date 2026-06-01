@@ -9,7 +9,7 @@ use chrono::Utc;
 async fn test_task_decomposition_service() {
     // Mock db to avoid pool timeouts for isolated test
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
@@ -22,26 +22,24 @@ async fn test_task_decomposition_service() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    locked_until TIMESTAMPTZ,
                     ultraplan_phase TEXT,
+                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    depth INT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -64,26 +62,24 @@ async fn test_task_decomposition_service() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies TEXT NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
+                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    depth INTEGER,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -93,14 +89,6 @@ async fn test_task_decomposition_service() {
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
                 );
                 "#
             )
@@ -176,7 +164,7 @@ async fn test_task_decomposition_service() {
     svc.create_task(dep_task.clone()).await.unwrap();
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
+    let claimed = svc.claim_task("agent1").await.unwrap();
     assert!(claimed.is_some());
 
     svc.update_status(&main_task.id, "REVIEW", "agent1").await.unwrap();
@@ -185,7 +173,7 @@ async fn test_task_decomposition_service() {
 #[tokio::test]
 async fn test_task_decomposition_dag_blocked() {
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -199,26 +187,24 @@ async fn test_task_decomposition_dag_blocked() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    locked_until TIMESTAMPTZ,
                     ultraplan_phase TEXT,
+                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    depth INT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
                 "#
             ).execute(&db.pool).await.unwrap();
@@ -229,26 +215,24 @@ async fn test_task_decomposition_dag_blocked() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies TEXT NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
+                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    depth INTEGER,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
@@ -262,17 +246,9 @@ async fn test_task_decomposition_dag_blocked() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
-                );
                 "#
             ).execute(sqlite_pool).await.unwrap();
-            }
+        }
     }
 
 
@@ -341,18 +317,18 @@ async fn test_task_decomposition_dag_blocked() {
     svc.create_task(dep_task.clone()).await.unwrap();
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
+    let claimed = svc.claim_task("agent1").await.unwrap();
     assert!(claimed.is_some());
     assert_eq!(claimed.unwrap().id, dep_task.id);
 
-    let claimed2 = svc.claim_task("org1", "agent2").await.unwrap();
+    let claimed2 = svc.claim_task("agent2").await.unwrap();
     assert!(claimed2.is_none());
 }
 
 #[tokio::test]
 async fn test_task_decomposition_service_fail_task() {
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -366,26 +342,24 @@ async fn test_task_decomposition_service_fail_task() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies JSONB NOT NULL DEFAULT '[]'::jsonb,
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    locked_until TIMESTAMPTZ,
                     ultraplan_phase TEXT,
+                    deliberation_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    depth INT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -405,26 +379,24 @@ async fn test_task_decomposition_service_fail_task() {
                 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
-                    mission_id TEXT,
-                    parent_plan_id TEXT,
-                    dependencies JSONB DEFAULT '[]',
+                    mission_id TEXT NOT NULL,
+                    parent_plan_id TEXT NOT NULL,
+                    dependencies TEXT NOT NULL DEFAULT '[]',
                     title TEXT NOT NULL,
                     description TEXT,
+                    assigned_agent_id TEXT,
                     status TEXT NOT NULL DEFAULT 'PENDING',
-                    priority TEXT NOT NULL DEFAULT 'P2',
-                    payload JSONB DEFAULT '{}',
-                    deliberation_log JSONB DEFAULT '[]',
-                    depth INTEGER,
+                    priority TEXT NOT NULL,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    locked_until TIMESTAMP,
                     ultraplan_phase TEXT,
+                    deliberation_log TEXT NOT NULL DEFAULT '[]',
+                    depth INTEGER,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     action_risk TEXT,
                     approval_status TEXT,
-                    proposed_content TEXT,
-                    tokens_consumed INTEGER DEFAULT 0,
-                    assigned_agent_id TEXT,
-                    agent_role TEXT,
-                    model TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    proposed_content TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -435,17 +407,9 @@ async fn test_task_decomposition_service_fail_task() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS task_dependencies (
-                    task_id TEXT NOT NULL,
-                    depends_on_task_id TEXT NOT NULL
-                );
                 "#
             ).execute(sqlite_pool).await.unwrap();
-            }
+        }
     }
 
 
@@ -490,7 +454,7 @@ async fn test_task_decomposition_service_fail_task() {
 
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
+    let claimed = svc.claim_task("agent1").await.unwrap();
     assert!(claimed.is_some());
     assert_eq!(claimed.unwrap().id, main_task.id);
 

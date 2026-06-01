@@ -1151,7 +1151,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+    if let Ok(db_url) = std::env::var("DATABASE_URL") {
         if db_url.starts_with("sqlite") {
             match sqlx::sqlite::SqlitePoolOptions::new().connect(&db_url).await {
                 Ok(pool) => {

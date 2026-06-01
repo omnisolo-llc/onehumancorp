@@ -204,11 +204,11 @@ bazelisk run //src/server:server
 | `OHC_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
 | `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
 | `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
-| `MINIMAX_BASE_URL` | Optional MiniMax OpenAI-compatible API root; defaults to `https://api.minimaxi.com/v1` for China. Set to `https://api.minimax.io/v1` for the international API base |
+| `MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
 | `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
 | `OHC_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
 | `OHC_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
-| `OHC_STANDALONE_MODE` | Set `true` to force standalone mode and SQLite enforcement |
+| `OHC_STANDALONE` | Set `true` to force standalone mode and SQLite enforcement |
 | `OHC_SQLITE_KEY` | Required when using standalone SQLite-backed state |
 | `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
 | `OHC_HEADLESS` | Set `true` for API-only/headless integration behavior |
