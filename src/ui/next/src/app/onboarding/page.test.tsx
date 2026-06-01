@@ -96,13 +96,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
     });
 
-    // Need to fill in email and phone to pass validation for step 2
-    const emailInput = screen.getByPlaceholderText(/you@email.com/i);
-    await user.type(emailInput, 'maya@example.com');
-
-    const phoneInput = screen.getByPlaceholderText(/\(555\) 123-4567/i);
-    await user.type(phoneInput, '5551234567');
-
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     await user.click(continueButton);
 
@@ -199,21 +192,19 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when location is too short', async () => {
+  it('Step 1: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
         chatStep: 3,
-        businessName: 'Valid Name',
-        location: 'A',
+        businessName: 'A',
+        location: 'NY',
         businessType: 'Bakery',
         categories: ['food'],
         firstProductName: 'Cake',
-        firstProductPrice: '20',
-        businessEmail: 'test@example.com',
-        businessPhone: '1234567890'
+        firstProductPrice: '20'
       });
     });
 
@@ -223,7 +214,7 @@ describe('OnboardingWizard', () => {
 
     await user.click(generateButton);
 
-    expect(await screen.findByText('Location must be at least 2 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {

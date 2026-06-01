@@ -127,6 +127,8 @@ CLOUD_HELM_SMOKE_ARGS=(
   --set multiTenant.enabled=true
   --set valkey.enabled=true
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
+  --set-string backend.env.REDIS_URL=redis://ohc-cloud-valkey-master:6379
+  --set-string backend.env.REDIS_ADDR=ohc-cloud-valkey-master:6379
   --set-string backend.env.OHC_STANDALONE_MODE=false
   --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
 )
