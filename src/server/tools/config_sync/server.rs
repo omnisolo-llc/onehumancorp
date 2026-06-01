@@ -33,8 +33,10 @@ impl ConfigSyncServer {
             return Err(tonic::Status::invalid_argument("Invalid tool_id"));
         }
 
-        if req.spiffe_id.is_empty() {
-            return Err(tonic::Status::unauthenticated("Missing SPIFFE ID"));
+        let parsed = ::server_auth::parse_spiffe_id(&req.spiffe_id).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
+        let tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
         }
 
         let params: SyncParams = serde_json::from_str(&req.params)
