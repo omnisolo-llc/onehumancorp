@@ -1,3 +1,4 @@
+pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
 
@@ -12,4 +13,3 @@ pub mod growth;
 pub mod telemetry;
 pub mod syndication_handler;
 pub mod dynamic_workflows;
-pub mod domain_engine;
