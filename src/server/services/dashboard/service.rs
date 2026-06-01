@@ -347,7 +347,7 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let mut final_meetings = Vec::new();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -464,7 +464,7 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-
+            final_meetings = out_meetings;
         }
 
         let org = if req.mobile_optimized {

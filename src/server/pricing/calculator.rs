@@ -80,11 +80,6 @@ pub struct CostConfig {
     pub cost_per_network_gb: f64,
 }
 
-pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_cost_with_config(input_tokens, output_tokens, cached_input_tokens, local_embedding_tokens, config);
-    (cost * 100.0).round() as i64
-}
-
 pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
     let input_cost = input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;
@@ -92,22 +87,6 @@ pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_
     let embedding_cost = local_embedding_tokens as f64 * config.cost_per_local_embedding;
     let total = (input_cost + output_cost + cached_cost + embedding_cost) * (1.0 - config.discount_factor);
     (total * 10000.0).round() / 10000.0
-}
-
-pub fn calculate_storage_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_storage_cost(bytes, config);
-    (cost * 100.0).round() as i64
-}
-
-pub fn calculate_storage_cost(bytes: i64, config: &CostConfig) -> f64 {
-    let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let cost = gb * config.cost_per_gb_month;
-    (cost * 10000.0).round() / 10000.0
-}
-
-pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_storage_savings(original_bytes, compressed_bytes, config);
-    (cost * 100.0).round() as i64
 }
 
 pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
@@ -118,19 +97,9 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     (savings * 10000.0).round() / 10000.0
 }
 
-pub fn calculate_compute_cost_cents(hours: f64, config: &CostConfig) -> i64 {
-    let cost = calculate_compute_cost(hours, config);
-    (cost * 100.0).round() as i64
-}
-
 pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
     let cost = hours * config.cost_per_compute_hour;
     (cost * 10000.0).round() / 10000.0
-}
-
-pub fn calculate_network_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
-    let cost = calculate_network_cost(bytes, config);
-    (cost * 100.0).round() as i64
 }
 
 pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
@@ -140,14 +109,14 @@ pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
 }
 
 pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
-    if cost.abs() < 1e-9 {
+    if cost == 0.0 {
         return 0.0;
     }
     (revenue - cost) / cost * 100.0
 }
 
 pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
-    if cost.abs() < 1e-9 {
+    if cost == 0.0 {
         return 0.0;
     }
     (output_tokens as f64) / cost
@@ -221,21 +190,6 @@ mod tests {
 
         let cost = calculate_cost_with_config(1000, 500, 200, 100, &config);
         assert_eq!(cost, 1.899);
-    }
-
-    #[test]
-    fn test_calculate_storage_cost() {
-        let config = CostConfig {
-            cost_per_gb_month: 0.10,
-            ..Default::default()
-        };
-
-        let storage_bytes = 5 * 1024 * 1024 * 1024; // 5GB
-        let cost = calculate_storage_cost(storage_bytes, &config);
-        assert_eq!(cost, 0.50);
-
-        let storage_bytes_cents = calculate_storage_cost_cents(storage_bytes, &config);
-        assert_eq!(storage_bytes_cents, 50);
     }
 
     #[test]

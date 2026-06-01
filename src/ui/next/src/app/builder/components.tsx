@@ -174,7 +174,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Referral") {
     return (
-      <div className="builder-block p-6 bg-gradient-to-br from-[#0066FF]/10 to-[#00C24B]/10 font-inter text-center border-t border-b border-white/40 dark:border-white/10 my-4 shadow-sm backdrop-blur-sm">
+      <div className="p-6 bg-gradient-to-br from-[#0066FF]/10 to-[#00C24B]/10 font-inter text-center border-t border-b border-white/40 dark:border-white/10 my-4 shadow-sm backdrop-blur-sm">
         <h2 className="text-xl font-bold font-outfit mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">{props.offerTitle || "Refer a Friend & Earn"}</h2>
         <p className="text-sm text-gray-700 dark:text-[#A1A1A6] mb-5">{props.offerDescription || "Get 20% off your next purchase when a friend buys from us!"}</p>
 
@@ -197,12 +197,54 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
             Share
           </a>
-          <a
-            href={`ohc://join?ref=${props.tenantId || 'storefront'}-referral`}
-            className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
-          >
-            Get Code
-          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "Testimonials") {
+    return (
+      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+        <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">What People Say</h2>
+        <div className="flex flex-col gap-4">
+          {(props.quotes || []).map((quote: any, i: number) => (
+            <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-4 rounded-[16px]">
+              <p className="text-sm italic text-gray-700 dark:text-[#A1A1A6] mb-2">"{quote.text}"</p>
+              <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">- {quote.author}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "BookingCalendar") {
+    return (
+      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
+          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title || "Schedule an Appointment"}</h2>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
+             <p className="text-sm text-gray-500">Calendar Widget</p>
+          </div>
+          <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-semibold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "ContactForm") {
+    return (
+      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px]">
+          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Contact Us</h2>
+          <input className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Your Name" />
+          <input className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Your Email" />
+          <textarea className="w-full mb-3 p-3 rounded bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-700" placeholder="Message"></textarea>
+          <button className="w-full bg-black dark:bg-white text-white dark:text-black font-semibold py-3 rounded-[8px] shadow-md transition-all">
+            Send Message
+          </button>
         </div>
       </div>
     );
@@ -229,12 +271,12 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     }
 
     return (
-      <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
+      <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
           href={`ohc://join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
-          <span className="font-inter">⚡ Powered by</span>
+          <span className="font-inter">Powered by</span>
           <span className="font-outfit font-bold tracking-tight">OHC</span>
           <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

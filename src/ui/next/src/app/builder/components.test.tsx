@@ -5,7 +5,7 @@ import { SmartBlock } from './components';
 describe('SmartBlock PoweredBy', () => {
     it('renders the Powered by OHC footer when isPremium is false or undefined', () => {
         render(<SmartBlock type="PoweredBy" props={{ tenantId: 'test-tenant' }} />);
-        expect(screen.getByText('⚡ Powered by')).toBeTruthy();
+        expect(screen.getByText('Powered by')).toBeTruthy();
         expect(screen.getByText('OHC')).toBeTruthy();
         expect(screen.getByRole('link').getAttribute('href')).toBe('ohc://join?ref=test-tenant');
     });

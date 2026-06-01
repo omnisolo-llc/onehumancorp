@@ -191,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_closed_tasks_with_cache() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
         }
@@ -247,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_closed_tasks() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
         }
