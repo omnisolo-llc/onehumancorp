@@ -194,7 +194,7 @@ export default function AgentsPage() {
               {departments.map((dept) => (
                 <div
                   key={dept.id}
-                  className="mac-glass-container shadow-sm p-5 rounded-[20px] flex items-start gap-4 cursor-pointer hover:shadow-md hover:bg-white/80 transition-all duration-200"
+                  className="ohc-hybrid-panel shadow-sm p-5 rounded-[20px] flex items-start gap-4 cursor-pointer hover:shadow-md hover:bg-white/80 transition-all duration-200"
                 >
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
@@ -219,7 +219,7 @@ export default function AgentsPage() {
 
           ) : activeTab === 'workflows' ? (
             <div className="space-y-4 pb-8">
-              <form onSubmit={createWorkflow} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
+              <form onSubmit={createWorkflow} className="ohc-hybrid-panel rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div>
                     <h2 className="font-bold text-gray-900 font-outfit text-xl">Create Workflow</h2>
@@ -264,12 +264,12 @@ export default function AgentsPage() {
               </form>
 
               {workflows.length === 0 ? (
-                <div className="mac-glass-container rounded-[20px] border border-dashed border-gray-300 p-8 text-center">
+                <div className="ohc-hybrid-panel rounded-[20px] border border-dashed border-gray-300 p-8 text-center">
                   <p className="text-gray-500 text-sm">No workflows yet.</p>
                 </div>
               ) : (
                 workflows.map((workflow) => (
-                  <div key={workflow.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
+                  <div key={workflow.id} className="ohc-hybrid-panel rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                     <div className="flex justify-between items-start gap-3">
                       <div>
                         <h3 className="font-bold text-gray-900 font-outfit text-lg">{workflow.name}</h3>
@@ -306,7 +306,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {feed.map((item) => (
-                    <div key={item.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
+                    <div key={item.id} className="ohc-hybrid-panel rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {item.department}
@@ -340,7 +340,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {approvals.map((req) => (
-                    <div key={req.id} className="mac-glass-container rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
+                    <div key={req.id} className="ohc-hybrid-panel rounded-[20px] shadow-sm p-6 transition-all duration-200 hover:shadow-md hover:bg-white/80 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {req.department}
