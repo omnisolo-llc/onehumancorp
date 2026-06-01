@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/e2e/**'],
+    setupFiles: ['src/ui/next/vitest.setup.ts'],
+    exclude: ['**/*.spec.ts', '**/node_modules/**', '**/e2e/**', '**/bazel-out/**', '**/_tmp/**'],
   }
 })
