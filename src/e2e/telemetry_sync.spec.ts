@@ -7,8 +7,8 @@ test.describe('Canvas: Telemetry Sync UI Tests', () => {
   });
 
   test('should display dashboard telemetry-adjacent status', async ({ page }) => {
-    await expect(page.getByText("Today's Sales")).toBeVisible();
-    await expect(page.getByText('Business Snapshot')).toBeVisible();
+    await expect(page.getByText("Your Daily Briefing")).toBeVisible();
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
   });
 
   test('should navigate to settings', async ({ page }) => {

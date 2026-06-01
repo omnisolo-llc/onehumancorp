@@ -744,27 +744,42 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Business Snapshot */}
-         <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+         {/* Plain-Language Briefing Agent (replaces Business Snapshot) */}
+         <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Your Daily Briefing</h2>
+            <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                        🤖
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-gray-800 font-inter text-lg leading-relaxed mb-4">
+                            <strong>Good morning!</strong> You made <strong>${todaysSales.toFixed(2)}</strong> today.
+                            Your most popular item was the <em>Vegan Celebration Cake</em>.
+                            You have {pendingOrders} pending orders left to fulfill, and {activeCustomers} active customers.
+                            Consider running a weekend discount to boost sales further.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => {
+                                    alert('Briefing acknowledged.');
+                                }}
+                                className="px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] shadow-md flex-1 sm:flex-none"
+                                style={{ background: '#0071E3' }}
+                            >
+                                Got it
+                            </button>
+                            <button
+                                onClick={() => {
+                                    alert('Drafting promotional email...');
+                                }}
+                                className="px-6 py-3 rounded-xl font-bold text-[#0071E3] bg-white border border-[#0071E3] transition-all hover:bg-blue-50 active:scale-[0.98] shadow-sm flex-1 sm:flex-none"
+                            >
+                                Draft Weekend Promo
+                            </button>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
-                </div>
-
             </div>
          </section>
 

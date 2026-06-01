@@ -4,7 +4,7 @@ export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
-    await expect(page.getByText('Business Snapshot').first()).toBeVisible();
+    await expect(page.getByText('Your Daily Briefing').first()).toBeVisible();
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();

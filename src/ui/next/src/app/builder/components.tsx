@@ -124,7 +124,7 @@ export function QRCode({ value }: { value: string }) {
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
-      <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
+      <div className="builder-block relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}
@@ -141,7 +141,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Catalog") {
     return (
-      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+      <div className="builder-block p-6 bg-transparent font-inter min-w-[375px]">
         <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
@@ -160,7 +160,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Booking") {
     return (
-      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+      <div className="builder-block p-6 bg-transparent font-inter min-w-[375px]">
         <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
           <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title}</h2>
           <p className="text-sm text-gray-600 dark:text-[#A1A1A6] mb-4">{props.availability}</p>
@@ -210,7 +210,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Contact") {
     return (
-      <div className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center border-y border-white/50 dark:border-white/10">
+      <div className="builder-block p-6 bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center border-y border-white/50 dark:border-white/10">
         <h2 className="text-lg font-bold font-outfit mb-4">Get in Touch</h2>
         <div className="space-y-2 text-sm text-gray-700 dark:text-[#A1A1A6]">
           <p>Email: <a href={`mailto:${props.email}`} className="text-[#0066FF] hover:underline">{props.email}</a></p>

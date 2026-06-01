@@ -11,21 +11,21 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
-  test('Test 3: Verify the Business Snapshot section is displayed', async ({ page }) => {
+  test('Test 3: Verify the Your Daily Briefing section is displayed', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Business Snapshot' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your Daily Briefing' })).toBeVisible();
   });
 
   test('Test 4: Verify the Today\'s Sales section is displayed', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('Today\'s Sales')).toBeVisible();
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
   });
 
   test('Test 5: Complete end-to-end CUJ logging in and checking sections', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Business Snapshot' })).toBeVisible();
-    await expect(page.getByText('Today\'s Sales')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your Daily Briefing' })).toBeVisible();
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
