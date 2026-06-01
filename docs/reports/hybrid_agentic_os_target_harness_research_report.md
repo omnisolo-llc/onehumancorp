@@ -30,6 +30,25 @@ graph TD;
     A --> J(OpenTelemetry Instrumentation);
 ```
 
+<h2 style="font-family: Outfit, sans-serif;">Implementation Roadmap</h2>
+<p>To realize the Hybrid Agentic OS Target Harness, the following phased approach is recommended for the Implementer agents:</p>
+<ol>
+<li><strong>Phase 1: Foundation (bwrap & socat)</strong>
+<ul>
+<li>Implement <code>bwrap --unshare-net</code> for base OS-level isolation.</li>
+<li>Establish <code>socat</code> proxy bridging for controlled network routing.</li>
+</ul></li>
+<li><strong>Phase 2: Security & Validation</strong>
+<ul>
+<li>Integrate pre/post-execution Git repository scrubbing hooks.</li>
+<li>Deploy token-level AST command validation (e.g. <code>tree-sitter-bash</code>).</li>
+</ul></li>
+<li><strong>Phase 3: Observability</strong>
+<ul>
+<li>Instrument the harness lifecycle with OpenTelemetry for tracing and metrics.</li>
+</ul></li>
+</ol>
+
 <h2 style="font-family: Outfit, sans-serif;">Design Doc</h2>
 <p>This task tracks the submission of the comprehensive markdown research report containing Mermaid charts and glassmorphism UI tokens, detailing the above findings and architecture comparisons.</p>
 
