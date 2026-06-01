@@ -302,7 +302,7 @@ impl AgentServiceImpl {
             "anthropic" => std::env::var("ANTHROPIC_MODEL")
                 .unwrap_or_else(|_| "claude-3-5-sonnet-latest".to_string()),
             "minimax" => {
-                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string())
             }
             "openai" | "openai-compatible" | "openai_compatible" => {
                 Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
