@@ -1048,8 +1048,8 @@ impl HubService for MyHubService {
 
     async fn get_my_plan(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
+        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::MyPlanResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
@@ -1082,7 +1082,7 @@ impl HubService for MyHubService {
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
+        Ok(tonic::Response::new(crate::ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
@@ -1094,8 +1094,8 @@ impl HubService for MyHubService {
 
     async fn get_cost_dashboard(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
+        request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::CostDashboardResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
@@ -1125,7 +1125,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
+        Ok(tonic::Response::new(crate::ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -1138,8 +1138,8 @@ impl HubService for MyHubService {
 
     async fn select_plan(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
+        request: tonic::Request<crate::ohc::orchestration::SelectPlanRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::SelectPlanResponse>, tonic::Status> {
                 let tenant_id = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .map(|a| a.org_id.clone())
             .filter(|id| !id.is_empty())
@@ -1176,7 +1176,7 @@ impl HubService for MyHubService {
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::SelectPlanResponse {
+        Ok(tonic::Response::new(crate::ohc::orchestration::SelectPlanResponse {
             success: true,
             checkout_url: url,
         }))
@@ -1184,8 +1184,8 @@ impl HubService for MyHubService {
 
     async fn cancel_subscription(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
+        request: tonic::Request<crate::ohc::orchestration::CancelSubscriptionRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
@@ -1196,16 +1196,16 @@ impl HubService for MyHubService {
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CancelSubscriptionResponse {
+        Ok(tonic::Response::new(crate::ohc::orchestration::CancelSubscriptionResponse {
             success: true,
         }))
     }
 
     async fn download_invoice(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
-        Ok(tonic::Response::new(::server_ohc::orchestration::DownloadInvoiceResponse {
+        _request: tonic::Request<crate::ohc::orchestration::DownloadInvoiceRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
+        Ok(tonic::Response::new(crate::ohc::orchestration::DownloadInvoiceResponse {
             pdf_url: "https://invoice.stripe.com/...".to_string(),
         }))
     }
@@ -1226,8 +1226,8 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -1237,8 +1237,8 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -1621,7 +1621,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
+    ) -> Result<Response<crate::ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -1631,7 +1631,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(::server_ohc::orchestration::SharedTask {
+        Ok(Response::new(crate::ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -1655,7 +1655,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<crate::ohc::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -1664,8 +1664,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(::server_ohc::orchestration::SharedTask {
+        let mapped_tasks: Vec<Result<crate::ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(crate::ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -1746,7 +1746,7 @@ async fn get_pending_approvals(
         let limit = 100;
         let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
 
-        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
+        let mapped_tasks: Vec<crate::ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
             let mut proposed_content = "".to_string();
             if let Some(payload) = &task.payload {
                 if let Some(draft) = payload.get("draft_copy") {
@@ -1763,7 +1763,7 @@ async fn get_pending_approvals(
                 proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
             }
 
-            ::server_ohc::orchestration::SharedTask {
+            crate::ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.tenant_id,
                 parent_plan_id: "".to_string(),
@@ -1903,7 +1903,7 @@ async fn get_pending_approvals(
 
     async fn publish_mesh_event(
         &self,
-        request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
+        request: Request<crate::ohc::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(event) = req.event {
@@ -2015,10 +2015,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
+        _request: tonic::Request<crate::ohc::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(crate::ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
@@ -2239,7 +2239,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
         };
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = crate::ohc::orchestration::TeammateMeshEvent {
             agent_id: "system".to_string(),
             action: event_type,
             status: "ok".to_string(),
@@ -3047,10 +3047,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
+        .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
+        .add_service(crate::ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;
@@ -4395,7 +4395,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
-                        <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
+                        <div class="card glass" id="voice-ai-config" style="display:block; margin-bottom: 20px;">
                             <h2>Select an AI Voice</h2>
                             <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
                             <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
