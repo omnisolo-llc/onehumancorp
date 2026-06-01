@@ -27,13 +27,16 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        let risk = ActionRisk::DraftForReview;
+
         if event.event_type == "tenant.inventory.low" {
-            let item = event.payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("item");
+            let item_name = event.payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("popular item");
+            let description = format!("Suggest promotional campaign for related items to {}", item_name);
             return self.orchestrator.execute_action(
                 DepartmentType::Marketing,
-                format!("Inventory low on popular item: {}. Suggest promotional campaign for related items.", item),
+                description,
                 event.tenant_id.clone(),
-                ActionRisk::DraftForReview,
+                risk,
                 event.payload.clone(),
             ).await.map(|_| ());
         }
@@ -45,7 +48,6 @@ impl Department for MarketingAgent {
             if let Some(media_array) = media {
                 if !media_array.is_empty() {
                     let media_url = media_array[0].as_str().unwrap_or("");
-
                     let draft_copy = format!("Beautiful new {} completed recently. Completed on time and on budget.", service_name.to_lowercase());
 
                     let payload = serde_json::json!({
@@ -61,7 +63,7 @@ impl Department for MarketingAgent {
                         DepartmentType::Marketing,
                         description,
                         event.tenant_id.clone(),
-                        ActionRisk::DraftForReview,
+                        risk,
                         payload,
                     ).await.map(|_| ());
                 }
@@ -72,7 +74,7 @@ impl Department for MarketingAgent {
             DepartmentType::Marketing,
             "Draft social media campaign for trending item".to_string(),
             event.tenant_id.clone(),
-            ActionRisk::DraftForReview,
+            risk,
             event.payload.clone(),
         ).await.map(|_| ())
     }

@@ -36,7 +36,7 @@ impl Department for OperationsAgent {
             DepartmentType::Operations,
             action_description,
             event.tenant_id.clone(),
-            ActionRisk::DraftForReview, // Default to Draft, Orchestrator will upgrade to Auto if configured
+            ActionRisk::DraftForReview, // Defaults to draft, orchestrator will upgrade based on config
             event.payload.clone(),
         ).await?;
 
@@ -50,8 +50,7 @@ impl Department for OperationsAgent {
         self.orchestrator.dispatch_event(cs_event).await
     }
 
-    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
-        // In a real implementation, this would call load_department_config
+    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
         None
     }
 

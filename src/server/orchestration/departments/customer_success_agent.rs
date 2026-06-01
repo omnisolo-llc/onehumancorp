@@ -32,17 +32,6 @@ impl Department for CustomerSuccessAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = &config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
-        } else {
-            ActionRisk::DraftForReview
-        };
-
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
             let original = payload.get("original_payload");
@@ -55,15 +44,12 @@ impl Department for CustomerSuccessAgent {
 
             let content = format!("Sent response to customer: {}", message);
 
-            // Log the action in the agent's memory, handling errors and using proper defaults
-            // Assuming we don't have an embedding service here, we use a zero vector
-            // but properly await and map the error.
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: "customer_success_agent".to_string(),
                 content,
-                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
+                embedding: vec![0.0; 1536],
                 source_type: "AGENT_ACTION".to_string(),
                 created_at: chrono::Utc::now(),
                 last_referenced_at: chrono::Utc::now(),
@@ -96,12 +82,6 @@ impl Department for CustomerSuccessAgent {
                 "Thank you for your message. We will get back to you shortly."
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
-                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
-            } else {
-                "Draft email for review".to_string()
-            };
-
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": message,
@@ -111,9 +91,9 @@ impl Department for CustomerSuccessAgent {
 
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
-                description,
+                "Draft response to customer message".to_string(),
                 event.tenant_id.clone(),
-                risk,
+                ActionRisk::DraftForReview,
                 action_payload,
             ).await.map(|_| ())?;
 
@@ -124,7 +104,7 @@ impl Department for CustomerSuccessAgent {
             DepartmentType::CustomerSuccess,
             "Send personalized thank you & shipping ETA".to_string(),
             event.tenant_id.clone(),
-            risk,
+            ActionRisk::DraftForReview,
             event.payload.clone(),
         ).await.map(|_| ())
     }

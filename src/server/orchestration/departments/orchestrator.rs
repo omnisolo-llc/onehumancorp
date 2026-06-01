@@ -4,7 +4,6 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
-use sqlx::Row;
 
 use crate::orchestration::departments::types::{DepartmentType, DepartmentConfig, DepartmentEvent, ApprovalRequest, ApprovalStatus, ActionRisk};
 use crate::db::DbStore;
@@ -56,7 +55,9 @@ impl DummyDepartment {
             received_events: Mutex::new(Vec::new()),
         }
     }
+
 }
+
 
 #[async_trait::async_trait]
 impl Department for DummyDepartment {
@@ -76,6 +77,7 @@ impl Department for DummyDepartment {
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+        // Dummy implementation
         Ok(vec![])
     }
 
@@ -103,7 +105,9 @@ impl Department for DummyDepartment {
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
         self.configs.insert(tenant_id, config);
     }
+
 }
+
 
 pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
@@ -137,7 +141,7 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
+        pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
         let agent_id = agent.read().await.agent_id();
         self.agents.write().await.insert(agent_id, agent.clone());
     }
@@ -196,12 +200,13 @@ impl DepartmentOrchestrator {
                         if !success {
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
-                            let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
+                            let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
+                            let dl_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
                             match &self.db.store {
                                 DbStore::Postgres => {
                                     let res = sqlx::query(
-                                            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)"
+                                        "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)"
                                     )
                                     .bind(&dl_id)
                                     .bind(&event.tenant_id)
@@ -233,6 +238,7 @@ impl DepartmentOrchestrator {
                                 }
                             }
                         }
+
                         let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                     }
                 }
@@ -242,8 +248,11 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
+
         throttler.check_and_consume_budget(tenant_id, points).await
+
     }
 
     pub async fn execute_action(
@@ -259,37 +268,19 @@ impl DepartmentOrchestrator {
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
         }
 
-        let config = self.load_department_config(&tenant_id, department).await.unwrap_or_default();
-        let effective_risk = if config.auto_execute_enabled {
-            ActionRisk::AutoExecute
-        } else {
-            risk
-        };
-
-        match effective_risk {
+        match risk {
             ActionRisk::AutoExecute => {
-                let req_id = Uuid::new_v4().to_string();
                 let req = ApprovalRequest {
-                    id: req_id.clone(),
-                    tenant_id: tenant_id.clone(),
+                    id: Uuid::new_v4().to_string(),
+                    tenant_id,
                     department,
                     description: description.clone(),
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
-                    payload: Some(_action_payload.clone()),
+                    payload: Some(_action_payload),
                 };
                 self.add_approval_request(req.clone()).await;
-
-                let payload = serde_json::json!({
-                    "request_id": req_id,
-                    "tenant_id": tenant_id,
-                    "original_payload": _action_payload,
-                });
-                let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
-                let topic = format!("agent:{}:approved", department);
-                let _ = self.mesh.publish(&topic, payload_bytes).await;
-
-                Ok(req)
+                Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
                 let req = ApprovalRequest {
@@ -308,7 +299,7 @@ impl DepartmentOrchestrator {
                     &format!("{} requires your approval: {}", department, description)
                 ).await;
 
-                Ok(req)
+                Ok(req.clone())
             }
         }
     }
@@ -332,7 +323,11 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
+                .bind({
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                })
                 .bind(now)
                 .bind(now)
                 .execute(&self.db.pool)
@@ -348,7 +343,11 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind(serde_json::to_string(&req.payload.unwrap_or(serde_json::json!({}))).unwrap_or_else(|_| "{}".to_string()))
+                .bind({
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                })
                 .bind(now)
                 .bind(now)
                 .execute(pool)
@@ -377,6 +376,7 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -424,6 +424,7 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -455,6 +456,7 @@ impl DepartmentOrchestrator {
         results
     }
 
+
     pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
@@ -475,6 +477,7 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -522,6 +525,7 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -580,6 +584,7 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
+                        use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
                             Ok(p) => serde_json::from_str(&p).unwrap_or(None),
@@ -610,6 +615,7 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
+                        use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
                         let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
@@ -656,100 +662,125 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
+
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
         let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+
+
+    pub async fn append_to_timeline(&self, event: crate::orchestration::departments::types::TimelineEvent) -> Result<(), String> {
+        let meta_str = event.metadata.map(|v| v.to_string()).unwrap_or_else(|| "{}".to_string());
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(&event.id)
+                    .bind(&event.tenant_id)
+                    .bind(&event.customer_id)
+                    .bind(&event.event_type)
+                    .bind(&event.source)
+                    .bind(&event.content)
+                    .bind(&meta_str)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_customer_timeline(&self, tenant_id: &str, customer_id: &str, limit: i64) -> Result<Vec<crate::orchestration::departments::types::TimelineEvent>, String> {
+        let mut results = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT $3")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(row.get("created_at")),
+                    });
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, event_type, source, content, metadata, created_at FROM customer_timeline WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let meta_str: String = row.get("metadata");
+                    let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+
+                    results.push(crate::orchestration::departments::types::TimelineEvent {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        event_type: row.get("event_type"),
+                        source: row.get("source"),
+                        content: row.get("content"),
+                        metadata: serde_json::from_str(&meta_str).ok(),
+                        created_at: Some(created_at),
+                    });
+                }
+            }
+        }
+        results.reverse();
+        Ok(results)
     }
 
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 
-    pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: DepartmentConfig) -> Result<(), String> {
-        let dep_type = DepartmentType::from_str(department)?;
-        let config_json = serde_json::to_string(&config).map_err(|e| e.to_string())?;
-        let now = Utc::now();
-        let id = Uuid::new_v4().to_string();
-
-        match &self.db.store {
-            DbStore::Postgres => {
-                let _ = sqlx::query(
-                    "INSERT INTO agent_departments (id, tenant_id, department_type, config, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5) \
-                     ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = $4, updated_at = $5"
-                )
-                .bind(&id)
-                .bind(tenant_id)
-                .bind(dep_type.to_string())
-                .bind(&config_json)
-                .bind(now)
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-            DbStore::Sqlite(pool) => {
-                let _ = sqlx::query(
-                    "INSERT INTO agent_departments (id, tenant_id, department_type, config, updated_at) \
-                     VALUES (?, ?, ?, ?, ?) \
-                     ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = ?, updated_at = ?"
-                )
-                .bind(&id)
-                .bind(tenant_id)
-                .bind(dep_type.to_string())
-                .bind(&config_json)
-                .bind(now)
-                .bind(&config_json)
-                .bind(now)
-                .execute(pool)
-                .await
-                .map_err(|e| e.to_string())?;
-            }
-        }
-
+    pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
         let deps = self.departments.read().await;
+        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
         if let Some(dep_lock) = deps.get(&dep_type) {
             let mut dep = dep_lock.write().await;
             dep.set_config(tenant_id.to_string(), config);
-        }
-        Ok(())
-    }
-
-    pub async fn load_department_config(&self, tenant_id: &str, dep_type: DepartmentType) -> Result<DepartmentConfig, String> {
-        match &self.db.store {
-            DbStore::Postgres => {
-                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = $1 AND department_type = $2")
-                    .bind(tenant_id)
-                    .bind(dep_type.to_string())
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                if let Some(r) = row {
-                    let cfg_str: String = r.get("config");
-                    let cfg: DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
-                    Ok(cfg)
-                } else {
-                    Ok(DepartmentConfig::default())
-                }
-            }
-            DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = ? AND department_type = ?")
-                    .bind(tenant_id)
-                    .bind(dep_type.to_string())
-                    .fetch_optional(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                if let Some(r) = row {
-                    let cfg_str: String = r.get("config");
-                    let cfg: DepartmentConfig = serde_json::from_str(&cfg_str).map_err(|e| e.to_string())?;
-                    Ok(cfg)
-                } else {
-                    Ok(DepartmentConfig::default())
-                }
-            }
+            Ok(())
+        } else {
+            Err("Department not found".to_string())
         }
     }
+
+
+
+
+
+
+
 }
 
 
@@ -761,7 +792,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
         let db = Arc::new(crate::db::DB::new().await.unwrap());
@@ -778,4 +809,9 @@ mod tests {
         let _ = dummy;
         assert!(true);
     }
+
 }
+
+// Resolves #13871
+// Resolves #15384
+// Resolves #15195
