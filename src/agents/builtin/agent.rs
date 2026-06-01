@@ -139,7 +139,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
-    pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
@@ -198,7 +197,6 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
-            enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
@@ -238,7 +236,52 @@ impl AgentProgress {
 }
 
 // Prompt Construction: OpenAI Codex Mechanic
-// Modularized in crate::prompt_construction::PromptBuilder
+// 1. Server-controlled System Message (Highest Priority)
+// 2. Tool Definitions
+// 3. Developer Instructions
+// 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
+// 5. Conversation History (happens at run loop)
+
+pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
+    let mut current_dir = start_dir.to_path_buf();
+    let mut contents = Vec::new();
+    let mut max_depth = 50;
+
+    loop {
+        let agent_file = current_dir.join("AGENTS.md");
+        if agent_file.exists() && agent_file.is_file() {
+            if let Ok(content) = tokio::fs::read_to_string(&agent_file).await {
+                contents.push(content);
+            }
+        }
+
+        if !current_dir.pop() || max_depth == 0 {
+            break;
+        }
+        max_depth -= 1;
+    }
+
+    // Order: more deeply-nested files take precedence
+    let mut combined = String::new();
+    for (i, content) in contents.iter().enumerate() {
+        if i > 0 {
+            combined.push_str("\n\n---\n\n");
+        }
+        combined.push_str(content);
+    }
+
+    let max_bytes = 32 * 1024;
+    if combined.len() > max_bytes {
+        let mut end_idx = max_bytes;
+        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
+            end_idx -= 1;
+        }
+        combined.truncate(end_idx);
+        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
+    }
+
+    combined
+}
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
 /// This fulfills the Master Catalog specification:
@@ -350,7 +393,6 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
-    pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
 }
 
@@ -366,7 +408,6 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
-            event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
         }
     }
@@ -604,148 +645,6 @@ impl Agent {
         let resp = self.llm.chat(req).await?;
         Ok(resp.message.content)
     }
-
-    /// Master Catalog B.1. The Orchestration Loop
-    /// Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
-    /// Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
-    /// Termination conditions are layered:
-    /// 1. Model returns text with no tool calls.
-    /// 2. Max turn limit exceeded.
-    /// 3. Token budget exhausted.
-    /// 4. Guardrail tripwire fires.
-    /// 5. Safety refusal.
-    pub async fn run_tao_orchestration_loop<F>(
-        &self,
-        cfg: &AgentRunConfig,
-        initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
-        on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
-    where
-        F: FnMut(AgentEvent) + Send + Sync,
-    {
-        on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        let mut messages = vec![crate::types::Message::user(initial_message)];
-        let mut turn_count = 0;
-        let mut total_tokens = 0;
-
-        let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
-        let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
-            name: t.name.clone(),
-            description: t.description.clone(),
-            parameters: t.parameters.clone(),
-        }).collect();
-
-        // The Orchestration Loop
-        while turn_count < cfg.max_iterations {
-            on_event(AgentEvent::IterationStarted { iteration: turn_count, message_count: messages.len() });
-
-            // 1. Assemble prompt
-            let req = crate::types::ChatRequest {
-                model: cfg.model.clone(),
-                system: system_prompt.clone(),
-                messages: messages.clone(),
-                tools: tool_defs.clone(),
-                max_tokens: cfg.max_tokens,
-                temperature: cfg.temperature,
-            };
-
-            // 2. Call LLM API
-            let resp = self.llm.chat(req).await?;
-            let msg = resp.message;
-            let usage = resp.usage;
-
-            total_tokens += usage.input_tokens + usage.output_tokens;
-            messages.push(msg.clone());
-
-            // 3. Termination Condition: Safety refusal
-            if resp.stop_reason == "safety" || resp.stop_reason == "refusal" {
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Safety refusal")));
-            }
-
-            // 4. Termination Condition: Token budget exhausted
-            if cfg.max_task_tokens > 0 && total_tokens > cfg.max_task_tokens {
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
-            }
-
-            // 5. Parse output / check tool calls
-            // Termination Condition: Model returns text with no tool calls
-            if msg.tool_calls.is_empty() {
-                return Ok(msg.content);
-            }
-
-            // 6. Execute tool calls and Format results back
-            let mut tool_results = vec![
-                crate::types::ToolResult {
-                    tool_call_id: "".to_string(),
-                    content: "".to_string(),
-                    error: "".to_string(),
-                }; msg.tool_calls.len()
-            ];
-
-            for (i, tc) in msg.tool_calls.iter().enumerate() {
-                tool_results[i].tool_call_id = tc.id.clone();
-
-                // Termination Condition: Guardrail tripwire fires
-                if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
-                     return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires: {:?}", e))));
-                }
-
-                let tool = session_tools.iter().find(|t| t.name == tc.name);
-                if let Some(tool) = tool {
-                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                        tool,
-                        tc,
-                        cfg.max_retries
-                    ).await;
-
-                    match res {
-                        Ok(r) => {
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: r.clone(),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].content = r;
-                        }
-                        Err(crate::types::ToolError::Fatal(err_msg)) | Err(crate::types::ToolError::Unexpected(err_msg)) => {
-                            // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
-                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
-                        }
-                        Err(e) => {
-                            let err_str = e.to_string();
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err_str),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].error = err_str;
-                        }
-                    }
-                } else {
-                    tool_results[i].error = format!("Tool '{}' not found", tc.name);
-                }
-            }
-
-            messages.push(crate::types::Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
-                tool_calls: vec![],
-                tool_results,
-                response_id: None,
-                previous_response_id: msg.response_id.clone(),
-            });
-
-            turn_count += 1;
-        }
-
-        // Termination Condition: Max turn limit exceeded
-        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Max turn limit exceeded")))
-    }
-
     pub async fn run_langgraph<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -960,14 +859,14 @@ impl Agent {
                                         final_res = Ok(res);
                                         break;
                                     }
-                                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                                    Err(crate::types::ToolError::Transient(msg)) => {
                                         if retry_count < max_retries {
                                             retry_count += 1;
                                             let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
                                             tokio::time::sleep(backoff).await;
                                             continue;
                                         } else {
-                                            final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                                            final_res = Err(crate::types::ToolError::Transient(msg));
                                             break;
                                         }
                                     }
@@ -1012,17 +911,17 @@ impl Agent {
                                 "error": msg
                             });
                         }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
                         Err(crate::types::ToolError::Transient(msg)) => {
-                            return Err(format!("Unexpected tool error: Transient error: {}", msg));
+                            return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
                             return Err(format!("Fatal tool error: {}", msg));
+                        }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg));
                         }
                         Err(crate::types::ToolError::HandoffRequested(target)) => {
                             return Err(format!("Handoff requested to {}", target));
@@ -1060,10 +959,10 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
+                            Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
                             Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
                         continue;
@@ -1071,7 +970,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -1095,14 +994,14 @@ impl Agent {
                                     final_res = Ok(res);
                                     break;
                                 }
-                                Err(crate::types::ToolError::Unexpected(msg)) => {
+                                Err(crate::types::ToolError::Transient(msg)) => {
                                     if retry_count < max_retries {
                                         retry_count += 1;
                                         let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
                                         tokio::time::sleep(backoff).await;
                                         continue;
                                     } else {
-                                        final_res = Err(crate::types::ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                                        final_res = Err(crate::types::ToolError::Transient(msg));
                                         break;
                                     }
                                 }
@@ -1114,9 +1013,6 @@ impl Agent {
                         }
 
                         match final_res {
-                            Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                            }
                             Ok(res) => {
                                 error_counts.insert(name.to_string(), serde_json::json!(0));
                                 tool_results_json[idx] = serde_json::json!({
@@ -1137,14 +1033,17 @@ impl Agent {
                                     "error": msg
                                 });
                             }
-                            Err(crate::types::ToolError::Unexpected(msg)) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                return Err(format!("Unexpected tool error: Transient error after retries: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
+                            }
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::HandoffRequested(target)) => {
                                 return Err(format!("Handoff requested to {}", target));
@@ -1270,24 +1169,7 @@ impl Agent {
         let max_attempts = 3;
         loop {
             attempts += 1;
-            let event_stream_clone = self.event_stream.clone();
-            let mut on_event_wrapper = &mut |e: AgentEvent| {
-                if let Some(stream) = &event_stream_clone {
-                    let openhands_event = match &e {
-                        AgentEvent::TaskError { error } => Some(crate::openhands::EventType::Action(crate::openhands::Action::AgentMessage {
-                            content: format!("TaskError: {}", error),
-                        })),
-                        AgentEvent::ToolCall { name, args_json, .. } => Some(crate::openhands::EventType::Action(crate::openhands::Action::RunCommand {
-                            command: format!("{} {}", name, args_json),
-                        })),
-                        _ => None,
-                    };
-                    if let Some(evt) = openhands_event {
-                        let _ = stream.publish(evt);
-                    }
-                }
-                on_event(e);
-            };
+            let mut on_event_wrapper = |e| on_event(e);
             let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
             match result {
                 Ok(Ok(res)) => {
@@ -1439,24 +1321,16 @@ impl Agent {
             let model_clone = cfg.model.clone();
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
                 let mut current_tc = tc_clone.clone();
                 let mut llm_recovery_attempts = 0;
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            if retry_count < max_retries {
-                                retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                tokio::time::sleep(backoff).await;
-                                continue;
-                            } else {
-                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
-                            }
+                        Err(crate::types::ToolError::Transient(msg)) => {
+                            break Ok(format!("Error executing planned step: Transient error: {}", msg));
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            if llm_recovery_attempts < max_retries {
+                            if llm_recovery_attempts < cfg.max_retries {
                                 llm_recovery_attempts += 1;
 
                                 // Error Handling (Compounding Error Prevention): LLM-recoverable
@@ -1547,25 +1421,16 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let mut llm_recovery_attempts = 0;
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        break format!("Error executing planned step: Transient error: {}", msg);
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        if llm_recovery_attempts < max_retries {
+                        if llm_recovery_attempts < cfg.max_retries {
                             llm_recovery_attempts += 1;
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
@@ -1604,6 +1469,9 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::Fatal(msg)) => {
                         return Err(format!("Fatal tool error: {}", msg).into());
+                    }
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                        return Err(format!("Unexpected tool error: {}", msg).into());
                     }
                     Err(e) => {
                         return Err(format!("Fatal tool error: {:?}", e).into());
@@ -1766,7 +1634,6 @@ impl Agent {
         });
 
         let temp_agent = Agent {
-            event_stream: None,
             llm: self.llm.clone(),
             tools: structured_tools,
             progress: self.progress.clone(),
@@ -1878,7 +1745,6 @@ impl Agent {
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
-                event_stream: None,
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
@@ -1918,7 +1784,7 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(start_dir).await;
+            let cascading_md = load_cascading_agents_md(start_dir).await;
             if !cascading_md.is_empty() {
                 if !final_cfg.user_instructions.is_empty() {
                     final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
@@ -2095,9 +1961,6 @@ impl Agent {
             }
         }
 
-        // 1. The Orchestration Loop
-        // Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
-        // Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
         let mut turn_count = 0;
         while turn_count < max_iterations {
             let iteration = turn_count;
@@ -2134,12 +1997,32 @@ impl Agent {
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
-            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
-                &mut final_messages,
-                final_cfg.enable_lost_in_the_middle_prevention,
-                &final_cfg.developer_instructions,
-                &final_cfg.user_instructions,
-            );
+            // High-signal context at the very beginning and very end.
+            if final_cfg.enable_lost_in_the_middle_prevention {
+                let mut reminder_text = String::new();
+                if !final_cfg.developer_instructions.is_empty() {
+                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
+                }
+                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
+                    // Truncate user instructions if it's too long, just to remind the core objective
+                    let mut end_idx = 1000;
+                    if final_cfg.user_instructions.len() > 1000 {
+                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
+                            end_idx -= 1;
+                        }
+                    } else {
+                        end_idx = final_cfg.user_instructions.len();
+                    }
+                    let summary = &final_cfg.user_instructions[..end_idx];
+                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
+                }
+
+                if !reminder_text.is_empty() {
+                    final_messages.push(Message::user(reminder_text.trim()));
+                }
+            } else if !final_cfg.developer_instructions.is_empty() {
+                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
+            }
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
@@ -2406,19 +2289,15 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let _retry_count = 0;
-                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                    loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
-                            Ok(r) => {
-                                return (tc_clone, Ok(r));
-                            }
-                            Err(ToolError::Transient(msg)) => {
-                                return (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg))));
-                            }
-                            Err(e) => {
-                                return (tc_clone, Err(e));
-                            }
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                        Ok(r) => {
+                            return (tc_clone, Ok(r));
+                        }
+                        Err(ToolError::Transient(msg)) => {
+                            return (tc_clone, Err(ToolError::Transient(msg)));
+                        }
+                        Err(e) => {
+                            return (tc_clone, Err(e));
                         }
                     }
                 }.instrument(tool_span));
@@ -2430,20 +2309,6 @@ impl Agent {
             for (tc, res) in ro_results {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
-                    Err(crate::types::ToolError::Transient(msg)) => {
-                        let err = format!("Transient error after retries: {}", msg);
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        tool_results[idx] = ToolResult {
-                            tool_call_id: tc.id.clone(),
-                            content: String::new(),
-                            error: err,
-                        };
-                    }
                     Ok(r) => {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
@@ -2460,7 +2325,20 @@ impl Agent {
                             error: String::new(),
                         };
                     }
-
+                    Err(ToolError::Transient(msg)) => {
+                        let err = format!("Transient error after retries: {}", msg);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        tool_results[idx] = ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: err,
+                        };
+                    }
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
@@ -2607,6 +2485,8 @@ impl Agent {
                     }
                 }
 
+                let mut retry_count = 0;
+                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
@@ -2617,17 +2497,6 @@ impl Agent {
                         tool_name = %tc.name,
                     );
                     match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            error = err;
-                            break;
-                        }
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2640,6 +2509,24 @@ impl Agent {
                             });
                             content = r;
                             break;
+                        }
+                        Err(ToolError::Transient(msg)) => {
+                            if retry_count < max_retries {
+                                retry_count += 1;
+                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                tokio::time::sleep(backoff).await;
+                                continue;
+                            } else {
+                                let err = format!("Transient error after retries: {}", msg);
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                error = err;
+                                break;
+                            }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
@@ -3243,146 +3130,6 @@ mod tests {
         );
     }
 
-    // Tests for B.1 The Orchestration Loop (TAO) termination conditions
-    #[tokio::test]
-    async fn test_tao_termination_no_tool_calls() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Done!"),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "Done!");
-    }
-
-    #[tokio::test]
-    async fn test_tao_termination_max_turn_limit() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                },
-                crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "2".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 1; // Limit to 1 iteration to force termination
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Termination: Max turn limit exceeded"));
-    }
-
-    #[tokio::test]
-    async fn test_tao_termination_token_budget_exhausted() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Too many tokens"),
-                    usage: crate::types::Usage { input_tokens: 500, output_tokens: 600, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.max_task_tokens = 1000; // 500 + 600 = 1100 > 1000
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Termination: Token budget exhausted"));
-    }
-
-    #[tokio::test]
-    async fn test_tao_termination_guardrail_tripwire() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "mutating_tool".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.project_trusted = false; // This triggers Stage 1 Guardrail (Fatal error on mutating tool without trust)
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
-    }
-
-    #[tokio::test]
-    async fn test_tao_termination_safety_refusal() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("I cannot fulfill this request."),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "safety".to_string(), // Triggers safety refusal
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Termination: Safety refusal"));
-    }
-
     #[tokio::test]
     async fn test_cascading_agents_md() {
         use tempfile::tempdir;
@@ -3402,7 +3149,7 @@ mod tests {
         fs::write(&sub_md, "Sub level instructions").await.unwrap();
         fs::write(&deep_md, "Deep level instructions").await.unwrap();
 
-        let combined = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(&deep_dir).await;
+        let combined = crate::agent::load_cascading_agents_md(&deep_dir).await;
 
         // Since it loops from deep to root, the deeper files are collected first.
         // The results should be: Deep -> Sub -> Root.
@@ -3430,7 +3177,7 @@ mod tests {
         let large_content = "A".repeat(33000);
         fs::write(&root_md, large_content).await.unwrap();
 
-        let combined = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(root_path).await;
+        let combined = crate::agent::load_cascading_agents_md(root_path).await;
 
         // Verify the size is close to 32KiB + notice
         assert!(combined.len() <= 32 * 1024 + 100); // 32768 + the length of the system notice
@@ -4268,7 +4015,6 @@ mod tests {
             ]),
         });
 
-        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -4517,9 +4263,15 @@ mod tests {
         let agent1 = Agent::new(client_transient, tools.clone());
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
-        let res = agent1.run(&cfg, "Run transient", &mut on_event).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Unexpected tool error"));
+        let _ = agent1.run(&cfg, "Run transient", &mut on_event).await;
+        let transient_handled = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { name, result, .. } = e {
+                name == "transient_tool" && result.contains("Transient error after retries: network timeout")
+            } else {
+                false
+            }
+        });
+        assert!(transient_handled);
 
         // 2. LLM Recoverable
         struct LlmRecoverableMockClient {
@@ -5816,7 +5568,7 @@ mod tests {
         let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
         // Should return Err because transient error exhausted max retries
         assert!(res3.is_err());
-        assert!(res3.unwrap_err().to_string().contains("Unexpected tool error: Transient error"));
+        assert!(res3.unwrap_err().to_string().contains("Transient error after retries"));
 
         let agent2 = Agent::new(client2, vec![tool_fatal]);
         let mut events2 = vec![];
@@ -6329,7 +6081,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6562,10 +6314,8 @@ mod hierarchical_prompt_tests {
 }
 
 
-    #[derive(Clone)]
-    #[allow(dead_code)]
     struct NudgeMockLlmClient {
-        call_count: std::sync::Arc<tokio::sync::Mutex<usize>>,
+        call_count: tokio::sync::Mutex<usize>,
     }
 
     #[async_trait::async_trait]
@@ -6605,7 +6355,8 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: std::sync::Arc::new(tokio::sync::Mutex::new(0)) });
+        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
+        let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
         let tool = Tool {
             name: "test_tool".to_string(),
             description: "test".to_string(),
@@ -6630,7 +6381,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6704,7 +6455,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]
@@ -6861,15 +6612,3 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
-
-
-#[cfg(test)]
-mod tao_tests {
-    #[test]
-    fn test_tao_mechanic_terminations() {
-        let _thought = "Assemble prompt";
-        let _action = "Call LLM API -> Parse output -> Execute tool calls";
-        let _observation = "Format results back -> Repeat";
-        assert_eq!(_thought, "Assemble prompt");
-    }
-}
