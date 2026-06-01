@@ -124,7 +124,7 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/v1/growth/milestones/check");
         const data = await res.json();
-        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+        if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
@@ -138,28 +138,7 @@ export default function Dashboard() {
     }
     checkMilestones();
   }, []);
-  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-
   useEffect(() => {
-    async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
-      try {
-        const res = await fetch('/api/v1/growth/milestones/check');
-        const data = await res.json();
-        if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
-          if (orderMilestone) {
-            setCurrentMilestone(orderMilestone);
-            setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
-          }
-        }
-      } catch (e) {
-        console.error("Failed to check milestones", e);
-      }
-    }
-    checkMilestones();
-
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
@@ -525,10 +504,13 @@ export default function Dashboard() {
                                window.location.href = '/pricing';
                            }
                        }}
-                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] mb-4"
                    >
                        Upgrade to Pro
                    </button>
+                   <Link href="/migrate" className="px-6 py-3 font-bold text-white rounded-lg shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: "#0066FF" }}>
+                     Migrate Existing Store
+                   </Link>
                </div>
            </div>
          </section>
@@ -545,8 +527,8 @@ export default function Dashboard() {
                  Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
                </p>
                <div className="flex gap-4">
-                 <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
-                 <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
+                 <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors shadow-sm">Dismiss</button>
+                 <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-lg shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
                    Add your first product
                  </Link>
                </div>
@@ -567,7 +549,7 @@ export default function Dashboard() {
                      Upgrade to Pro for unlimited agents, advanced analytics, and custom domains. Grow your business faster and without limits.
                    </p>
                </div>
-               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
                  Upgrade to Pro
                </Link>
              </div>
@@ -647,7 +629,7 @@ export default function Dashboard() {
          {/* Milestone Viral Share Loop Banner */}
          {activeCustomers > 0 && !bannerDismissed && (
              <section className="mb-6">
-                 <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', color: '#fff' }}>
+                 <div className="p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', color: '#fff' }}>
                      <div className="flex items-center gap-4">
                          <span className="text-3xl">🎉</span>
                          <div>
@@ -681,7 +663,7 @@ export default function Dashboard() {
 
          {/* Top Action Banner (Stripe Setup) */}
          <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+             <div className="p-4 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
                  <div className="flex items-center gap-4">
                      <div>
                          <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
@@ -730,12 +712,12 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
                     <button
                         onClick={() => setShowWallOfLoveModal(true)}
-                        className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
+                        className="px-5 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
                     >
                         Generate Widget
                     </button>
                 </div>
-                <div className="w-full md:w-1/3 bg-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px] relative overflow-hidden">
+                <div className="w-full md:w-1/3 bg-purple-50 rounded-lg p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px] relative overflow-hidden">
                     <div className="absolute top-2 right-2 text-3xl opacity-20">⭐⭐⭐⭐⭐</div>
                     <div className="absolute bottom-2 left-2 text-3xl opacity-20">💖</div>
                     <div className="text-4xl mb-3 z-10">🌟</div>
@@ -784,14 +766,14 @@ export default function Dashboard() {
                 </p>
 
                 {campaignSuccess ? (
-                    <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                    <div className="p-4 rounded-lg mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
                         ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
                     </div>
                 ) : (
                     <button
                         onClick={handleSendCampaign}
                         disabled={isSendingCampaign}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
+                        className="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
                         style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
                     >
                         {isSendingCampaign ? 'Generating drafts...' : '✨ Send AI Review Requests'}
@@ -817,7 +799,7 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Discover hidden trends in your sales data. Our AI analyzes customer behavior to recommend exactly what to sell next and how to price it for maximum profit.</p>
                     <button
                         onClick={() => setShowUpgradeModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                         View AI Insights
@@ -848,7 +830,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Promoters</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>12 top customers</strong> who haven't joined your VIP referral program. Ask them to refer their friends using an AI-generated email campaign.</p>
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">
                                     🎁
@@ -889,7 +871,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">🤝</div>
                     <span className="text-sm font-medium text-gray-600 text-center">+25% more new customers</span>
                 </div>
@@ -911,7 +893,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Win Back Lost Sales</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>5 abandoned carts</strong> totaling <strong className="text-green-600">$240.00</strong>. Recover these sales with an AI-generated discount campaign.</p>
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">
                                     🛒
@@ -955,7 +937,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💸</div>
                     <span className="text-sm font-medium text-gray-600 text-center">+15% average recovery rate</span>
                 </div>
@@ -977,7 +959,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Advocates</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>3 recent orders</strong> delivered that haven't left a review. Ask for a review with one tap and build your store's credibility automatically.</p>
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">
                                     ⭐
@@ -1069,7 +1051,7 @@ export default function Dashboard() {
                             }
                         }}
                         disabled={isGeneratingPromo}
-                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
+                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
@@ -1098,16 +1080,16 @@ export default function Dashboard() {
             <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
-                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
+                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-lg flex items-center justify-between mb-3">
                             <span className="font-semibold text-gray-700">Conversion Rate</span>
                             <span className="text-xl font-bold text-green-600">4.2%</span>
                         </div>
-                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between">
+                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-lg flex items-center justify-between">
                             <span className="font-semibold text-gray-700">Customer Lifetime Value</span>
                             <span className="text-xl font-bold text-blue-600">$184.50</span>
                         </div>
                     </div>
-                    <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                    <div className="w-full md:w-1/3 bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                         <div className="text-4xl mb-3">📈</div>
                         <span className="text-sm font-medium text-gray-600 text-center">Top Traffic: Organic Search</span>
                     </div>
@@ -1122,7 +1104,7 @@ export default function Dashboard() {
                         <p className="text-sm text-gray-600 mb-4">See exactly where your best customers come from and optimize your store to double your conversion rate.</p>
                         <button
                             onClick={() => setShowUpgradeModal(true)}
-                            className="w-full py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                            className="w-full py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
                         >
                             Upgrade to Premium
                         </button>
@@ -1152,7 +1134,7 @@ export default function Dashboard() {
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
                         }}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                        className={`px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
                     >
                         {saleShareCopied ? (
                             <>
@@ -1170,7 +1152,7 @@ export default function Dashboard() {
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-lg text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
                         onClick={() => setShowSaleCelebration(false)}
                     >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -1199,7 +1181,7 @@ export default function Dashboard() {
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
                           }}
-                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
+                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-lg shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
                       >
                           Share & Claim Reward
                       </button>
@@ -1239,7 +1221,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-lg p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💻</div>
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
                 </div>
@@ -1260,7 +1242,7 @@ export default function Dashboard() {
                 </div>
                 <button
                     onClick={() => setShowAddItemModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-lg shadow-md hover:bg-black transition-all font-inter text-sm"
                 >
                     <span>+ Add Item</span>
                 </button>
@@ -1372,7 +1354,7 @@ export default function Dashboard() {
                     name="Referrals"
                     onClick={openReferralModal}
                     disabled={isGeneratingReferral}
-                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
+                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
                 >
                     <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
                 </button>
@@ -1453,7 +1435,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-yellow-600">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-yellow-600">
                 🎉
               </div>
               <button
@@ -1481,7 +1463,7 @@ export default function Dashboard() {
                   href={`https://wa.me/?text=${encodeURIComponent(`Just hit an amazing milestone: ${currentMilestone.title} on my new store! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                   Share to WhatsApp
@@ -1490,7 +1472,7 @@ export default function Dashboard() {
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit an amazing milestone: ${currentMilestone.title} on my new store! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                  className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-lg font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                   Share to X
@@ -1575,7 +1557,7 @@ export default function Dashboard() {
                         }
                     }
                 }}
-                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg shadow-md hover:bg-black transition-all"
             >
                 Save {newItemType === 'product' ? 'Product' : newItemType === 'service' ? 'Service' : 'Digital Good'}
             </button>
@@ -1591,7 +1573,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-orange-600">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-orange-600">
                 ⭐
               </div>
               <button
@@ -1610,13 +1592,13 @@ export default function Dashboard() {
             <div className="space-y-3">
               <Link
                 href="/pricing"
-                className="block w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                className="block w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
               >
                 Upgrade to Starter
               </Link>
               <button
                 onClick={() => setShowPaywallModal(false)}
-                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                className="w-full py-2 rounded-lg text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
               >
                 Maybe later
               </button>
@@ -1632,7 +1614,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-purple-600">
                 ✨
               </div>
               <button
@@ -1691,7 +1673,7 @@ export default function Dashboard() {
                 href={`https://wa.me/?text=${encodeURIComponent("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-[#25D366] text-white py-3 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                 Send via WhatsApp
@@ -1707,7 +1689,7 @@ export default function Dashboard() {
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-red-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-red-600">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-red-600">
                 🛒
               </div>
               <button
@@ -1739,7 +1721,7 @@ export default function Dashboard() {
                         rows={8}
                     />
                     {cartCampaignSent ? (
-                        <div className="w-full py-3 bg-green-50 text-green-700 rounded-xl text-center text-sm font-semibold border border-green-200 flex items-center justify-center gap-2">
+                        <div className="w-full py-3 bg-green-50 text-green-700 rounded-lg text-center text-sm font-semibold border border-green-200 flex items-center justify-center gap-2">
                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                              Campaign Sent Successfully!
                         </div>
@@ -1765,7 +1747,7 @@ export default function Dashboard() {
                                     console.error('Failed to send abandoned cart campaign', e);
                                 }
                             }}
-                            className="w-full py-3 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-red-700 transition-colors"
+                            className="w-full py-3 bg-red-600 text-white rounded-lg text-sm font-semibold shadow-md hover:bg-red-700 transition-colors"
                         >
                             Send Campaign
                         </button>
@@ -1783,7 +1765,7 @@ export default function Dashboard() {
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-blue-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-blue-600">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-blue-600">
                 ⭐
               </div>
               <button
@@ -1815,7 +1797,7 @@ export default function Dashboard() {
                         rows={8}
                     />
                     {reviewSent ? (
-                        <div className="w-full py-3 bg-green-50 text-green-700 rounded-xl text-center text-sm font-semibold border border-green-200 flex items-center justify-center gap-2">
+                        <div className="w-full py-3 bg-green-50 text-green-700 rounded-lg text-center text-sm font-semibold border border-green-200 flex items-center justify-center gap-2">
                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                              Review Request Sent!
                         </div>
@@ -1844,7 +1826,7 @@ export default function Dashboard() {
                                     setReviewMessage('Failed to send campaign. Please try again later.');
                                 }
                             }}
-                            className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md flex items-center justify-center gap-2"
+                            className="w-full py-3 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md flex items-center justify-center gap-2"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                             Send Email
@@ -1865,7 +1847,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-purple-600">
                 🎁
               </div>
               <button
@@ -1894,7 +1876,7 @@ export default function Dashboard() {
                             value={customerReferralMessage}
                             onChange={(e) => setCustomerReferralMessage(e.target.value)}
                             rows={8}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 resize-none font-inter"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 resize-none font-inter"
                         />
                     )}
 
@@ -1912,7 +1894,7 @@ export default function Dashboard() {
                                 setCustomerReferralSent(true);
                                 setShowCustomerReferralModal(false);
                             }}
-                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
                             Send Campaign to 12 Customers
                         </button>
@@ -1933,7 +1915,7 @@ export default function Dashboard() {
 
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600 border border-purple-200">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-purple-600 border border-purple-200">
                     🌟
                   </div>
                   <div>
@@ -1950,7 +1932,7 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 shadow-inner">
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Preview</h3>
                   <div className="mac-glass-container border border-gray-200 p-4 rounded-lg shadow-sm">
                       <div className="flex gap-4">
@@ -1976,7 +1958,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <textarea
                     readOnly
-                    className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-xl h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
+                    className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-lg h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
                     value={`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`}
                   />
                   <div className="absolute top-3 right-3 flex gap-2">
@@ -2018,7 +2000,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-yellow-600">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-yellow-600">
                 📈
               </div>
               <button
@@ -2054,14 +2036,14 @@ export default function Dashboard() {
                 onClick={() => {
                   window.location.href = '/checkout';
                 }}
-                className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
+                className="w-full py-3 rounded-lg text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
               >
                 Upgrade Now - $29/mo
               </button>
 
               <button
                 onClick={() => setShowUpgradeModal(false)}
-                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                className="w-full py-2 rounded-lg text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
               >
                 Maybe later
               </button>
@@ -2093,7 +2075,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
-              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              className="w-full py-4 rounded-lg font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
             >
               Upgrade to Pro
@@ -2103,7 +2085,7 @@ export default function Dashboard() {
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-lg font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
               style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -2119,7 +2101,7 @@ export default function Dashboard() {
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-green-600">
                 🌐
               </div>
               <button
@@ -2171,7 +2153,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-2xl shadow-inner text-indigo-600">
                 🚀
               </div>
               <button
@@ -2225,7 +2207,7 @@ export default function Dashboard() {
                   href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                  className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                   WhatsApp
@@ -2234,7 +2216,7 @@ export default function Dashboard() {
                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                  className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-lg font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                   X (Twitter)
