@@ -145,7 +145,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
-    pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub long_term_memory: Option<Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
@@ -347,7 +347,7 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
-    pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
+    pub memory_store: Option<Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
@@ -371,7 +371,7 @@ impl Agent {
         }
     }
 
-    pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
+    pub fn with_memory_store(mut self, store: Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>) -> Self {
         self.memory_store = Some(store);
         self
     }

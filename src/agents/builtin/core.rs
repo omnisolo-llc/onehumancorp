@@ -11,3 +11,4 @@ pub mod hnsw_memory;
 pub mod code_native;
 pub mod acon_context;
 pub mod prompt_construction;
+pub mod memory_traits;

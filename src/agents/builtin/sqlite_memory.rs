@@ -103,9 +103,6 @@ impl LongTermMemory for SqliteMemoryStore {
         }
     }
 
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
-        None
-    }
 }
 
 #[cfg(test)]

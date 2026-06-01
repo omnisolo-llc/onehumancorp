@@ -777,29 +777,40 @@ mod tests {
     }
 
 
-#[async_trait]
-pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
-    /// Retrieve relevant past conversations or state based on a query
-    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    
-    /// Store a new piece of memory (e.g., an architectural decision or summary)
-    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
+pub use ohc_builtin_agent_core::memory_traits::LongTermMemory;
 
-    /// 3-Tier: Get the lightweight index (always loaded in context)
-    async fn get_lightweight_index(&self) -> Result<String, String> {
-        Ok("".to_string())
-    }
+pub trait AnthropicAccessorExt {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>>;
+}
 
-    /// 3-Tier: Pull a detailed topic file on demand
-    async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
-        Err("Not implemented".to_string())
+impl AnthropicAccessorExt for Anthropic3TierMemoryStore {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        Some(std::sync::Arc::new(self.clone()))
     }
+}
 
-    /// 3-Tier: Search raw transcripts
-    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        Ok(vec![])
+impl AnthropicAccessorExt for PersistentMemoryStore {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        None
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
+}
+
+impl AnthropicAccessorExt for RedisMemoryStore {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        None
+    }
+}
+
+impl AnthropicAccessorExt for crate::sqlite_memory::SqliteMemoryStore {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        None
+    }
+}
+
+impl AnthropicAccessorExt for crate::json_store::NamespaceJsonStore {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+        None
+    }
 }
 
 pub struct PersistentMemoryStore {
@@ -1017,9 +1028,6 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             }
         }
         Ok(results)
-    }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
-        Some(std::sync::Arc::new(self.clone()))
     }
 }
 

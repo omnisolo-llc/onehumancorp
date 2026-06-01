@@ -18,6 +18,7 @@ rust_library(
         "pubsub.rs",
         "types.rs",
         "prompt_construction.rs",
+        "memory_traits.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",

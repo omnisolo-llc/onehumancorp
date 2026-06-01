@@ -490,8 +490,8 @@ impl AgentServiceImpl {
             }
         }
 
-        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if sqlite_memory.is_some() {
-            sqlite_memory
+        let long_term_memory: Option<std::sync::Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>> = if sqlite_memory.is_some() {
+            sqlite_memory.map(|s| s as Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>)
         } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
             Some(Arc::new(crate::json_store::NamespaceJsonStore::new(&base_dir)))
@@ -502,7 +502,7 @@ impl AgentServiceImpl {
                     tenant_id: org_id.clone(),
                     agent_id: self.agent_id.clone(),
                     llm: llm.clone(),
-                }) as Arc<dyn crate::memory_store::LongTermMemory>
+                }) as Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>
             })
         };
 
@@ -649,6 +649,7 @@ impl AgentServiceImpl {
         working_dir: Option<PathBuf>,
         memory_accessor: Option<Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>>,
         observation_store: Arc<dashmap::DashMap<String, String>>,
+        long_term_memory: Option<Arc<dyn ohc_builtin_agent_core::memory_traits::LongTermMemory>>,
     ) -> Vec<Tool> {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
@@ -665,7 +666,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
+        tools.push(crate::tools::create_skill::create_skill_tool(long_term_memory));
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -719,6 +720,7 @@ impl AgentServiceImpl {
                 Some(Self::workspace_path()),
                 None,
                 observation_store.clone(),
+                run_cfg.long_term_memory.clone(),
             )
             .await;
         let mut unarc_agent = Agent::new(llm, tools);
@@ -776,7 +778,7 @@ impl AgentService for AgentServiceImpl {
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
         let accessor = if let Some(mem) = &anthropic_memory {
-            use crate::memory_store::LongTermMemory;
+            use crate::memory_store::AnthropicAccessorExt;
             mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
@@ -787,6 +789,7 @@ impl AgentService for AgentServiceImpl {
                 Some(Self::workspace_path()),
                 accessor,
                 observation_store.clone(),
+                run_cfg.long_term_memory.clone(),
             )
             .await;
 
@@ -1042,6 +1045,7 @@ impl AgentService for AgentServiceImpl {
                     working_dir,
                     None,
                     observation_store.clone(),
+                    run_cfg.long_term_memory.clone(),
                 )
                 .await;
             let mut agent = Agent::new(llm, tools);
@@ -1411,7 +1415,7 @@ mod memory_tests {
         assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
         let mem = service.anthropic_memory.as_ref().unwrap();
 
-        use crate::memory_store::LongTermMemory;
+        use crate::memory_store::AnthropicAccessorExt;
         let accessor = mem.as_anthropic_accessor();
         assert!(accessor.is_some(), "Should return the anthropic memory accessor");
 
