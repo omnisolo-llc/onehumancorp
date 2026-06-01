@@ -432,6 +432,9 @@ export default function Dashboard() {
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
+            <Link href="/link-in-bio" className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-md text-sm font-medium hover:bg-emerald-200 transition-colors border border-emerald-200 shadow-sm flex items-center gap-1">
+              <span>🔗</span> Link in Bio
+            </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
