@@ -172,6 +172,11 @@ impl BookingService {
         .execute(&mut *tx)
         .await;
 
+        // Invalidate cache
+        let cache = crate::builder::edge::get_edge_cache();
+        cache.invalidate_by_tag(&format!("entity:booking:{}", service.id)).await;
+        cache.invalidate_by_tag(&format!("tenant-id:{}", service.tenant_id)).await;
+
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -243,6 +248,11 @@ impl BookingService {
         .bind(amount_cents)
         .execute(&mut *tx)
         .await;
+
+        // Invalidate cache
+        let cache = crate::builder::edge::get_edge_cache();
+        cache.invalidate_by_tag(&format!("entity:booking:{}", booking.product_id)).await;
+        cache.invalidate_by_tag(&format!("tenant-id:{}", booking.tenant_id)).await;
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())

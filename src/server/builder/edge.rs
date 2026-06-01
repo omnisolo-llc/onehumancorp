@@ -220,6 +220,9 @@ async fn regenerate_cache(
             "ServiceBookingBlock" | "Booking" => {
                 let title = block.content.get("title").and_then(|v| v.as_str()).unwrap_or("Book a Service");
                 let avail = block.content.get("availability").and_then(|v| v.as_str()).unwrap_or("Available now");
+                if let Some(service_id) = block.content.get("service_id").and_then(|v| v.as_str()) {
+                    tags.push(format!("entity:booking:{}", service_id));
+                }
                 html.push_str("<div class=\"service-block\">\n");
                 html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>\n", escape_html(title)));
                 html.push_str(&format!("<p>{}</p>\n", escape_html(avail)));
