@@ -509,7 +509,7 @@ impl AgentServiceImpl {
         // Attempt to load AGENTS.md for user instructions
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
         let user_instructions = load_cascading_agents_md(&current_dir, None).await;
-        let mut developer_instructions = "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string();
+        let mut developer_instructions = "You're a capable AI in OHC. Obey security and verify actions.".to_string();
         if let Some(toolset) = req.toolset_config.as_ref() {
             let skill_context = Self::format_loaded_skills(&toolset.skills);
             if !skill_context.is_empty() {
@@ -978,7 +978,7 @@ impl AgentService for AgentServiceImpl {
                 agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
-                developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
+                developer_instructions: "You're a capable AI in OHC. Obey security and verify actions.".to_string(),
                 user_instructions: {
                     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
                     load_cascading_agents_md(&current_dir, if sub_req.working_dir.is_empty() { None } else { Some(&sub_req.working_dir) }).await

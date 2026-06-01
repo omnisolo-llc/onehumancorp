@@ -347,7 +347,18 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let final_meetings = if req.mobile_optimized {
+            out_meetings
+                .into_iter()
+                .map(|mut m| {
+                    m.transcript.clear();
+                    m.participants.clear();
+                    m
+                })
+                .collect()
+        } else {
+            out_meetings
+        };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -388,7 +399,11 @@ impl DashboardService for MyDashboardService {
                     name,
                     role: role_val,
                     status: status_val,
-                    organization_id: a.organization_id,
+                    organization_id: if req.mobile_optimized {
+                        String::new()
+                    } else {
+                        a.organization_id
+                    },
                 }
             })
             .collect::<Vec<_>>();

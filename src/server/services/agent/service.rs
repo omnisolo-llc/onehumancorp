@@ -10,6 +10,7 @@ pub struct MyAgentManagerService {
     skills: RwLock<Vec<SkillPack>>,
     snapshots: RwLock<Vec<OrgSnapshot>>,
     snapshot_cache: ::server_utils::cache::HybridCache<DashboardSnapshot>,
+    skills_cache: ::server_utils::cache::HybridCache<Vec<SkillPack>>,
 }
 
 impl MyAgentManagerService {
@@ -19,7 +20,8 @@ impl MyAgentManagerService {
             hub,
             skills: RwLock::new(Vec::new()),
             snapshots: RwLock::new(Vec::new()),
-            snapshot_cache: ::server_utils::cache::HybridCache::new(redis_client),
+            snapshot_cache: ::server_utils::cache::HybridCache::new(redis_client.clone()),
+            skills_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 
@@ -75,7 +77,12 @@ impl MyAgentManagerService {
             queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
         };
-        self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
+        self.snapshot_cache.set_with_tags(
+            &cache_key,
+            snapshot.clone(),
+            vec![format!("org:{}", org_id)],
+            std::time::Duration::from_secs(3600)
+        ).await;
         Ok(snapshot)
     }
 }
@@ -105,7 +112,7 @@ impl AgentManagerService for MyAgentManagerService {
         };
 
         self.hub.register_agent(agent);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache.invalidate_by_tag(&format!("org:{}", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -122,7 +129,7 @@ impl AgentManagerService for MyAgentManagerService {
         }
 
         self.hub.fire_agent(&req.agent_id);
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache.invalidate_by_tag(&format!("org:{}", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -142,7 +149,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
             .map_err(|e| Status::invalid_argument(e))?;
-        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}", org_id)).await;
+        self.snapshot_cache.invalidate_by_tag(&format!("org:{}", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id).await?))
     }
 
@@ -190,8 +197,14 @@ impl AgentManagerService for MyAgentManagerService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<SkillsResponse>, Status> {
-        let skills = self.skills.read().unwrap();
-        Ok(Response::new(SkillsResponse { skills: skills.clone() }))
+        let cache_key = "global_skills";
+        if let Some(skills) = self.skills_cache.get(cache_key).await {
+            return Ok(Response::new(SkillsResponse { skills }));
+        }
+
+        let skills = self.skills.read().unwrap().clone();
+        self.skills_cache.set(cache_key, skills.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(Response::new(SkillsResponse { skills }))
     }
 
     async fn import_skill(
@@ -217,6 +230,7 @@ impl AgentManagerService for MyAgentManagerService {
 
         let mut skills = self.skills.write().unwrap();
         skills.push(pack.clone());
+        self.skills_cache.invalidate("global_skills").await;
 
         Ok(Response::new(pack))
     }
