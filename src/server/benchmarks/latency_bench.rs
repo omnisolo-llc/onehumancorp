@@ -218,23 +218,6 @@ pub async fn bench_dashboard_snapshot() {
     fetch_times.sort();
     tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 
-    // Bench Cached Dashboard Fetch
-    unsafe { std::env::set_var("ENABLE_DASHBOARD_CACHING", "true"); }
-    let mut fetch_times_cached = Vec::new();
-    for _ in 0..iterations {
-        let start = Instant::now();
-        let req_desktop2 = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        let mut request2 = tonic::Request::new(req_desktop2);
-        request2.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-        let db_arc2 = std::sync::Arc::new(db.clone());
-        let dashboard_service2 = crate::services::dashboard::service::MyDashboardService::new(db_arc2, hub.clone());
-        let _res_desktop2 = dashboard_service2.get_dashboard(request2).await.unwrap().into_inner();
-        fetch_times_cached.push(start.elapsed().as_micros());
-    }
-    fetch_times_cached.sort();
-    println!("Cached Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times_cached[iterations / 2], fetch_times_cached[(iterations as f32 * 0.95) as usize], fetch_times_cached[(iterations as f32 * 0.99) as usize]);
-    unsafe { std::env::remove_var("ENABLE_DASHBOARD_CACHING"); }
-
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
@@ -465,4 +448,51 @@ pub async fn bench_advisory_insights_latency() {
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
+
+    // Standalone Mode (SQLite)
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:?cache=shared")
+        .await
+        .unwrap();
+
+    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
+
+    let mut fetch_times_sqlite = Vec::with_capacity(iterations);
+    let tenant_id = "system".to_string();
+
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+
+        let (_org_res, _active_orders_res) = tokio::join!(
+            async {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&sqlite_pool)
+                .await
+                .unwrap()
+            },
+            async {
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
+                )
+                .bind(&tenant_id)
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap()
+            }
+        );
+
+        fetch_times_sqlite.push(start.elapsed().as_micros());
+    }
+
+    fetch_times_sqlite.sort();
+    println!(
+        "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times_sqlite[iterations / 2],
+        fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
+        fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
+    );
 }
