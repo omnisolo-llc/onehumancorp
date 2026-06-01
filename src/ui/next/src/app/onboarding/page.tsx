@@ -210,12 +210,12 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: 'admin@ohc.app',
-          admin_name: 'Admin',
+          admin_email: `${businessName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'admin'}@ohc.app`,
+          admin_name: businessName || 'Admin',
           admin_password: 'password123',
           website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
+          first_product_name: firstProductName || 'My First Product',
+          first_product_price: firstProductPrice || '10.00',
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed'
         })
@@ -663,7 +663,7 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="block w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Go to Dashboard
                 </a>
