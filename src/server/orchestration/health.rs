@@ -100,13 +100,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
@@ -163,13 +163,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -204,13 +204,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite://file::memory:?cache=shared".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
         let _pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })

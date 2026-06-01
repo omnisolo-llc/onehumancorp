@@ -278,10 +278,10 @@ mod chaos_tests {
         let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
-        // The pull_available_tasks for cloud has a 60-second timeout on the lock or DB
-        // The mocked sleeping mesh sleeps for 61s, forcing the 60s timeout to trigger.
-        assert!(elapsed < std::time::Duration::from_millis(62000));
-        assert!(elapsed > std::time::Duration::from_millis(59000));
+        // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
+        // The mocked sleeping mesh sleeps for 61s, forcing the 2s timeout to trigger.
+        assert!(elapsed < std::time::Duration::from_millis(4000));
+        assert!(elapsed > std::time::Duration::from_millis(1500));
 
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
@@ -335,7 +335,7 @@ mod chaos_tests {
     async fn test_standalone_db_transition_fallback() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let db = Arc::new(DB {
@@ -356,7 +356,7 @@ mod chaos_tests {
     async fn test_standalone_db_pull_fallback() {
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy("sqlite::memory:")
+            .connect_lazy("sqlite://file::memory:?cache=shared")
             .unwrap();
 
         let db = Arc::new(DB {

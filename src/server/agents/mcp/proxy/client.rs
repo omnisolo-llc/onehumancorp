@@ -3,8 +3,6 @@ use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnel
 use ::server_ohc::mcp_proxy::{
     ProxyToServer, RegisterProxyRequest, ServerToProxy, proxy_to_server,
 };
-use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -112,6 +110,7 @@ impl LocalProxyClient {
                                             let details = serde_json::json!({
                                                 "reason": e.reason,
                                                 "command": e.command,
+                                                "deployment_mode": ::server_telemetry::get_deployment_mode(),
                                             });
 
                                             let _ = ::server_telemetry::buffer_metric(
@@ -194,96 +193,5 @@ impl LocalProxyClient {
         });
 
         Ok(())
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct LocalFSSyncToolParams {
-    pub action: String,
-    pub path: String,
-    pub content: Option<String>,
-}
-
-pub struct LocalFSSyncTool {
-    base_dir: String,
-}
-
-impl LocalFSSyncTool {
-    pub fn new(base_dir: String) -> Self {
-        Self { base_dir }
-    }
-
-    pub async fn execute(&self, params_json: &str) -> Result<(bool, String, String), String> {
-        let params: LocalFSSyncToolParams = match serde_json::from_str(params_json) {
-            Ok(p) => p,
-            Err(e) => return Ok((false, "".to_string(), format!("Invalid params: {}", e))),
-        };
-
-        if !params.path.starts_with(".agent-task/") {
-            return Ok((
-                false,
-                "".to_string(),
-                "Path must start with .agent-task/".to_string(),
-            ));
-        }
-        if params.path.contains("..") {
-            return Ok((false, "".to_string(), "Path traversal attempt".to_string()));
-        }
-
-        let full_path = Path::new(&self.base_dir).join(&params.path);
-
-        match params.action.as_str() {
-            "read" => match tokio::fs::read_to_string(&full_path).await {
-                Ok(content) => {
-                    let _ = ::server_telemetry::buffer_metric(
-                        &crate::db::get_pool(),
-                        "local_fs_sync_read",
-                        "counter",
-                        1.0,
-                        serde_json::json!({"path": params.path}),
-                    )
-                    .await;
-                    Ok((true, content, "".to_string()))
-                }
-                Err(e) => Ok((false, "".to_string(), e.to_string())),
-            },
-            "write" => {
-                let content = params.content.unwrap_or_default();
-                if let Some(parent) = full_path.parent() {
-                    let _ = tokio::fs::create_dir_all(parent).await;
-                }
-                match tokio::fs::write(&full_path, content).await {
-                    Ok(_) => {
-                        let _ = ::server_telemetry::buffer_metric(
-                            &crate::db::get_pool(),
-                            "local_fs_sync_write",
-                            "counter",
-                            1.0,
-                            serde_json::json!({"path": params.path}),
-                        )
-                        .await;
-                        Ok((true, "Successfully wrote file".to_string(), "".to_string()))
-                    }
-                    Err(e) => Ok((false, "".to_string(), e.to_string())),
-                }
-            }
-            "sync" => {
-                let exists = full_path.exists();
-                let _ = ::server_telemetry::buffer_metric(
-                    &crate::db::get_pool(),
-                    "local_fs_sync_sync",
-                    "counter",
-                    1.0,
-                    serde_json::json!({"path": params.path}),
-                )
-                .await;
-                if exists {
-                    Ok((true, "Synced".to_string(), "".to_string()))
-                } else {
-                    Ok((false, "".to_string(), "File does not exist".to_string()))
-                }
-            }
-            _ => Ok((false, "".to_string(), "Invalid action".to_string())),
-        }
     }
 }

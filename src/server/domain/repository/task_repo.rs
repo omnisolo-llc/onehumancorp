@@ -1,15 +1,21 @@
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use super::models::Task;
+use super::models::{Task, TaskDependency};
 use chrono::Utc;
+
+use tokio::sync::Mutex;
 
 pub struct TaskRepository {
     db: Arc<DB>,
+    sqlite_mutex: Mutex<()>,
 }
 
 impl TaskRepository {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self {
+            db,
+            sqlite_mutex: Mutex::new(()),
+        }
     }
 
     pub async fn create_task(&self, task: Task) -> Result<Task, String> {
@@ -144,6 +150,204 @@ impl TaskRepository {
         }
         Ok(())
     }
+
+    pub async fn create_task_dependency(&self, dependency: TaskDependency) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT DO NOTHING
+                    "#
+                )
+                .bind(&dependency.task_id)
+                .bind(&dependency.depends_on_task_id)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
+                    VALUES (?, ?)
+                    ON CONFLICT DO NOTHING
+                    "#
+                )
+                .bind(&dependency.task_id)
+                .bind(&dependency.depends_on_task_id)
+                .execute(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_task_dependencies(&self, task_id: &str) -> Result<Vec<TaskDependency>, String> {
+        let deps = match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query_as::<_, TaskDependency>(
+                    r#"
+                    SELECT task_id, depends_on_task_id
+                    FROM task_dependencies
+                    WHERE task_id = $1
+                    "#
+                )
+                .bind(task_id)
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query_as::<_, TaskDependency>(
+                    r#"
+                    SELECT task_id, depends_on_task_id
+                    FROM task_dependencies
+                    WHERE task_id = ?
+                    "#
+                )
+                .bind(task_id)
+                .fetch_all(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?
+            }
+        };
+        Ok(deps)
+    }
+
+    pub async fn claim_task(&self, organization_id: &str, assigned_agent_role: &str) -> Result<Option<Task>, String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT t.id FROM tasks t
+                    WHERE t.status = 'PENDING' AND t.organization_id = $1
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM task_dependencies td
+                        JOIN tasks parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = t.id AND parent.status != 'DONE'
+                    )
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                    "#,
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
+                };
+
+                let id: String = sqlx::Row::get(&row, "id");
+
+                sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'CLAIMED', assigned_agent_role = $1, updated_at = $2
+                    WHERE id = $3
+                    "#,
+                )
+                .bind(assigned_agent_role)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let task = sqlx::query_as::<_, Task>(
+                    r#"
+                    SELECT id, organization_id, parent_task_id, title, description,
+                           status, assigned_agent_role, created_at, updated_at
+                    FROM tasks
+                    WHERE id = $1
+                    "#
+                )
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                Ok(Some(task))
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row_opt = sqlx::query(
+                    r#"
+                    SELECT t.id FROM tasks t
+                    WHERE t.status = 'PENDING' AND t.organization_id = ?
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM task_dependencies td
+                        JOIN tasks parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = t.id AND parent.status != 'DONE'
+                    )
+                    LIMIT 1
+                    "#,
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let row = match row_opt {
+                    Some(r) => r,
+                    None => {
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                        return Ok(None);
+                    }
+                };
+
+                let id: String = sqlx::Row::get(&row, "id");
+
+                sqlx::query(
+                    r#"
+                    UPDATE tasks
+                    SET status = 'CLAIMED', assigned_agent_role = ?, updated_at = ?
+                    WHERE id = ?
+                    "#,
+                )
+                .bind(assigned_agent_role)
+                .bind(now)
+                .bind(&id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let task = sqlx::query_as::<_, Task>(
+                    r#"
+                    SELECT id, organization_id, parent_task_id, title, description,
+                           status, assigned_agent_role, created_at, updated_at
+                    FROM tasks
+                    WHERE id = ?
+                    "#
+                )
+                .bind(&id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                Ok(Some(task))
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -177,9 +381,35 @@ mod tests {
         .await
         .unwrap();
 
+        sqlx::query(
+            r#"
+            CREATE TABLE task_dependencies (
+                task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                PRIMARY KEY (task_id, depends_on_task_id)
+            );
+            "#
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
         let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
+
+        // create table in pg test pool if not exists (although normally migrations would be run)
+        let _ = sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS task_dependencies (
+                task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                PRIMARY KEY (task_id, depends_on_task_id)
+            );
+            "#
+        )
+        .execute(&pg_pool)
+        .await;
 
         Arc::new(DB {
             pool: pg_pool,
@@ -248,5 +478,108 @@ mod tests {
 
         let tasks_after = repo.get_tasks_by_org(&org_id).await.unwrap();
         assert_eq!(tasks_after[0].status, "IN_PROGRESS");
+    }
+
+    #[tokio::test]
+    async fn test_task_dependencies() {
+        let db = setup_test_db().await;
+        let repo = TaskRepository::new(db);
+
+        let org_id = "org_1".to_string();
+
+        let task1 = Task {
+            id: "task_1".to_string(),
+            organization_id: org_id.clone(),
+            parent_task_id: None,
+            title: "Task 1".to_string(),
+            description: None,
+            status: "PENDING".to_string(),
+            assigned_agent_role: None,
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_task(task1).await.unwrap();
+
+        let task2 = Task {
+            id: "task_2".to_string(),
+            organization_id: org_id.clone(),
+            parent_task_id: None,
+            title: "Task 2".to_string(),
+            description: None,
+            status: "PENDING".to_string(),
+            assigned_agent_role: None,
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_task(task2).await.unwrap();
+
+        repo.create_task_dependency(TaskDependency {
+            task_id: "task_2".to_string(),
+            depends_on_task_id: "task_1".to_string(),
+        }).await.unwrap();
+
+        let deps = repo.get_task_dependencies("task_2").await.unwrap();
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].depends_on_task_id, "task_1");
+    }
+
+    #[tokio::test]
+    async fn test_claim_task() {
+        let db = setup_test_db().await;
+        let repo = TaskRepository::new(db);
+
+        let org_id = "org_1".to_string();
+
+        let task1 = Task {
+            id: "task_1".to_string(),
+            organization_id: org_id.clone(),
+            parent_task_id: None,
+            title: "Task 1".to_string(),
+            description: None,
+            status: "PENDING".to_string(),
+            assigned_agent_role: None,
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_task(task1).await.unwrap();
+
+        let task2 = Task {
+            id: "task_2".to_string(),
+            organization_id: org_id.clone(),
+            parent_task_id: None,
+            title: "Task 2".to_string(),
+            description: None,
+            status: "PENDING".to_string(),
+            assigned_agent_role: None,
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_task(task2).await.unwrap();
+
+        repo.create_task_dependency(TaskDependency {
+            task_id: "task_2".to_string(),
+            depends_on_task_id: "task_1".to_string(),
+        }).await.unwrap();
+
+        // task_2 cannot be claimed because task_1 is not DONE
+        let claimed_task_2 = repo.claim_task(&org_id, "agent_1").await.unwrap();
+        assert!(claimed_task_2.is_some()); // wait, it might claim task_1 instead
+
+        let claimed = claimed_task_2.unwrap();
+        assert_eq!(claimed.id, "task_1"); // should claim task_1 which has no unfulfilled dependencies
+        assert_eq!(claimed.status, "CLAIMED");
+        assert_eq!(claimed.assigned_agent_role.unwrap(), "agent_1");
+
+        // now there are no pending tasks without dependencies
+        let claimed_none = repo.claim_task(&org_id, "agent_2").await.unwrap();
+        assert!(claimed_none.is_none());
+
+        // finish task 1
+        repo.update_task_status(&org_id, "task_1", "DONE").await.unwrap();
+
+        // now task 2 can be claimed
+        let claimed_task_2_now = repo.claim_task(&org_id, "agent_2").await.unwrap();
+        assert!(claimed_task_2_now.is_some());
+        assert_eq!(claimed_task_2_now.unwrap().id, "task_2");
     }
 }
