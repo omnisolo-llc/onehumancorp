@@ -94,7 +94,7 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)")
+                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)")
                         .bind(&task.id)
                         .bind(dep)
                         .execute(&self.db.pool)
@@ -140,7 +140,7 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 for dep in &task.dependencies {
-                    sqlx::query("INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
+                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)")
                         .bind(&task.id)
                         .bind(dep)
                         .execute(sqlite_pool)
@@ -202,7 +202,7 @@ impl TaskDecompositionService {
                     WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                     AND NOT EXISTS (
                         SELECT 1
-                        FROM shared_task_dependencies std
+                        FROM task_dependencies std
                         JOIN shared_tasks_decomposition parent ON parent.id = std.depends_on_task_id
                         WHERE std.task_id = st.id AND parent.status != 'COMPLETED'
                     )
@@ -309,7 +309,7 @@ impl TaskDecompositionService {
                         WHERE st.organization_id = ? AND (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                         AND NOT EXISTS (
                             SELECT 1
-                            FROM shared_task_dependencies std
+                            FROM task_dependencies std
                             JOIN shared_tasks_decomposition parent ON parent.id = std.depends_on_task_id
                             WHERE std.task_id = st.id AND parent.status != 'COMPLETED'
                         )
@@ -894,7 +894,10 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -998,7 +1001,7 @@ mod tests {
         // Simulate some time in queue
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        let claimed_opt = service.claim_task("test-org", "agent-1").await.unwrap();
+        let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
         assert!(claimed_opt.is_some());
 
         // Simulate execution time
@@ -1053,7 +1056,10 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1179,12 +1185,12 @@ mod tests {
         service.create_task(task2).await.unwrap();
 
         // Attempt to claim. Should get task 1 because task 2 is blocked.
-        let claimed_opt = service.claim_task("test-org", "agent-1").await.unwrap();
+        let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
         assert!(claimed_opt.is_some());
         assert_eq!(claimed_opt.unwrap().id, "task-1");
 
         // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
-        let claimed_opt2 = service.claim_task("test-org", "agent-2").await.unwrap();
+        let claimed_opt2 = service.claim_task("org-123", "agent-2").await.unwrap();
         assert!(claimed_opt2.is_none());
 
         // Complete task 1
@@ -1194,7 +1200,7 @@ mod tests {
             .unwrap();
 
         // Attempt to claim. Should get task 2 now.
-        let claimed_opt3 = service.claim_task("test-org", "agent-2").await.unwrap();
+        let claimed_opt3 = service.claim_task("org-123", "agent-2").await.unwrap();
         assert!(claimed_opt3.is_some());
         assert_eq!(claimed_opt3.unwrap().id, "task-2");
     }
@@ -1342,12 +1348,12 @@ mod tests {
             service.create_task(task2).await.unwrap();
 
             // Attempt to claim. Should get task 1 because task 2 is blocked.
-            let claimed_opt = service.claim_task("test-org", "agent-1").await.unwrap();
+            let claimed_opt = service.claim_task("org-123", "agent-1").await.unwrap();
             assert!(claimed_opt.is_some());
             assert_eq!(claimed_opt.unwrap().id, "task-pg-1");
 
             // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
-            let claimed_opt2 = service.claim_task("test-org", "agent-2").await.unwrap();
+            let claimed_opt2 = service.claim_task("org-123", "agent-2").await.unwrap();
             assert!(claimed_opt2.is_none());
 
             // Complete task 1
@@ -1357,7 +1363,7 @@ mod tests {
                 .unwrap();
 
             // Attempt to claim. Should get task 2 now.
-            let claimed_opt3 = service.claim_task("test-org", "agent-2").await.unwrap();
+            let claimed_opt3 = service.claim_task("org-123", "agent-2").await.unwrap();
             assert!(claimed_opt3.is_some());
             assert_eq!(claimed_opt3.unwrap().id, "task-pg-2");
         }
@@ -1563,7 +1569,10 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1655,7 +1664,10 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE shared_task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"

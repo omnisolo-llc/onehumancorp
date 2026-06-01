@@ -94,6 +94,14 @@ async fn test_task_decomposition_service() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
                 "#
             )
             .execute(sqlite_pool)
@@ -168,7 +176,7 @@ async fn test_task_decomposition_service() {
     svc.create_task(dep_task.clone()).await.unwrap();
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("agent1").await.unwrap();
+    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
     assert!(claimed.is_some());
 
     svc.update_status(&main_task.id, "REVIEW", "agent1").await.unwrap();
@@ -254,9 +262,17 @@ async fn test_task_decomposition_dag_blocked() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
                 "#
             ).execute(sqlite_pool).await.unwrap();
-        }
+            }
     }
 
 
@@ -325,11 +341,11 @@ async fn test_task_decomposition_dag_blocked() {
     svc.create_task(dep_task.clone()).await.unwrap();
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("agent1").await.unwrap();
+    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
     assert!(claimed.is_some());
     assert_eq!(claimed.unwrap().id, dep_task.id);
 
-    let claimed2 = svc.claim_task("agent2").await.unwrap();
+    let claimed2 = svc.claim_task("org1", "agent2").await.unwrap();
     assert!(claimed2.is_none());
 }
 
@@ -419,9 +435,17 @@ async fn test_task_decomposition_service_fail_task() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS task_dependencies (
+                    task_id TEXT NOT NULL,
+                    depends_on_task_id TEXT NOT NULL
+                );
                 "#
             ).execute(sqlite_pool).await.unwrap();
-        }
+            }
     }
 
 
@@ -466,7 +490,7 @@ async fn test_task_decomposition_service_fail_task() {
 
     svc.create_task(main_task.clone()).await.unwrap();
 
-    let claimed = svc.claim_task("agent1").await.unwrap();
+    let claimed = svc.claim_task("org1", "agent1").await.unwrap();
     assert!(claimed.is_some());
     assert_eq!(claimed.unwrap().id, main_task.id);
 
