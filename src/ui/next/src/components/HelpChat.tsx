@@ -100,7 +100,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse"
+            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group"
             aria-label="Open help chat"
           >
             <span className="text-xl">✨</span>
