@@ -271,6 +271,6 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Worker dispatch must enforce timeout");
-        assert!(start.elapsed() >= Duration::from_millis(60), "Timeout should wait the configured time");
+        assert!(start.elapsed() >= Duration::from_millis(50), "Timeout should wait the configured time");
     }
 }

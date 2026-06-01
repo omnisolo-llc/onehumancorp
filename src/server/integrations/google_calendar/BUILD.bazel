@@ -67,6 +67,7 @@ rust_library(
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
         "//src/server/telemetry:server_telemetry",
+        "//src/server/tools/local_proxy:server_tools_local_proxy",
         "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
@@ -108,4 +109,17 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_integrations_google_calendar_unit_test",
+    size = "small",
+    crate = ":server_integrations_google_calendar",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

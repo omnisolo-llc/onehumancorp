@@ -39,6 +39,33 @@ describe('OnboardingWizard', () => {
     expect(button).toBeDisabled();
   });
 
+  it('Step 1: Has correct mobile keyboard hints on inputs', async () => {
+    render(<OnboardingWizard />);
+
+    // Check first chat step (Business Name)
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    expect(nameInput).toHaveAttribute('autoComplete', 'organization');
+    expect(nameInput).toHaveAttribute('autoCapitalize', 'words');
+    expect(nameInput).toHaveAttribute('enterKeyHint', 'next');
+
+    const user = userEvent.setup({ delay: null });
+    await user.type(nameInput, 'Test Store');
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+
+    // Check second chat step (What you sell)
+    const sellTextarea = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    expect(sellTextarea).toHaveAttribute('enterKeyHint', 'next');
+
+    await user.type(sellTextarea, 'Test Items');
+    await user.click(screen.getByRole('button', { name: /Next/i }));
+
+    // Check third chat step (Location)
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    expect(locInput).toHaveAttribute('autoComplete', 'address-level2');
+    expect(locInput).toHaveAttribute('autoCapitalize', 'words');
+    expect(locInput).toHaveAttribute('enterKeyHint', 'done');
+  });
+
   it('Handles multi-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
@@ -192,15 +219,14 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it('Step 2: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
+    // Set initial state to Step 2
     act(() => {
       useOnboardingStore.setState({
-        step: 1,
-        chatStep: 3,
+        step: 2,
         businessName: 'A',
-        location: 'NY',
         businessType: 'Bakery',
         categories: ['food'],
         firstProductName: 'Cake',
@@ -210,9 +236,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
 
-    await user.click(generateButton);
+    await user.click(continueButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
@@ -288,41 +314,5 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
-  });
-
-  it('Save Draft button triggers draft API and shows success message', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    // Mock draft API success
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/draft') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({})
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
-    });
-
-    // Start at Step 2
-    act(() => {
-      useOnboardingStore.setState({ step: 2 });
-    });
-
-    render(<OnboardingWizard />);
-
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
-    expect(saveDraftButton).toBeInTheDocument();
-
-    await user.click(saveDraftButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
-    });
-
-    // Verify API was called
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
-      method: 'POST'
-    }));
   });
 });
