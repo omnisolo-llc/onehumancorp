@@ -12,9 +12,12 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/ohc:server_ohc",
+        "//src/server/auth:server_auth",
         "@crates//:serde_json",
         "@crates//:tonic",
         "@crates//:tracing",
+        "@crates//:uuid",
+        "@crates//:sqlx",
     ],
 )
 

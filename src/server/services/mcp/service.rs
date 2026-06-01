@@ -224,7 +224,7 @@ impl McpService for MyMcpService {
                 }
             }
             "local_stateful_proxy" => {
-                match self.local_proxy_server.invoke_tool(&req).await {
+                match self.local_proxy_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
