@@ -27,6 +27,14 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
 
+    // Check that Usage Metering section is present
+    await expect(page.locator('h2', { hasText: 'Usage Metering' })).toBeVisible();
+
+    // Check for individual usage metering items
+    await expect(page.locator('span', { hasText: 'Total Tokens' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Overall ROI' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Agent Efficiency' })).toBeVisible();
+
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
     await expect(page).toHaveURL('http://localhost:3000/plan');

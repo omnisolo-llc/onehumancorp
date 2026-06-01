@@ -22,6 +22,9 @@ pub struct CostDashboardResponse {
     pub payment_fees: i64,
     pub period_start: String,
     pub period_end: String,
+    pub total_tokens: i64,
+    pub overall_roi: f64,
+    pub agent_efficiency: f64,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -112,7 +115,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), total_tokens: 0, overall_roi: 0.0, agent_efficiency: 0.0 })
     };
 
     let now = chrono::Utc::now();
@@ -129,7 +132,12 @@ pub async fn cost_dashboard_handler(
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
-        (auditor.get_tenant_cost(&tenant_id_clone_2), auditor.get_total_revenue())
+        let total_tokens = auditor.get_tenant_tokens(&tenant_id_clone_2);
+        let tenant_cost = auditor.get_tenant_cost(&tenant_id_clone_2);
+        let total_revenue = auditor.get_total_revenue();
+        let overall_roi = auditor.calculate_roi(tenant_cost, total_revenue);
+        let agent_efficiency = auditor.calculate_efficiency(tenant_cost, total_tokens);
+        (tenant_cost, total_revenue, total_tokens, overall_roi, agent_efficiency)
     });
 
     let storage_future = tokio::task::spawn(async move {
@@ -139,7 +147,7 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64) = auditor_res.unwrap_or((0.0, 0.0));
+    let (llm_cost_f64, total_revenue_f64, total_tokens, overall_roi, agent_efficiency) = auditor_res.unwrap_or((0.0, 0.0, 0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
@@ -155,5 +163,8 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+        total_tokens,
+        overall_roi,
+        agent_efficiency,
     })
 }

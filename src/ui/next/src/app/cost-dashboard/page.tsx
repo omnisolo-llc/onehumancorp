@@ -11,6 +11,9 @@ interface CostDashboardData {
   payment_fees: number;
   period_start: string;
   period_end: string;
+  total_tokens: number;
+  overall_roi: number;
+  agent_efficiency: number;
 }
 
 export default function CostDashboardPage() {
@@ -44,6 +47,9 @@ export default function CostDashboardPage() {
                 payment_fees: 0,
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
+                total_tokens: 0,
+                overall_roi: 0.0,
+                agent_efficiency: 0.0,
             });
         }
       } catch (err) {
@@ -58,6 +64,9 @@ export default function CostDashboardPage() {
             payment_fees: 0,
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
+            total_tokens: 0,
+            overall_roi: 0.0,
+            agent_efficiency: 0.0,
         });
       } finally {
         setLoading(false);
@@ -143,6 +152,36 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
+        {/* Usage Metering Section */}
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Usage Metering</h2>
+
+            <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <span className="font-medium text-gray-900">Total Tokens</span>
+                        <p className="text-sm text-gray-500 mt-1">Total AI tokens processed across all agents.</p>
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">{data?.total_tokens?.toLocaleString() || 0}</span>
+                </div>
+
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <span className="font-medium text-gray-900">Overall ROI</span>
+                        <p className="text-sm text-gray-500 mt-1">Return on investment based on AI spending vs revenue.</p>
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">{data?.overall_roi?.toFixed(2) || '0.00'}%</span>
+                </div>
+
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <span className="font-medium text-gray-900">Agent Efficiency</span>
+                        <p className="text-sm text-gray-500 mt-1">Tokens generated per dollar spent.</p>
+                    </div>
+                    <span className="text-lg font-semibold text-gray-900">{data?.agent_efficiency?.toFixed(2) || '0.00'} tok/$</span>
+                </div>
+            </div>
+        </section>
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

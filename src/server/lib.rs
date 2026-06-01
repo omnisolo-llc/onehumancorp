@@ -1097,6 +1097,9 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            total_tokens: auditor.get_tenant_tokens(&tenant_id_clone),
+            overall_roi: auditor.calculate_roi(llm_cost_f64, total_revenue_f64),
+            agent_efficiency: auditor.calculate_efficiency(llm_cost_f64, auditor.get_tenant_tokens(&tenant_id_clone)),
         }))
     }
 
