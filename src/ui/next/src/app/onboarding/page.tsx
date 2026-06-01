@@ -3,14 +3,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
 
+import { useRouter } from 'next/navigation';
+
 export default function OnboardingWizard() {
+  const router = useRouter();
   const {
     step, setStep,
     chatStep, setChatStep,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
-    location, setLocation,
+    preferredLanguage, setPreferredLanguage,
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
@@ -42,7 +45,7 @@ export default function OnboardingWizard() {
         businessDescription,
         businessName,
         whatYouSell,
-        location,
+        preferredLanguage,
         businessType,
         categories,
         websiteTemplate,
@@ -93,7 +96,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
+        if (data.wizardState.preferredLanguage) setPreferredLanguage(data.wizardState.preferredLanguage);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
@@ -122,7 +125,7 @@ export default function OnboardingWizard() {
       businessDescription,
       businessName,
       whatYouSell,
-      location,
+      preferredLanguage,
       businessType,
       categories,
       websiteTemplate,
@@ -142,7 +145,7 @@ export default function OnboardingWizard() {
 
     return () => clearTimeout(timer);
   }, [
-    step, chatStep, businessDescription, businessName, whatYouSell, location,
+    step, chatStep, businessDescription, businessName, whatYouSell, preferredLanguage,
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
@@ -155,7 +158,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nPreferred Language: ${preferredLanguage}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -179,11 +182,64 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
+      // Directly call handleStartOnboarding logic instead of going to review step
+      setIsLoading(false);
+      await handleStartOnboardingInternal(intakeData);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleStartOnboardingInternal = async (intakeData: any) => {
+    setIsLoading(true);
+    setError('');
+    setStep(4); // Go to loading screen
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData?.business_type || businessType,
+          company_name: intakeData?.business_name || businessName,
+          company_description: businessDescription || whatYouSell,
+          selling_categories: intakeData?.categories || categories,
+          payment_pref: 'online',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
+          website_template: websiteTemplate,
+          first_product_name: intakeData?.initial_products?.[0]?.name || firstProductName || 'First Product',
+          first_product_price: intakeData?.initial_products?.[0]?.price || firstProductPrice || '10.00',
+          domain_choice: domainChoice || 'subdomain',
+          price_type: 'fixed'
+        })
+      });
+
+      if (!startRes.ok) {
+        throw new Error('Failed to start onboarding');
+      }
+
+      const result = await startRes.json();
+      setStartResult(result);
+      localStorage.setItem('has_onboarded', 'true');
+
+      // Navigate directly to dashboard
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred starting onboarding');
       setIsLoading(false);
     }
   };
@@ -354,10 +410,10 @@ export default function OnboardingWizard() {
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What is your preferred language?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
+                      This helps us set up your store's primary language.
                     </p>
                     <button
                       onClick={handleSaveDraft}
@@ -374,9 +430,9 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Portland, OR"
+                        value={preferredLanguage}
+                        onChange={(e) => setPreferredLanguage(e.target.value)}
+                        placeholder="e.g. English, Español"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
@@ -385,7 +441,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
+                      disabled={!preferredLanguage.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}

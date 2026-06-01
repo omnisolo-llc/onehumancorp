@@ -13,7 +13,7 @@ describe('OnboardingWizard', () => {
       chatStep: 1,
       businessName: '',
       whatYouSell: '',
-      location: '',
+      preferredLanguage: '',
       businessDescription: '',
       aiAgents: [],
       aiAutoRespond: true,
