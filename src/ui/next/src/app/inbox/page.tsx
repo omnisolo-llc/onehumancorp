@@ -99,7 +99,7 @@ export default function InboxPage() {
         <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
           &lt; Back
         </Link>
-        <h1 className="text-2xl font-bold">Customer Inbox</h1>
+        <h1 className="text-2xl font-bold">Omnichannel Inbox</h1>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setShowSettingsModal(true)}
@@ -112,6 +112,19 @@ export default function InboxPage() {
             Audit Dashboard
           </Link>
         </div>
+      </div>
+
+      <div className="mb-4 bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-center justify-between shadow-sm">
+         <div className="flex flex-col">
+            <span className="text-sm font-semibold text-indigo-900">The Silent Ambassador</span>
+            <span className="text-xs text-indigo-700">AI is actively monitoring IG, WA, SMS, and Email.</span>
+         </div>
+         <div className="flex gap-1 text-lg">
+             <span title="Instagram">📸</span>
+             <span title="WhatsApp">💬</span>
+             <span title="SMS">📱</span>
+             <span title="Email">📧</span>
+         </div>
       </div>
 
       <button
@@ -242,7 +255,7 @@ export default function InboxPage() {
                         />
                         <div className="flex justify-end mt-2 gap-2">
                            <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
-                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
+                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Approve & Send</button>
                         </div>
                       </div>
                   ) : (
@@ -251,7 +264,7 @@ export default function InboxPage() {
                         <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
                            <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
+                               Approve & Send
                            </button>
                            <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>

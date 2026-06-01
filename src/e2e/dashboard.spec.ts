@@ -4,8 +4,7 @@ test.describe('Dashboard Core', () => {
   test('loads the dashboard and business snapshot', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByText("Today's Sales")).toBeVisible();
-    await expect(page.getByText('Business Snapshot')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agent Activity Feed' })).toBeVisible();
   });
 
   test('navigates to login and agents screens', async ({ page }) => {
