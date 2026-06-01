@@ -543,6 +543,7 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE INDEX IF NOT EXISTS idx_orders_tenant_status ON orders(tenant_id, status);
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
@@ -588,6 +589,8 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE INDEX IF NOT EXISTS idx_cost_entries_tenant_date ON agent_actions(tenant_id, created_at);
+                    CREATE INDEX IF NOT EXISTS idx_products_organization_id ON products(organization_id);
                     CREATE TABLE IF NOT EXISTS referrals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -746,6 +749,7 @@ impl DB {
                         agenda TEXT NOT NULL DEFAULT '',
                         participants TEXT NOT NULL DEFAULT '[]'
                     );
+                    CREATE INDEX IF NOT EXISTS idx_meeting_rooms_tenant_id ON meeting_rooms(tenant_id);
                     CREATE TABLE IF NOT EXISTS meeting_transcripts (
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         meeting_id TEXT NOT NULL,

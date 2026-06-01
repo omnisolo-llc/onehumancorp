@@ -64,6 +64,13 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
         let hub_agents = self.hub.clone();
+        let dashboard_fetch_start = std::time::Instant::now();
+        let agents_start = std::time::Instant::now();
+        let meetings_start = std::time::Instant::now();
+        let cost_start = std::time::Instant::now();
+        let products_start = std::time::Instant::now();
+        let orders_start = std::time::Instant::now();
+        let org_start = std::time::Instant::now();
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
@@ -77,19 +84,24 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let agents = hub1.get_agents().await.to_vec();
+                tracing::debug!("agents fetch took {} us", agents_start.elapsed().as_micros());
                 cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let res = hub2.get_meetings().await;
+                tracing::debug!("meetings fetch took {} us", meetings_start.elapsed().as_micros());
+                Ok::<_, String>(res)
             }),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
+                let res = (
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
-                ))
+                );
+                tracing::debug!("costs fetch took {} us", cost_start.elapsed().as_micros());
+                Ok::<_, String>(res)
             }),
             tokio::spawn(async move {
                 let org_id = org_id1;
@@ -163,6 +175,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+                tracing::debug!("products fetch took {} us", products_start.elapsed().as_micros());
                 Ok::<_, String>(results)
             }),
             tokio::spawn(async move {
@@ -217,6 +230,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+                tracing::debug!("orders fetch took {} us", orders_start.elapsed().as_micros());
                 Ok::<_, String>(results)
             }),
             tokio::spawn(async move {
@@ -271,10 +285,13 @@ impl DashboardService for MyDashboardService {
                 }
 
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+                tracing::debug!("org fetch took {} us", org_start.elapsed().as_micros());
                 Ok::<_, String>(org)
             })
         );
 
+        let fetch_duration = dashboard_fetch_start.elapsed();
+        tracing::info!("get_dashboard parallel fetch completed for org {} in {} us", req.organization_id, fetch_duration.as_micros());
         let agents = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
