@@ -47,12 +47,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
     catalog.push(shippo_provider.to_integration_provider());
 
-    let daily_provider = crate::integrations::daily::provider::DailyProvider::new("dummy_token".to_string());
-    catalog.push(daily_provider.to_integration_provider());
-
-    let chatwoot_provider = crate::integrations::chatwoot::provider::ChatwootProvider::new("dummy_token".to_string(), "https://dummy".to_string());
-    catalog.push(chatwoot_provider.to_integration_provider());
-
     let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
     catalog.push(zoom_provider.to_integration_provider());
 
