@@ -55,11 +55,11 @@ SET username = EXCLUDED.username,
 
 INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING_APPROVAL', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
-('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', '{"feature_type": "abandoned_cart"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING_APPROVAL', 'LOW', '{"feature_type": "social_calendar"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING_APPROVAL', 'HIGH', '{"feature_type": "abandoned_cart"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING_APPROVAL', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
@@ -77,8 +77,8 @@ SET name = EXCLUDED.name,
 
 INSERT INTO customers (id, tenant_id, name, email, phone, preferences)
 VALUES
-  ('e2e-customer-ava', 'e2e-tenant', 'Ava Customer', 'ava@example.com', '+15550101010', '{"diet":"vegan"}'::jsonb),
-  ('e2e-customer-ben', 'e2e-tenant', 'Ben Buyer', 'ben@example.com', '+15550101011', '{}'::jsonb)
+  ('e2e-customer-ava', 'e2e-tenant', 'Ava Customer', 'ava@example.com', '+15550101010', '{"diet":"vegan"}'),
+  ('e2e-customer-ben', 'e2e-tenant', 'Ben Buyer', 'ben@example.com', '+15550101011', '{}')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     email = EXCLUDED.email,
@@ -88,8 +88,8 @@ SET name = EXCLUDED.name,
 
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}')
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
