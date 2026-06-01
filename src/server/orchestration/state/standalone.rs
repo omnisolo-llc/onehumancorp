@@ -60,7 +60,7 @@ impl StandaloneStateManager {
             .unwrap_or_else(|_| "system".to_string());
 
         // DAG validation
-        if to_state == "EXECUTING" {
+        if to_state == "IN_PROGRESS" {
             let deps_str: String = row
                 .try_get("dependencies")
                 .unwrap_or_else(|_| "[]".to_string());

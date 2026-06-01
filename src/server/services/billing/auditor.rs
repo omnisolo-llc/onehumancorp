@@ -32,6 +32,8 @@ pub struct CostAuditor {
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
+    tenant_revenues: Mutex<HashMap<String, f64>>,
+    tenant_payment_fees: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
@@ -59,6 +61,8 @@ impl CostAuditor {
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
+            tenant_revenues: Mutex::new(HashMap::new()),
+            tenant_payment_fees: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
@@ -215,6 +219,16 @@ impl CostAuditor {
         agent_revenues.values().sum()
     }
 
+    pub fn get_tenant_revenue(&self, tenant_id: &str) -> f64 {
+        let tenant_revenues = self.tenant_revenues.lock().unwrap();
+        *tenant_revenues.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_payment_fees(&self, tenant_id: &str) -> f64 {
+        let tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
+        *tenant_payment_fees.get(tenant_id).unwrap_or(&0.0)
+    }
+
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
     }
@@ -223,10 +237,25 @@ impl CostAuditor {
         calculator::calculate_efficiency(cost, output_tokens)
     }
 
-    pub fn record_revenue(&self, agent_id: &str, amount: f64) {
-        let mut agent_revenues = self.agent_revenues.lock().unwrap();
-        let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
-        *current_revenue += amount;
+    pub fn record_revenue(&self, agent_id: &str, tenant_id: &str, amount: f64) {
+        {
+            let mut agent_revenues = self.agent_revenues.lock().unwrap();
+            let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
+            *current_revenue += amount;
+        }
+
+        {
+            let mut tenant_revenues = self.tenant_revenues.lock().unwrap();
+            let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
+            *current_tenant_revenue += amount;
+        }
+
+        {
+            let mut tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
+            let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0.0);
+            // Using Stripe's standard fee calculation: 2.9% + 30 cents per transaction
+            *current_tenant_fee += amount * 0.029 + 0.30;
+        }
     }
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
@@ -350,9 +379,11 @@ mod tests {
         let cost = auditor.record_event(event);
         assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
 
-        auditor.record_revenue("agent1", 5.0);
+        auditor.record_revenue("agent1", "tenant1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
+        assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
+        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
         
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
