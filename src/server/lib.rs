@@ -2207,6 +2207,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::billing_webhook::twilio_webhook_handler))
         .route("/api/v1/webhooks/shippo", axum::routing::post(api::billing_webhook::shippo_webhook_handler))
         .route("/api/v1/webhooks/zoom", axum::routing::post(api::billing_webhook::zoom_webhook_handler))
+        .route("/api/v1/webhooks/meta", axum::routing::post(api::billing_webhook::meta_webhook_handler))
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::billing_webhook::twilio_webhook_handler))
+        .route("/api/v1/webhooks/shippo", axum::routing::post(api::billing_webhook::shippo_webhook_handler))
+        .route("/api/v1/webhooks/zoom", axum::routing::post(api::billing_webhook::zoom_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
