@@ -52,7 +52,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -78,7 +77,6 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
-      domainChoice,
       firstProductName,
       firstProductPrice,
       aiAgents,
@@ -97,7 +95,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, domainChoice, isLoaded
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -425,26 +423,6 @@ export default function OnboardingWizard() {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Domain Choice</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['subdomain', 'custom'].map(domain => (
-                      <div
-                        key={domain}
-                        onClick={() => setDomainChoice(domain)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${domainChoice === domain ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold text-sm capitalize">
-                          {domain === 'subdomain' ? 'Free Subdomain' : 'Custom Domain'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mt-2">
-                    {domainChoice === 'subdomain' ? 'Get a free .ohc.store domain instantly.' : 'Connect a domain you already own (e.g. mybusiness.com).'}
-                  </p>
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
