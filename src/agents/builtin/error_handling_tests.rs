@@ -1,5 +1,5 @@
-mod tool_executor_engine;
-use tool_executor_engine::ToolExecutionEngine;
+mod error_handling;
+use error_handling::ErrorHandlingEngine;
 
 #[cfg(test)]
 mod tests {
@@ -60,7 +60,7 @@ mod tests {
 
         // We use mock time via tokio::time::pause to avoid waiting during the test
         tokio::time::pause();
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
@@ -89,7 +89,7 @@ mod tests {
         };
 
         tokio::time::pause();
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_err());
         match res.unwrap_err() {
@@ -118,10 +118,10 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "LLM_RECOVERABLE_TOOL_ERROR: Execution of 'dummy' failed due to invalid arguments or schema mismatch: parse error. Please fix your tool arguments and try again."),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
@@ -144,7 +144,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
@@ -170,7 +170,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
@@ -196,7 +196,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
@@ -222,7 +222,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ErrorHandlingEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),

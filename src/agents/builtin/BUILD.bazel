@@ -87,7 +87,7 @@ rust_library(
         "sqlite_memory.rs",
         "swarm_topology.rs",
         "tools_gating.rs",
-        "tool_executor_engine.rs",
+        "error_handling.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
         "visual_orchestration.rs",
@@ -309,8 +309,8 @@ exports_files([
 ])
 
 rust_test(
-    name = "tool_executor_engine_tests",
-    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs"],
+    name = "error_handling_tests",
+    srcs = ["error_handling_tests.rs", "error_handling.rs"],
     deps = [
         "//src/agents/builtin:core",
         "//src/agents/builtin/tools:tools",

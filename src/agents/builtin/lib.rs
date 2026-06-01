@@ -68,7 +68,7 @@ pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;
 
-pub mod tool_executor_engine;
+pub mod error_handling;
 pub mod ruflo_plugins;
 
 fn get_env(key: &str, default: &str) -> String {
