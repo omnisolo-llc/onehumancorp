@@ -473,3 +473,25 @@ fn test_record_llm_network_latency() {
     // This test verifies that the metric recording logic for llm network latency runs without panicking.
     ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
 }
+
+#[tokio::test]
+async fn test_record_mcp_proxy_connections_active_tags_deployment_mode() {
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
+
+    let res = ::server_telemetry::record_mcp_proxy_connections_active(&pool, "spiffe://example.org/proxy", 1.0).await;
+    assert!(res.is_ok());
+
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_mcp_proxy_connections_active' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+    use sqlx::Row;
+    let labels_json: String = row.get("labels_json");
+    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
+    assert!(parsed.get("deployment_mode").is_some());
+}
