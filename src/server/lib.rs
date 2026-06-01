@@ -2413,7 +2413,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let is_standalone = is_standalone_runtime();
-    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+    let sub_agent_jobs: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
     } else {
         match &db.store {
@@ -2422,12 +2422,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     };
 
-    let sub_agent_queue_clone = sub_agent_queue.clone();
+    let sub_agent_jobs_clone = sub_agent_jobs.clone();
     tokio::spawn(async move {
         loop {
-            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
+            if let Ok(Some(job)) = sub_agent_jobs_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
                 tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+                let _ = sub_agent_jobs_clone.complete(&job.id, &job.tenant_id).await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }

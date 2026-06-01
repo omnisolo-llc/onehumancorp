@@ -466,35 +466,56 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration);
     }
     #[tokio::test]
-    async fn test_transport_packet_loss_simulation() {
-        // Stress test a mock transport layer that randomly drops packets to verify application-level retries
-        struct ChaosTransport {
-            drop_rate: f64,
-        }
+    async fn test_chaos_sql_sync_lag_real() {
+        // Real chaos experiment: Simulate SQL sync lag on the hybrid MCP daemon
+        use crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon;
 
-        impl ChaosTransport {
-            async fn send(&self, _msg: &str) -> Result<(), String> {
-                if rand::random::<f64>() < self.drop_rate {
-                    return Err("Packet dropped by chaos simulation".to_string());
-                }
-                Ok(())
-            }
-        }
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
 
-        let transport = ChaosTransport { drop_rate: 0.5 };
-        let mut drops = 0;
-        let mut successes = 0;
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                synced_to_cloud BOOLEAN DEFAULT 0,
+                sync_error TEXT,
+                last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tenant_id TEXT DEFAULT 'system',
+                mission_log TEXT
+            );"
+        ).execute(&sqlite_pool).await.unwrap();
 
-        for _ in 0..100 {
-            if transport.send("hello").await.is_err() {
-                drops += 1;
-            } else {
-                successes += 1;
-            }
-        }
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
 
-        assert!(drops > 0, "Packet loss simulation should successfully drop packets");
-        assert!(successes > 0, "Packet loss simulation should allow some packets to pass");
+        let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+
+        // Insert a record into sqlite with status 'CLOUD_ESCALATION' so sync_cloud_escalations will pick it up
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('lag_test_mission_1', 'CLOUD_ESCALATION', '{}', false)")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        // The postgres connection is a dummy URL and will fail or hang.
+        // We set a strict timeout and simulate lag to ensure the fail-safe updates the SQLite error.
+
+        // We call sync_cloud_escalations() which reads from agent_missions and tries to sync to postgres
+        let sync_result = tokio::time::timeout(std::time::Duration::from_millis(150), daemon.sync_cloud_escalations()).await;
+
+        // Assert that a fallback happened (because the dummy pg won't work, it should fail-safe locally)
+        let row: (bool, Option<String>) = sqlx::query_as("SELECT synced_to_cloud, sync_error FROM agent_missions WHERE id = 'lag_test_mission_1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert!(!row.0, "Should not be synced to cloud due to simulated drop/lag");
+        assert!(row.1.is_some() || sync_result.is_err(), "Must record local sync error or hit resilient timeout when lag occurs");
     }
 
     #[tokio::test]

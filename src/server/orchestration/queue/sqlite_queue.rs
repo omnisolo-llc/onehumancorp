@@ -156,7 +156,7 @@ impl TaskQueue for SQLiteTaskQueue {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_jobs_delay(latency, ::server_telemetry::get_deployment_mode());
 
             let job = Job {
                 id: row.get("id"),
@@ -188,16 +188,26 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING updated_at, run_after")
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let row = sqlx::query("SELECT run_after FROM sub_agent_jobs WHERE id = ?")
             .bind(job_id)
-            .fetch_optional(&*self.pool)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+            .bind(job_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             use sqlx::Row;
-            let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
+            let updated: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
             let run_after: chrono::DateTime<chrono::Utc> = r.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);

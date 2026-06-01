@@ -51,7 +51,7 @@ mod tests {
         .unwrap();
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+            "CREATE TABLE IF NOT EXISTS sub_agent_jobs (
                 id VARCHAR PRIMARY KEY,
                 tenant_id VARCHAR NOT NULL,
                 parent_task_id VARCHAR,
@@ -109,7 +109,7 @@ mod tests {
 
         // Let's also check the pg queue redaction.
         let queue_row =
-            sqlx::query("SELECT payload FROM sub_agent_queue WHERE payload LIKE '%test_mem_1%'")
+            sqlx::query("SELECT payload FROM sub_agent_jobs WHERE payload LIKE '%test_mem_1%'")
                 .fetch_one(&pg_pool)
                 .await
                 .unwrap();

@@ -295,7 +295,7 @@ pub fn get_agent_execution_traces_total() -> &'static Counter<u64> {
     })
 }
 
-pub fn get_sub_agent_queue_delay_histogram() -> &'static Histogram<f64> {
+pub fn get_sub_agent_jobs_delay_histogram() -> &'static Histogram<f64> {
     SUB_AGENT_QUEUE_DELAY_HISTOGRAM.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
         meter
@@ -453,8 +453,8 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
     );
 }
 
-pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
-    let histogram = get_sub_agent_queue_delay_histogram();
+pub fn record_sub_agent_jobs_delay(delay: f64, deployment_mode: &str) {
+    let histogram = get_sub_agent_jobs_delay_histogram();
     histogram.record(delay, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
 }
 
@@ -765,7 +765,7 @@ pub async fn record_queue_length(
 
     buffer_metric(
         pool,
-        "ohc_sub_agent_queue_length",
+        "ohc_sub_agent_jobs_length",
         "gauge",
         delta as f32,
         payload,

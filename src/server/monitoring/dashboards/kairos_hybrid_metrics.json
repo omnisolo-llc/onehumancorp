@@ -301,7 +301,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(ohc_sub_agent_queue_length) by (mode)",
+          "expr": "sum(ohc_sub_agent_jobs_length) by (mode)",
           "legendFormat": "{{mode}} Mode",
           "range": true,
           "refId": "A"

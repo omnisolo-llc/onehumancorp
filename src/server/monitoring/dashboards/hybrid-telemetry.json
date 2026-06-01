@@ -2965,7 +2965,7 @@
       },
       "targets": [
         {
-          "expr": "ohc_sub_agent_queue_length",
+          "expr": "ohc_sub_agent_jobs_length",
           "refId": "A",
           "legendFormat": "Queue Length"
         }
