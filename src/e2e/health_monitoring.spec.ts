@@ -19,8 +19,8 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
   test('keeps agents page reachable from dashboard', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('button', { name: 'Manage AI Assistants' }).click();
+    await page.getByRole('button', { name: 'My AI Assistants' }).click();
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
-    await expect(page.locator('#team-screen')).toContainText('Status: Active');
+    await expect(page.locator('#agents-screen')).toContainText('Status: Active');
   });
 });
