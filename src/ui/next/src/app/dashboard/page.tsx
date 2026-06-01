@@ -455,7 +455,44 @@ export default function Dashboard() {
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Business Analytics Widget */}
+
+         {/* Actionable Feed Widget */}
+         <section className="mb-6 animate-fade-in">
+           <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Actionable Feed</h2>
+           <div className="flex flex-col gap-4">
+             <div className="p-4 shadow-sm border rounded-xl bg-white flex items-center justify-between border-l-4 border-l-[#0066FF]">
+               <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                 </div>
+                 <div>
+                   <h3 className="text-sm font-bold text-gray-900">1 New Order</h3>
+                   <p className="text-gray-600 text-xs">Maya's Custom Cakes - $25.00</p>
+                 </div>
+               </div>
+               <button className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                 Fulfill Order
+               </button>
+             </div>
+
+             <div className="p-4 shadow-sm border rounded-xl bg-white flex items-center justify-between border-l-4 border-l-[#34C759]">
+               <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                 </div>
+                 <div>
+                   <h3 className="text-sm font-bold text-gray-900">Weekly Report Ready</h3>
+                   <p className="text-gray-600 text-xs">Check out your business performance from last week.</p>
+                 </div>
+               </div>
+               <button className="px-4 py-2 bg-[#0066FF] text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                 View Report
+               </button>
+             </div>
+           </div>
+         </section>
+
+{/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                <div className="flex items-center gap-4">
