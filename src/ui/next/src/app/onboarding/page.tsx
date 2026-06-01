@@ -2,8 +2,23 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { WalkthroughTarget } from "../../components/Walkthrough";
+import { useWalkthrough } from "../../components/help";
+import { useSearchParams } from "next/navigation";
 
 export default function OnboardingWizard() {
+  const searchParams = useSearchParams();
+  const { startWalkthrough } = useWalkthrough();
+  useEffect(() => {
+    if (searchParams.get("walkthrough") === "setup-store") {
+      setTimeout(() => {
+        startWalkthrough([
+          { targetId: "business-name-input", title: "Business Name", content: "Start by telling us the name of your business." },
+          { targetId: "launch-store-target", title: "Launch Store", content: "When you are ready, click here to generate and launch your store." }
+        ]);
+      }, 500);
+    }
+  }, [searchParams]);
   const {
     step, setStep,
     chatStep, setChatStep,

@@ -5,6 +5,14 @@ import { useOnboardingStore } from './store';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
+vi.mock("../../components/help", () => ({
+  useWalkthrough: () => ({ startWalkthrough: vi.fn(), nextStep: vi.fn(), endWalkthrough: vi.fn() })
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => ({ get: vi.fn() })
+}));
+
 describe('OnboardingWizard', () => {
   beforeEach(() => {
     localStorage.clear();
