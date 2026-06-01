@@ -6,11 +6,24 @@ import userEvent from '@testing-library/user-event';
 
 describe('HelpCenterPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve([
-        { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started" },
-        { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
-      ])
+    global.fetch = vi.fn().mockImplementation((url) => {
+        if (url === '/api/help') {
+            return Promise.resolve({
+                json: () => Promise.resolve([
+                    { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started" },
+                    { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
+                ])
+            });
+        }
+        if (url === '/api/videos') {
+            return Promise.resolve({
+                json: () => Promise.resolve([
+                    { id: 1, title: "How to set up your first store easily", duration: "1:20" },
+                    { id: 2, title: "Linking your own website name", duration: "0:45" }
+                ])
+            });
+        }
+        return Promise.resolve({ json: () => Promise.resolve([]) });
     });
   });
 
