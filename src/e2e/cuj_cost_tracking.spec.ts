@@ -10,9 +10,9 @@ test.describe('CUJ: Billing Cost Tracking', () => {
     await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
     await expect(page.locator('#my-plan-name')).toContainText('Plan:');
 
-    await page.getByRole('button', { name: 'View Detailed Costs' }).click();
+    await page.getByRole('button', { name: 'View Cost Details' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Costs' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cost Transparency Dashboard' })).toBeVisible();
     await expect(page.locator('#cost-dashboard-total')).toBeVisible();
     await expect(page.locator('#cost-dashboard-llm')).toBeVisible();
     await expect(page.locator('#cost-dashboard-storage')).toBeVisible();
