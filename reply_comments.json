@@ -1,6 +1,0 @@
-[
-  {
-    "comment_id": "4591177128",
-    "reply": "The E2E tests are failing in CI/bazel because of sandbox network isolation blocking Docker pulls from pgvector, which breaks the E2E infrastructure initialization (`docker: failed to extract layer... operation not permitted`). However, all individual E2E tests for the new Documentation features have been locally verified to pass with `npx playwright test src/e2e/documentation.spec.ts` using the real API network flow without mocks."
-  }
-]
