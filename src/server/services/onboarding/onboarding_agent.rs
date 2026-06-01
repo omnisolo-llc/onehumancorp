@@ -114,7 +114,7 @@ impl OnboardingAgent {
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
             }
-            Ok(state)
+            Ok(serde_json::json!({ "wizardState": state }))
         } else {
             Ok(serde_json::json!({ "step": 0 }))
         }

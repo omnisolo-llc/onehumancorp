@@ -61,7 +61,9 @@ async fn save_draft(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
+    let state_json = payload.get("wizardState").unwrap_or(&payload);
+
+    match agent.save_onboarding_state(tenant_id, user_id, step, state_json).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
