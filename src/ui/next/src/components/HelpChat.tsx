@@ -41,6 +41,7 @@ export function HelpChat() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const nextIdRef = useRef(2);
 
   const nextMessageId = (suffix: string) => `${Date.now()}-${nextIdRef.current++}-${suffix}`;
@@ -54,6 +55,12 @@ export function HelpChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -89,6 +96,12 @@ export function HelpChat() {
     };
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   if (process.env.NEXT_PUBLIC_E2E === 'true') {
     return null; // Disable in E2E
   }
@@ -102,8 +115,10 @@ export function HelpChat() {
             onClick={() => setIsOpen(true)}
             className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse"
             aria-label="Open help chat"
+            aria-expanded={isOpen}
+            aria-controls="help-chat-dialog"
           >
-            <span className="text-xl">✨</span>
+            <span className="text-xl" aria-hidden="true">✨</span>
             <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">Ask anything</span>
           </button>
         )}
@@ -111,23 +126,33 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat">
+        <div
+          id="help-chat-dialog"
+          role="dialog"
+          aria-label="Help Chat"
+          className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat"
+          onKeyDown={handleKeyDown}
+        >
           {/* Header */}
           <div className="bg-gray-900/90 text-white p-4 flex justify-between items-center backdrop-blur-md">
             <div className="flex items-center gap-2">
-              <span className="text-xl">✨</span>
+              <span className="text-xl" aria-hidden="true">✨</span>
               <div>
                 <h3 className="font-bold font-outfit text-sm">Help Agent</h3>
                 <p className="text-xs text-gray-300 font-inter">Always here to help</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors" aria-label="Close help chat">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900 rounded"
+              aria-label="Close help chat"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto h-[350px] bg-transparent flex flex-col gap-4 font-inter text-sm">
+          <div className="flex-1 p-4 overflow-y-auto h-[350px] bg-transparent flex flex-col gap-4 font-inter text-sm" role="log" aria-live="polite" aria-atomic="false">
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] leading-relaxed ${
@@ -150,19 +175,21 @@ export function HelpChat() {
           {/* Input */}
           <form onSubmit={handleSend} className="p-3 bg-white/50 backdrop-blur-md border-t border-white/30 flex gap-2">
             <input
+              ref={inputRef}
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
+              aria-label="Type your message"
               className="flex-1 bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter"
             />
             <button
               type="submit"
               disabled={!inputValue.trim()}
-              className="bg-blue-600/90 backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/90 transition-colors shadow-sm"
+              className="bg-blue-600/90 backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/90 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               aria-label="Send message"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
             </button>
           </form>
         </div>

@@ -42,6 +42,8 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
+          role="tooltip"
+          id={`tooltip-${activeTooltip}`}
           className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-xl pointer-events-none w-64 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-gray-700/50 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
@@ -73,7 +75,7 @@ export function useTooltip() {
 }
 
 export function WithTooltip({ children, id, defaultText }: { children: ReactNode, id: string, defaultText?: string }) {
-  const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
+  const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip, activeTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = () => {
@@ -110,6 +112,14 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
     };
   }, []);
 
+  const handleFocus = () => {
+    handleMouseEnter();
+  };
+
+  const handleBlur = () => {
+    handleMouseLeave();
+  };
+
   return (
     <div
       ref={wrapperRef}
@@ -118,8 +128,11 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       onContextMenu={(e) => e.preventDefault()}
       className="inline-block relative cursor-help"
+      aria-describedby={activeTooltip === id ? `tooltip-${id}` : undefined}
     >
       {children}
     </div>

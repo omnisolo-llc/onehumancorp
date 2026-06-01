@@ -27,7 +27,7 @@ export default function HelpCenterPage() {
         <div className="mb-8">
           <input
             type="text"
-            placeholder="Search for help articles..."
+            placeholder="Search for help articles..." aria-label="Search for help articles"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-800"
