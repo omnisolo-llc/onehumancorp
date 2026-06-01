@@ -1252,6 +1252,44 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Viral Link-in-Bio Page */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Setup</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">One Link to Rule Them All</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Create a beautiful, mobile-optimized link tree for your Instagram, TikTok, and Twitter profiles. Automatically routes followers to your storefront and booking pages to drive more sales.</p>
+                    <Link
+                        href="/link-in-bio"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-semibold hover:bg-black transition-colors shadow-sm"
+                    >
+                        <span>Create Link-in-Bio</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </Link>
+                </div>
+                <div className="w-full md:w-[280px] shrink-0 bg-gray-50 border rounded-xl overflow-hidden shadow-sm relative group cursor-pointer" onClick={() => router.push('/link-in-bio')}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent flex items-end p-4 z-10">
+                        <span className="text-white font-medium text-sm">Preview Layout</span>
+                    </div>
+                    <div className="p-4 bg-white/50 backdrop-blur-sm pointer-events-none">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3"></div>
+                        <div className="h-2 w-16 bg-gray-200 rounded mx-auto mb-4"></div>
+                        <div className="space-y-2">
+                            <div className="h-6 bg-white border border-gray-100 rounded-lg w-full"></div>
+                            <div className="h-6 bg-white border border-gray-100 rounded-lg w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
