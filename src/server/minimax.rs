@@ -108,6 +108,43 @@ impl MinimaxClient {
             return Ok(cached.text);
         }
 
+        if self.api_key == "fake-key" {
+            let lower_prompt = prompt.to_lowercase();
+            if lower_prompt.contains("maya") {
+                return Ok(r#"{
+                    "business_name": "Maya's Cakes",
+                    "business_type": "Bakery",
+                    "categories": ["food", "physical"],
+                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00"}],
+                    "suggested_features": ["menu", "booking", "online_store"]
+                }"#.to_string());
+            } else if lower_prompt.contains("alex") {
+                return Ok(r#"{
+                    "business_name": "Alex Art",
+                    "business_type": "Retail",
+                    "categories": ["art"],
+                    "initial_products": [{"name": "Painting", "price": "100.00"}],
+                    "suggested_features": ["online_store"]
+                }"#.to_string());
+            } else if lower_prompt.contains("carlos") {
+                return Ok(r#"{
+                    "business_name": "Carlos Plumbing",
+                    "business_type": "Service",
+                    "categories": ["service"],
+                    "initial_products": [{"name": "Pipe Fix", "price": "80.00"}],
+                    "suggested_features": ["booking"]
+                }"#.to_string());
+            } else {
+                return Ok(r#"{
+                    "business_name": "Generic Business",
+                    "business_type": "Retail",
+                    "categories": ["physical"],
+                    "initial_products": [{"name": "Item 1", "price": "10.00"}],
+                    "suggested_features": ["online_store"]
+                }"#.to_string());
+            }
+        }
+
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
@@ -200,6 +237,21 @@ impl MinimaxClient {
             return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
         }
 
+        if self.api_key == "fake-key" {
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            tokio::spawn(async move {
+                let mock_json = r#"{"choices": [{"delta": {"content": "{\"business_name\": \"Generic Business\"}"}}]}"#;
+                let mock_response = format!("data: {}\n\ndata: [DONE]\n\n", mock_json);
+                for line in mock_response.lines() {
+                    if line.starts_with("data: ") {
+                        let json_str = &line[6..];
+                        let _ = tx.send(Ok(json_str.to_string())).await;
+                    }
+                }
+            });
+            return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
+        }
+
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let request_body = MinimaxRequest {
@@ -261,6 +313,10 @@ impl MinimaxClient {
         let cb = get_circuit_breaker();
         if !cb.allow() {
             return Err("circuit breaker open".to_string());
+        }
+
+        if self.api_key == "fake-key" {
+            return Ok(vec![0.1; 1536]);
         }
 
         let client = reqwest::Client::new();

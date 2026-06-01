@@ -325,7 +325,7 @@ impl SwarmCoordinator {
                 let mut futures = Vec::new();
 
                 // Include lead agent in mesh
-                let task_clone = task.to_string();
+                let _task_clone = task.to_string();
                 let instruction = "Analyze the task and provide your independent solution.";
                 let lead_clone = task.to_string();
 

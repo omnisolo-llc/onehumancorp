@@ -47,7 +47,7 @@ impl VisualOrchestrator {
     }
 
     /// Evaluates the visual orchestration graph
-    pub async fn execute(&self, mut inputs: HashMap<String, String>) -> Result<String, String> {
+    pub async fn execute(&self, inputs: HashMap<String, String>) -> Result<String, String> {
         let mut state = inputs.clone();
 
         // 1. Find start node (Input)
@@ -72,7 +72,7 @@ impl VisualOrchestrator {
             visited.insert(current_node_id.clone());
 
             match node {
-                OrchestrationNode::Input { name } => {
+                OrchestrationNode::Input { name: _ } => {
                     // Start block; variables should be in state already.
                 }
                 OrchestrationNode::Llm { prompt_template } => {
@@ -143,7 +143,7 @@ impl VisualOrchestrator {
 mod tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, Usage, ToolCall, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage, ToolError};
     use crate::tools::{Tool, ToolExecutor};
 
     struct MockVisualLlmClient;

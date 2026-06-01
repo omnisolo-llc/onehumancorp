@@ -168,13 +168,13 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+    <div className="min-h-screen bg-transparent p-8 backdrop-blur-[20px] saturate-200">
+      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm">
         <p className="text-yellow-700 text-sm">
           <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
         </p>
       </div>
-      {mounted && <SwaggerUI spec={swaggerSpec} />}
+      {mounted && <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-xl border border-gray-100/50"><SwaggerUI spec={swaggerSpec} /></div>}
     </div>
   );
 }
