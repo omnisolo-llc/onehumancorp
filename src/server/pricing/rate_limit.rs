@@ -355,7 +355,7 @@ impl RedisRateLimiter {
         }
 
         Ok(RateLimitStatus {
-            is_allowed: true,
+            is_allowed: true, // Soft limit allows request
             soft_limit_reached: false,
             user_message: None,
         })
