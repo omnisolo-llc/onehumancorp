@@ -75,3 +75,10 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });
+
+test.describe('Help Article Page', () => {
+  test('should display getting started article', async ({ page }) => {
+    await page.goto('/help/getting-started');
+    await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible();
+  });
+});

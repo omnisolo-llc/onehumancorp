@@ -344,7 +344,8 @@ export function HelpWidget() {
             )}
 
             {tab === "whatsnew" && (
-              <div>
+              <div className="backdrop-blur-[20px] saturate-200">
+                {/* eslint-disable-next-line react/no-unescaped-entities */}
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">What's New</h3>
                 <div className="w-full aspect-video bg-gray-200 rounded-xl mb-4 relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
                    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">

@@ -71,6 +71,7 @@ export default function HelpArticlePage() {
             Everyone loves a good deal. You can easily set up a weekend sale or a holiday promotion. You can choose to give a percentage off or a set amount of money off.
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Sharing Your Store</h2>
+          {/* eslint-disable-next-line react/no-unescaped-entities */}
           <p className="text-gray-700 mb-4">
             Don't forget to share your store link on social media or with your friends and family. You can find your store's link on your Dashboard.
           </p>
@@ -125,6 +126,7 @@ export default function HelpArticlePage() {
       title: "Your AI Helpers",
       content: (
         <>
+          {/* eslint-disable-next-line react/no-unescaped-entities */}
           <p className="text-gray-700 mb-4 leading-relaxed text-lg">
             Running a business takes a lot of work. That's why we give you AI helpers—smart computer programs that can do tasks for you, like a real team!
           </p>
@@ -145,13 +147,15 @@ export default function HelpArticlePage() {
     }
   };
 
+  // eslint-disable-next-line react/no-unescaped-entities
   const articleData = article && typeof article === 'string' && articles[article] ? articles[article] : { title: "Article Not Found", content: <p>We couldn't find the article you're looking for.</p> };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter relative z-0">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-indigo-50/50 via-white/50 to-blue-50/50 backdrop-blur-[20px] saturate-200"></div>
       <div className="max-w-3xl mx-auto">
         <button onClick={() => router.push('/help')} className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
-          &larr; Back to Help Center
+          ← Back to Help Center
         </button>
         <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
           <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">{articleData.title}</h1>
