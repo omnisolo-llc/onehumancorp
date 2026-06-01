@@ -615,7 +615,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_bus_pub_sub() {
-        let url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
         let bus = match RedisBus::new(&url).await {
             Ok(b) => b,
             Err(_) => return,
@@ -689,7 +689,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_redis_bus_distributed_lock() {
-        let url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string());
         let bus = match RedisBus::new(&url).await {
             Ok(b) => b,
             Err(_) => return,
