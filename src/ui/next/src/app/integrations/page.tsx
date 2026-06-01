@@ -8,17 +8,14 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
-    { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Unified Instagram and Facebook Inbox." },
-    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Unified omnichannel inbox aggregating messages across all channels." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
+    { id: "meta", name: "Social Media Accounts", category: "social", status: "disconnected", icon: "💬", description: "Manage all your social media messages and posts in one place.", buttonText: "Connect my Instagram and Facebook" },
+    { id: "cal_com", name: "Autonomous Booking Agent", category: "operations", status: "disconnected", icon: "📅", description: "Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.", buttonText: "Enable Booking Agent" },
+    { id: "resend", name: "Customer Emails", category: "marketing", status: "disconnected", icon: "📧", description: "Send email updates and promotions to your customers.", buttonText: "Start sending emails" },
+    { id: "mercadopago", name: "Local Payments", category: "finance", status: "disconnected", icon: "🌎", description: "Get paid easily using local payment methods in Latin America.", buttonText: "Accept local payments" },
+    { id: "shippo", name: "Shipping Labels", category: "operations", status: "disconnected", icon: "📦", description: "Print shipping labels and automatically track packages for your orders.", buttonText: "Set up shipping" },
+    { id: "twilio", name: "Text Notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Send automatic text message updates to your customers about their orders.", buttonText: "Enable text messages" },
+    { id: "zoom", name: "Online Meetings", category: "operations", status: "disconnected", icon: "📹", description: "Host online video meetings with your customers easily without extra downloads.", buttonText: "Create my meeting room" },
+    { id: "front", name: "Omnichannel Inbox", category: "operations", status: "disconnected", icon: "📥", description: "Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.", buttonText: "Connect Front" }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -120,8 +117,8 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
-            <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Custom Software</h1>
+            <p className="text-gray-400 text-sm">Seamlessly connect your favorite apps to streamline your business operations.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
             🧩
@@ -152,7 +149,7 @@ export default function Integrations() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredIntegrations.map(integration => (
             <div key={integration.id}
-                 className="rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md"
+                 className="card glass rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md"
                  style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
             >
               <div className="flex justify-between items-start mb-4">
@@ -175,7 +172,7 @@ export default function Integrations() {
                     ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                     : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
                 }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
-                {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                {integration.status === 'connected' ? 'Manage' : (integration.buttonText || 'Connect')}
               </button>
             </div>
           ))}
