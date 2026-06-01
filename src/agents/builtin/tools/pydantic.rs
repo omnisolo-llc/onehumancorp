@@ -1,8 +1,6 @@
-use ohc_builtin_agent_core::types::ToolError;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::sync::Arc;
-use super::ToolExecutor;
+use ohc_builtin_agent_core::types::ToolError;
 
 /// SOTA Harness Pattern: Pydantic-first tool schema validation.
 /// If validation fails, it generates a precise ToolError::LlmRecoverable containing the serde validation error
@@ -14,18 +12,18 @@ pub trait PydanticToolExecutor<T: DeserializeOwned + Send + Sync>: Send + Sync {
 }
 
 pub struct PydanticAdapter<T, E> {
-    executor: Arc<E>,
+    executor: std::sync::Arc<E>,
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdapter<T, E> {
     pub fn new(executor: E) -> Self {
         Self {
-            executor: Arc::new(executor),
+            executor: std::sync::Arc::new(executor),
             _marker: std::marker::PhantomData,
         }
     }
-    pub fn new_arc(executor: Arc<E>) -> Self {
+    pub fn new_arc(executor: std::sync::Arc<E>) -> Self {
         Self {
             executor,
             _marker: std::marker::PhantomData,
@@ -34,7 +32,8 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdap
 }
 
 #[async_trait::async_trait]
-impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor for PydanticAdapter<T, E> {
+#[async_trait::async_trait]
+impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> super::ToolExecutor for PydanticAdapter<T, E> {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         // Validation Errors fed back to LLM for self-correction
         let typed_args: T = match serde_json::from_value(args.clone()) {
@@ -72,6 +71,7 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
 mod tests {
     use super::*;
     use serde::Deserialize;
+    use super::super::ToolExecutor;
 
     #[derive(Deserialize)]
     struct MyArgs {

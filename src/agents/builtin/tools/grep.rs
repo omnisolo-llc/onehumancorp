@@ -1,37 +1,56 @@
-use ohc_builtin_agent_core::types::ToolError;
-use async_recursion::async_recursion;
-use regex::Regex;
+use serde::Deserialize;
 use serde_json::{json, Value};
+use schemars::JsonSchema;
 use std::sync::Arc;
+use regex::Regex;
+use async_recursion::async_recursion;
 
-use super::{Tool, ToolExecutor};
+use ohc_builtin_agent_core::types::ToolError;
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
-struct GrepExecutor {
-    working_dir: Option<std::path::PathBuf>,
+#[derive(Deserialize, JsonSchema)]
+pub struct GrepArgs {
+    /// Regular expression pattern to search for.
+    pub pattern: String,
+    /// Directory to search (default '.').
+    #[serde(default = "default_path")]
+    pub path: String,
+    /// File extension filter (e.g. '*.go', '*.rs').
+    #[serde(default)]
+    pub include: Option<String>,
+    /// Case-insensitive search.
+    #[serde(default)]
+    pub case_insensitive: bool,
+}
+
+fn default_path() -> String {
+    ".".to_string()
+}
+
+pub struct GrepExecutor {
+    pub working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GrepExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GrepArgs> for GrepExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GrepArgs,
     ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
-        let path = args["path"].as_str().unwrap_or(".");
-        let case_insensitive = args["case_insensitive"].as_bool().unwrap_or(false);
-        let include_pattern = args["include"].as_str().map(str::to_string);
+        let pattern = args.pattern;
+        let path = args.path;
+        let case_insensitive = args.case_insensitive;
+        let include_pattern = args.include;
 
         let re = if case_insensitive {
             Regex::new(&format!("(?i){}", pattern))
         } else {
-            Regex::new(pattern)
+            Regex::new(&pattern)
         }
         .map_err(|e| format!("grep: invalid regex: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut results = Vec::new();
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path).to_string_lossy().to_string() } else { path.to_string() };
         search_directory(&actual_path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
@@ -119,33 +138,15 @@ fn matches_include(filename: &str, include: &str) -> bool {
 }
 
 pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
+    let schema = schemars::schema_for!(GrepArgs);
+    let parameters = serde_json::to_value(schema).unwrap();
+
     Tool {
         name: "Grep".to_string(),
         description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
-        parameters: json!({
-            "type": "object",
-            "properties": {
-                "pattern": {
-                    "type": "string",
-                    "description": "Regular expression pattern to search for."
-                },
-                "path": {
-                    "type": "string",
-                    "description": "Directory to search (default '.')."
-                },
-                "include": {
-                    "type": "string",
-                    "description": "File extension filter (e.g. '*.go', '*.rs')."
-                },
-                "case_insensitive": {
-                    "type": "boolean",
-                    "description": "Case-insensitive search."
-                }
-            },
-            "required": ["pattern"]
-        }),
-        execute: Arc::new(GrepExecutor { working_dir }),
+        parameters,
+        execute: Arc::new(PydanticAdapter::new(GrepExecutor { working_dir })),
     }
 }
 
@@ -153,6 +154,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
 mod tests {
     use super::*;
     use std::io::Write;
+    use super::ToolExecutor;
 
     #[tokio::test]
     async fn test_grep_large_file_streaming() {
@@ -172,7 +174,7 @@ mod tests {
             }
         }
 
-        let executor = GrepExecutor { working_dir: Some(test_dir.clone()) };
+        let executor = PydanticAdapter::new(GrepExecutor { working_dir: Some(test_dir.clone()) });
 
         let args = json!({
             "pattern": "critical failure",
