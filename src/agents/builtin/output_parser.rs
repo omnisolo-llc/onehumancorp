@@ -38,8 +38,21 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
                         Err(e) => {
+                            let detail = if e.is_data() {
+                                format!("Semantic validation failed: {}", e)
+                            } else if e.is_syntax() {
+                                format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
+                            } else if e.is_eof() {
+                                format!("Incomplete JSON structure (unexpected EOF): {}", e)
+                            } else {
+                                format!("{}", e)
+                            };
+                            let args_str = match serde_json::to_string(&data) {
+                                Ok(s) => if s.len() > 100 { format!("{}...", &s[..100]) } else { s },
+                                Err(_) => "<unprintable>".to_string(),
+                            };
                             Err(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.", detail, args_str
                             ))
                         }
                     };
@@ -88,8 +101,17 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
         match serde_json::from_str::<T>(json_str) {
             Ok(parsed) => Ok(parsed),
             Err(e) => {
+                let detail = if e.is_data() {
+                    format!("Semantic validation failed: {}", e)
+                } else if e.is_syntax() {
+                    format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
+                } else if e.is_eof() {
+                    format!("Incomplete JSON structure (unexpected EOF): {}", e)
+                } else {
+                    format!("{}", e)
+                };
                 Err(format!(
-                    "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                    "Validation Error (Pydantic-first tool schema): Failed to parse text output as valid JSON matching the schema.\nReason: {}\nYour raw text was: {}\nPlease fix the JSON and return only the raw JSON without markdown formatting.", detail, completion
                 ))
             }
         }

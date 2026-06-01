@@ -247,7 +247,7 @@ impl OperationsWorker {
                             let mut drafted_msg = String::new();
                             if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
                                 let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_secs(5), ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()))).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                         prompt,
                                         from_agent_id: "operations".into(),
@@ -485,7 +485,7 @@ mod tests {
         "#;
         sqlx::query(schema).execute(&sqlite_pool).await.unwrap();
 
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
@@ -765,7 +765,7 @@ impl CustomerSuccessWorker {
             if event_type == "CustomerMessageReceived" {
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
                 let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
-                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_secs(5), ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()))).await {
                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                         prompt,
                         from_agent_id: "The Ambassador".into(),
@@ -914,7 +914,7 @@ impl PromoterWorker {
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
-                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_secs(5), ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()))).await {
                                 let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                     prompt,
                                     from_agent_id: "The Promoter".into(),
@@ -981,7 +981,7 @@ impl PromoterWorker {
                                     from_agent_id: "setup_wizard".to_string(),
                                 };
 
-                                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_secs(5), ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()))).await {
 
                                     if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
                                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
@@ -1048,7 +1048,7 @@ impl AdvisorWorker {
                     let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
                     let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();
 
-                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                    if let Ok(Ok(mut client)) = tokio::time::timeout(std::time::Duration::from_secs(5), ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()))).await {
                         let reason_req = ::server_ohc::orchestration::ReasonRequest {
                             prompt,
                             from_agent_id: "The Advisor".into(),
