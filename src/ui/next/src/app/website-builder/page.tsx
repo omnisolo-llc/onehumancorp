@@ -314,7 +314,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="What is your business called?"
                       value={businessName}
@@ -322,7 +322,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="e.g. Maya's Cakes"
                       value={businessDescription}
@@ -388,7 +388,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="What is the name of this product?"
                       value={productName}
@@ -396,7 +396,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="0.00"
                       value={productPrice}
@@ -448,7 +448,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="e.g. Maya Smith"
                       value={userName}
@@ -456,7 +456,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="email"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="you@email.com"
                       value={userEmail}
@@ -464,7 +464,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="password"
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="Password"
                       value={userPassword}
@@ -584,7 +584,7 @@ export default function WebsiteBuilderPage() {
                   </h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
-                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
+                      className="w-full border border-gray-200 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#f5f5f7]"
                       style={{ borderRadius: "8px" }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
@@ -678,9 +678,7 @@ export default function WebsiteBuilderPage() {
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
-          <span className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%]/20 px-2 py-0.5 rounded">
-            375px
-          </span>
+          <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
@@ -733,7 +731,7 @@ export default function WebsiteBuilderPage() {
         </div>
 
         <div
-          className="absolute bottom-0 w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%]/90 backdrop-blur-md border-t border-gray-200 z-50"
+          className="absolute bottom-0 w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border-t border-gray-200 z-50"
           style={{ borderRadius: "0 0 16px 16px" }}
         >
           <WithTooltip
