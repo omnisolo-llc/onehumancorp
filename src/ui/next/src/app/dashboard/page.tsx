@@ -646,24 +646,28 @@ export default function Dashboard() {
                                         <p className="text-gray-600 font-inter text-sm">{activity.description}</p>
                                     </div>
                                 </div>
-                                {activity.status === 'PendingApproval' && (
-                                    <div className="flex gap-2 mt-2">
-                                        <button
-                                            onClick={() => handleApprove(activity.id, false)}
-                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
-                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(activity.id, true)}
-                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
-                                            style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
-                                        >
-                                            Review & Send
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="flex gap-2 mt-2">
+                                    <button
+                                        onClick={async () => {
+                                            await fetch(`/api/agents/approvals/${activity.id}`, { method: 'POST', body: JSON.stringify({ approved: false }), headers: { 'Content-Type': 'application/json' }});
+                                            setActionFeed(actionFeed.filter(a => a.id !== activity.id));
+                                        }}
+                                        className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                        style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
+                                    >
+                                        Reject Action
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            await fetch(`/api/agents/approvals/${activity.id}`, { method: 'POST', body: JSON.stringify({ approved: true }), headers: { 'Content-Type': 'application/json' }});
+                                            setActionFeed(actionFeed.filter(a => a.id !== activity.id));
+                                        }}
+                                        className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                        style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
+                                    >
+                                        Approve Action
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}

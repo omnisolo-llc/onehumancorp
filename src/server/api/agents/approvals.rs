@@ -34,15 +34,32 @@ pub struct DecisionResponse {
     pub success: bool,
 }
 
+#[derive(Deserialize)]
+pub struct CreateApprovalRequest {
+    pub tenant_id: String,
+    pub department: crate::orchestration::departments::types::DepartmentType,
+    pub description: String,
+    pub status: crate::orchestration::departments::types::ApprovalStatus,
+    pub action_risk: crate::orchestration::departments::types::ActionRisk,
+}
+
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/", get(list_approvals))
+        .route("/", get(list_approvals).post(create_approval_mock))
         .route("/activity", get(list_activity_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+async fn create_approval_mock(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Json(payload): Json<CreateApprovalRequest>,
+) -> impl IntoResponse {
+    let req = orchestrator.execute_action(payload.department, payload.description, payload.tenant_id, payload.action_risk, serde_json::Value::Null).await.unwrap();
+    (StatusCode::OK, Json(req)).into_response()
 }
 
 async fn list_approvals(
