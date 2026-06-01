@@ -1082,7 +1082,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px]">
-                    <div className="bg-white p-6 rounded-2xl shadow-xl border border-yellow-100 text-center max-w-sm flex flex-col items-center animate-fade-in" style={{ transform: 'translateY(10px)' }}>
+                    <div className="mac-glass-container p-6 rounded-2xl shadow-xl border border-yellow-100 text-center max-w-sm flex flex-col items-center animate-fade-in" style={{ transform: 'translateY(10px)' }}>
                         <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mb-3">
                             🔒
                         </div>
@@ -1895,7 +1895,7 @@ export default function Dashboard() {
       {/* Wall of Love Modal */}
       {showWallOfLoveModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+          <div className="w-full max-w-2xl p-6 relative mac-glass-container rounded-2xl shadow-2xl md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-purple-100/50 to-transparent rounded-bl-full -z-10"></div>
 
@@ -2041,7 +2041,7 @@ export default function Dashboard() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+          <div className="w-full max-w-md p-8 relative mac-glass-container rounded-2xl shadow-2xl shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">

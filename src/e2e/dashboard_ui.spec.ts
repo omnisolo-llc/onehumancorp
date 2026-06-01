@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test('Dashboard Premium UI verified', async ({ page }) => {
-  // Mock auth if necessary or just load the page directly
-  await page.goto('http://localhost:18789/dashboard');
+  // Use login bypass hook
+  await page.goto('/dashboard');
 
   // Wait for the UI to be fully rendered
   await page.waitForTimeout(1000);
