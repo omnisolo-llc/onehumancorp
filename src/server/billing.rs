@@ -19,8 +19,8 @@ impl Tracker {
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
-        let mercadopago_client = std::env::var("OHC_MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
-        let stripe_client = std::env::var("OHC_STRIPE_API_KEY")
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
+        let stripe_client = std::env::var("STRIPE_API_KEY")
             .ok()
             .map(|key| Arc::new(StripeClient::new(key)));
         if let Ok(client) = Client::open(redis_url) {

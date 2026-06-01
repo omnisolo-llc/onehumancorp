@@ -52,10 +52,10 @@ impl Hub {
     }
 
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
-        let minimax_api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
+        let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         let redis_client = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
-            std::env::var("OHC_REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+            std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
         } else {
             None
         };
@@ -86,10 +86,10 @@ impl Hub {
                 let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
-                let cost_cents = (cost * 100.0).round() as i64;
+                let cost_cents = (cost * 100.0) as f32;
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -107,7 +107,7 @@ impl Hub {
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: {
-                let mut t = if let Ok(url) = std::env::var("OHC_REDIS_URL") { Tracker::new_with_redis(&url) } else { Tracker::new() };
+                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url) } else { Tracker::new() };
                 t.set_auditor(cost_auditor.clone());
                 t
             },
@@ -717,7 +717,7 @@ impl Hub {
         if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
             checklist.push("PostgreSQL Connected");
         }
-        if std::env::var("OHC_REDIS_URL").is_ok() {
+        if std::env::var("REDIS_URL").is_ok() {
             checklist.push("Redis Available");
         }
         if mode == "standalone" && (std::env::var("OHC_DATABASE_URL").is_err() || std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
