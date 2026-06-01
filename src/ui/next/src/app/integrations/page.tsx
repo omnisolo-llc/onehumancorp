@@ -18,6 +18,7 @@ export default function Integrations() {
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "meta", name: "Meta (Facebook, Instagram, WhatsApp)", category: "social", status: "disconnected", icon: "💬", description: "Unified Instagram, Facebook, and WhatsApp Inbox." },
     { id: "tiktok", name: "TikTok Business", category: "social", status: "disconnected", icon: "🎵", description: "Unified TikTok Inbox." },
+    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Unified omnichannel inbox aggregating messages across all channels." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
   ]);
 
@@ -49,7 +50,7 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
-    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'tiktok' || id === 'mercadopago' || id === 'cal_com') {
+    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'tiktok' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
