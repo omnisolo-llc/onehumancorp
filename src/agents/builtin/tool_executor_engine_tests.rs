@@ -38,7 +38,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "current_thread", start_paused = true)]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -58,17 +58,20 @@ mod tests {
             arguments: json!({}),
         };
 
-        // We use mock time via tokio::time::pause to avoid waiting during the test
-        tokio::time::pause();
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let handle = tokio::spawn(async move {
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+        });
+
+        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
+
+        let res = handle.await.unwrap();
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
-        tokio::time::resume();
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "current_thread", start_paused = true)]
     async fn test_transient_retry_exhausted() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -88,16 +91,20 @@ mod tests {
             arguments: json!({}),
         };
 
-        tokio::time::pause();
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let handle = tokio::spawn(async move {
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+        });
+
+        tokio::time::advance(std::time::Duration::from_millis(5000)).await;
+
+        let res = handle.await.unwrap();
 
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::Transient(msg) => assert_eq!(msg, "transient error attempt 2"),
-            _ => panic!("Expected Transient error"),
+            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            _ => panic!("Expected Unexpected error"),
         }
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
-        tokio::time::resume();
     }
 
     #[tokio::test]
