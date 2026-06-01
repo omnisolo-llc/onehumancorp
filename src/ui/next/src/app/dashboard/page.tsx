@@ -2131,6 +2131,72 @@ export default function Dashboard() {
       )}
 
       {/* Embed Modal */}
+
+      {/* Growth Loop: Link-in-Bio Modal */}
+      {showLinkInBioModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative overflow-hidden font-inter border border-white/20">
+            {/* Background embellishment */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl -z-10"></div>
+
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/50">
+                📱
+              </div>
+              <button
+                onClick={() => {
+                  setShowLinkInBioModal(false);
+                  setLinkInBioCopied(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3 tracking-tight">Your Link-in-Bio is Ready</h2>
+            <p className="text-gray-600 mb-8 text-sm leading-relaxed">
+              Add this single link to your Instagram, TikTok, or Twitter bio. The Marketing Agent will automatically keep it updated with your active products and booking slots.
+            </p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-800 uppercase tracking-wider mb-2">Your Public Link</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`https://ohc.store/bio/${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all font-medium"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://ohc.store/bio/${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+                      setLinkInBioCopied(true);
+                      setTimeout(() => setLinkInBioCopied(false), 2000);
+                    }}
+                    className={`px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${linkInBioCopied ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-900 text-white hover:bg-black'}`}
+                  >
+                    {linkInBioCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                 <button
+                   onClick={() => window.open(`/link-in-bio?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`, '_blank')}
+                   className="flex-1 px-4 py-3 bg-purple-50 text-purple-700 rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors flex items-center justify-center gap-2 border border-purple-200"
+                 >
+                   Preview Page
+                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
