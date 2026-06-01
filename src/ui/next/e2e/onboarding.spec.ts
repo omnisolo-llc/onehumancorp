@@ -8,7 +8,7 @@ test.describe('Onboarding Wizard Flow', () => {
     // Step 1: Business Name
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
@@ -110,11 +110,11 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location
@@ -132,11 +132,11 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Bakery');
     await page.locator('button:has-text("Next")').click();
 
     // Step 2: What do you sell
-    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom cakes');
     await page.locator('button:has-text("Next")').click();
 
     // Step 3: Location

@@ -141,3 +141,4 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+src/ui/next/test-results/.last-run.json
