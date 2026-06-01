@@ -229,3 +229,28 @@ mod tests {
         assert_eq!(cache.get("k2").await, None);
     }
 }
+#[cfg(test)]
+mod more_tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_hybrid_cache_get_with_swr() {
+        let cache = HybridCache::<String>::with_capacity(None, 10);
+        cache.set("swr_k", "swr_v".to_string(), Duration::from_secs(0)).await;
+
+        let (val, is_stale) = cache.get_with_swr("swr_k").await.unwrap();
+        assert_eq!(val, "swr_v");
+        assert!(is_stale);
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_cache_invalidate() {
+        let cache = HybridCache::<String>::with_capacity(None, 10);
+        cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
+
+        assert_eq!(cache.get("k1").await, Some("v1".to_string()));
+        cache.invalidate("k1").await;
+        assert_eq!(cache.get("k1").await, None);
+    }
+}

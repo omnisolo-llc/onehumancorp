@@ -85,7 +85,7 @@ pub async fn bench_api_response_time() {
             let start = Instant::now();
 
 
-            let _ = dashboard_service_cloud.get_dashboard(request).await;
+            let _ = dashboard_service_cloud.get_dashboard(request).await.unwrap().into_inner();
             cloud_times.push(start.elapsed().as_micros());
         }
         cloud_times.sort();
@@ -111,7 +111,7 @@ pub async fn bench_api_response_time() {
         let start = Instant::now();
 
 
-        let _ = dashboard_service_standalone.get_dashboard(request).await;
+        let _ = dashboard_service_standalone.get_dashboard(request).await.unwrap().into_inner();
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
@@ -124,7 +124,7 @@ pub async fn bench_api_response_time() {
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
-        let _ = dashboard_service_standalone.get_dashboard(request).await;
+        let _ = dashboard_service_standalone.get_dashboard(request).await.unwrap().into_inner();
         standalone_mobile_times.push(start.elapsed().as_micros());
     }
     standalone_mobile_times.sort();
