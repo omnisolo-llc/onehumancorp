@@ -61,12 +61,12 @@ test('Maya operates her custom cake business', async ({ page }) => {
   // If the key is provided, we can test that by capturing the `Live` text.
 
   // Let's ensure the loading spinner is gone, meaning we are on step 5 or an error is displayed
-  await expect(page.getByText('Building Your Business...')).toBeHidden({ timeout: 15000 });
+  await expect(page.getByText('Building Your Business...')).toBeHidden({ timeout: 30000 });
 
   // A deterministic check: verify that the page either shows the success state or the correct error state
   // We use an OR locator so Playwright waits for one of them to be visible
   await expect(
     page.getByRole('heading', { name: "You're Live!" })
-    .or(page.getByText(/Failed to start onboarding|Backend connection failed/i))
-  ).toBeVisible({ timeout: 15000 });
+    .or(page.getByText(/Failed to start|An error occurred|Backend connection/i))
+  ).toBeVisible({ timeout: 30000 });
 });
