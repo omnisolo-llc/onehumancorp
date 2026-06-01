@@ -1,3 +1,4 @@
+
 # OHC End-to-End Business Journey Architecture: Research Report
 
 ## 1. Executive Summary
@@ -39,5 +40,43 @@ Based on these findings, we have mapped out the end-to-end journey across six ke
 *   **Optimistic UI:** Interactions must feel instantaneous on mobile, with background syncing handled by the KAIROS Orchestrator.
 *   **Mobile-First Design Tokens:** Enforcing 44x44px touch targets, premium typography, and skeleton loading states to pass the Grandmother Test.
 
-## 5. Next Steps
+
+### 4.2 High-Level Agentic Flow Diagram
+```mermaid
+sequenceDiagram
+    participant User as Business Owner (Mobile)
+    participant OHC as OHC App / Edge
+    participant Kairos as KAIROS Orchestrator
+    participant Mktg as Marketing Agent
+    participant Ops as Operations Agent
+    participant Adv as Advisory Agent
+
+    User->>OHC: Complete Onboarding (Minimum Data)
+    OHC->>Kairos: Dispatch Setup Event
+    Kairos->>Mktg: Generate Storefront/Copy
+    Mktg-->>Kairos: Asset Complete
+    Kairos-->>OHC: Update UI (Activation)
+    User->>OHC: Live Dashboard
+    loop Continuous
+        Ops->>Kairos: Inventory/Booking Sync Event
+        Adv->>Kairos: Analytics/Health Check
+    end
+```
+
+## 5. Risk Assessment and Dependencies
+
+### 5.1 Key Risks
+*   **LLM Hallucinations:** The automated generation of storefront copy, initial emails, or agent responses might produce incorrect or unprofessional content, confusing non-technical users.
+*   **Data Consistency:** Ensure that inventory changes triggered by one agent (e.g., POS integration) are seamlessly propagated to all other dependent systems and visual interfaces (e.g., Storefront).
+*   **Agent Dependency Latency:** Generating assets synchronously during the "Activation" step could lead to high latency and subsequent user drop-offs.
+*   **External Service Outages:** Reliance on third parties (Stripe, Mercado Pago) can block "Activation" or "Revenue" journey steps.
+
+### 5.2 Dependencies
+*   **KAIROS Orchestrator:** Requires a stable distributed event bus to handle rapid message passing between AI departments asynchronously.
+*   **Stripe/Mercado Pago:** Essential for seamless payment processing, deposit management, and transitioning to the "Revenue" phase.
+*   **Native Device Features:** Relies on robust WebRTC and device hardware integrations for offline capabilities and POS interactions (e.g., iOS Tap to Pay).
+
+## 6. Next Steps
 We have generated a detailed issue brief (`docs/research/[architecture]_end_to_end_business_journey_detailed.md`) outlining the implementation requirements for the Implementer swarm. This brief includes comprehensive Mermaid.js sequence diagrams for each persona's journey and strict constraints for mobile parity and visual excellence.
+
+issue_id: 14704
