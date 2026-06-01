@@ -544,7 +544,7 @@ async fn handle_generate_discount_share(
     Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
+    let tenant_id = "DEFAULT";
     let uuid = uuid::Uuid::new_v4().to_string();
     let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
 
