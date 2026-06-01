@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { GlassCard, GlassButton, GlassInput, StepProgress } from '../../components/glass';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function OnboardingWizard() {
   const {
@@ -27,6 +29,8 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [pendingState, setPendingState] = useState<any>(null);
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -87,20 +91,9 @@ export default function OnboardingWizard() {
     })
     .then(res => res.json())
     .then(data => {
-      if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      if (data && data.wizardState && (data.wizardState.step > 1 || (data.wizardState.step === 1 && data.wizardState.businessName))) {
+        setPendingState(data.wizardState);
+        setShowResumeModal(true);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -146,6 +139,25 @@ export default function OnboardingWizard() {
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
     aiAgents, aiAutoRespond, isLoaded
   ]);
+
+  const handleResume = () => {
+    if (pendingState) {
+      if (pendingState.step) setStep(pendingState.step);
+      if (pendingState.chatStep) setChatStep(pendingState.chatStep);
+      if (pendingState.businessDescription) setBusinessDescription(pendingState.businessDescription);
+      if (pendingState.businessName) setBusinessName(pendingState.businessName);
+      if (pendingState.whatYouSell) setWhatYouSell(pendingState.whatYouSell);
+      if (pendingState.location) setLocation(pendingState.location);
+      if (pendingState.businessType) setBusinessType(pendingState.businessType);
+      if (pendingState.categories) setCategories(pendingState.categories);
+      if (pendingState.websiteTemplate) setWebsiteTemplate(pendingState.websiteTemplate);
+      if (pendingState.firstProductName) setFirstProductName(pendingState.firstProductName);
+      if (pendingState.firstProductPrice) setFirstProductPrice(pendingState.firstProductPrice);
+      if (pendingState.aiAgents) setAiAgents(pendingState.aiAgents);
+      if (pendingState.aiAutoRespond !== undefined) setAiAutoRespond(pendingState.aiAutoRespond);
+    }
+    setShowResumeModal(false);
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -242,9 +254,23 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 relative">
+      {showResumeModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+          <GlassCard className="w-full max-w-[320px] p-6 text-center animate-scale-in">
+            <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Resume Setup?</h3>
+            <p className="text-sm text-gray-500 dark:text-[#A1A1A6] mb-6">We found your previous progress. Would you like to continue where you left off?</p>
+            <div className="space-y-3">
+              <GlassButton onClick={handleResume}>Resume Progress</GlassButton>
+              <GlassButton variant="secondary" onClick={() => setShowResumeModal(false)}>Start Fresh</GlassButton>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      <GlassCard id="setup-screen" className="w-full max-w-[375px] mx-auto overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
+          {step < 4 && <StepProgress currentStep={step} totalSteps={3} />}
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
@@ -281,26 +307,22 @@ export default function OnboardingWizard() {
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
                   <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
+                    <GlassInput
+                      type="text"
+                      autoFocus
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="e.g. Maya's Custom Cakes"
+                    />
                   </div>
 
                   <div className="mt-auto pt-6">
-                    <button
+                    <GlassButton
                       onClick={() => setChatStep(2)}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
-                    </button>
+                    </GlassButton>
                   </div>
                 </div>
               )}
@@ -326,25 +348,22 @@ export default function OnboardingWizard() {
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
                   <div className="space-y-4 flex-1">
-                    <div>
-                      <textarea
-                        autoFocus
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
-                    </div>
+                    <GlassInput
+                      isTextArea
+                      autoFocus
+                      value={whatYouSell}
+                      onChange={(e) => setWhatYouSell(e.target.value)}
+                      placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                    />
                   </div>
 
                   <div className="mt-auto pt-6">
-                    <button
+                    <GlassButton
                       onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
-                    </button>
+                    </GlassButton>
                   </div>
                 </div>
               )}
@@ -370,26 +389,23 @@ export default function OnboardingWizard() {
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
                   <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
+                    <GlassInput
+                      type="text"
+                      autoFocus
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. Portland, OR"
+                    />
                   </div>
 
                   <div className="mt-auto pt-6">
-                    <button
+                    <GlassButton
                       onClick={handleIntake}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      isLoading={isLoading}
                     >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
-                    </button>
+                      Generate My Business
+                    </GlassButton>
                   </div>
                 </div>
               )}
@@ -417,60 +433,45 @@ export default function OnboardingWizard() {
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
+                <GlassInput
+                  label="Business Name"
+                  autoFocus
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="text-base p-3"
+                />
+                <GlassInput
+                  label="Business Type"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  className="text-base p-3"
+                />
+                <GlassInput
+                  label="Categories (Comma separated)"
+                  value={categories.join(', ')}
+                  onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                  className="text-base p-3"
+                />
                 <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
-                        type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
+                   <GlassInput
+                     label="First Product"
+                     value={firstProductName}
+                     onChange={(e) => setFirstProductName(e.target.value)}
+                     className="text-base p-3"
+                   />
+                   <GlassInput
+                     label="Price"
+                     inputMode="decimal"
+                     value={firstProductPrice}
+                     onChange={(e) => setFirstProductPrice(e.target.value)}
+                     className="text-base p-3"
+                   />
                 </div>
               </div>
 
               {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
-                <button
+                <GlassButton
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
@@ -480,10 +481,9 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
-                </button>
+                </GlassButton>
               </div>
             </div>
           )}
@@ -516,9 +516,16 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-1 rounded-[12px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20' : 'border-transparent'}`}
                       >
-                        <div className="font-semibold text-sm">{template}</div>
+                        <div className={`h-24 w-full rounded-[8px] mb-2 flex items-center justify-center text-xs font-bold uppercase tracking-widest ${
+                          template === 'Modern' ? 'bg-gradient-to-br from-blue-400 to-indigo-600' :
+                          template === 'Minimal' ? 'bg-gray-100 dark:bg-gray-800' :
+                          template === 'Bold' ? 'bg-black text-white' : 'bg-amber-50 dark:bg-amber-900/20'
+                        }`}>
+                           {template}
+                        </div>
+                        <div className={`text-center font-semibold text-xs py-1 ${websiteTemplate === template ? 'text-[#0066FF]' : 'text-gray-500'}`}>{template}</div>
                       </div>
                     ))}
                   </div>
@@ -527,25 +534,30 @@ export default function OnboardingWizard() {
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
                   <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
+                    {[
+                      { name: 'Sales Agent', desc: 'Responds to product questions and closes sales 24/7.' },
+                      { name: 'Support Agent', desc: 'Handles returns, shipping updates, and general FAQs.' },
+                      { name: 'Marketing Agent', desc: 'Creates social media posts and runs email campaigns.' }
+                    ].map(agent => {
+                       const isSelected = aiAgents.includes(agent.name);
                        return (
-                         <div
-                           key={agent}
-                           onClick={() => {
-                             if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
-                             } else {
-                               setAiAgents([...aiAgents, agent]);
-                             }
-                           }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white'}`}
-                         >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                         <WithTooltip key={agent.name} id={`agent-${agent.name}`} defaultText={agent.desc}>
+                           <div
+                             onClick={() => {
+                               if (isSelected) {
+                                 setAiAgents(aiAgents.filter(a => a !== agent.name));
+                               } else {
+                                 setAiAgents([...aiAgents, agent.name]);
+                               }
+                             }}
+                             className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all w-full ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white'}`}
+                           >
+                             <span className="font-semibold text-sm">{agent.name}</span>
+                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
+                                {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                             </div>
                            </div>
-                         </div>
+                         </WithTooltip>
                        );
                     })}
                   </div>
@@ -568,29 +580,42 @@ export default function OnboardingWizard() {
               </div>
 
               <div className="mt-auto pt-6">
-                <button
+                <GlassButton
                   onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  isLoading={isLoading}
                 >
                   Launch Store
-                </button>
+                </GlassButton>
               </div>
             </div>
           )}
 
           {step === 4 && (
              <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-               <div className="w-24 h-24 relative mb-8">
-                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
-                 <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+               <div className="w-32 h-32 relative mb-10">
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF]/10 rounded-full"></div>
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF] rounded-full border-t-transparent animate-spin" style={{ animationDuration: '0.8s' }}></div>
+                 <div className="absolute inset-4 border-[4px] border-[#34C759] rounded-full border-b-transparent animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.2s' }}></div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-[#0066FF] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                 </div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
-               <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Empire...</h2>
+               <div className="space-y-3 max-w-[280px]">
+                 {[
+                   "Crafting your unique brand identity...",
+                   "Onboarding your elite AI support team...",
+                   "Optimizing your store for global sales...",
+                   "Securing your financial channels...",
+                   "Igniting your digital presence..."
+                 ].map((text, i) => (
+                   <p key={i} className="text-gray-500 dark:text-[#A1A1A6] text-xs font-medium animate-pulse flex items-center justify-center gap-2" style={{ animationDelay: `${i * 0.4}s` }}>
+                     <span className="w-1.5 h-1.5 bg-[#0066FF] rounded-full shadow-[0_0_4px_#0066FF]"></span>
+                     {text}
+                   </p>
+                 ))}
                </div>
              </div>
           )}
@@ -631,7 +656,7 @@ export default function OnboardingWizard() {
             </div>
           )}
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }

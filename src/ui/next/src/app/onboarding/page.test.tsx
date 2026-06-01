@@ -4,6 +4,15 @@ import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
+import { TooltipProvider } from '../../components/TooltipRegistry';
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <TooltipProvider>
+      {ui}
+    </TooltipProvider>
+  );
+};
 
 describe('OnboardingWizard', () => {
   beforeEach(() => {
@@ -32,7 +41,9 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    render(<OnboardingWizard />);
+    await act(async () => {
+      renderWithProviders(<OnboardingWizard />);
+    });
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -64,7 +75,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -177,7 +188,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -207,7 +218,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -231,7 +242,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -248,7 +259,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -279,7 +290,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -308,7 +319,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 2 });
     });
 
-    render(<OnboardingWizard />);
+    renderWithProviders(<OnboardingWizard />);
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
