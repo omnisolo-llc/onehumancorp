@@ -6,7 +6,7 @@ use crate::agent::AgentRunConfig;
 /// 2. Tool Definitions
 /// 3. Developer Instructions
 /// 4. User Instructions (capped at 32 KiB)
-pub struct HierarchicalPromptBuilder {
+pub(crate) struct HierarchicalPromptBuilder {
     server_system_message: String,
     tool_definitions: String,
     developer_instructions: String,
