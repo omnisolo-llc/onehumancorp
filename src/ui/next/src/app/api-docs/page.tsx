@@ -168,13 +168,34 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-8">
-      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm">
-        <p className="text-yellow-700 text-sm">
-          <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
-        </p>
+    <div className="min-h-screen bg-gray-50 flex justify-center font-inter">
+      <div className="w-full max-w-[375px] bg-[#F5F5F7] min-h-screen shadow-xl relative flex flex-col">
+        <header className="px-5 pt-10 pb-4 bg-white/70 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-20 border-b border-gray-200">
+          <h1 className="text-2xl font-extrabold font-outfit text-gray-900 tracking-tight">API Reference</h1>
+        </header>
+
+        <main className="flex-1 p-5 overflow-y-auto pb-24 space-y-6">
+          <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 rounded-r-xl shadow-sm">
+            <p className="text-yellow-700 text-sm">
+              <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
+            </p>
+          </div>
+
+          {mounted && (
+            <div className="bg-white/80 backdrop-blur-md saturate-200 p-4 rounded-2xl shadow-sm border border-white/60 overflow-x-auto w-full">
+              <div className="min-w-[300px]">
+                <SwaggerUI spec={swaggerSpec} />
+              </div>
+            </div>
+          )}
+        </main>
       </div>
-      {mounted && <div className="bg-white/10 backdrop-blur-md saturate-200 p-6 rounded-2xl shadow-xl border border-white/20"><SwaggerUI spec={swaggerSpec} /></div>}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .swagger-ui .wrapper { padding: 0 !important; max-width: none !important; }
+      `}} />
     </div>
   );
 }

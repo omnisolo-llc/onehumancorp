@@ -419,10 +419,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-         <nav className="flex items-center gap-3">
-             <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
-               Calendar 📅
-             </Link>
+         <WithTooltip id="nav-dashboard-tooltip" defaultText="Check your sales, recent orders, and how your store is doing.">
+           <nav className="flex items-center gap-3">
+               <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
+                 Calendar 📅
+               </Link>
              <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
                Inbox
              </Link>
@@ -447,10 +448,11 @@ export default function Dashboard() {
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                 AC
-             </div>
-         </nav>
+               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+                   AC
+               </div>
+           </nav>
+         </WithTooltip>
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">

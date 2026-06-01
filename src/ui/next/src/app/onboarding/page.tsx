@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function OnboardingWizard() {
   const {
@@ -327,13 +328,15 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
-                      <textarea
-                        autoFocus
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
+                      <WithTooltip id="bio-input-tooltip">
+                        <textarea
+                          autoFocus
+                          value={whatYouSell}
+                          onChange={(e) => setWhatYouSell(e.target.value)}
+                          placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                          className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        />
+                      </WithTooltip>
                     </div>
                   </div>
 
@@ -383,13 +386,15 @@ export default function OnboardingWizard() {
                   </div>
 
                   <div className="mt-auto pt-6">
-                    <button
-                      onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
-                    </button>
+                    <WithTooltip id="generate-btn-tooltip">
+                      <button
+                        onClick={handleIntake}
+                        disabled={!location.trim() || isLoading}
+                        className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? 'Analyzing...' : 'Generate My Business'}
+                      </button>
+                    </WithTooltip>
                   </div>
                 </div>
               )}
