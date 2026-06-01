@@ -2450,7 +2450,7 @@ mod tests {
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
+        let _ = std::env::var("DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }

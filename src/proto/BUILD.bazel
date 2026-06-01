@@ -3,6 +3,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
+    "collaboration.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -212,6 +213,22 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Collaboration ────────────────────────────────────────────────────────
+
+proto_library(
+    name = "collaboration_proto",
+    srcs = ["collaboration.proto"],
+    deps = [":organization_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "collaboration",
+    proto = ":collaboration_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

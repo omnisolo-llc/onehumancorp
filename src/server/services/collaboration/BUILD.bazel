@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
+
+rust_library(
+    name = "collaboration",
+    crate_root = "mod.rs",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    deps = [
+        "//src/server/ohc:server_ohc",
+        "@crates//:tonic",
+        "@crates//:chrono",
+        "@crates//:uuid",
+        "@crates//:sqlx",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "collaboration_test",
+    crate = ":collaboration",
+    deps = [
+        "@crates//:tokio",
+    ],
+)
+
+exports_files([
+    "mod.rs",
+    "service.rs",
+], visibility = ["//visibility:public"])

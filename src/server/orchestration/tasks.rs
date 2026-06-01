@@ -1174,11 +1174,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_dag_dependencies_postgres() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return; // Skip if no PG DB available for test
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("DATABASE_URL").unwrap();
         if !database_url.contains("test") {
             return;
         }
