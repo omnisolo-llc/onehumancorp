@@ -286,6 +286,14 @@ export default function WebsiteBuilderPage() {
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
+                    <input
+                      type="text"
+                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      style={{ borderRadius: '8px' }}
+                      placeholder="e.g. Maya's Cakes"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                    />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(3)}
