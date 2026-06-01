@@ -2451,7 +2451,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             dynamic_workflow_state_dir,
         ),
     );
-    let app = axum::Router::new()
+    let app = axum::Router::new().route("/api/v1/ledger/lease", axum::routing::post(crate::api::ledger_api::handle_lease))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
