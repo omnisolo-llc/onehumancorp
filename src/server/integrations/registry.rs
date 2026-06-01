@@ -34,6 +34,7 @@ pub struct IntegrationsRegistry {
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
 
@@ -74,6 +75,7 @@ impl IntegrationsRegistry {
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
@@ -271,6 +273,11 @@ impl IntegrationsRegistry {
         if integration_id == "manychat" {
             let mut clients = self.manychat_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "sendgrid" {
@@ -751,6 +758,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "sendgrid" {
                 let clients = self.sendgrid_clients.read().unwrap();
