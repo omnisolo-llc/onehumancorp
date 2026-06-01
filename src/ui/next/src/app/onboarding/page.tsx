@@ -239,6 +239,24 @@ export default function OnboardingWizard() {
     }
   };
 
+  const handleStep2Continue = () => {
+    if (businessName.trim().length < 3) {
+      setValidationError('Business Name must be at least 3 characters.');
+      return;
+    }
+    const isValid = !!(businessName.trim() && businessType.trim() && categories.length !== 0 && firstProductName.trim() && firstProductPrice.trim());
+    if (isValid) {
+      setValidationError('');
+      setStep(3);
+    }
+  };
+
+  const handleStep2KeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleStep2Continue();
+    }
+  };
+
   if (!isLoaded) return null;
 
   return (
@@ -287,6 +305,11 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && businessName.trim()) {
+                            setChatStep(2);
+                          }
+                        }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -331,6 +354,14 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            if (whatYouSell.trim()) {
+                              e.preventDefault();
+                              setChatStep(3);
+                            }
+                          }
+                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -376,6 +407,11 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            handleIntake();
+                          }
+                        }}
                         placeholder="e.g. Portland, OR"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -424,6 +460,7 @@ export default function OnboardingWizard() {
                     autoFocus
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
+                    onKeyDown={handleStep2KeyDown}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -433,6 +470,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
+                    onKeyDown={handleStep2KeyDown}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -442,6 +480,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    onKeyDown={handleStep2KeyDown}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -452,6 +491,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
+                        onKeyDown={handleStep2KeyDown}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -462,6 +502,7 @@ export default function OnboardingWizard() {
                         inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                        onKeyDown={handleStep2KeyDown}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -471,14 +512,7 @@ export default function OnboardingWizard() {
               {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => {
-                    if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
-                      return;
-                    }
-                    setValidationError('');
-                    setStep(3);
-                  }}
+                  onClick={handleStep2Continue}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
