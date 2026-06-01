@@ -16,10 +16,19 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
+        setShowAdvanced(localStorage.getItem('advanced_developer_settings') === 'true');
     }
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+
+  const toggleAdvancedSettings = () => {
+    const newState = !showAdvanced;
+    setShowAdvanced(newState);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('advanced_developer_settings', newState.toString());
+    }
+  };
   const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
@@ -548,9 +557,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Developer Settings</span>
                         <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
+                            onClick={toggleAdvancedSettings}
                             className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                         >
                             <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>

@@ -6,6 +6,29 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
     await expect(page.getByText('Business Snapshot').first()).toBeVisible();
 
+    // Verify Advanced Developer Settings Toggle and Persistence
+    await expect(page.getByText('Advanced Developer Settings').first()).toBeVisible();
+    await expect(page.getByText('Technical Payload:').first()).not.toBeVisible();
+
+    // Check initial state
+    let isAdvancedActive = await page.evaluate(() => localStorage.getItem('advanced_developer_settings') === 'true');
+    expect(isAdvancedActive).toBeFalsy();
+
+    // Click the toggle button which is next to the text
+    await page.locator('span:text("Advanced Developer Settings") + button').click();
+
+    // Verify state updated in localStorage
+    isAdvancedActive = await page.evaluate(() => localStorage.getItem('advanced_developer_settings') === 'true');
+    expect(isAdvancedActive).toBeTruthy();
+
+    // Reload page to check persistence
+    await page.reload();
+    await expect(page.getByText('Advanced Developer Settings').first()).toBeVisible();
+
+    // Verify the state remains true in localStorage
+    isAdvancedActive = await page.evaluate(() => localStorage.getItem('advanced_developer_settings') === 'true');
+    expect(isAdvancedActive).toBeTruthy();
+
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
