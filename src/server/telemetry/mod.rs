@@ -16,7 +16,7 @@ static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new
 static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
@@ -1178,11 +1178,11 @@ pub fn get_bubblewrap_execution_latency() -> &'static Histogram<f64> {
     })
 }
 
-pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
+pub fn get_bubblewrap_violation_total() -> &'static Counter<u64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("ohc_harness_security_violation_total")
+            .u64_counter("ohc_sandbox_violation_total")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })

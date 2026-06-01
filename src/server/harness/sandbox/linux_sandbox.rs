@@ -151,6 +151,16 @@ impl SandboxAdapter for LinuxSandbox {
 mod tests {
     use super::*;
 
+
+    #[tokio::test]
+    async fn test_linux_sandbox_generates_correct_flags() {
+        let sandbox = LinuxSandbox::new(None);
+        let wrapped = sandbox.wrap_command("ls").await.unwrap();
+        assert!(wrapped.contains("bwrap"));
+        assert!(wrapped.contains("--unshare-all"));
+        assert!(wrapped.contains("--ro-bind / /"));
+    }
+
     #[test]
     fn test_generate_bwrap_args_default() {
         let sandbox = LinuxSandbox::new(None);

@@ -105,6 +105,15 @@ impl SandboxAdapter for MacOsSandbox {
 mod tests {
     use super::*;
 
+
+    #[tokio::test]
+    async fn test_macos_sandbox_generates_correct_flags() {
+        let sandbox = MacOsSandbox::new(None);
+        let wrapped = sandbox.wrap_command("ls").await.unwrap();
+        assert!(wrapped.contains("sandbox-exec -p"));
+        assert!(wrapped.contains("(version 1)"));
+    }
+
     #[test]
     fn test_generate_profile_default() {
         let sandbox = MacOsSandbox::new(None);

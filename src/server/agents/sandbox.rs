@@ -5,6 +5,7 @@ use std::process::{Command, Output};
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
 use tokio::process::Command as AsyncCommand;
+use crate::harness::sandbox::manager::SandboxAdapter;
 use tokio::time::timeout;
 
 pub type SandboxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -47,7 +48,13 @@ impl ExecutionEnvironment for LocalEnvironment {
 impl LocalEnvironment {
     pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<Output> {
         // Wrap command for Bash execution to disable extended globs
-        let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
+        let base_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
+
+        let sandbox = crate::harness::sandbox::manager::SandboxManager::new(None);
+
+        let wrapped_cmd = sandbox.wrap_command(&base_cmd).await.map_err(|e| {
+             std::io::Error::new(std::io::ErrorKind::Other, e)
+        })?;
 
         let dir_str = self.dir.path().to_str().ok_or_else(|| {
             std::io::Error::new(std::io::ErrorKind::InvalidData, "failed to convert temp dir path to string")
