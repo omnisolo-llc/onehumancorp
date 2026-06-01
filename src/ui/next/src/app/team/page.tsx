@@ -31,6 +31,8 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState("https://ohc.app/invite/team-default");
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   const fetchApprovals = async () => {
     try {
@@ -124,10 +126,25 @@ export default function TeamPage() {
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
               <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
               <button
-                onClick={() => setShowInviteModal(true)}
-                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
+                onClick={async () => {
+                  setIsGeneratingLink(true);
+                  try {
+                    const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setInviteLink(data.referral_link || "https://ohc.app/invite/team-default");
+                    }
+                  } catch (e) {
+                    console.error("Failed to generate link", e);
+                  } finally {
+                    setIsGeneratingLink(false);
+                    setShowInviteModal(true);
+                  }
+                }}
+                disabled={isGeneratingLink}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98] disabled:opacity-75"
               >
-                Invite to Cloud Team
+                {isGeneratingLink ? 'Generating Link...' : 'Invite to Cloud Team'}
               </button>
             </div>
           </div>
@@ -178,14 +195,14 @@ export default function TeamPage() {
                   id="cloud-bridge-invite-link"
                   type="text"
                   readOnly
-                  value="https://ohc.app/invite/team-default"
+                  value={inviteLink}
                   className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
                 />
               </div>
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText("https://ohc.app/invite/team-default");
+                  navigator.clipboard.writeText(inviteLink);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}
