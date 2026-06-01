@@ -241,12 +241,34 @@ export default function OnboardingWizard() {
 
   if (!isLoaded) return null;
 
+  // Progress percentage calculation
+  const getProgress = () => {
+    if (step === 1) return (chatStep / 3) * 33;
+    if (step === 2) return 50;
+    if (step === 3) return 75;
+    if (step === 4) return 90;
+    if (step === 5) return 100;
+    return 0;
+  };
+
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      {/* Background Glows for Premium Aesthetic */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[24px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+        {/* Progress Bar */}
+        <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
+          <div
+            className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
+            style={{ width: `${getProgress()}%` }}
+          ></div>
+        </div>
+
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           {error && (
-            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[12px] text-sm animate-shake">
               {error}
             </div>
           )}
@@ -297,7 +319,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => setChatStep(2)}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -341,7 +363,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -382,13 +404,29 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={handleIntake}
+                      onClick={() => {
+                        if (businessName.trim().length < 3) {
+                          setValidationError('Business Name must be at least 3 characters.');
+                          return;
+                        }
+                        setValidationError('');
+                        handleIntake();
+                      }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Analyzing...
+                        </span>
+                      ) : 'Generate My Business'}
                     </button>
                   </div>
                 </div>
@@ -480,7 +518,7 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -559,7 +597,7 @@ export default function OnboardingWizard() {
                                setAiAgents([...aiAgents, agent]);
                              }
                            }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white'}`}
+                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white'}`}
                          >
                            <span className="font-semibold text-sm">{agent}</span>
                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
@@ -572,7 +610,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
@@ -591,9 +629,17 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Launch Store
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Launching...
+                    </span>
+                  ) : 'Launch Store'}
                 </button>
               </div>
             </div>
@@ -628,7 +674,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                <div className="p-3 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
@@ -643,7 +689,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="block w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm  active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront
                 </a>
