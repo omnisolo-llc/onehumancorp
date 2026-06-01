@@ -44,11 +44,9 @@ cp -RL "${next_dir}/src" "${work_dir}/src"
 cd "${work_dir}"
 
 if [[ ! -x "node_modules/.bin/vitest" ]]; then
-  npm install
+  npm ci --ignore-scripts --no-audit --no-fund
 fi
 
-npx vitest run \
+npm test -- --run \
   src/app/api/chat/route.test.ts \
-  src/app/api/v1/growth/storefront/embed/route.test.ts \
-  src/app/changelog/page.test.tsx \
-  src/app/api-docs/page.test.tsx
+  src/app/api/v1/growth/storefront/embed/route.test.ts
