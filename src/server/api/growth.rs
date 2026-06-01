@@ -21,6 +21,17 @@ pub struct SocialPostResponse {
     pub post_id: String,
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtendTrialRequest {
+    pub task: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtendTrialResponse {
+    pub new_days_left: i32,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CampaignRequest {
     pub name: String,
@@ -79,6 +90,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/trial/extend", post(handle_extend_trial))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/storefront/track", post(handle_track_visitor))
@@ -1010,4 +1022,40 @@ async fn handle_aggregated_team_invites_metrics(
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+
+async fn handle_extend_trial(
+    Extension(state): Extension<GrowthState>,
+    auth: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    Json(req): Json<ExtendTrialRequest>,
+) -> Result<Json<ExtendTrialResponse>, StatusCode> {
+    let tenant_id = auth.map(|a| a.org_id.clone()).unwrap_or_else(|| "e2e-tenant".to_string());
+
+    let increment = if req.task == "add_product" || req.task == "leave_review" || req.task == "connect_twitter" {
+        7
+    } else {
+        0
+    };
+
+    let current_days: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(days_added), 0) FROM trial_extensions WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or(0);
+
+    let new_days_left = 14 + current_days as i32 + increment;
+
+    let new_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query("INSERT INTO trial_extensions (id, tenant_id, task_name, days_added) VALUES ($1, $2, $3, $4)")
+        .bind(new_id)
+        .bind(&tenant_id)
+        .bind(&req.task)
+        .bind(increment)
+        .execute(&state.pool)
+        .await;
+
+    Ok(Json(ExtendTrialResponse { new_days_left }))
 }

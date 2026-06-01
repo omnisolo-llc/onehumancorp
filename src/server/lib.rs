@@ -2817,13 +2817,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
-        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
+        .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -3806,6 +3807,58 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <div class="card glass" id="legacy-growth-coverage">
+
+                        <div class="card glass" id="viral-trial-extension">
+                            <h2>Extend Your Trial</h2>
+                            <div class="text-5xl font-outfit font-bold text-gray-900" id="trial-days-left">14</div>
+                            <button id="connect-twitter-btn" onclick="
+                                fetch('/api/v1/growth/trial/extend', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ task: 'connect_twitter' })
+                                }).then(res => res.json()).then(data => {
+                                    document.getElementById('trial-days-left').innerText = data.new_days_left;
+                                }).catch(e => console.error(e));
+                                this.innerText = 'Connected';
+                                this.disabled = true;
+                                document.getElementById('trial-days-left').innerText = parseInt(document.getElementById('trial-days-left').innerText) + 7;
+                            ">Connect</button>
+                            <button id="leave-review-btn" onclick="
+                                fetch('/api/v1/growth/trial/extend', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ task: 'leave_review' })
+                                }).then(res => res.json()).then(data => {
+                                    document.getElementById('trial-days-left').innerText = data.new_days_left;
+                                }).catch(e => console.error(e));
+                                this.innerText = 'Done';
+                                this.disabled = true;
+                                document.getElementById('trial-days-left').innerText = parseInt(document.getElementById('trial-days-left').innerText) + 7;
+                            ">Review</button>
+                            <button id="add-item-btn" onclick="
+                                document.getElementById('add-item-modal').style.display = 'block';
+                            ">+ Add Item</button>
+                        </div>
+
+                        <div id="add-item-modal" class="card glass" style="display: none;">
+                            <h2>Add New Item</h2>
+                            <button onclick="
+                                document.getElementById('add-item-modal').style.display = 'none';
+                                fetch('/api/v1/growth/trial/extend', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ task: 'add_product' })
+                                }).then(res => res.json()).then(data => {
+                                    document.getElementById('trial-days-left').innerText = data.new_days_left;
+                                }).catch(e => console.error(e));
+                                document.getElementById('trial-days-left').innerText = parseInt(document.getElementById('trial-days-left').innerText) + 7;
+                                let btn = document.createElement('button');
+                                btn.innerText = 'Done';
+                                btn.disabled = true;
+                                document.getElementById('viral-trial-extension').appendChild(btn);
+                            ">Save Product</button>
+                        </div>
+
                             <h2>Referral Program</h2>
                             <p>Team Invites Sent</p>
                             <div class="text-indigo-900">0</div>
@@ -4430,7 +4483,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const response = await fetch('/api/v1/growth/team-invites', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
                                 });
                                 if (!response.ok) return;
@@ -4550,7 +4603,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const res = await fetch('/api/agents/workflows', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({ name, task })
                                 });
                                 const data = await res.json();
@@ -5602,7 +5655,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const reviewRes = await fetch('/api/v1/growth/campaign/generate-review', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({
                                         order_id: '8922',
                                         customer_name: 'Sarah',
@@ -5618,7 +5671,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 const response = await fetch('/api/v1/growth/campaign/send', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({
                                         name: 'Automated Review Request',
                                         subject: 'How did we do? Leave a review!',
@@ -5692,7 +5745,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const response = await fetch('/api/v1/builder/publish_draft', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify(payload)
                                 });
                                 if (response.ok) {
@@ -5862,7 +5915,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             fetch('/api/v1/growth/referrals/click', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                 body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
                             }).catch(console.error);
 
@@ -5944,7 +5997,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const response = await fetch('/api/v1/auth/login', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({ username: email, password: password })
                                 });
                                 if (response.ok) {
@@ -6044,7 +6097,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 const res = await fetch('/api/onboarding/start', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify(payload)
                                 });
 
@@ -6255,7 +6308,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                     const res = await fetch('/api/onboarding/start', {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                         body: JSON.stringify(payload)
                                     });
                                     if (prevStep === 3) nextStep(4);
@@ -6279,7 +6332,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             try {
                                 const response = await fetch('/api/v1/builder/generate', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                     body: JSON.stringify({ description })
                                 });
                                 if (response.ok) {
@@ -6762,7 +6815,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             input.value = '';
                             messages.scrollTop = messages.scrollHeight;
                             try {
-                                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: query }) });
+                                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }, body: JSON.stringify({ message: query }) });
                                 const data = await res.json();
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';

@@ -182,6 +182,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [[ "${E2E_SKIP_DOCKER:-false}" == "true" ]]; then
+  echo "[playwright] Skipping docker infrastructure..."
+  export DATABASE_URL="sqlite::memory:"
+  export REDIS_URL="redis://127.0.0.1:6379"
+  export E2E_SKIP_REDIS="true"
+else
 echo "[playwright] Starting E2E infrastructure..."
 docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
@@ -230,6 +236,9 @@ postgres_exec() {
 echo "[playwright] Initializing database roles..."
 postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
 postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
+  export DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
+  export REDIS_URL="redis://127.0.0.1:$VK_PORT"
+fi
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -251,8 +260,8 @@ export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  DATABASE_URL="$DATABASE_URL" \
+  REDIS_URL="${REDIS_URL:-}" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   OHC_PORT="$OHC_SERVER_PORT" \
