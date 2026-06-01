@@ -76,18 +76,17 @@ spec:
         - protocol: TCP
           port: 5432
     {{- end }}
-    {{- if .Values.valkey.enabled }}
+    {{- if .Values.redis.enabled }}
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "ohc.valkey.name" . }}
-              app.kubernetes.io/instance: {{ .Release.Name }}
+              app: {{ .Release.Name }}-redis-master
       ports:
         - protocol: TCP
-          port: {{ .Values.valkey.service.port }}
+          port: 6379
     {{- end }}
     - to:
         - ipBlock:
@@ -291,18 +290,17 @@ spec:
               - "fe80::/10"
 {{- end }}
 ---
-{{- if .Values.valkey.enabled }}
+{{- if .Values.redis.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-valkey
+  name: {{ include "ohc.fullname" . }}-redis
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "ohc.valkey.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: {{ .Release.Name }}-redis-master
   policyTypes:
     - Ingress
     - Egress
@@ -316,7 +314,7 @@ spec:
               app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
-          port: {{ .Values.valkey.service.port }}
+          port: 6379
   egress:
     - to:
         - namespaceSelector:
