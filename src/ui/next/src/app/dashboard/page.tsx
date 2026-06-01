@@ -27,7 +27,6 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
-  const [activeReferrals, setActiveReferrals] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -278,17 +277,13 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const [metricsRes, invitesRes, referralsRes] = await Promise.all([
+            const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
                 fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`/api/v1/growth/referrals/metrics?tenant_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -305,11 +300,6 @@ export default function Dashboard() {
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
-            }
-
-            if (referralsRes.ok) {
-                const referralsData = await referralsRes.json();
-                setActiveReferrals(referralsData.active_referrals);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -710,45 +700,6 @@ export default function Dashboard() {
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
                    </div>
-                </div>
-            </div>
-         </section>
-
-         {/* Social Media Discount Share Growth Loop */}
-         <section className="mb-8 mt-8">
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: '#ffffff', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex items-center gap-4 w-full">
-                    <div className="w-16 h-16 bg-green-50 rounded-2xl shadow-sm flex items-center justify-center text-3xl">
-                        🐦
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                           <h3 className="text-lg font-bold font-outfit text-gray-900">Social Media Discount Share</h3>
-                           <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">New Growth Loop</span>
-                        </div>
-                        <p className="text-sm text-gray-600 font-medium">Offer a 10% discount on social media when you hit a new milestone. Drive instant traffic back to your store!</p>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <button
-                        onClick={async () => {
-                            try {
-                                const response = await fetch('/api/v1/growth/discount_share/generate', { method: 'POST' });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    const text = encodeURIComponent(`I just unlocked a milestone for my store! 🚀 Here is a special 10% discount for my followers: ${data.share_url}`);
-                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                                } else {
-                                    alert('Failed to generate discount share link');
-                                }
-                            } catch (e) {
-                                alert('Network error');
-                            }
-                        }}
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
-                    >
-                        🐦 Share 10% Off on X (Twitter)
-                    </button>
                 </div>
             </div>
          </section>
@@ -1425,7 +1376,7 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
