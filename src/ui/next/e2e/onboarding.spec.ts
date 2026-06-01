@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
-  test('completes full onboarding flow', async ({ page }) => {
+  test('completes full onboarding flow for Maya the Baker (Mobile 375px)', async ({ page }) => {
+    // Mobile viewport constraint
+    await page.setViewportSize({ width: 375, height: 667 });
+
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
