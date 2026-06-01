@@ -347,6 +347,7 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
+    pub memory_manager: crate::memory_manager::MemoryManager,
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
@@ -363,6 +364,7 @@ impl Agent {
             llm,
             tools,
             progress: Arc::new(AgentProgress::default()),
+            memory_manager: crate::memory_manager::MemoryManager::new(),
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
@@ -372,7 +374,8 @@ impl Agent {
     }
 
     pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
-        self.memory_store = Some(store);
+        self.memory_store = Some(store.clone());
+        self.memory_manager = self.memory_manager.with_long_term_store(store);
         self
     }
 
@@ -1771,6 +1774,7 @@ impl Agent {
             tools: structured_tools,
             progress: self.progress.clone(),
             memory_store: self.memory_store.clone(),
+            memory_manager: crate::memory_manager::MemoryManager::new(),
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
@@ -1882,6 +1886,7 @@ impl Agent {
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
+                memory_manager: crate::memory_manager::MemoryManager::new().with_long_term_store(ltm.clone()),
                 memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),

@@ -65,6 +65,7 @@ rust_library(
         "local_provider.rs",
         "marketplace.rs",
         "memory_exhaustive_tests.rs",
+        "memory_manager.rs",
         "memory_store.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
