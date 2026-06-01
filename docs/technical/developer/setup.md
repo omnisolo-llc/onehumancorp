@@ -17,7 +17,7 @@ OHC is designed as a single monorepo that targets vastly different runtime envir
 - **Standalone Desktop Mode**: Packages the backend natively for local execution against SQLite.
 - **Headless API**: An API-only target optimized for remote client connection.
 
-Manually toggling `OHC_MULTITENANT`, `OHC_HEADLESS`, and `OHC_DATABASE_URL` during development can cause significant friction.
+Manually toggling `OHC_MULTITENANT`, `OHC_HEADLESS`, and `DATABASE_URL` during development can cause significant friction.
 
 ## Automated Setup
 To completely configure your environment, simply execute the `ohc-setup` script.

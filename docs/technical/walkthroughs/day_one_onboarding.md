@@ -37,7 +37,7 @@ If you need to configure API keys (OpenAI, Anthropic) or customize ports and mul
 
 **Key Configuration Options:**
 - **Mode Selection:** Toggle `OHC_MULTITENANT` to switch between Standalone and Cloud environments.
-- **LLM Providers:** Securely inject your `OHC_OPENAI_API_KEY` and `OHC_ANTHROPIC_API_KEY`.
+- **LLM Providers:** Securely inject your `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.
 - **Database/Redis:** Configure external connection strings for Cloud Mode.
 
 ## 4. Launching Your First Swarm

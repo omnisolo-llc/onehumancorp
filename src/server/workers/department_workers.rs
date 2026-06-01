@@ -783,7 +783,7 @@ impl CustomerSuccessWorker {
 
             // Simulate LLM confidence check
             let mut confidence = "REVIEW".to_string();
-            if let Ok(api_key) = std::env::var("OHC_MINIMAX_API_KEY") {
+            if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
                 if !api_key.is_empty() {
                     let minimax = crate::minimax::MinimaxClient::new(api_key);
                     let prompt = format!("Evaluate this customer message and the drafted reply. If the drafted reply perfectly and safely addresses the customer message, reply with exactly 'CONFIDENT'. Otherwise reply with 'REVIEW'. Message: '{}'. Draft: '{}'", payload.get("message").and_then(|m| m.as_str()).unwrap_or(""), drafted_msg);

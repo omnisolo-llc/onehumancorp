@@ -2,13 +2,13 @@
 
 To execute automated "Day One" setup flow audits:
 
-1. Create an `.env` file with values for `OHC_PORT`, `OHC_LOG_LEVEL`, and `OHC_SOURCE_MODE`.
+1. Create an `.env` file with values for `OHC_PORT`, `LOG_LEVEL`, and `OHC_SOURCE_MODE`.
 2. Run `deploy/scripts/ohc-verify-setup.sh` to audit the configuration and emit telemetry logs in Markdown and YAML formats.
 
 ```bash
 cat << 'ENV' > .env
 OHC_PORT=18789
-OHC_LOG_LEVEL=info
+LOG_LEVEL=info
 OHC_SOURCE_MODE=standalone
 ENV
 

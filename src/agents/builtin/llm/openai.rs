@@ -103,10 +103,10 @@ impl OpenAIClientConfig {
                 .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
                 .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
             embedding_format: EmbeddingRequestFormat::OpenAI,
-            organization: std::env::var("OHC_OPENAI_ORGANIZATION")
+            organization: std::env::var("OPENAI_ORGANIZATION")
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
-            project: std::env::var("OHC_OPENAI_PROJECT")
+            project: std::env::var("OPENAI_PROJECT")
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
             timeout: Duration::from_secs(60),
@@ -137,9 +137,9 @@ impl OpenAIClientConfig {
             api_key: api_key.into(),
             base_url: base_url.unwrap_or_else(|| "https://api.minimax.chat/v1".to_string()),
             default_model: Some(
-                std::env::var("OHC_MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string()),
+                std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string()),
             ),
-            embedding_model: std::env::var("OHC_MINIMAX_EMBEDDING_MODEL")
+            embedding_model: std::env::var("MINIMAX_EMBEDDING_MODEL")
                 .unwrap_or_else(|_| "embo-01".to_string()),
             embedding_format: EmbeddingRequestFormat::Minimax,
             organization: None,
