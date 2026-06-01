@@ -2,7 +2,6 @@ use std::str::FromStr;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum DepartmentType {
     Operations,
     Marketing,
@@ -59,7 +58,6 @@ pub struct DepartmentEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ActionRisk {
     AutoExecute,
     DraftForReview,
@@ -98,7 +96,6 @@ pub struct ApprovalRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ApprovalStatus {
     PendingApproval,
     Approved,
