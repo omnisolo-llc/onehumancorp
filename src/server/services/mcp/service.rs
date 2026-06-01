@@ -215,7 +215,10 @@ impl McpService for MyMcpService {
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
                 // Determine tenant_id from spiffe_id on each request to ensure multi-tenancy
                 let spiffe_id_str = &req.spiffe_id;
-                let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+                let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+                if tenant_id.is_empty() {
+                    return Err(Status::unauthenticated("missing tenant identity in session"));
+                }
                 let provider = crate::tools::hybridfsmcp::factory::create_fs_provider(Some(tenant_id));
                 let request_specific_server = crate::tools::hybridfsmcp::server::HybridFSMcpServer::new(provider);
                 match request_specific_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {

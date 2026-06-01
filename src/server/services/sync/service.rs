@@ -20,6 +20,14 @@ impl SyncService for MySyncService {
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
         let md = request.metadata().clone();
+        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = parsed.0;
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
         let req = request.into_inner();
         let payloads = req.payloads;
 
@@ -32,7 +40,7 @@ impl SyncService for MySyncService {
         }
 
         let mut synced_count = 0;
-        let sip_db = SipDB::new(self.pool.clone(), "system".to_string());
+        let sip_db = SipDB::new(self.pool.clone(), tenant_id);
 
         for p in payloads {
             if p.id.is_empty() {
@@ -85,10 +93,10 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received push request.");
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
-        let mut tenant_id = parsed.0;
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let items: Vec<serde_json::Value> = serde_json::from_str(&req.payload).unwrap_or_default();
@@ -162,10 +170,10 @@ impl SyncService for MySyncService {
 
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
-        let mut tenant_id = parsed.0;
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            tenant_id = "system".to_string();
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -299,7 +307,11 @@ impl SyncService for MySyncService {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
+        let tenant_id = parsed.0;
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
 
         let req = request.into_inner();
         let payloads = req.payloads;
@@ -423,13 +435,13 @@ mod tests {
             "id": mission_id,
             "status": "COMPLETED",
             "payload": "test data",
-            "organization_id": "system",
+            "organization_id": "org-1",
             "updated_at": chrono::Utc::now().to_rfc3339(),
             "version": 2
         }]).to_string();
 
         let mut push_req = Request::new(PowerSyncPushRequest { payload: payload_json });
-        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/system".parse().unwrap());
+        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/system".parse().unwrap());
 
         let push_resp = service.power_sync_push(push_req).await.unwrap();
         assert_eq!(push_resp.get_ref().status, "ok");
