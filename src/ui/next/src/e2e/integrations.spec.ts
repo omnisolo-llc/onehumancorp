@@ -14,23 +14,23 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Jitsi Meet")')).toBeVisible();
 
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
-        const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
+        const mercadoCard = page.locator('div').filter({ hasText: /^🌎disconnectedMercado PagoAccept credit cards and local payment methods in Latin America\.Connect$/ });
+        const connectMercadoPagoButton = mercadoCard.getByRole('button', { name: 'Connect' });
 
         // Mock window alert
         page.on('dialog', dialog => dialog.accept());
         await connectMercadoPagoButton.click();
 
         // Verify state changed
-        await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
+        await expect(page.locator('div').filter({ hasText: /^🌎connectedMercado PagoAccept credit cards and local payment methods in Latin America\.Manage$/ }).getByRole('button', { name: 'Manage' })).toBeVisible();
 
         // Let's connect Jitsi Meet
-        const jitsiCard = page.locator('div').filter({ hasText: 'Jitsi Meet' }).first();
-        const connectJitsiButton = jitsiCard.locator('button:has-text("Connect")');
+        const jitsiCard = page.locator('div').filter({ hasText: /^📹disconnectedJitsi MeetZero-Setup Online Lessons and video conferencing\.Connect$/ });
+        const connectJitsiButton = jitsiCard.getByRole('button', { name: 'Connect' });
         await connectJitsiButton.click();
 
         // Verify state changed
-        await expect(jitsiCard.locator('button:has-text("Manage")')).toBeVisible();
+        await expect(page.locator('div').filter({ hasText: /^📹connectedJitsi MeetZero-Setup Online Lessons and video conferencing\.Manage$/ }).getByRole('button', { name: 'Manage' })).toBeVisible();
 
     });
 
