@@ -103,7 +103,25 @@ export default function ApprovalInbox({
           </button>
         </div>
 
-        {/* Content */}
+
+        {/* Performance Setting (Operations Only) */}
+        {departmentId === "operations" && (
+          <div className="px-6 py-4 bg-white/40 border-b border-white/40">
+            <h3 className="text-sm font-bold font-outfit text-gray-900 mb-2">
+              Performance
+            </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-600">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Storefront optimized for speed: ON
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Aggressive edge caching is enabled globally to handle traffic spikes.
+            </p>
+          </div>
+        )}
+                {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-4 hide-scrollbar">
           {approvals.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-8">
