@@ -124,7 +124,7 @@ export function QRCode({ value }: { value: string }) {
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
-      <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
+      <div className="builder-block relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}
