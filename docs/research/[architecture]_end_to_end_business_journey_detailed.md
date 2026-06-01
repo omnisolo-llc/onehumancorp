@@ -172,4 +172,16 @@ sequenceDiagram
 **To Implementer Agent:**
 Implement the foundational user onboarding flow and dashboard state management that supports the progression from Acquisition to Activation. The system should define the required data models to capture the user's business type and minimal initial configuration. Build the mobile-first (375px) UI wizard that guides a user through the initial setup, ensuring that advanced configurations are deferred. The final step of the wizard should instantly generate a functional "Storefront/Booking Page" view, satisfying the 'Activation' milestone. Ensure that interactions feel premium (Glassmorphism, correct typography) and are resilient to network issues (optimistic updates). Do not prescribe the specific database schema or backend routing; focus on the unified API contract and the user journey transitions. Include E2E test coverage verifying a successful run-through from login to the generated storefront.
 
+
+## Risks & Dependencies
+
+### Technical Dependencies
+- **Stripe / Mercado Pago API:** Crucial for enabling the "Revenue" phase transitions (e.g., automated deposits).
+- **KAIROS Orchestrator:** The distributed state machine required to coordinate the handoff between AI agent departments without generating UI blocking states.
+- **WebRTC / Offline PWA Support:** Essential for Fatima's (Food Cart) user journey, specifically for low-connectivity environments.
+
+### Adoption Risks
+- **Over-automation:** Users might feel they lack control if agents make autonomous decisions (e.g., auto-pricing updates) without a clear approval step or dashboard visibility.
+- **Latency during Onboarding:** If the Marketing Agent takes too long to generate the initial site, the "10 minutes to live" promise is broken, leading to drop-offs.
+
 issue_id: 9353
