@@ -97,46 +97,95 @@ impl VisualVerifier for PlaywrightVisualVerifier {
 
 pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
+    pub max_retries: usize,
+    pub approval_threshold: f32, // e.g. 4.0 out of 5.0
 }
 
-#[derive(Deserialize)]
-struct JudgeEvaluation {
-    status: String,
-    reason: String,
-    confidence: f32,
+impl LlmJudgeSensor {
+    pub fn new(llm: Arc<dyn LlmClient>, max_retries: usize, approval_threshold: f32) -> Self {
+        Self { llm, max_retries, approval_threshold }
+    }
+}
+
+/// SOTA Harness Patterns (2025-2026): Verification Loops - Inferential/Sensors
+/// Structured Scoring Rubric for LLM-as-judge subagent evaluation.
+#[derive(Deserialize, Debug)]
+struct JudgeEvaluationRubric {
+    correctness_score: f32,  // 1.0 to 5.0
+    completeness_score: f32, // 1.0 to 5.0
+    security_score: f32,     // 1.0 to 5.0
+    reasoning: String,
+    suggested_fixes: Vec<String>,
 }
 
 #[async_trait::async_trait]
 impl InferentialSensor for LlmJudgeSensor {
+    #[tracing::instrument(skip(self, output, task), fields(task_len=task.len(), output_len=output.len()))]
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
-        let system_prompt = "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.";
-        let user_prompt = format!("Task: {}\nOutput: {}", task, output);
+        let system_prompt = "You are an expert subagent judge in a SOTA Verification Loop. \
+        Evaluate the provided output against the task requirements. \
+        Score 'correctness_score', 'completeness_score', and 'security_score' on a scale of 1.0 to 5.0. \
+        Provide detailed reasoning and actionable 'suggested_fixes' if scores are low. \
+        Be rigorous.";
+
+        let user_prompt = format!("Task Requirements:\n{}\n\nExecution Output:\n{}", task, output);
 
         let req = ChatRequest {
             model: "judge-model".to_string(),
             system: system_prompt.to_string(),
             messages: vec![Message::user(user_prompt)],
             tools: vec![],
-            max_tokens: 500,
+            max_tokens: 1000,
             temperature: 0.0,
         };
 
         struct ParserAdapter { llm: Arc<dyn LlmClient>, }
-#[async_trait::async_trait]
-impl LlmClientForParser for ParserAdapter {
-    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
-}
-let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
-        match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
-            Ok(eval) => {
-                if eval.status.to_uppercase() == "REJECT" {
-                    Err(format!("Reason: {}. Confidence: {:.2}", eval.reason, eval.confidence))
-                } else {
-                    Ok(())
+        #[async_trait::async_trait]
+        impl LlmClientForParser for ParserAdapter {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
+        }
+
+        let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+
+        let mut attempts = 0;
+        let mut last_error = String::new();
+
+        while attempts <= self.max_retries {
+            if attempts > 0 {
+                tracing::warn!("LlmJudgeSensor retry attempt {} for inferential verification.", attempts);
+            }
+
+            // Pass 0 as max_retries to parse_structured_output to avoid nested retries,
+            // as we are manually managing retries in this loop.
+            match parse_structured_output::<JudgeEvaluationRubric>(&parser_client, req.clone(), 0).await {
+                Ok(eval) => {
+                    tracing::info!("Judge Evaluation: {:?}", eval);
+
+                    // Calculate composite score (could weight differently in future)
+                    let composite_score = (eval.correctness_score + eval.completeness_score + eval.security_score) / 3.0;
+
+                    if composite_score >= self.approval_threshold {
+                        tracing::info!("Inferential verification passed with score: {:.2}", composite_score);
+                        return Ok(());
+                    } else {
+                        tracing::warn!("Inferential verification failed. Score: {:.2}. Reason: {}", composite_score, eval.reasoning);
+                        let feedback = format!(
+                            "Inferential verification rejected the output. Composite Score: {:.2}/{:.2}.\nReasoning: {}\nSuggested Fixes: {:?}",
+                            composite_score, self.approval_threshold, eval.reasoning, eval.suggested_fixes
+                        );
+                        // Regression: Fail fast on genuine rubric failure, let the parent Orchestrator retry the task itself.
+                        return Err(feedback);
+                    }
+                }
+                Err(e) => {
+                    last_error = format!("Output Parsing Error: {}", e);
+                    tracing::error!("Judge subagent parsing failed: {}", last_error);
+                    attempts += 1;
                 }
             }
-            Err(e) => Err(format!("LLM Error: {}", e)),
         }
+
+        Err(format!("LlmJudgeSensor failed after {} retries. Last error: {}", self.max_retries, last_error))
     }
 }
 
