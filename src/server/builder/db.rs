@@ -48,6 +48,16 @@ pub struct Page {
     pub seo_metadata: Value,
 }
 
+pub async fn get_page_by_id(pool: &PgPool, tenant_id: Uuid, page_id: Uuid) -> Result<Page, sqlx::Error> {
+    sqlx::query_as::<_, Page>(
+        "SELECT id, tenant_id, site_id, path, title, seo_metadata FROM builder_pages WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(tenant_id)
+    .bind(page_id)
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn list_pages(pool: &PgPool, tenant_id: Uuid, site_id: Uuid) -> Result<Vec<Page>, sqlx::Error> {
     sqlx::query_as::<_, Page>(
         "SELECT id, tenant_id, site_id, path, title, seo_metadata FROM builder_pages WHERE tenant_id = $1 AND site_id = $2",

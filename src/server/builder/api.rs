@@ -409,6 +409,15 @@ async fn update_block(
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Trigger cache invalidation for the edge cache
+    let page = db::get_page_by_id(&pool, tenant_id, block.page_id).await;
+    if let Ok(p) = page {
+        let cache_key = format!("edge_site_{}_{}", tenant_id, p.site_id);
+        let cache = super::edge::get_edge_cache();
+        cache.invalidate(&cache_key).await;
+    }
+
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
