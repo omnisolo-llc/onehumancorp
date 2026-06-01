@@ -132,7 +132,6 @@ export default function OnboardingWizard() {
 
       setStep(2); // Go to review step
     } catch (err: any) {
-      setStep(1); setChatStep(1);
       console.error(err);
       setError(err.message || 'An error occurred processing details');
     } finally {
@@ -159,7 +158,7 @@ export default function OnboardingWizard() {
         body: JSON.stringify({
           business_type: businessType,
           company_name: businessName,
-          company_description: businessDescription,
+          company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
@@ -183,7 +182,6 @@ export default function OnboardingWizard() {
       setStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
-      setStep(1); setChatStep(1);
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
       setStep(3); // Go back to last input screen on error

@@ -1,4 +1,5 @@
 exports_files([
+    "playwright_spec_coverage_check.sh",
     "playwright_test.sh",
     "run_playwright.sh",
 ])
