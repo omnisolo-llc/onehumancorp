@@ -4,6 +4,7 @@ use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
 use tracing::{error, info, warn};
 use uuid::Uuid;
+use std::time::Instant;
 
 pub struct HybridSyncDaemon {
     sqlite_pool: SqlitePool,
@@ -20,15 +21,21 @@ impl HybridSyncDaemon {
 
     pub async fn run(&self) {
         loop {
+            let mode = ::server_telemetry::get_deployment_mode();
+            let start = Instant::now();
             if let Err(e) = self.sync_step().await {
                 error!("Hybrid sync daemon error: {}", e);
+                ::server_telemetry::record_sync_daemon_error(mode, "sync_step_error");
             }
             if let Err(e) = self.sync_cloud_escalations().await {
                 error!("Hybrid sync cloud escalations error: {}", e);
+                ::server_telemetry::record_sync_daemon_error(mode, "cloud_escalation_error");
             }
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
+                ::server_telemetry::record_sync_daemon_error(mode, "telemetry_step_error");
             }
+            ::server_telemetry::record_sync_latency_ms(mode, start.elapsed().as_millis() as f64);
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }

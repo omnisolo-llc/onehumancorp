@@ -1,3 +1,4 @@
+pub mod metrics;
 #[path = "store.rs"]
 pub mod store;
 use crate::db::DB;

@@ -730,6 +730,207 @@
         }
       },
       "transparent": true
+    },
+    {
+      "id": 5,
+      "title": "Sync Error Rate by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "targets": [
+        {
+          "expr": "rate(sync_daemon_error_total[5m])",
+          "legendFormat": "{{mode}} - {{error}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Sync Latency (P95) by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(sync_latency_ms_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}} P95 Latency",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Sync Payload Size and Batch Depth",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "targets": [
+        {
+          "expr": "sum(ohc_sync_daemon_batch_size) by (mode)",
+          "legendFormat": "{{mode}} Batch Size",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sync_payload_size_bytes_sum[5m])) by (mode) / sum(rate(sync_payload_size_bytes_count[5m])) by (mode)",
+          "legendFormat": "{{mode}} Avg Payload (Bytes)",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 8,
+      "title": "Task Claim Contention",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(TaskClaimContentionTotal[5m])) by (mode)",
+          "legendFormat": "{{mode}} Task Claim Contention",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 9,
+      "title": "AutoDream Memories Processed",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "targets": [
+        {
+          "expr": "sum(ohc_autodream_memories_processed_total) by (mode)",
+          "legendFormat": "{{mode}} Processed",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 10,
+      "title": "AutoDream Batch Processing Duration",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_autodream_batch_processing_duration_ms_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}} Duration (ms)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
+    },
+    {
+      "id": 11,
+      "title": "AutoDream Consolidation Errors",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_autodream_consolidation_errors_total[5m])) by (mode, error)",
+          "legendFormat": "{{mode}} - {{error}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(20px) saturate(200%)"
+      }
     }
   ],
   "schemaVersion": 38,

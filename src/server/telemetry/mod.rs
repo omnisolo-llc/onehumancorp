@@ -1341,7 +1341,63 @@ pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
     })
 }
 
+
 static HARNESS_IO_BYTES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static SYNC_DAEMON_ERROR_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static SYNC_LATENCY_MS: OnceLock<Histogram<f64>> = OnceLock::new();
+static SYNC_PAYLOAD_SIZE_BYTES: OnceLock<Histogram<u64>> = OnceLock::new();
+
+pub fn get_sync_daemon_error_total() -> &'static Counter<u64> {
+    SYNC_DAEMON_ERROR_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .u64_counter("sync_daemon_error_total")
+            .with_description("Total sync daemon errors")
+            .build()
+    })
+}
+
+pub fn get_sync_latency_ms_histogram() -> &'static Histogram<f64> {
+    SYNC_LATENCY_MS.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .f64_histogram("sync_latency_ms")
+            .with_description("Sync latency in milliseconds")
+            .build()
+    })
+}
+
+pub fn get_sync_payload_size_bytes_histogram() -> &'static Histogram<u64> {
+    SYNC_PAYLOAD_SIZE_BYTES.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .u64_histogram("sync_payload_size_bytes")
+            .with_description("Sync payload size in bytes")
+            .build()
+    })
+}
+
+pub fn record_sync_daemon_error(mode: &str, error: &str) {
+    let counter = get_sync_daemon_error_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("mode", mode.to_string()),
+        opentelemetry::KeyValue::new("error", error.to_string()),
+    ]);
+}
+
+pub fn record_sync_latency_ms(mode: &str, latency_ms: f64) {
+    let histogram = get_sync_latency_ms_histogram();
+    histogram.record(latency_ms, &[
+        opentelemetry::KeyValue::new("mode", mode.to_string()),
+    ]);
+}
+
+pub fn record_sync_payload_size_bytes(mode: &str, size_bytes: u64) {
+    let histogram = get_sync_payload_size_bytes_histogram();
+    histogram.record(size_bytes as u64, &[
+        opentelemetry::KeyValue::new("mode", mode.to_string()),
+    ]);
+}
 
 pub fn get_harness_io_bytes_total() -> &'static Counter<u64> {
     HARNESS_IO_BYTES_TOTAL.get_or_init(|| {
