@@ -154,4 +154,25 @@ mod tests {
         assert_eq!(final_data.records, vec!["init".to_string(), "step2_data".to_string()]);
         assert_eq!(*final_data.computational_cache.get("metric_a").unwrap(), 42.0);
     }
+
+    #[tokio::test]
+    async fn test_code_native_error_handling() {
+        let mut env = RichExecutionEnvironment::new();
+
+        let missing = env.get_variable::<ComplexDataStructure>("non_existent");
+        assert!(missing.is_none());
+
+        env.set_variable("wrong_type", "A string value".to_string());
+        let cast_error = env.get_variable::<ComplexDataStructure>("wrong_type");
+        assert!(cast_error.is_none());
+
+        let correct_type = env.get_variable::<String>("wrong_type");
+        assert!(correct_type.is_some());
+        assert_eq!(*correct_type.unwrap(), "A string value".to_string());
+
+        assert!(env.contains_variable("wrong_type"));
+        let removed = env.remove_variable("wrong_type");
+        assert!(removed.is_some());
+        assert!(!env.contains_variable("wrong_type"));
+    }
 }

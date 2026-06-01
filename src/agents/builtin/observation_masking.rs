@@ -111,4 +111,53 @@ mod tests {
         assert!(!messages[2].tool_results[0].content.contains("[Observation Masked"));
         assert_eq!(messages[2].tool_results[0].content, "B".repeat(500));
     }
+
+    #[test]
+    fn test_observation_masking_edge_cases() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "empty_output".to_string(),
+                        content: "".to_string(),
+                        error: String::new(),
+                    },
+                    ToolResult {
+                        tool_call_id: "short_output".to_string(),
+                        content: "A short string".to_string(),
+                        error: String::new(),
+                    },
+                    ToolResult {
+                        tool_call_id: "exactly_size_limit".to_string(),
+                        content: "A".repeat(10),
+                        error: String::new(),
+                    },
+                ],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        apply_observation_masking(&mut messages, 0, 10);
+
+        assert!(!messages[0].tool_results[0].content.contains("[Observation Masked"));
+        assert_eq!(messages[0].tool_results[0].content, "");
+
+        assert!(messages[0].tool_results[1].content.contains("[Observation Masked"));
+        assert!(messages[0].tool_results[1].content.contains("Output was 14 bytes"));
+
+        assert!(!messages[0].tool_results[2].content.contains("[Observation Masked"));
+        assert_eq!(messages[0].tool_results[2].content, "A".repeat(10));
+    }
 }

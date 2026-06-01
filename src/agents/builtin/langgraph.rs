@@ -189,4 +189,33 @@ mod tests {
         assert_eq!(final_state.messages[2], "tool: Sunny");
         assert_eq!(final_state.messages[3], "assistant: The weather is sunny.");
     }
+
+    #[tokio::test]
+    async fn test_default_reducer_merge_json() {
+        let reducer = DefaultReducer;
+
+        let mut state = serde_json::json!({
+            "messages": ["hello"],
+            "count": 1,
+            "metadata": {
+                "key": "value"
+            }
+        });
+
+        let update = serde_json::json!({
+            "messages": ["world"],
+            "count": 2,
+            "metadata": {
+                "new_key": "new_value"
+            },
+            "new_field": "added"
+        });
+
+        reducer.reduce(&mut state, update);
+
+        assert_eq!(state["messages"], serde_json::json!(["hello", "world"]));
+        assert_eq!(state["count"], serde_json::json!(2));
+        assert_eq!(state["new_field"], serde_json::json!("added"));
+        assert_eq!(state["metadata"], serde_json::json!({ "new_key": "new_value" }));
+    }
 }
