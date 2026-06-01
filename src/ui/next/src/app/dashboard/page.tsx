@@ -27,7 +27,6 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
-  const [activeReferrals, setActiveReferrals] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -278,17 +277,13 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const [metricsRes, invitesRes, referralsRes] = await Promise.all([
+            const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
                 fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch(`/api/v1/growth/referrals/metrics?tenant_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -305,11 +300,6 @@ export default function Dashboard() {
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
-            }
-
-            if (referralsRes.ok) {
-                const referralsData = await referralsRes.json();
-                setActiveReferrals(referralsData.active_referrals);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -486,6 +476,35 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Welcome Banner */}
+         <div className="mb-2">
+             <h2 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Welcome back, Human.</h2>
+             <p className="text-gray-600 font-inter">Your AI assistants are working on your behalf.</p>
+         </div>
+
+         {/* Quick Actions (Grandmother Test) */}
+         <section className="mb-6 animate-fade-in">
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                 <div className="flex items-center gap-4">
+                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>
+                         Quick Actions
+                         <button className="ml-2 px-2 py-0.5 text-xs bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" onClick={() => {
+                             const hint = document.getElementById('quick-actions-hint');
+                             if (hint) hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+                         }}>?</button>
+                     </h2>
+                 </div>
+             </div>
+             <p id="quick-actions-hint" style={{ display: 'none' }} className="mb-4 bg-blue-50 text-blue-800 p-4 rounded-lg text-sm border-l-4 border-blue-500">
+                 These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.
+             </p>
+             <div className="flex gap-4">
+                 <Link href="/integrations" className="px-6 py-3 font-semibold text-gray-700 bg-white border hover:bg-gray-50 rounded-xl transition-colors shadow-sm text-sm">
+                     Connect Tools
+                 </Link>
+             </div>
+         </section>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
@@ -1386,7 +1405,7 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
