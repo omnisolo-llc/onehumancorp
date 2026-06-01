@@ -192,15 +192,15 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it('Step 1: Displays validation error when location is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
         chatStep: 3,
-        businessName: 'A',
-        location: 'NY',
+        businessName: 'Bakery',
+        location: 'A',
         businessType: 'Bakery',
         categories: ['food'],
         firstProductName: 'Cake',
@@ -214,7 +214,7 @@ describe('OnboardingWizard', () => {
 
     await user.click(generateButton);
 
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Location must be at least 2 characters.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
@@ -238,7 +238,7 @@ describe('OnboardingWizard', () => {
 
     await user.click(continueButton);
 
-    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Location must be at least 2 characters.')).not.toBeInTheDocument();
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
