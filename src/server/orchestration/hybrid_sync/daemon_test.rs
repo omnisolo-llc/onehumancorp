@@ -13,11 +13,11 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {
         let sqlite_pool = SqlitePoolOptions::new()
-            .connect("sqlite://file::memory:?cache=shared")
+            .connect("sqlite::memory:")
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -73,7 +73,9 @@ mod tests {
                 id VARCHAR PRIMARY KEY,
                 status VARCHAR NOT NULL,
                 payload TEXT,
-                tenant_id VARCHAR
+                tenant_id VARCHAR,
+                sync_error TEXT,
+                last_synced_at TIMESTAMP
             )",
         )
         .execute(&pg_pool)
@@ -188,11 +190,11 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     use std::time::Duration;
 
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite://file::memory:?cache=shared")
+        .connect("sqlite::memory:")
         .await
         .unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false\n            )").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
