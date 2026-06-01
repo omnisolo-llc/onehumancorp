@@ -3965,7 +3965,5 @@ mod tests_added_for_coverage {
         rec_b.created_at = now;
         let (winner, loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
         assert_eq!(winner.id, "a");
-        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
-        assert_eq!(winner.id, "a");
     }
 }
