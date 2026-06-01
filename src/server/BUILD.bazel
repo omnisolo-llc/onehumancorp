@@ -82,7 +82,6 @@ SERVER_RS_SRCS = [
     "//src/server/domain/repository:task_repo.rs",
     "//src/server/integrations:catalog.rs",
     "//src/server/integrations:chat.rs",
-    "//src/server/integrations:chatwoot.rs",
     "//src/server/integrations:githubissues.rs",
     "//src/server/integrations:imessage.rs",
     "//src/server/integrations:jira.rs",
@@ -244,6 +243,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:department_workers.rs",
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
+    "//src/server/workers:migration_worker.rs",
     "//src/server/workers:mod.rs",
 ]
 
@@ -297,6 +297,8 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
+        "//src/server/integrations/chatwoot:server_integrations_chatwoot",
+        "//src/server/integrations/daily:server_integrations_daily",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
