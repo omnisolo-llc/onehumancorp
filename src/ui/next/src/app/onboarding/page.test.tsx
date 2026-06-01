@@ -288,4 +288,40 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
   });
+
+  it('Save Draft button triggers draft API and shows success message', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock draft API success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({})
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    // Start at Step 2
+    act(() => {
+      useOnboardingStore.setState({ step: 2 });
+    });
+
+    render(<OnboardingWizard />);
+
+    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    expect(saveDraftButton).toBeInTheDocument();
+
+    await user.click(saveDraftButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    });
+
+    // Verify API was called
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
+      method: 'POST'
+    }));
+  });
 });
