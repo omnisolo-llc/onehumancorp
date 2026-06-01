@@ -3690,6 +3690,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                         <a onclick="showScreen('inbox-screen')">Inbox</a>
+                        <a onclick="showScreen('voice-settings-screen')" id="nav-voice">Voice Receptionist</a>
                         <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
                     </nav>
 
@@ -5918,6 +5919,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'help-screen': '/help',
                             'changelog-screen': '/changelog',
                             'api-screen': '/integrations',
+                            'voice-settings-screen': '/voice-settings',
                             'api-docs-screen': '/api-docs',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
@@ -6549,7 +6551,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'voice-settings-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -6931,6 +6933,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Changelog Screen -->
+                    <!-- Voice Settings Screen -->
+                    <div id="voice-settings-screen" class="screen glass">
+                        <h1>Voice Receptionist</h1>
+                        <p>Configure your autonomous AI voice agent to answer calls and take messages.</p>
+                        <div class="card glass">
+                            <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+                                <input type="checkbox" id="voice-enable-toggle">
+                                <strong>Enable AI Receptionist</strong>
+                            </label>
+                            <div style="margin-bottom:16px;">
+                                <label for="voice-phone-number">Select Phone Number</label>
+                                <select id="voice-phone-number" style="width:100%; padding:8px; border-radius:4px; border:1px solid var(--border);">
+                                    <option value="none">Assign a new number...</option>
+                                    <option value="1234567890">+1 (234) 567-890</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom:16px;">
+                                <label for="voice-instructions">Agent Instructions</label>
+                                <textarea id="voice-instructions" rows="4" style="width:100%; padding:8px; border-radius:4px; border:1px solid var(--border);" placeholder="What should the agent know? (e.g. Tell them I am booked until next week...)"></textarea>
+                            </div>
+                            <button onclick="alert('Voice Settings Saved')">Save Settings</button>
+                        </div>
+                    </div>
+
                     <div id="changelog-screen" class="screen">
                         <h1>What's New</h1>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
