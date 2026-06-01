@@ -60,8 +60,9 @@ pub struct CodeNativeAdapter {
 // Wait, `ohc_builtin_agent_tools` depends on `core`. So we can't implement `ToolExecutor` here if it's not in `core`.
 // We will just provide the struct here and implement `ToolExecutor` where it's defined, or we can just implement the execute logic here.
 impl CodeNativeAdapter {
-    pub async fn execute_adapter(&self, args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-        let mut env_lock = self.env.write().await;
+    pub async fn execute_adapter(&self, args: serde_json::Value, env: Option<Arc<tokio::sync::RwLock<RichExecutionEnvironment>>>) -> Result<String, crate::types::ToolError> {
+        let env_to_use = env.unwrap_or_else(|| self.env.clone());
+        let mut env_lock = env_to_use.write().await;
         self.tool.execute_native(&mut env_lock, args).await.map_err(|e| crate::types::ToolError::Fatal(e))
     }
 }

@@ -46,7 +46,15 @@ pub mod workflow;
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        self.execute_adapter(args).await
+        self.execute_adapter(args, None).await
+    }
+
+    async fn execute_with_env(
+        &self,
+        args: Value,
+        env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>
+    ) -> Result<String, ToolError> {
+        self.execute_adapter(args, env).await
     }
 }
 
@@ -83,6 +91,14 @@ pub trait ToolExecutor: Send + Sync {
         &self,
         args: Value,
     ) -> Result<String, ToolError>;
+
+    async fn execute_with_env(
+        &self,
+        args: Value,
+        _env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>
+    ) -> Result<String, ToolError> {
+        self.execute(args).await
+    }
 }
 
 /// Shared todo list state.

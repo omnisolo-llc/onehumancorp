@@ -742,7 +742,8 @@ impl Agent {
                     let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                         tool,
                         tc,
-                        cfg.max_retries
+                        cfg.max_retries,
+                        Some(self.native_env.clone())
                     ).await;
 
                     match res {
@@ -947,9 +948,11 @@ impl Agent {
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
         let cfg_max_retries = cfg.max_retries;
+        let native_env_node = self.native_env.clone();
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
+            let native_env_inner = native_env_node.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
                 let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
@@ -975,6 +978,7 @@ impl Agent {
                 for tc_val in read_only_calls {
                     let tt_clone = tt.clone();
                     let cfg_arc_clone = cfg_arc_node.clone();
+                    let native_env_ro = native_env_inner.clone();
                     read_only_futures.push(async move {
                         let name = tc_val["name"].as_str().unwrap();
                         let args = tc_val["arguments"].clone();
@@ -999,7 +1003,8 @@ impl Agent {
                             let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                 tool,
                                 &tc,
-                                max_retries
+                                max_retries,
+                                Some(native_env_ro.clone())
                             ).await;
                             (id, final_res)
                         } else {
@@ -1113,7 +1118,8 @@ impl Agent {
                         let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                             tool,
                             &tc,
-                            max_retries
+                            max_retries,
+                            Some(native_env_inner.clone())
                         ).await;
 
                         match final_res {
@@ -3056,7 +3062,7 @@ impl Agent {
 
         let mut modified_tc = tc.clone();
         modified_tc.arguments = args;
-        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
+        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries, None).await
     }
 }
 

@@ -12,12 +12,13 @@ impl ToolExecutionEngine {
         tool: &Tool,
         tc: &ToolCall,
         max_retries: usize,
+        env: Option<std::sync::Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     ) -> Result<String, ToolError> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
 
         loop {
-            match tool.execute.execute(tc.arguments.clone()).await {
+            match tool.execute.execute_with_env(tc.arguments.clone(), env.clone()).await {
                 Ok(res) => return Ok(res),
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.

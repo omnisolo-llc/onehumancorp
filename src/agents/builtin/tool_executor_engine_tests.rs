@@ -59,7 +59,7 @@ mod tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await
         });
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
@@ -92,7 +92,7 @@ mod tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await
         });
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
@@ -125,7 +125,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
@@ -151,7 +151,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
@@ -177,7 +177,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
@@ -203,7 +203,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
@@ -229,11 +229,56 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, None).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),
             _ => panic!("Expected HandoffRequested error"),
         }
+    }
+
+
+    struct EnvCheckingExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for EnvCheckingExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::Fatal("execute should not be called".to_string()))
+        }
+
+        async fn execute_with_env(
+            &self,
+            _args: serde_json::Value,
+            env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>
+        ) -> Result<String, ToolError> {
+            if env.is_some() {
+                Ok("env passed successfully".to_string())
+            } else {
+                Err(ToolError::Fatal("env not passed".to_string()))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_native_env_passed_to_executor() {
+        let tool = Tool {
+            name: "env_checker".to_string(),
+            description: "checks env".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(EnvCheckingExecutor),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "env_checker".to_string(),
+            arguments: json!({}),
+        };
+
+        let env = Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new()));
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, Some(env)).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "env passed successfully");
     }
 }
