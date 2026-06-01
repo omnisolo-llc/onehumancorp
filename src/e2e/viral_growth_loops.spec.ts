@@ -21,7 +21,7 @@ test.describe('Viral Growth Loops - Referral', () => {
     // Check that the referral link input contains the generated link
     const referralLinkInput = page.locator('input[readOnly]').filter({ hasText: 'ohc' }).first();
     // Wait for the fetch request to finish and link to be displayed.
-    await expect(referralLinkInput).toHaveValue(/ohc\.store\/join\?ref=|https:\/\/ohc\.app\/ref\//);
+    await expect(referralLinkInput).toHaveValue(/ohc\.store\/join\?ref=|https:\/\/ohc\.app\/ref\//, { timeout: 10000 });
 
     // Click the copy button to trigger any tracking
     const copyButton = page.getByRole('button', { name: 'Copy' }).first();

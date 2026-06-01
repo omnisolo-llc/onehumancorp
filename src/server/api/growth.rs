@@ -915,7 +915,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
-        let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
+        let res = handle_generate_customer_referral(Extension(state), Json(req)).await;
 
         let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json: GenerateCustomerReferralResponse = serde_json::from_slice(&body_bytes).unwrap();
@@ -932,7 +932,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let req = GenerateCartRequest { customer_name: Some("Bob".to_string()), cart_value: Some("$100.00".to_string()) };
-        let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
+        let res = handle_generate_cart(Extension(state), Json(req)).await;
 
         let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json: GenerateCartResponse = serde_json::from_slice(&body_bytes).unwrap();
