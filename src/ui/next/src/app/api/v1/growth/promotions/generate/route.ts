@@ -1,28 +1,41 @@
 import { NextResponse } from 'next/server';
 
-const promotions = [
-  "Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/{tenant}",
-  "🚀 Just dropped! Check out our latest arrivals and get a special 15% discount on your first order. Use code NEW15 at checkout! https://ohc.store/shop/{tenant}",
-  "✨ Special offer just for you! Buy one, get one 50% off on all accessories this week. Don't miss out! Shop now: https://ohc.store/shop/{tenant}",
-  "🔥 Limited time offer: Free shipping on all orders over $50! Stock up on your essentials today. https://ohc.store/shop/{tenant}",
-  "🎁 Treat yourself! Use code TREAT20 for 20% off your entire purchase today. Shop the collection: https://ohc.store/shop/{tenant}",
-];
-
 export async function POST(request: Request) {
+  let body: any = {};
   try {
-    const { tenant } = await request.json();
-    const tenantName = tenant || 'my-store';
+    const text = await request.text();
+    if (text) {
+      body = JSON.parse(text);
+    }
+  } catch (e) {
+    console.error("Failed to parse body:", e);
+  }
 
-    // Pick a random promotion
-    const randomPromo = promotions[Math.floor(Math.random() * promotions.length)];
-    const message = randomPromo.replace('{tenant}', tenantName);
+  try {
+    // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/promotions/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-    return NextResponse.json({ message });
+    if (backendRes.ok) {
+        const data = await backendRes.json();
+        return NextResponse.json(data);
+    } else {
+        // Fallback if backend is not available
+        const { tenant } = body;
+        const tenantStr = tenant || 'our store';
+        const message = `🎉 Exciting news from ${tenantStr}!\n\nAs a special thank you to our amazing community, we are running a limited-time promotion.\n\nUse code **SPECIAL15** at checkout to get 15% off your next order.\n\nHurry, this offer won't last long!\n\nShop now: https://ohc.store/${tenantStr}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+        return NextResponse.json({ message });
+    }
   } catch (error) {
     console.error("Error generating promotion:", error);
-    return NextResponse.json(
-      { error: "Failed to generate promotion" },
-      { status: 500 }
-    );
+    // Fallback if fetch fails completely
+    const { tenant } = body;
+    const tenantStr = tenant || 'our store';
+    const message = `🎉 Exciting news from ${tenantStr}!\n\nAs a special thank you to our amazing community, we are running a limited-time promotion.\n\nUse code **SPECIAL15** at checkout to get 15% off your next order.\n\nHurry, this offer won't last long!\n\nShop now: https://ohc.store/${tenantStr}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+    return NextResponse.json({ message });
   }
 }

@@ -79,6 +79,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/promotions/generate", post(handle_generate_promotion))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/storefront/track", post(handle_track_visitor))
@@ -114,6 +115,16 @@ pub struct GenerateReviewRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateReviewResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionRequest {
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionResponse {
     pub message: String,
 }
 
@@ -202,16 +213,50 @@ async fn handle_social_post(
     })
 }
 
+async fn handle_generate_promotion(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromotionRequest>,
+) -> impl IntoResponse {
+    let tenant = req.tenant.unwrap_or_else(|| "our store".to_string());
+
+    let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+    if api_key.is_empty() {
+        return Json(GeneratePromotionResponse {
+            message: format!("🎉 Exciting news from {}!\n\nAs a special thank you to our amazing community, we are running a limited-time promotion.\n\nUse code **SPECIAL15** at checkout to get 15% off your next order.\n\nHurry, this offer won't last long!\n\nShop now: https://ohc.store/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", tenant, tenant)
+        });
+    }
+
+    let client = crate::minimax::MinimaxClient::new(api_key);
+    let prompt = format!("You are an expert marketer for a small business. Generate a short, exciting promotional message for a store called {}. The promotion should offer 15% off using code SPECIAL15. Keep it friendly and concise. Include a link to https://ohc.store/{}. Sign off with 'Warmly, The Team'. Add '⚡ Powered by OHC' at the very end.", tenant, tenant);
+
+    let generated = match client.reason(&prompt).await {
+        Ok(res) => res,
+        Err(_) => format!("🎉 Exciting news from {}!\n\nAs a special thank you to our amazing community, we are running a limited-time promotion.\n\nUse code **SPECIAL15** at checkout to get 15% off your next order.\n\nHurry, this offer won't last long!\n\nShop now: https://ohc.store/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", tenant, tenant),
+    };
+
+    Json(GeneratePromotionResponse {
+        message: generated,
+    })
+}
+
 async fn handle_generate_review(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
-    // In a real implementation we would call an AI provider here.
-    // For now we simulate generating a review request based on the inputs.
-    let generated = format!(
-        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
-        req.customer_name, req.product_name, req.order_id
-    );
+    let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+    if api_key.is_empty() {
+        return Json(GenerateReviewResponse {
+            message: format!("Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", req.customer_name, req.product_name, req.order_id)
+        });
+    }
+
+    let client = crate::minimax::MinimaxClient::new(api_key);
+    let prompt = format!("You are an expert customer success manager for a small business. Draft a short, warm email to a customer named {} asking for a product review for their recent purchase of {}. The review link is https://ohc.store/review/{}. Be polite and emphasize how much their feedback helps the business grow. Sign off with 'Warmly, The Team'. Add '⚡ Powered by OHC' at the very end.", req.customer_name, req.product_name, req.order_id);
+
+    let generated = match client.reason(&prompt).await {
+        Ok(res) => res,
+        Err(_) => format!("Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", req.customer_name, req.product_name, req.order_id),
+    };
 
     Json(GenerateReviewResponse {
         message: generated,
@@ -967,6 +1012,23 @@ mod tests {
 
         assert!(res_json.message.contains("Hi Bob"));
         assert!(res_json.message.contains("totaling $100.00"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_promotion() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GeneratePromotionRequest { tenant: Some("SuperStore".to_string()) };
+        let res = handle_generate_promotion(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GeneratePromotionResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(res_json.message.contains("SuperStore"));
+        assert!(res_json.message.contains("SPECIAL15"));
     }
 
     #[tokio::test]
