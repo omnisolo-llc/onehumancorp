@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-test('renders AI Departments heading', async () => {
+test('renders Agents heading', async () => {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     json: async () => ({ pending_approvals: [], next_cursor: null }),
@@ -25,7 +25,7 @@ test('renders AI Departments heading', async () => {
   render(<AgentsPage />);
 
   await waitFor(() => {
-    expect(screen.getByText('AI Departments')).toBeDefined();
+    expect(screen.getByText('Agents')).toBeDefined();
   });
 });
 

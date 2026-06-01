@@ -533,6 +533,29 @@ export default function Dashboard() {
            </div>
          </section>
 
+         {/* Quick Actions */}
+         <section className="mb-6 flex gap-4">
+            <button onClick={() => window.location.href = '/agents'} className="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg font-semibold shadow-sm hover:bg-blue-200">
+               Manage AI Assistants
+            </button>
+            <button onClick={() => setShowAdvanced(!showAdvanced)} className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-semibold shadow-sm hover:bg-gray-200">
+               Settings
+            </button>
+         </section>
+
+         {showAdvanced && (
+           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+              <div className="bg-white p-6 rounded-xl w-full max-w-md">
+                 <h2 className="text-xl font-bold mb-4 text-gray-900">Settings</h2>
+                 <label className="flex items-center gap-2 text-gray-900">
+                    <input type="checkbox" />
+                    <span>Enable Email Notifications</span>
+                 </label>
+                 <button onClick={() => setShowAdvanced(false)} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Close</button>
+              </div>
+           </div>
+         )}
+
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">

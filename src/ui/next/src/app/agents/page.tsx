@@ -128,6 +128,7 @@ export default function AgentsPage() {
     { id: 'legal', name: 'The Counsel', role: 'Legal', icon: '⚖️', description: 'Drafts contracts and handles compliance.' },
     { id: 'business_advisory', name: 'The Strategist', role: 'Advisory', icon: '📈', description: 'Provides insights and growth strategies.' },
     { id: 'discovery', name: 'The Scout', role: 'Discovery', icon: '🔍', description: 'Optimizes structured data for LLM crawlers.' },
+    { id: 'marketing_pro', name: 'Marketing Pro', role: 'Marketing', icon: '🚀', description: 'Advanced AI insights and campaigns.' },
   ];
 
   return (
@@ -150,7 +151,7 @@ export default function AgentsPage() {
               </button>
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">AI Departments</h1>
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">Agents</h1>
           <p className="text-sm text-gray-500 mt-1">Your autonomous business team.</p>
         </header>
 

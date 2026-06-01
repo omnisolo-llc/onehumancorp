@@ -208,7 +208,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Review and add any extra details to help our AI generate the perfect store.
+                    Zero tech skills needed. We do the heavy lifting.
                   </p>
 
                   <div className="flex flex-col gap-4">
@@ -231,6 +231,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 1 && (
                 <>
+                  <button onClick={() => setWizardStep(0)} className="text-[#0071E3] font-bold text-sm mb-4 block">Back</button>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
