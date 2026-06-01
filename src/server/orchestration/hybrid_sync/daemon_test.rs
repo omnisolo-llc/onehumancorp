@@ -232,18 +232,8 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    // The async env issue... temp_env is synchronous
-    let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
-    let _old_standalone = std::env::var("OHC_STANDALONE_MODE");
-
-    unsafe {
-        std::env::set_var("OHC_TELEMETRY_ENABLED", "false");
-        std::env::set_var("OHC_STANDALONE_MODE", "true");
-    }
-
-    // We also need to reload config somehow... or actually our change reads ::server_config::get().
-    // We can't really reload standard OnceLock easily so we'll just check if it blocks.
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+    // Ensure we construct daemon with telemetry explicitly disabled without mutating env vars
+    let daemon = super::daemon::HybridSyncDaemon::new_with_telemetry(sqlite_pool.clone(), pg_pool.clone(), false);
     daemon.sync_telemetry_step().await.unwrap();
 
     // Check that it's still pending
@@ -254,18 +244,4 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     use sqlx::Row;
     let status: String = row.get("sync_status");
     assert_eq!(status, "pending");
-
-    unsafe {
-        if let Ok(val) = _old_telemetry {
-            std::env::set_var("OHC_TELEMETRY_ENABLED", val);
-        } else {
-            std::env::remove_var("OHC_TELEMETRY_ENABLED");
-        }
-
-        if let Ok(val) = _old_standalone {
-            std::env::set_var("OHC_STANDALONE_MODE", val);
-        } else {
-            std::env::remove_var("OHC_STANDALONE_MODE");
-        }
-    }
 }

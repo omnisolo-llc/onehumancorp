@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub struct HybridSyncDaemon {
     sqlite_pool: SqlitePool,
     pg_pool: PgPool,
+    telemetry_enabled: bool,
 }
 
 impl HybridSyncDaemon {
@@ -15,6 +16,15 @@ impl HybridSyncDaemon {
         Self {
             sqlite_pool,
             pg_pool,
+            telemetry_enabled: ::server_config::get().telemetry_enabled,
+        }
+    }
+
+    pub fn new_with_telemetry(sqlite_pool: SqlitePool, pg_pool: PgPool, telemetry_enabled: bool) -> Self {
+        Self {
+            sqlite_pool,
+            pg_pool,
+            telemetry_enabled,
         }
     }
 
@@ -34,7 +44,7 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_telemetry_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if !::server_config::get().telemetry_enabled {
+        if !self.telemetry_enabled {
             return Ok(());
         }
 

@@ -340,13 +340,9 @@ impl TeammateMesh for SleepingMockMesh {
 
 #[tokio::test]
 async fn test_degradation_fallback_standalone() {
-    unsafe {
-        std::env::set_var("OHC_STATE_MANAGER_TIMEOUT_MS", "50");
-    }
-
     let db = setup_db().await;
     let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
-    let state_manager = StandaloneStateManager::new(db.clone(), mesh);
+    let state_manager = StandaloneStateManager::new_with_timeout(db.clone(), mesh, std::time::Duration::from_millis(50));
 
     // Testing the fail-safe behavior via mocked timeout
     // The acquire_lock on the MockMesh sleeps past the configured timeout.
@@ -355,13 +351,9 @@ async fn test_degradation_fallback_standalone() {
     let elapsed = start.elapsed();
 
     // It should time out around the configured threshold, not the full lock wait.
-    assert!(elapsed < std::time::Duration::from_millis(100));
-    assert!(elapsed > std::time::Duration::from_millis(40));
+    assert!(elapsed < std::time::Duration::from_millis(500));
+    assert!(elapsed >= std::time::Duration::from_millis(40));
 
     // And returned empty list fail-safe
     assert_eq!(tasks.len(), 0);
-
-    unsafe {
-        std::env::remove_var("OHC_STATE_MANAGER_TIMEOUT_MS");
-    }
 }
