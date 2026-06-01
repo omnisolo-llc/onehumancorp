@@ -61,6 +61,20 @@ impl OHCSandboxManager for LocalSandbox {
             }
         }
 
+        let git_internals = [".git/hooks", ".git/objects", ".git/refs", ".git/config", ".git/HEAD", ".git/index"];
+        for git_internal in &git_internals {
+            if cmd.contains(git_internal) {
+                let reason = format!("Command attempts to access git-internal path: {}", git_internal);
+                if let Some(cb) = &self.callback {
+                    if !cb.ask_for_permission(cmd, &reason).await {
+                        return Err(ViolationEvent { reason, command: cmd.to_string() });
+                    }
+                } else {
+                    return Err(ViolationEvent { reason, command: cmd.to_string() });
+                }
+            }
+        }
+
         let work_dir = self.env.dir_path().to_str().unwrap_or("");
         match self.env.execute(cmd, work_dir, Duration::from_secs(30)).await {
             Ok(output) => {
@@ -154,3 +168,14 @@ mod tests {
         assert!(result.is_err());
     }
 }
+
+    #[tokio::test]
+    async fn test_local_sandbox_execute_deny_git_internals() {
+        let config = SandboxConfig::default();
+        let sandbox = LocalSandbox::new(config, None);
+        let result = sandbox.execute("echo 'test' > .git/hooks/pre-commit").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.reason, "Command attempts to access git-internal path: .git/hooks");
+        assert_eq!(err.command, "echo 'test' > .git/hooks/pre-commit");
+    }

@@ -64,6 +64,13 @@ impl ASTParser {
         }
 
 
+        if node_kind == "word" || node_kind == "raw_string" || node_kind == "string" || node_kind == "command_name" {
+             let text = &source[node.start_byte()..node.end_byte()];
+             if text.contains(".git/hooks") || text.contains(".git/objects") || text.contains(".git/refs") || text.contains(".git/HEAD") || text.contains(".git/config") || text.contains(".git/index") {
+                  return Err("Dangerous pattern detected: Git internal path access".to_string());
+             }
+        }
+
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             self.walk_node_for_security(child, source)?;
@@ -116,5 +123,17 @@ mod tests {
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
+    }
+
+    #[test]
+    fn test_block_git_internals() {
+        let mut parser = ASTParser::new();
+        let res1 = parser.parse_for_security("echo 'test' > .git/hooks/pre-commit");
+        assert!(res1.is_err());
+        assert_eq!(res1.unwrap_err(), "Dangerous pattern detected: Git internal path access");
+        let res2 = parser.parse_for_security("cat .git/HEAD");
+        assert!(res2.is_err());
+        let res3 = parser.parse_for_security("git status");
+        assert!(res3.is_ok());
     }
 }

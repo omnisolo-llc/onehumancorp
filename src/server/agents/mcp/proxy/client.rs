@@ -1,11 +1,11 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer, RegisterProxyRequest, proxy_to_server};
+use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
 use tonic::transport::Channel;
 use tonic::Request;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use std::process::Stdio;
-use tracing::{info, warn, error};
+
+use tracing::{info, error};
 use super::blob::{create_blob_provider, BlobProvider};
 use std::sync::Arc;
 
@@ -101,7 +101,8 @@ impl LocalProxyClient {
 
                                             ::server_telemetry::record_sandbox_violation(&e.reason, &e.command);
 
-                                            (false, "".to_string(), error_msg)
+                                            let xml_error_msg = format!("<sandbox_violations>\n<violation>\n<reason>{}</reason>\n<command>{}</command>\n</violation>\n</sandbox_violations>\n{}", e.reason, e.command, error_msg);
+                                            (false, "".to_string(), xml_error_msg)
                                         }
                                     }
                                 }
