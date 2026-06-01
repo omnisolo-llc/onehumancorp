@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
 use futures::future::join_all;
@@ -108,7 +108,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let role = req.system;
             let output = if role.contains("Lead") {
                 format!("Lead Agent Output: {}", self.resp)
@@ -116,7 +116,7 @@ mod tests {
                 format!("Worker Output: {}", self.resp)
             };
 
-            Ok(ChatResponse {
+            Ok(ohc_builtin_agent_core::types::ChatResponse {
                 message: Message::assistant(output),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
@@ -159,14 +159,14 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for AdaptiveMockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let output = if req.system.contains("COMPLEX") {
                 "COMPLEX".to_string()
             } else {
                 "Adaptive output".to_string()
             };
 
-            Ok(ChatResponse {
+            Ok(ohc_builtin_agent_core::types::ChatResponse {
                 message: Message::assistant(output),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
@@ -215,14 +215,14 @@ mod tests {
         struct HintMockLlmClient;
         #[async_trait::async_trait]
         impl LlmClient for HintMockLlmClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(&self, req: ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let msg_content = &req.messages[0].content;
                 let output = if msg_content.contains("SONA Trajectory Hint") {
                     "Hint recognized".to_string()
                 } else {
                     "No hint".to_string()
                 };
-                Ok(ChatResponse {
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
                     message: Message::assistant(output),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
