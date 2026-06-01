@@ -95,7 +95,7 @@ pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
     HARNESS_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.harness");
         meter
-            .f64_histogram("harness_execution_latency")
+            .f64_histogram("ohc_harness_command_duration_seconds")
             .with_description("Execution latency for Harness")
             .build()
     })
@@ -1162,7 +1162,7 @@ pub fn get_bubblewrap_spawn_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_SPAWN_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("BubblewrapSpawnTotal")
+            .i64_up_down_counter("ohc_harness_executions_total")
             .with_description("Total number of Bubblewrap process spawns")
             .build()
     })
@@ -1172,7 +1172,7 @@ pub fn get_bubblewrap_execution_latency() -> &'static Histogram<f64> {
     BUBBLEWRAP_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .f64_histogram("BubblewrapExecutionLatency")
+            .f64_histogram("ohc_harness_execution_duration_ms")
             .with_description("Execution latency of Bubblewrap processes")
             .build()
     })
@@ -1182,7 +1182,7 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("BubblewrapViolationTotal")
+            .i64_up_down_counter("ohc_harness_security_violation_total")
             .with_description("Total number of Bubblewrap policy violations")
             .build()
     })
@@ -1336,4 +1336,41 @@ pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
             .with_description("Total number of task state transitions")
             .build()
     })
+}
+
+static HARNESS_IO_BYTES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_harness_io_bytes_total() -> &'static Counter<u64> {
+    HARNESS_IO_BYTES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .u64_counter("ohc_harness_io_bytes_total")
+            .with_description("Total I/O bytes recorded by Harness")
+            .build()
+    })
+}
+
+pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
+    let counter = get_harness_io_bytes_total();
+    counter.add(
+        bytes,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+            opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+        ],
+    );
+}
+
+#[cfg(test)]
+mod harness_io_bytes_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_harness_io_bytes() {
+        // Just calling it ensures it doesn't panic
+        record_harness_io_bytes("test_agent", "test_task", 1024);
+        let counter = get_harness_io_bytes_total();
+        // Counter doesn't easily expose current value in OpenTelemetry, but ensuring initialization is fine.
+        counter.add(0, &[]);
+    }
 }

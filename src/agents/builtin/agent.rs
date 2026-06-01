@@ -2448,6 +2448,24 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} read-only tool calls concurrently.", read_only_calls.len());
             }
             for tc in &read_only_calls {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
+                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
+                        return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
+                    }
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
+                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
+                        return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
+                    }
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
+                    let is_high_risk = ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
+                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name) });
+                        return Err(ToolError::UserFixable(format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name)).into());
+                    }
+                }
+
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
@@ -2628,12 +2646,24 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate || final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
                     }
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
+                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
+                        return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
+                    }
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Supervisory {
+                    let is_high_risk = ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
+                    if is_high_risk && !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name) });
+                        return Err(ToolError::UserFixable(format!("Tool call {} requires supervisory approval (high-risk tool).", tc.name)).into());
+                    }
                 }
+
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
@@ -3394,6 +3424,187 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Token budget exhausted"));
+    }
+
+    #[tokio::test]
+    async fn test_human_in_loop_spectrum_approval_on_all() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "read_only_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let dummy_tool = Tool {
+            name: "read_only_tool".to_string(),
+            description: "A read-only tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: true,
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::ApprovalOnAll;
+        cfg.manually_approved_tool_calls = vec![];
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call read_only_tool requires manual approval."));
+    }
+
+    #[tokio::test]
+    async fn test_human_in_loop_spectrum_collaborative_edit() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "read_only_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let dummy_tool = Tool {
+            name: "read_only_tool".to_string(),
+            description: "A read-only tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: true,
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::CollaborativeEdit;
+        cfg.manually_approved_tool_calls = vec![];
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call read_only_tool requires collaborative editing/approval."));
+    }
+
+    #[tokio::test]
+    async fn test_human_in_loop_spectrum_supervisory_high_risk() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "bash".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                }
+            ]),
+        });
+
+        let dummy_tool = Tool {
+            name: "bash".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
+        cfg.manually_approved_tool_calls = vec![];
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User intervention required: Tool call bash requires supervisory approval (high-risk tool)."));
+    }
+
+    #[tokio::test]
+    async fn test_human_in_loop_spectrum_supervisory_low_risk() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "read_only_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-2".to_string()),
+                }
+            ]),
+        });
+
+        let dummy_tool = Tool {
+            name: "read_only_tool".to_string(),
+            description: "A read-only tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: true,
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
+        cfg.manually_approved_tool_calls = vec![];
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
+        // In the gating tool, supervisory will trigger a confirmation requirement if confidence < 0.5.
+        // Wait, confidence_threshold is 0.0 by default, so it triggers.
+        // We'll assert it triggers user intervention.
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("requires explicit user confirmation"));
     }
 
     #[tokio::test]
