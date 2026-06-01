@@ -14,6 +14,8 @@ interface OnboardingState {
   domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
+  businessEmail: string;
+  businessPhone: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
   isLoading: boolean;
@@ -31,6 +33,8 @@ interface OnboardingState {
   setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setBusinessEmail: (email: string) => void;
+  setBusinessPhone: (phone: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
@@ -53,6 +57,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
+      businessEmail: '',
+      businessPhone: '',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -70,6 +76,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setBusinessEmail: (businessEmail) => set({ businessEmail }),
+      setBusinessPhone: (businessPhone) => set({ businessPhone }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
       setIsLoading: (isLoading) => set({ isLoading }),

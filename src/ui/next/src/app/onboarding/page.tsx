@@ -17,6 +17,8 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    businessEmail, setBusinessEmail,
+    businessPhone, setBusinessPhone,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
@@ -48,6 +50,8 @@ export default function OnboardingWizard() {
         websiteTemplate,
         firstProductName,
         firstProductPrice,
+        businessEmail,
+        businessPhone,
         aiAgents,
         aiAutoRespond
       };
@@ -99,6 +103,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.businessEmail) setBusinessEmail(data.wizardState.businessEmail);
+        if (data.wizardState.businessPhone) setBusinessPhone(data.wizardState.businessPhone);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
@@ -128,6 +134,8 @@ export default function OnboardingWizard() {
       websiteTemplate,
       firstProductName,
       firstProductPrice,
+      businessEmail,
+      businessPhone,
       aiAgents,
       aiAutoRespond
     };
@@ -144,7 +152,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, isLoaded
+    businessEmail, businessPhone, aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -210,8 +218,9 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: 'admin@ohc.app',
+          admin_email: businessEmail || 'admin@ohc.app',
           admin_name: 'Admin',
+          admin_phone: businessPhone || '',
           admin_password: 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
@@ -317,7 +326,14 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(2)}
+                      onClick={() => {
+                        if (businessName.trim().length < 3) {
+                          setValidationError('Business Name must be at least 3 characters.');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(2);
+                      }}
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -361,7 +377,14 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      onClick={() => {
+                        if (whatYouSell.trim().length < 3) {
+                          setValidationError('Please describe what you sell (at least 3 characters).');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(3);
+                      }}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -404,12 +427,12 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
+                        if (location.trim().length < 2) {
+                          setValidationError('Location must be at least 2 characters.');
                           return;
                         }
                         setValidationError('');
@@ -504,9 +527,31 @@ export default function OnboardingWizard() {
                       />
                    </div>
                 </div>
+                <div className="pt-2 grid grid-cols-2 gap-2">
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={businessEmail}
+                        onChange={(e) => setBusinessEmail(e.target.value)}
+                        placeholder="you@email.com"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Phone (Optional)</label>
+                      <input
+                        type="tel"
+                        value={businessPhone}
+                        onChange={(e) => setBusinessPhone(e.target.value)}
+                        placeholder="(555) 123-4567"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                </div>
               </div>
 
-              {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+              {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
@@ -514,10 +559,27 @@ export default function OnboardingWizard() {
                       setValidationError('Business Name must be at least 3 characters.');
                       return;
                     }
+                    if (firstProductName.trim().length < 2) {
+                      setValidationError('Product name is required and must be at least 2 characters.');
+                      return;
+                    }
+                    const priceNum = parseFloat(firstProductPrice);
+                    if (!firstProductPrice || isNaN(priceNum) || priceNum <= 0) {
+                      setValidationError('Please enter a valid price greater than 0.');
+                      return;
+                    }
+                    if (businessEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)) {
+                      setValidationError('Please enter a valid email address.');
+                      return;
+                    }
+                    if (businessPhone && !/^[0-9\+\-\(\)\s]{7,20}$/.test(businessPhone)) {
+                      setValidationError('Please enter a valid phone number.');
+                      return;
+                    }
                     setValidationError('');
                     setStep(3);
                   }}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim() || !businessEmail.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
