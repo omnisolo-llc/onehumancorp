@@ -714,7 +714,22 @@ export default function Dashboard() {
 
          {/* Business Snapshot */}
          <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+
+          <Link href="/inbox" className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📞</span>
+                <h3 className="font-bold text-gray-900 font-outfit text-lg">AI Receptionist Active</h3>
+                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">ON</span>
+              </div>
+              <p className="text-gray-500 text-sm">3 Missed Calls Handled Today</p>
+            </div>
+            <div className="text-blue-500 font-semibold text-sm">
+              View Log &rarr;
+            </div>
+          </Link>
+
+          <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}

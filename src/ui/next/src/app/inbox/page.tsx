@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 type Message = {
@@ -13,6 +13,33 @@ type Message = {
 };
 
 export default function InboxPage() {
+  useEffect(() => {
+    fetch('/api/inbox/messages')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const formatted = data.map((d: any) => ({
+            id: d.id || Date.now(),
+            sender: d.source === 'voice' ? d.caller_id || 'Voice Caller' : d.source + ' User',
+            source: d.source === 'voice' ? 'Voice' : d.source,
+            icon: d.source === 'voice' ? '📞' : '💬',
+            content: d.content || d.transcript || 'Message',
+            date: d.created_at || 'Today',
+            draft: d.draft_reply || ''
+          }));
+          setMessages(prev => {
+            // Keep hardcoded defaults if no DB data or merge them
+            const merged = [...formatted, ...prev].reduce((acc, curr) => {
+               if(!acc.find((x:any) => x.id === curr.id)) acc.push(curr);
+               return acc;
+            }, []);
+            return merged;
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -33,7 +60,7 @@ export default function InboxPage() {
       draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
     },
     {
-      id: 3,
+      id: 4, sender: '+1 (555) 123-4567', source: 'Voice', icon: '📞', content: 'Customer asked if we do vegan cakes. Answered yes and sent SMS link. (Transcript: Can I get a vegan cake? Yes, we do. I will send you a link to order.)', date: 'Today', draft: 'Order SMS sent.' }, { id: 3,
       sender: 'WhatsApp User',
       source: 'WhatsApp',
       icon: '💬',
@@ -223,6 +250,23 @@ export default function InboxPage() {
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
 
+            {msg.source === 'Voice' && (
+              <div className="mt-2 bg-gray-100 p-2 rounded-lg flex items-center gap-3 w-64 shadow-inner">
+                <button className="text-[#0066FF] hover:text-[#005bb5] focus:outline-none">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                </button>
+                <div className="flex-1 h-1.5 bg-gray-300 rounded-full relative">
+                   <div className="absolute top-0 left-0 h-1.5 bg-[#0066FF] rounded-full w-1/3"></div>
+                </div>
+                <span className="text-xs font-mono text-gray-500">0:12</span>
+              </div>
+            )}
+            {msg.source === 'Voice' && (
+              <div className="mt-2 flex gap-2">
+                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Order SMS Sent</span>
+                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Checked Catalog</span>
+              </div>
+            )}
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
                <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
