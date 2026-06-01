@@ -6,6 +6,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -25,6 +27,7 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [activeReferrals, setActiveReferrals] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -117,6 +120,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function checkMilestones() {
+      if (localStorage.getItem("10th_order_milestone_shown") === "true") return;
+      try {
+        const res = await fetch("/api/v1/growth/milestones/check");
+        const data = await res.json();
+        if (data const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false); data.milestones) {
+          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          if (orderMilestone) {
+            setCurrentMilestone(orderMilestone);
+            setShowMilestoneModal(true);
+            localStorage.setItem("10th_order_milestone_shown", "true");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check milestones", e);
+      }
+    }
+    checkMilestones();
+  }, []);
+  const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
         const res = await fetch('/api/v1/growth/milestones/check');
@@ -150,6 +175,56 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
+
+    const updateOfflineStatus = () => {
+      setIsOffline(!navigator.onLine);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        setOfflineQueueCount(queue.length);
+      } catch(e) {}
+    };
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        if (queue.length > 0) {
+          const res = await fetch("/api/v1/sync/offline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mutations: queue })
+          });
+          if (res.ok) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            setOfflineQueueCount(0);
+          }
+        }
+      } catch (e) { console.error("Sync failed", e); }
+    };
+
+    const handleStorage = (e: any) => {
+      if (e.key === "ohc_offline_queue") {
+        try {
+          const queue = JSON.parse(e.newValue || "[]");
+          setOfflineQueueCount(queue.length);
+        } catch(e) {}
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("storage", handleStorage);
+    updateOfflineStatus();
+
+    // Setup interval to check queue dynamically (useful for offline writes in same tab)
+    const queueCheckInterval = setInterval(() => {
+      if (!navigator.onLine) {
+         try {
+           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           if (queue.length !== offlineQueueCount) setOfflineQueueCount(queue.length);
+         } catch(e) {}
+      }
+    }, 1000);
 
     const connectSwarmMesh = () => {
         try {
@@ -203,13 +278,17 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const [metricsRes, invitesRes] = await Promise.all([
+            const [metricsRes, invitesRes, referralsRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
                 fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`/api/v1/growth/referrals/metrics?tenant_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -227,12 +306,22 @@ export default function Dashboard() {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
             }
+
+            if (referralsRes.ok) {
+                const referralsData = await referralsRes.json();
+                setActiveReferrals(referralsData.active_referrals);
+            }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
         }
     };
 
     fetchMetrics();
+
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", updateOfflineStatus);
+        window.removeEventListener("storage", handleStorage);
+        clearInterval(queueCheckInterval);
 
     return () => {
         if (ws) ws.close();
@@ -348,20 +437,20 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
+          <div className="flex items-center">
+            <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
+              {offlineQueueCount} Payments Pending Sync
+            </div>
+            <div id="network-status-indicator" className={`${isOffline ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(255, 193, 7, 0.2)", color: "#B28200", border: "1px solid rgba(255, 193, 7, 0.3)" }}>
+              Offline - Changes saved locally
+            </div>
           </div>
         </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
-        </div>
+
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -485,11 +574,11 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Action Required (Approvals) */}
+         {/* Agent Updates (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -538,7 +627,7 @@ export default function Dashboard() {
                                             className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
-                                            Approve
+                                            Review & Send
                                         </button>
                                     </div>
                                 </div>
@@ -621,6 +710,45 @@ export default function Dashboard() {
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
                    </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Social Media Discount Share Growth Loop */}
+         <section className="mb-8 mt-8">
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: '#ffffff', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                <div className="flex items-center gap-4 w-full">
+                    <div className="w-16 h-16 bg-green-50 rounded-2xl shadow-sm flex items-center justify-center text-3xl">
+                        🐦
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                           <h3 className="text-lg font-bold font-outfit text-gray-900">Social Media Discount Share</h3>
+                           <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">New Growth Loop</span>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Offer a 10% discount on social media when you hit a new milestone. Drive instant traffic back to your store!</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                    <button
+                        onClick={async () => {
+                            try {
+                                const response = await fetch('/api/v1/growth/discount_share/generate', { method: 'POST' });
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    const text = encodeURIComponent(`I just unlocked a milestone for my store! 🚀 Here is a special 10% discount for my followers: ${data.share_url}`);
+                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                                } else {
+                                    alert('Failed to generate discount share link');
+                                }
+                            } catch (e) {
+                                alert('Network error');
+                            }
+                        }}
+                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                    >
+                        🐦 Share 10% Off on X (Twitter)
+                    </button>
                 </div>
             </div>
          </section>
@@ -1124,35 +1252,6 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Growth Loop: Link-in-Bio Generator */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
-                        <span className="text-xs font-medium text-pink-600">Social Growth</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Centralize Your Links</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Create a beautiful, mobile-friendly landing page for your social media bios. Add your storefront, booking links, and custom pages in one place.</p>
-                    <Link
-                        href="/link-in-bio-generator"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-semibold hover:bg-pink-700 transition-colors shadow-sm"
-                    >
-                        <span>Create Link-in-Bio Page</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                    </Link>
-                </div>
-                <div className="hidden md:flex w-48 h-32 bg-gray-50 rounded-xl border border-gray-200 items-center justify-center flex-shrink-0 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink-100/50 to-purple-100/50"></div>
-                    <div className="text-4xl relative z-10">🔗</div>
-                </div>
-            </div>
-         </section>
-
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1326,7 +1425,7 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">

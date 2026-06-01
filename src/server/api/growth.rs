@@ -88,6 +88,7 @@ where
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
+        .route("/referrals/metrics", get(handle_referral_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -153,6 +154,16 @@ pub struct ReferralGenerateResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralMetricsResponse {
+    pub active_referrals: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetReferralMetricsQuery {
+    pub tenant_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -287,7 +298,7 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = query.tenant.as_deref().unwrap_or("my-store");
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
@@ -332,7 +343,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -507,22 +518,41 @@ async fn handle_get_team_invites(
     }
 }
 
+async fn handle_referral_metrics(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetReferralMetricsQuery>,
+) -> Result<Json<ReferralMetricsResponse>, StatusCode> {
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM referrals WHERE tenant_id = $1")
+        .bind(&query.tenant_id)
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(active_referrals) => Ok(Json(ReferralMetricsResponse { active_referrals })),
+        Err(e) => {
+            tracing::error!("Failed to fetch referral metrics: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct DiscountShareResponse {
     pub share_url: String,
 }
 
 async fn handle_generate_discount_share(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
-    // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
+    let tenant_id = &auth_info.org_id;
     let uuid = uuid::Uuid::new_v4().to_string();
     let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
 
-    // Track generation metrics
-    // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
-    // we omit the direct `.add` call or use an existing log/metric method instead.
+    state.hub.append_recent_event(crate::hub::HubEvent {
+        r#type: "growth.discount_share_generated".to_string(),
+        payload: format!("{{\"tenant_id\": \"{}\", \"share_url\": \"{}\"}}", tenant_id, share_url),
+        occurred_at: chrono::Utc::now(),
+    });
 
     Ok(Json(DiscountShareResponse { share_url }))
 }
@@ -708,7 +738,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_db() -> PgPool {
-        let database_url = std::env::var("DATABASE_URL")
+        let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -922,6 +952,28 @@ mod tests {
 
         assert!(res_json.message.contains("Maya Cakes"));
         assert!(res_json.message.contains("VIP Referral Program"));
+    }
+
+    #[tokio::test]
+    async fn test_generate_discount_share() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = handle_generate_discount_share(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        let share_url = res.0.share_url;
+        assert!(share_url.starts_with("https://ohc.store/discount/"));
+        assert!(share_url.contains("tenant=test-org"));
+
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.discount_share_generated"));
     }
 
     #[tokio::test]
