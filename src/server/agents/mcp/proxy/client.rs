@@ -89,6 +89,7 @@ impl LocalProxyClient {
                                             let details = serde_json::json!({
                                                 "reason": e.reason,
                                                 "command": e.command,
+                                                "deployment_mode": ::server_telemetry::get_deployment_mode(),
                                             });
 
                                             let _ = ::server_telemetry::buffer_metric(
