@@ -11,7 +11,7 @@ pub trait OutputGuardrail: Send + Sync {
 }
 
 pub trait ToolGuardrail: Send + Sync {
-    fn check_tool(&self, tc: &ToolCall) -> Result<(), String>;
+    fn check_tool(&self, tc: &ToolCall) -> Result<(), ohc_builtin_agent_core::types::ToolError>;
 }
 
 #[derive(Clone)]
@@ -56,7 +56,7 @@ impl GuardrailRegistry {
         Ok(())
     }
 
-    pub fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+    pub fn check_tool(&self, tc: &ToolCall) -> Result<(), ohc_builtin_agent_core::types::ToolError> {
         for hook in &self.tool_guardrails {
             hook.check_tool(tc)?;
         }
@@ -97,14 +97,14 @@ impl OutputGuardrail for KeywordGuardrail {
 }
 
 impl ToolGuardrail for KeywordGuardrail {
-    fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+    fn check_tool(&self, tc: &ToolCall) -> Result<(), ohc_builtin_agent_core::types::ToolError> {
         for kw in &self.blocked_keywords {
             if tc.name.contains(kw) {
-                return Err(format!("Tool guardrail tripped: name contains blocked keyword: {}", kw));
+                return Err(ToolError::Fatal(format!("Tool guardrail tripped: name contains blocked keyword: {}", kw)));
             }
             let args_str = tc.arguments.to_string();
             if args_str.contains(kw) {
-                return Err(format!("Tool guardrail tripped: arguments contain blocked keyword: {}", kw));
+                return Err(ToolError::Fatal(format!("Tool guardrail tripped: arguments contain blocked keyword: {}", kw)));
             }
         }
         Ok(())
@@ -154,5 +154,27 @@ mod tests {
             arguments: json!({"arg": "banned_value"}),
         };
         assert!(registry.check_tool(&tc_bad_arg).is_err());
+    }
+}
+
+use crate::agent::AgentRunConfig;
+use ohc_builtin_agent_tools::Tool;
+use ohc_builtin_agent_core::types::ToolError;
+
+pub struct AnthropicToolGatingGuardrail {
+    cfg: AgentRunConfig,
+    tools: Vec<Tool>,
+}
+
+impl AnthropicToolGatingGuardrail {
+    pub fn new(cfg: AgentRunConfig, tools: Vec<Tool>) -> Self {
+        Self { cfg, tools }
+    }
+}
+
+impl ToolGuardrail for AnthropicToolGatingGuardrail {
+    fn check_tool(&self, tc: &ToolCall) -> Result<(), ToolError> {
+        let is_read_only = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+        crate::tools_gating::ToolGater::check_gating(tc, is_read_only, &self.cfg)
     }
 }

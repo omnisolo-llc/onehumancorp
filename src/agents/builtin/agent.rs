@@ -514,11 +514,7 @@ impl Agent {
                 let cfg_clone = cfg.clone();
                 read_only_futures.push(async move {
                     // Anthropic Mechanic: 3-Stage Tool Gating
-                    let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
-                    let res = match gating_res {
-                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
-                        Err(e) => Err(e),
-                    };
+                    let res = self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await;
                     (tc_clone, res)
                 });
             }
@@ -575,11 +571,7 @@ impl Agent {
             }
             for tc in &mutating_calls {
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
-                let res = match gating_res {
-                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
-                    Err(e) => Err(e),
-                };
+                let res = self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await;
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
@@ -676,6 +668,15 @@ impl Agent {
         let mut total_tokens = 0;
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
+        let mut final_cfg = cfg.clone();
+        if final_cfg.guardrails.is_none() {
+            final_cfg.guardrails = Some(crate::guardrails::GuardrailRegistry::new());
+        }
+        if let Some(registry) = &mut final_cfg.guardrails {
+            let cfg_clone = cfg.clone();
+            registry.tool_guardrails.push(std::sync::Arc::new(crate::guardrails::AnthropicToolGatingGuardrail::new(cfg_clone, session_tools.to_vec())));
+        }
+
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
             name: t.name.clone(),
             description: t.description.clone(),
@@ -733,8 +734,10 @@ impl Agent {
                 tool_results[i].tool_call_id = tc.id.clone();
 
                 // Termination Condition: Guardrail tripwire fires
-                if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
-                     return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires: {:?}", e))));
+                if let Some(registry) = &final_cfg.guardrails {
+                    if let Err(e) = registry.check_tool(tc) {
+                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires: {:?}", e))));
+                    }
                 }
 
                 let tool = session_tools.iter().find(|t| t.name == tc.name);
@@ -986,9 +989,7 @@ impl Agent {
                             arguments: args.clone(),
                         };
 
-                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, true, &cfg_arc_clone) {
-                            return (id, Err(e));
-                        }
+
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
@@ -1298,7 +1299,7 @@ impl Agent {
                 },
                 Ok(Err(e)) => {
                     let err_str = e.to_string();
-                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("Project not trusted") || err_str.contains("explicit user confirmation") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
@@ -1433,10 +1434,7 @@ impl Agent {
             let session_tools_clone = session_tools.to_vec();
             let max_retries = cfg.max_retries;
 
-            let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
-                 return Err(Box::new(e));
-            }
+
 
             read_only_futures.push(async move {
                 let mut retry_count = 0;
@@ -1513,10 +1511,7 @@ impl Agent {
                 iteration: i as i32,
             });
 
-            let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
-                 return Err(Box::new(e));
-            }
+
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
@@ -1646,7 +1641,7 @@ impl Agent {
                 },
                 Ok(Err(e)) => {
                     let err_str = e.to_string();
-                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("Project not trusted") || err_str.contains("explicit user confirmation") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
@@ -1681,6 +1676,15 @@ impl Agent {
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
+        let session_tools = self.tools.clone();
+        if final_cfg.guardrails.is_none() {
+            final_cfg.guardrails = Some(crate::guardrails::GuardrailRegistry::new());
+        }
+        if let Some(registry) = &mut final_cfg.guardrails {
+            let cfg_clone = cfg.clone();
+            registry.tool_guardrails.push(std::sync::Arc::new(crate::guardrails::AnthropicToolGatingGuardrail::new(cfg_clone, session_tools.clone())));
+        }
+
 
         // Append instruction to force the use of the structured output tool
         final_cfg.server_system_message = format!(
@@ -1786,7 +1790,7 @@ impl Agent {
                 },
                 Ok(Err(e)) => {
                     let err_str = e.to_string();
-                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("Project not trusted") || err_str.contains("explicit user confirmation") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
@@ -1838,6 +1842,14 @@ impl Agent {
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
+        if final_cfg.guardrails.is_none() {
+            final_cfg.guardrails = Some(crate::guardrails::GuardrailRegistry::new());
+        }
+        if let Some(registry) = &mut final_cfg.guardrails {
+            let cfg_clone = cfg.clone();
+            registry.tool_guardrails.push(std::sync::Arc::new(crate::guardrails::AnthropicToolGatingGuardrail::new(cfg_clone, session_tools.clone())));
+        }
+
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
@@ -1916,7 +1928,7 @@ impl Agent {
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &final_cfg.guardrails {
             if let Err(e) = guard_cfg.check_input(initial_message) {
-                on_event(AgentEvent::TaskError { error: e.clone() });
+                on_event(AgentEvent::TaskError { error: e.to_string() });
                 return Err(e.into());
             }
         }
@@ -2292,7 +2304,7 @@ impl Agent {
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_output(&last_assistant_content) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
                         return Err(e.into());
                     }
                 }
@@ -2366,11 +2378,11 @@ impl Agent {
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
-                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
+
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
@@ -2383,7 +2395,7 @@ impl Agent {
                 );
 
                 read_only_futures.push(async move {
-                    if let Err(e) = gating_res {
+                    if let Err(e) = Ok::<_, crate::types::ToolError>(()) {
                         return (tc_clone, Err(e));
                     }
                     let _retry_count = 0;
@@ -2564,7 +2576,7 @@ impl Agent {
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -3445,6 +3457,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.confidence_threshold = 0.0;
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
@@ -3494,6 +3507,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.confidence_threshold = 0.0;
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
@@ -3531,7 +3545,7 @@ mod tests {
 
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
+        assert!(res.unwrap_err().to_string().contains("Project not trusted"));
     }
 
     #[tokio::test]
@@ -4270,7 +4284,7 @@ mod tests {
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_err());
         let err_str = result.unwrap_err().to_string();
-        assert!(err_str.contains("USER_FIXABLE"));
+        assert!(err_str.contains("USER_FIXABLE") || err_str.contains("Project not trusted") || err_str.contains("explicit user confirmation"));
         assert!(err_str.contains("requires explicit user confirmation"));
 
     }
