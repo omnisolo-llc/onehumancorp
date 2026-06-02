@@ -57,6 +57,10 @@ export default function Dashboard() {
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
   const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before theyre gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
 
+  // Growth Loop: Link-in-Bio Generator State
+  const [showLinkInBioModal, setShowLinkInBioModal] = useState<boolean>(false);
+  const [linkInBioCopied, setLinkInBioCopied] = useState<boolean>(false);
+
   // Growth Loop: Wall of Love Generator State
   const [showWallOfLoveModal, setShowWallOfLoveModal] = useState<boolean>(false);
   const [isGeneratingWallOfLove, setIsGeneratingWallOfLove] = useState<boolean>(false);
@@ -677,6 +681,40 @@ export default function Dashboard() {
                        <p className="text-gray-800 text-sm leading-relaxed">
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
+                   </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Link-in-Bio Generator */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Link-in-Bio Generator</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Viral Growth</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Your Central Hub for Socials</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate a beautiful, mobile-optimized Link-in-Bio page perfect for Instagram and TikTok. Convert your followers into customers instantly.</p>
+                    <button
+                        onClick={() => setShowLinkInBioModal(true)}
+                        className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-semibold hover:bg-pink-700 transition-colors shadow-sm w-full md:w-auto"
+                    >
+                        Get Link-in-Bio
+                    </button>
+                </div>
+                <div className="w-full md:w-1/3 flex justify-center">
+                   <div className="w-24 h-32 bg-gray-50 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center p-2 relative overflow-hidden">
+                       <div className="w-6 h-6 rounded-full bg-pink-100 mb-2"></div>
+                       <div className="w-16 h-2 bg-gray-200 rounded-full mb-2"></div>
+                       <div className="w-14 h-2 bg-gray-200 rounded-full mb-1"></div>
+                       <div className="w-14 h-2 bg-gray-200 rounded-full mb-1"></div>
+                       <div className="w-14 h-2 bg-gray-200 rounded-full"></div>
+                       <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
                    </div>
                 </div>
             </div>
@@ -1887,6 +1925,72 @@ export default function Dashboard() {
                     )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link-in-Bio Modal */}
+      {showLinkInBioModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h2 className="text-xl font-bold font-outfit text-gray-900">Your Link-in-Bio</h2>
+              <button
+                onClick={() => setShowLinkInBioModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+                <p className="text-sm text-gray-600 mb-6 font-medium">Add this link to your Instagram, TikTok, and Twitter profiles. It automatically updates with your latest products and booking links.</p>
+
+                <div className="relative mb-6">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Your Custom URL</label>
+                  <div className="flex border rounded-xl overflow-hidden bg-gray-50">
+                     <input
+                        type="text"
+                        readOnly
+                        className="w-full text-sm font-mono p-3 bg-transparent border-none outline-none text-gray-800"
+                        value={`https://ohc.app/api/v1/growth/link-in-bio?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`}
+                     />
+                     <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://ohc.app/api/v1/growth/link-in-bio?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+                          setLinkInBioCopied(true);
+                          setTimeout(() => setLinkInBioCopied(false), 2000);
+                        }}
+                        className={`px-4 text-sm font-bold transition-colors ${linkInBioCopied ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                     >
+                        {linkInBioCopied ? 'Copied!' : 'Copy'}
+                     </button>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
+                    <span className="text-blue-500 text-lg">ℹ️</span>
+                    <div>
+                        <h4 className="text-sm font-bold text-blue-900 mb-1">Did you know?</h4>
+                        <p className="text-xs text-blue-800">Your Link-in-Bio includes a subtle "Powered by OHC" badge. If another business signs up through your link, you automatically earn a $50 credit!</p>
+                    </div>
+                </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => setShowLinkInBioModal(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                Close
+              </button>
+              <a
+                href={`/api/v1/growth/link-in-bio?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm font-medium hover:bg-pink-700 transition-colors shadow-sm text-center"
+              >
+                Preview Link
+              </a>
             </div>
           </div>
         </div>
