@@ -1526,7 +1526,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(database_url)
             .await
             .unwrap();
@@ -1615,7 +1615,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(database_url)
             .await
             .unwrap();
