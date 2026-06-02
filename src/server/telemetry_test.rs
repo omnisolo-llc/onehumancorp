@@ -526,3 +526,27 @@ fn test_record_llm_network_latency() {
     // This test verifies that the metric recording logic for llm network latency runs without panicking.
     ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
 }
+
+
+#[test]
+fn test_value_based_pii_redaction() {
+    let payload = serde_json::json!({
+        "safe_field_1": "123-45-6789", // SSN pattern
+        "safe_field_2": "4111-1111-1111-1111", // CC pattern
+        "safe_field_3": "sk-1234567890abcdefg", // API key pattern
+        "safe_field_4": "+1 (555) 123-4567", // Phone pattern
+        "safe_field_5": "just a normal string",
+        "nested": {
+            "safe_field_6": "ak-abcdefghijklmnopqrstuvwxyz"
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["safe_field_1"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_2"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_3"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_4"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_5"], "just a normal string");
+    assert_eq!(redacted["nested"]["safe_field_6"], "[REDACTED]");
+}

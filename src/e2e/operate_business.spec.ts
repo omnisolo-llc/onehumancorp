@@ -9,7 +9,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
     localStorage.removeItem('ohc_wizard_state');
   }, id);
 
-  await page.goto('/onboarding');
+  await page.goto('/website-builder');
 
   await page.getByRole('button', { name: /Start My Business Next/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
