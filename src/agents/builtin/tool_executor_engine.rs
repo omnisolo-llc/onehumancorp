@@ -21,16 +21,16 @@ impl ToolExecutionEngine {
                 Ok(res) => return Ok(res),
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
-                    if retry_count < max_retries {
-                        retry_count += 1;
-                        let backoff = Duration::from_millis(500 * (1 << retry_count));
-                        warn!("Transient error executing '{}', retrying {}/{} after {}ms...", tool.name, retry_count, max_retries, backoff.as_millis());
-                        sleep(backoff).await;
-                        continue;
-                    } else {
+                    if max_retries == 0 || retry_count >= max_retries {
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
                         return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
                     }
+
+                    retry_count += 1;
+                    let backoff = Duration::from_millis(500 * (1 << retry_count));
+                    warn!("Transient error executing '{}', retrying {}/{} after {}ms...", tool.name, retry_count, max_retries, backoff.as_millis());
+                    sleep(backoff).await;
+                    continue;
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.

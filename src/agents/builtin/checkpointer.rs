@@ -61,6 +61,10 @@ pub struct GitCheckpointer {
 }
 
 impl GitCheckpointer {
+    fn progress_file_path(&self, thread_id: &str) -> PathBuf {
+        self.repo_path.join(format!(".agent_progress_{}.json", thread_id))
+    }
+
     fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
         self.repo_path.join(format!(".scratchpad_{}.json", thread_id))
     }
@@ -95,10 +99,6 @@ impl GitCheckpointer {
         }
 
         GitCheckpointer { repo_path }
-    }
-
-    fn progress_file_path(&self, thread_id: &str) -> PathBuf {
-        self.repo_path.join(format!(".agent_progress_{}.json", thread_id))
     }
 }
 

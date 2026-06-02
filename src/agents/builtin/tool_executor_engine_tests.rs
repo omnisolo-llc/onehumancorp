@@ -58,7 +58,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 0).await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
