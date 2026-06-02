@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -59,6 +60,7 @@ impl DashboardService for MyDashboardService {
         let org_id1 = req.organization_id.clone();
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
+        let org_id4 = req.organization_id.clone();
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
@@ -83,13 +85,27 @@ impl DashboardService for MyDashboardService {
             tokio::spawn(async move {
                 Ok::<_, String>(hub2.get_meetings().await)
             }),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
-                    cost_auditor.get_total_cost(),
-                    cost_auditor.get_total_tokens(),
-                    cost_auditor.get_agent_costs_snapshot(),
-                ))
+            tokio::spawn(async move {
+                let org_id = org_id4;
+                let cache_key = format!("hub:cost:{}", org_id);
+                let cache = COST_CACHE.get_or_init(|| HybridCache::new(hub3.redis_client.clone()));
+
+                if let Some(cost_data) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(cost_data);
+                }
+
+                let hub_clone = hub3.clone();
+                let cost_data = tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub_clone.get_cost_auditor();
+                    (
+                        cost_auditor.get_total_cost(),
+                        cost_auditor.get_total_tokens(),
+                        cost_auditor.get_agent_costs_snapshot(),
+                    )
+                }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
+
+                cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
+                Ok::<_, String>(cost_data)
             }),
             tokio::spawn(async move {
                 let org_id = org_id1;
