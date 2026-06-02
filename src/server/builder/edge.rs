@@ -69,7 +69,7 @@ pub async fn handle_edge_request_impl(
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
     let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
-    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
+    let cache_key = format!("ohc:cache:{}:storefront:{}", tenant_id, site_id);
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
