@@ -19,7 +19,10 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec![
+            "tenant.quote.requested".to_string(),
+            "tenant.cart.abandoned".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -28,6 +31,33 @@ impl Department for SalesAgent {
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "tenant.cart.abandoned" {
+            ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "abandoned_cart_detected");
+
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let cart_value = event.payload.get("cart_value").and_then(|v| v.as_str()).unwrap_or("$0.00");
+
+            let message = format!(
+                "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+                customer_name, cart_value
+            );
+
+            let payload = serde_json::json!({
+                "feature_type": "abandoned_cart",
+                "customer_name": customer_name,
+                "cart_value": cart_value,
+                "draft_copy": message,
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Sales,
+                format!("Abandoned cart recovery for {}", customer_name),
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
