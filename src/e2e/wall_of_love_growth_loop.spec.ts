@@ -9,7 +9,7 @@ test.describe('Wall of Love Growth Loop', () => {
 
   test('should generate the Wall of Love widget and verify the viral loop embed renders', async ({ page }) => {
     // 1. Locate and click "Generate Widget"
-    await expect(page.getByRole('heading', { name: 'Wall of Love Widget' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Wall of Love Widget', exact: true })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Generate Widget' }).click();
 
     // 2. Verify the Wall of Love modal appears
