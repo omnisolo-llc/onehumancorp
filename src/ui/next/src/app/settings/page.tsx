@@ -10,6 +10,20 @@ export default function SettingsPage() {
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [language, setLanguage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const tenantId = localStorage.getItem('tenant') || 'my-store';
+      return localStorage.getItem(`primary_language_${tenantId}`) || 'en';
+    }
+    return 'en';
+  });
+  const [secondaryLanguage, setSecondaryLanguage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const tenantId = localStorage.getItem('tenant') || 'my-store';
+      return localStorage.getItem(`secondary_language_${tenantId}`) || '';
+    }
+    return '';
+  });
   const [preferences, setPreferences] = useState({
     urgent_booking: false,
     failed_payment: false,
@@ -70,6 +84,11 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    if (typeof window !== "undefined") {
+      const tenantId = localStorage.getItem("tenant") || "my-store";
+      localStorage.setItem(`primary_language_${tenantId}`, language);
+      localStorage.setItem(`secondary_language_${tenantId}`, secondaryLanguage);
+    }
     // Return to dashboard on save
     router.push('/dashboard');
   };
@@ -103,10 +122,20 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Language</p>
-              <select className="border rounded px-3 py-2 w-full max-w-xs text-gray-700 bg-white">
-                <option>English</option>
-                <option>Spanish</option>
+              <p className="text-sm font-medium text-gray-700 mb-1">Primary Language</p>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="border rounded px-3 py-2 w-full max-w-xs text-gray-700 bg-white">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="ar">Arabic</option>
+              </select>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Secondary Language (Optional)</p>
+              <select value={secondaryLanguage} onChange={(e) => setSecondaryLanguage(e.target.value)} className="border rounded px-3 py-2 w-full max-w-xs text-gray-700 bg-white">
+                <option value="">None</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="ar">Arabic</option>
               </select>
             </div>
           </div>

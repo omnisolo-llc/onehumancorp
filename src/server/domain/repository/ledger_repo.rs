@@ -9,6 +9,52 @@ pub struct LedgerRepository {
 }
 
 impl LedgerRepository {
+    pub async fn save_localized_transaction(&self, tx: crate::domain::repository::models::LocalizedTransaction) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    r#"INSERT INTO localized_transactions (id, tenant_id, original_amount, original_currency, target_currency, applied_fx_rate, applied_margin, final_amount, is_offline, reconciled, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#
+                )
+                .bind(&tx.id).bind(&tx.tenant_id).bind(&tx.original_amount).bind(&tx.original_currency).bind(&tx.target_currency).bind(&tx.applied_fx_rate).bind(&tx.applied_margin).bind(&tx.final_amount).bind(&tx.is_offline).bind(&tx.reconciled).bind(&tx.created_at)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    r#"INSERT INTO localized_transactions (id, tenant_id, original_amount, original_currency, target_currency, applied_fx_rate, applied_margin, final_amount, is_offline, reconciled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#
+                )
+                .bind(&tx.id).bind(&tx.tenant_id).bind(&tx.original_amount).bind(&tx.original_currency).bind(&tx.target_currency).bind(&tx.applied_fx_rate).bind(&tx.applied_margin).bind(&tx.final_amount).bind(&tx.is_offline).bind(&tx.reconciled).bind(&tx.created_at)
+                .execute(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_localized_transactions(&self, tenant_id: &str) -> Result<Vec<crate::domain::repository::models::LocalizedTransaction>, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query_as::<_, crate::domain::repository::models::LocalizedTransaction>(
+                    r#"SELECT id, tenant_id, original_amount, original_currency, target_currency, applied_fx_rate, applied_margin, final_amount, is_offline, reconciled, created_at FROM localized_transactions WHERE tenant_id = $1"#
+                )
+                .bind(tenant_id)
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query_as::<_, crate::domain::repository::models::LocalizedTransaction>(
+                    r#"SELECT id, tenant_id, original_amount, original_currency, target_currency, applied_fx_rate, applied_margin, final_amount, is_offline, reconciled, created_at FROM localized_transactions WHERE tenant_id = ?"#
+                )
+                .bind(tenant_id)
+                .fetch_all(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())
+            }
+        }
+    }
     pub fn new(db: Arc<DB>) -> Self {
         Self { db }
     }

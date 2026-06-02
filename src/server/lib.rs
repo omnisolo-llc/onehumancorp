@@ -2957,6 +2957,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }))
         }))
         .merge(webhook_router)
+        .merge(api::localization::router())
+        .merge(api::ledger::router())
         .merge(health_router)
         .fallback(ui_handler);
 

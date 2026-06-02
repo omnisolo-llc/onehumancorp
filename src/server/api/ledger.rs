@@ -15,8 +15,6 @@ use crate::domain::repository::models::{Invoice, InvoiceLineItem, PaymentEvent, 
 use crate::domain::repository::ledger_repo::LedgerRepository;
 
 #[derive(Clone)]
-pub struct AppState {
-    pub db: Arc<DB>,
 }
 
 #[derive(Deserialize)]
@@ -54,17 +52,18 @@ pub struct GetInvoiceQuery {
     pub tenant_id: String,
 }
 
-pub fn router() -> Router<AppState> {
+pub fn router() -> Router<crate::AppState> {
     Router::new()
         .route("/api/ledger/invoice/:id", get(get_invoice))
         .route("/api/ledger/invoice/draft", post(create_invoice_draft))
         .route("/api/ledger/invoice/:id/update", put(update_invoice_status))
         .route("/api/ledger/invoice/:id/pay", post(apply_payment))
         .route("/api/ledger/entries/:tenant_id", get(get_ledger_entries))
+        .route("/api/ledger/localized/:tenant_id", get(get_localized_transactions))
 }
 
 async fn get_invoice(
-    State(state): State<AppState>,
+    State(state): State<crate::AppState>,
     Path(id): Path<String>,
     axum::extract::Query(query): axum::extract::Query<GetInvoiceQuery>,
 ) -> impl IntoResponse {
@@ -77,7 +76,7 @@ async fn get_invoice(
 }
 
 async fn create_invoice_draft(
-    State(state): State<AppState>,
+    State(state): State<crate::AppState>,
     Json(payload): Json<CreateInvoiceDraftRequest>,
 ) -> impl IntoResponse {
     let repo = LedgerRepository::new(state.db);
@@ -121,7 +120,7 @@ async fn create_invoice_draft(
 }
 
 async fn update_invoice_status(
-    State(state): State<AppState>,
+    State(state): State<crate::AppState>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateInvoiceStatusRequest>,
 ) -> impl IntoResponse {
@@ -133,7 +132,7 @@ async fn update_invoice_status(
 }
 
 async fn apply_payment(
-    State(state): State<AppState>,
+    State(state): State<crate::AppState>,
     Json(payload): Json<ApplyPaymentRequest>,
 ) -> impl IntoResponse {
     let repo = LedgerRepository::new(state.db);
@@ -154,12 +153,23 @@ async fn apply_payment(
 }
 
 async fn get_ledger_entries(
-    State(state): State<AppState>,
+    State(state): State<crate::AppState>,
     Path(tenant_id): Path<String>,
 ) -> impl IntoResponse {
     let repo = LedgerRepository::new(state.db);
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+async fn get_localized_transactions(
+    State(state): State<crate::AppState>,
+    Path(tenant_id): Path<String>,
+) -> impl IntoResponse {
+    let repo = LedgerRepository::new(state.db);
+    match repo.get_localized_transactions(&tenant_id).await {
+        Ok(txs) => (StatusCode::OK, Json(txs)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }

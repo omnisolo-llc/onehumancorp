@@ -123,3 +123,40 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FxRate {
+    pub base_currency: String,
+    pub target_currency: String,
+    pub rate: f64,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FxMargin {
+    pub base_currency: String,
+    pub target_currency: String,
+    pub safe_margin: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct I18nString {
+    pub key: String,
+    pub language: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocalizedTransaction {
+    pub id: String,
+    pub tenant_id: String,
+    pub original_amount: f64,
+    pub original_currency: String,
+    pub target_currency: String,
+    pub applied_fx_rate: f64,
+    pub applied_margin: f64,
+    pub final_amount: f64,
+    pub is_offline: bool,
+    pub reconciled: bool,
+    pub created_at: DateTime<Utc>,
+}
