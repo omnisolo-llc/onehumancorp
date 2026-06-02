@@ -7,7 +7,7 @@ use tracing::warn;
 pub struct ToolExecutionEngine;
 
 impl ToolExecutionEngine {
-    /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic.
+    /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
     pub async fn execute_tool_with_langgraph_mechanics(
         tool: &Tool,
         tc: &ToolCall,
