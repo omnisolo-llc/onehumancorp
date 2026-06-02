@@ -4,6 +4,8 @@ import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
+import { HelpChat } from "../components/HelpChat";
+
 export const metadata: Metadata = {
   title: 'OHC Builder',
   description: 'Automated storefront builder',
@@ -22,11 +24,12 @@ export default function RootLayout({
       </head>
       <body>
         <TooltipProvider>
-          <WalkthroughProvider>
+                  <WalkthroughProvider>
             {children}
             <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
+            <HelpChat />
           </WalkthroughProvider>
-        </TooltipProvider>
+                </TooltipProvider>
       </body>
     </html>
   );

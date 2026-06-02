@@ -224,19 +224,18 @@ export function HelpWidget() {
 
       {open && (
         <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md [&>div]:flex-1">
+          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md">
             {helpTabs.map((t) => (
-              <WithTooltip key={t.id} id={`${t.id}-tab`} defaultText={`Open ${t.label} tab`}>
-                <button
-                  onClick={() => setTab(t.id)}
-                  className={`py-3 text-sm font-bold transition-all w-full ${
-                    tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  aria-pressed={tab === t.id}
-                >
-                  {t.label}
-                </button>
-              </WithTooltip>
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-1 py-3 text-sm font-bold transition-all ${
+                  tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900"
+                }`}
+                aria-pressed={tab === t.id}
+              >
+                {t.label}
+              </button>
             ))}
           </div>
 
