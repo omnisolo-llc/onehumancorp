@@ -215,21 +215,3 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
-
-# ── Delivery ──────────────────────────────────────────────────────────────────
-
-proto_library(
-    name = "delivery_proto",
-    srcs = ["delivery.proto"],
-    deps = [
-        ":organization_proto",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "delivery",
-    proto = ":delivery_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)

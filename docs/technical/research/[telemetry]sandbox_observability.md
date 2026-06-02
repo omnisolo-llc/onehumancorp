@@ -17,7 +17,7 @@ We have limited visibility into what happens *inside* the sandbox. We need high-
 2. Update `src/server/bash_sandbox/sandbox.go` to collect metrics during execution (using `syscall.Rusage`).
 3. Implement a background poller that aggregates these metrics every 5 seconds for long-running agent tasks.
 4. Ensure all metrics are tagged with `agent_id`, `organization_id`, and `task_id`.
-5. Create a Grafana dashboard JSON in `src/server/monitoring/grafana/dashboards/sandbox_observability.json` visualizing these metrics.
+5. Create a Grafana dashboard JSON in `monitoring/grafana/dashboards/sandbox_observability.json` visualizing these metrics.
 
 ## Priority
 P1

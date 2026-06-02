@@ -20,7 +20,7 @@ async fn test_acquire_resource_standalone_lock() {
     let resource_type = "inventory";
     let resource_id = "item-123";
 
-    let _guard1 = lock.acquire_resource(tenant_id, resource_type, resource_id).await.unwrap();
+    let guard1 = lock.acquire_resource(tenant_id, resource_type, resource_id).await.unwrap();
 
     // The resource should be locked
     let lock_clone = lock.locks.lock().await;

@@ -11,7 +11,7 @@ The OHC swarm consumes significant LLM tokens across various providers. While we
 
 ## Research Report
 Current telemetry in `src/server/telemetry/telemetry.go` tracks `ohc_token_usage_total` with labels for `agent_id`, `role`, `model`, and `type`. However, this data is decoupled from the **outcome** of the tasks.
-- The tracked telemetry forecaster in `src/server/telemetry/forecaster.rs` focuses on burn-rate and billing projections, not performance optimization.
+- The `TokenForecastWorker` focuses on rate-limiting and billing projections, not performance optimization.
 - There is no mechanism to correlate a specific task's total token consumption with its final `SUCCESS` or `FAILURE` state in Prometheus.
 - ROI (Return on Investment) analysis is currently a manual manual calculation from DB logs.
 
