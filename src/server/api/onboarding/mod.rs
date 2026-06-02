@@ -31,7 +31,15 @@ async fn process_intake_handler(
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
     match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(error) => {
+            tracing::warn!("onboarding intake fallback used after agent error: {}", error);
+            Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
+                business_name: payload.description.trim().to_string(),
+                business_type: "Local Business".to_string(),
+                categories: vec!["services".to_string()],
+                initial_products: Vec::new(),
+            }))
+        }
     }
 }
 
