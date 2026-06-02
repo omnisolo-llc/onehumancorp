@@ -141,7 +141,6 @@ impl OnboardingAgent {
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
         let password = req.admin_password.clone();
-        let location = req.location.clone();
 
         let req_first_product_name = req.first_product_name.clone();
         let req_first_product_price = req.first_product_price.clone();
@@ -306,7 +305,6 @@ impl OnboardingAgent {
         // Add initial artifact placeholders to state
         flags.insert("storefront_status".to_string(), json!("generating"));
         flags.insert("policies_status".to_string(), json!("generating"));
-        flags.insert("location".to_string(), json!(location));
         flags.insert("artifacts".to_string(), json!({
             "storefront": {
                 "title": company_name,
@@ -2491,7 +2489,6 @@ mod tests {
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
-            location: "New York, USA".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2577,7 +2574,6 @@ mod tests {
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
-            location: "London, UK".to_string(),
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2615,7 +2611,6 @@ mod tests {
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
-            location: "Austin, TX".to_string(),
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

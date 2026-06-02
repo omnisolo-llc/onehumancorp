@@ -26,33 +26,50 @@ pub struct DynamicPricingEngine;
 
 impl DynamicPricingEngine {
     pub fn calculate_price(bounds: &PricingBounds, context: &ContextSignals) -> DynamicPriceResult {
+        let mut adjusted_price = bounds.base_price;
+        let mut reason = "Standard price".to_string();
+        let mut adjustment_type = "none".to_string();
+
         // Very basic logic for now. We can make it more sophisticated later.
-        let (mut adjusted_price, mut reason, mut adjustment_type) = if context.demand_level == "high" || context.inventory_velocity == "fast" {
-            // 1. Demand & Velocity (Surge)
-            (bounds.base_price * 1.15, "High demand", "surge")
-        } else if context.time_of_day == "closing_soon" || context.inventory_velocity == "slow" {
-            // 2. Inventory Clearing (Discount)
-            (bounds.base_price * 0.85, "Last minute deal!", "discount")
-        } else if context.weather == "raining" && context.demand_level == "normal" {
-            // 3. Weather context (e.g. raining => want people to stick around or clear out depending on business)
-            (bounds.base_price * 0.90, "Rainy day special", "discount")
-        } else {
-            (bounds.base_price, "Standard price", "none")
-        };
+
+        // 1. Demand & Velocity (Surge)
+        if context.demand_level == "high" || context.inventory_velocity == "fast" {
+            adjusted_price = bounds.base_price * 1.15; // 15% surge
+            reason = "High demand".to_string();
+            adjustment_type = "surge".to_string();
+        }
+        // 2. Inventory Clearing (Discount)
+        else if context.time_of_day == "closing_soon" || context.inventory_velocity == "slow" {
+            adjusted_price = bounds.base_price * 0.85; // 15% discount
+            reason = "Last minute deal!".to_string();
+            adjustment_type = "discount".to_string();
+        }
+        // 3. Weather context (e.g. raining => want people to stick around or clear out depending on business)
+        // For this basic version, let's say rain causes a slight discount to attract people if demand is normal
+        else if context.weather == "raining" && context.demand_level == "normal" {
+            adjusted_price = bounds.base_price * 0.90; // 10% discount
+            reason = "Rainy day special".to_string();
+            adjustment_type = "discount".to_string();
+        }
 
         // Clamp to bounds
-        adjusted_price = adjusted_price.clamp(bounds.min_price, bounds.max_price);
+        if adjusted_price > bounds.max_price {
+            adjusted_price = bounds.max_price;
+        }
+        if adjusted_price < bounds.min_price {
+            adjusted_price = bounds.min_price;
+        }
 
         // If clamped back to base price, reset reason
         if (adjusted_price - bounds.base_price).abs() < 0.01 {
-            reason = "Standard price";
-            adjustment_type = "none";
+            reason = "Standard price".to_string();
+            adjustment_type = "none".to_string();
         }
 
         DynamicPriceResult {
             price: (adjusted_price * 100.0).round() / 100.0, // round to 2 decimal places
-            reason: reason.to_string(),
-            adjustment_type: adjustment_type.to_string(),
+            reason,
+            adjustment_type,
         }
     }
 }
@@ -103,4 +120,3 @@ mod tests {
         assert_eq!(result.price, 11.0);
     }
 }
-// verified by miser

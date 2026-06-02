@@ -32,7 +32,7 @@ pub struct ErrorResponse {
 
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
-    Extension(claims): Extension<::server_common::Claims>,
+    Extension(claims): Extension<::server_auth::common::Claims>,
     Json(payload): Json<CreateProductRequest>,
 ) -> impl IntoResponse {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
