@@ -637,7 +637,24 @@ async fn http_login_handler(
     };
 
     let password_hash: String = row.get("password_hash");
-    match bcrypt::verify(&payload.password, &password_hash) {
+
+    let is_valid = {
+        let password = payload.password.clone();
+        let hash = password_hash.clone();
+        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
+            Ok(res) => res,
+            Err(e) => {
+                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+                )
+                    .into_response();
+            }
+        }
+    };
+
+    match is_valid {
         Ok(true) => {}
         Ok(false) => {
             return (
@@ -2856,7 +2873,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(|headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(headers, payload).await }))
+        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))

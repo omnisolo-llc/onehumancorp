@@ -275,6 +275,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(tenant_id)
                                             .execute(pool)
                                             .await
+                                            .map(|_| ())
                                     },
                                     DbStore::Postgres => {
                                         sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
@@ -283,6 +284,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(tenant_id)
                                             .execute(&webhook_state.db.pool)
                                             .await
+                                            .map(|_| ())
                                     }
                                 };
 
@@ -304,6 +306,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(state_change.to_string())
                                             .execute(pool)
                                             .await
+                                            .map(|_| ())
                                     },
                                     DbStore::Postgres => {
                                         sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'operations', $3, $4)")
@@ -313,6 +316,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(state_change)
                                             .execute(&webhook_state.db.pool)
                                             .await
+                                            .map(|_| ())
                                     }
                                 };
 
