@@ -37,6 +37,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -291,6 +292,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -298,6 +300,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+
     pub use ::server_services_b2b as b2b;
     pub mod integration;
     pub mod ops;
@@ -479,7 +482,7 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
@@ -520,6 +523,12 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let cache_key = format!("metrics:{}", tenant_id);
+    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(metrics) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(metrics)).into_response();
+    }
+
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
             match &db.store {
@@ -552,9 +561,12 @@ async fn http_metrics_handler(
     let total_sales = sales_res.unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
+    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
+    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
+
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent }),
+        axum::Json(metrics),
     )
         .into_response()
 }
@@ -3035,6 +3047,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
         let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
@@ -5749,8 +5762,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             return (items || []).map(renderItem).join('');
                         }
 
-                        function syncWebsiteDraftToBuilder(draft) {
-                            currentSiteDraft = draft;
+                        function syncStoreProfileToBuilder(draft) {
+                            currentStoreProfile = draft;
                             if (draft && draft.pages && draft.pages.length > 0) {
                                 storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
                                     id: 'brand-toolbox-' + index,
@@ -5769,8 +5782,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             content.style.display = 'block';
                             const dna = toolbox.brand_dna || {};
                             const colors = dna.colors || [];
-                            const websiteBlocks = toolbox.website_draft && toolbox.website_draft.pages && toolbox.website_draft.pages[0]
-                                ? toolbox.website_draft.pages[0].blocks || []
+                            const websiteBlocks = toolbox.store_profile && toolbox.store_profile.pages && toolbox.store_profile.pages[0]
+                                ? toolbox.store_profile.pages[0].blocks || []
                                 : [];
 
                             content.innerHTML = `
@@ -5912,7 +5925,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (!response.ok) throw new Error('Brand toolbox generation failed');
                                 currentBrandToolbox = await response.json();
                                 renderBrandToolbox(currentBrandToolbox);
-                                syncWebsiteDraftToBuilder(currentBrandToolbox.website_draft);
+                                syncStoreProfileToBuilder(currentBrandToolbox.store_profile);
                                 publishBtn.disabled = !currentBrandToolbox.id;
                                 status.textContent = 'Brand toolbox ready.';
                             } catch (e) {
@@ -6223,7 +6236,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         path: '/',
                                         title: 'Home',
                                         blocks: draftBlocks,
-                                        seo_metadata: currentSiteDraft ? currentSiteDraft.pages[0].seo_metadata : {}
+                                        seo_metadata: currentStoreProfile ? currentStoreProfile.pages[0].seo_metadata : {}
                                     }]
                                 }
                             };
@@ -6916,7 +6929,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let currentSiteDraft = null;
+                        let currentStoreProfile = null;
 
                         async function generateAI() {
                             const descInput = document.querySelector('#step-ai input');
@@ -6930,7 +6943,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (response.ok) {
                                     const data = await response.json();
-                                    currentSiteDraft = data;
+                                    currentStoreProfile = data;
 
                                     // Update storefrontDraftState
                                     if (data.pages && data.pages.length > 0) {
