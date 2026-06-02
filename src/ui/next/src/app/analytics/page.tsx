@@ -29,6 +29,12 @@ export default function AnalyticsPage() {
     }, 500);
   };
 
+  const [totalRevenue] = useState('$4,250.00');
+
+  const shareRevenueMilestone = () => {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('My business just hit a new revenue milestone of ' + totalRevenue + '! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get 1 month free: ohc://join?ref=' + tenant)}`, '_blank');
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Header */}
@@ -47,12 +53,25 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Metrics (30 Days)</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-              <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
-              <div className="text-3xl font-bold font-outfit text-gray-900">$4,250.00</div>
-              <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
-                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                 12% from last month
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative group">
+              <div>
+                <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
+                <div className="text-3xl font-bold font-outfit text-gray-900">{totalRevenue}</div>
+                <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
+                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                   12% from last month
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('My business just hit a new revenue milestone of ' + totalRevenue + '! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get 1 month free: ohc://join?ref=' + tenant)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                  Share Milestone to X
+                </a>
               </div>
             </div>
 
