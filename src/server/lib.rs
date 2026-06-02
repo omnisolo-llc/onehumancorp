@@ -2259,13 +2259,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
 
-    dept_orchestrator.register_department(ops_agent).await;
-    dept_orchestrator.register_department(cs_agent).await;
-    dept_orchestrator.register_department(mkt_agent).await;
-    dept_orchestrator.register_department(sales_agent).await;
-    dept_orchestrator.register_department(finance_agent).await;
-    dept_orchestrator.register_department(legal_agent).await;
-    dept_orchestrator.register_department(advisory_agent).await;
+    tokio::join!(
+        dept_orchestrator.register_department(ops_agent),
+        dept_orchestrator.register_department(cs_agent),
+        dept_orchestrator.register_department(mkt_agent),
+        dept_orchestrator.register_department(sales_agent),
+        dept_orchestrator.register_department(finance_agent),
+        dept_orchestrator.register_department(legal_agent),
+        dept_orchestrator.register_department(advisory_agent)
+    );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
     let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
