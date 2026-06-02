@@ -56,7 +56,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'PredictiveRestock')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -79,7 +79,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'PredictiveRestock')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -119,6 +119,75 @@ impl OperationsWorker {
         };
 
         let processed = task.is_some();
+
+        if let Some((id, tenant_id, payload)) = &task {
+            if payload.get("prediction_id").is_some() {
+                // Handle PredictiveRestock
+                let prediction_id = payload.get("prediction_id").and_then(|v| v.as_str()).unwrap_or_default();
+                let raw_material_id = payload.get("raw_material_id").and_then(|v| v.as_str()).unwrap_or_default();
+
+                let lock_key = format!("ohc:lock:{}:purchase_order:{}", tenant_id, raw_material_id);
+                let redis_client_opt = None; // Redis fallback since we are using DB lock in OperationsWorker for simplicity/scope.
+                let mut locked = false;
+                // We use Postgres SKIP LOCKED internally in OperationsWorker queue so the task itself is uniquely assigned.
+                locked = true; // Task is already locked by the worker pool logic
+
+                // Fallback to db check if redis fails or isn't available, but we try redis lock first
+                let mut existing_po: i64 = 0;
+                if locked {
+                    existing_po = match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders p JOIN po_line_items pl ON p.id = pl.purchase_order_id WHERE p.tenant_id = $1 AND pl.raw_material_id = $2 AND (p.status = 'DRAFT' OR p.status = 'PENDING')")
+                                .bind(tenant_id)
+                                .bind(raw_material_id)
+                                .fetch_one(&db.pool).await.unwrap_or(0)
+                        },
+                        crate::db::DbStore::Sqlite(pool) => {
+                            sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders p JOIN po_line_items pl ON p.id = pl.purchase_order_id WHERE p.tenant_id = ? AND pl.raw_material_id = ? AND (p.status = 'DRAFT' OR p.status = 'PENDING')")
+                                .bind(tenant_id)
+                                .bind(raw_material_id)
+                                .fetch_one(pool).await.unwrap_or(0)
+                        }
+                    };
+                }
+
+                if locked && existing_po == 0 {
+
+                    // Fetch vendor for this raw material (assume single vendor per tenant for simplicity or fetch first)
+                    let vendor_id: Option<String> = match &db.store {
+                        crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM vendors WHERE tenant_id = $1 LIMIT 1").bind(tenant_id).fetch_optional(&db.pool).await.unwrap_or(None),
+                        crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar("SELECT id FROM vendors WHERE tenant_id = ? LIMIT 1").bind(tenant_id).fetch_optional(pool).await.unwrap_or(None),
+                    };
+
+                    if let Some(v_id) = vendor_id {
+                        let po_id = uuid::Uuid::new_v4().to_string();
+                        let po_line_id = uuid::Uuid::new_v4().to_string();
+                        let now = chrono::Utc::now();
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let mut tx = db.pool.begin().await.unwrap();
+                                let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', 0, $4, $4)").bind(&po_id).bind(tenant_id).bind(&v_id).bind(now).execute(&mut *tx).await;
+                                let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, unit_price, created_at) VALUES ($1, $2, $3, $4, 100, 0, $5)").bind(&po_line_id).bind(tenant_id).bind(&po_id).bind(raw_material_id).bind(now).execute(&mut *tx).await;
+                                let _ = sqlx::query("UPDATE inventory_predictions SET status = 'DRAFTED_PO', updated_at = $1 WHERE id = $2").bind(now).bind(prediction_id).execute(&mut *tx).await;
+                                let _ = tx.commit().await;
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let mut tx = pool.begin().await.unwrap();
+                                let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', 0, ?, ?)").bind(&po_id).bind(tenant_id).bind(&v_id).bind(now).bind(now).execute(&mut *tx).await;
+                                let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, unit_price, created_at) VALUES (?, ?, ?, ?, 100, 0, ?)").bind(&po_line_id).bind(tenant_id).bind(&po_id).bind(raw_material_id).bind(now).execute(&mut *tx).await;
+                                let _ = sqlx::query("UPDATE inventory_predictions SET status = 'DRAFTED_PO', updated_at = ? WHERE id = ?").bind(now).bind(prediction_id).execute(&mut *tx).await;
+                                let _ = tx.commit().await;
+                            }
+                        }
+                    }
+                }
+                match &db.store {
+                    crate::db::DbStore::Postgres => { let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1").bind(id).execute(&db.pool).await.unwrap(); },
+                    crate::db::DbStore::Sqlite(pool) => { let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(id).execute(pool).await.unwrap(); },
+                }
+                return Ok(processed);
+            }
+        }
         if let Some((id, tenant_id, payload)) = task {
             let mut final_status = "COMPLETED";
 

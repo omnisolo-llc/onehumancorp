@@ -123,3 +123,79 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct RawMaterial {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub current_quantity: Option<i32>,
+    pub reorder_threshold: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct BOMItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub finished_good_id: String,
+    pub raw_material_id: String,
+    pub quantity_required: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Vendor {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub contact_info: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PurchaseOrder {
+    pub id: String,
+    pub tenant_id: String,
+    pub vendor_id: String,
+    pub status: Option<String>,
+    pub total_cost: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct POLineItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub purchase_order_id: String,
+    pub raw_material_id: String,
+    pub quantity: Option<i32>,
+    pub unit_price: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DepletionLog {
+    pub id: String,
+    pub tenant_id: String,
+    pub raw_material_id: String,
+    pub sales_event_id: Option<String>,
+    pub quantity_deducted: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct InventoryPrediction {
+    pub id: String,
+    pub tenant_id: String,
+    pub raw_material_id: String,
+    pub predicted_stockout_date: Option<DateTime<Utc>>,
+    pub predicted_daily_velocity: Option<f64>,
+    pub current_inventory: Option<i32>,
+    pub status: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

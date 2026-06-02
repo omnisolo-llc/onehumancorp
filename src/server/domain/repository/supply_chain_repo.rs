@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use super::models::{RawMaterial, BOMItem, Vendor, PurchaseOrder, POLineItem, DepletionLog};
+use super::models::{RawMaterial, BOMItem, Vendor, PurchaseOrder, POLineItem, DepletionLog, InventoryPrediction};
 use chrono::Utc;
 use uuid::Uuid;
 
