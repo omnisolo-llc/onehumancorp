@@ -43,8 +43,12 @@ export default function ApprovalInbox({
     }
   };
 
-  const extractPayload = (description: string) => {
-    const parts = description.split(" | Payload: ");
+  const extractPayload = (req: ApprovalRequest) => {
+    if (req.payload) {
+      return { desc: req.description, payload: req.payload };
+    }
+    // Fallback for older data format
+    const parts = req.description?.split(" | Payload: ") || [req.description];
     if (parts.length > 1) {
       try {
         return { desc: parts[0], payload: JSON.parse(parts[1]) };
@@ -131,11 +135,11 @@ export default function ApprovalInbox({
             </div>
           ) : (
             approvals.map((req) => {
-              const { desc, payload } = extractPayload(req.description);
+              const { desc, payload } = extractPayload(req);
               return (
                 <div
                   key={req.id}
-                  className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -500,7 +504,7 @@ export default function ApprovalInbox({
         {selectedReview && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              className="bg-[rgba(255,255,255,0.85)] backdrop-blur-[30px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
               style={{
                 animation: "slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
@@ -513,8 +517,8 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Context
                 </p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
-                  {extractPayload(selectedReview.description).payload
+                <div className="bg-[rgba(255,255,255,0.5)] p-3 rounded-xl border border-[rgba(255,255,255,0.4)] text-sm text-gray-700">
+                  {extractPayload(selectedReview).payload
                     ?.original_message || "N/A"}
                 </div>
               </div>
@@ -523,36 +527,37 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Draft
                 </p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                  {extractPayload(selectedReview.description).payload
+                <div className="bg-[rgba(59,130,246,0.1)] p-3 rounded-xl border border-[rgba(59,130,246,0.2)] text-sm text-gray-800 italic relative">
+                  {extractPayload(selectedReview).payload
                     ?.generated_response || "N/A"}
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => {
                     onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-2 rounded-xl font-semibold text-[13px] bg-white/50 text-gray-700 hover:bg-white/80 border border-white/40 min-h-[44px]"
                 >
                   Discard
                 </button>
                 <button
                   onClick={() => {
+                    onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-2 rounded-xl font-semibold text-[13px] bg-white/50 text-blue-600 hover:bg-white/80 border border-white/40 min-h-[44px]"
                 >
-                  Edit
+                  Regenerate
                 </button>
                 <button
                   onClick={() => {
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
+                  className="flex-[1.5] py-3 px-2 rounded-xl font-bold text-[13px] bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 min-h-[44px]"
                 >
                   Send Now
                 </button>

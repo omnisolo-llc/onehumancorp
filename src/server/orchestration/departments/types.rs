@@ -44,6 +44,27 @@ impl std::fmt::Display for DepartmentType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIAgentPersona {
+    pub id: String,
+    pub name: String,
+    pub department: DepartmentType,
+    pub tone_of_voice: String,
+    pub system_prompt: String,
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIaaSWorkflow {
+    pub id: String,
+    pub name: String,
+    pub trigger_event: String,
+    pub persona_id: String,
+    pub description_template: String,
+    pub default_risk: ActionRisk,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,

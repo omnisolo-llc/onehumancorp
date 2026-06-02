@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 exports_files(
     [
         "approvals.rs",
+        "aiaas.rs",
         "chat.rs",
         "hire.rs",
         "mission/handoff.rs",
@@ -19,6 +20,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "approvals.rs",
+        "aiaas.rs",
         "chat.rs",
         "hire.rs",
         "mission/handoff.rs",
