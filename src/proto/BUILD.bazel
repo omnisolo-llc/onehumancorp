@@ -233,3 +233,18 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# ── Subscription ──────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "subscription_proto",
+    srcs = ["subscription.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "subscription",
+    proto = ":subscription_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package ohc.subscription;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/subscription;subscriptionpb";
+
+message SubscriptionPlan {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  int64 price_cents = 5;
+  string billing_interval = 6;
+  string stripe_product_id = 7;
+  string stripe_price_id = 8;
+  int64 created_at_unix = 9;
+}
+
+message Subscriber {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_plan_id = 3;
+  string customer_name = 4;
+  string customer_email = 5;
+  string status = 6;
+  string stripe_subscription_id = 7;
+  string stripe_customer_id = 8;
+  int64 current_period_end_unix = 9;
+  int64 created_at_unix = 10;
+}
+
+message FulfillmentBatch {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_plan_id = 3;
+  string fulfillment_date = 4;
+  string status = 5;
+  int32 total_boxes = 6;
+  int64 created_at_unix = 7;
+}
+
+message CreatePlanRequest {
+  string organization_id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price_cents = 4;
+  string billing_interval = 5;
+}
+
+message CreatePlanResponse {
+  SubscriptionPlan plan = 1;
+}
+
+message SubscribeRequest {
+  string organization_id = 1;
+  string subscription_plan_id = 2;
+  string customer_name = 3;
+  string customer_email = 4;
+}
+
+message SubscribeResponse {
+  Subscriber subscriber = 1;
+  string checkout_url = 2;
+}
+
+message GetFulfillmentBatchesRequest {
+  string organization_id = 1;
+}
+
+message GetFulfillmentBatchesResponse {
+  repeated FulfillmentBatch batches = 1;
+}
+
+service SubscriptionService {
+  rpc CreatePlan(CreatePlanRequest) returns (CreatePlanResponse);
+  rpc Subscribe(SubscribeRequest) returns (SubscribeResponse);
+  rpc GetFulfillmentBatches(GetFulfillmentBatchesRequest) returns (GetFulfillmentBatchesResponse);
+}

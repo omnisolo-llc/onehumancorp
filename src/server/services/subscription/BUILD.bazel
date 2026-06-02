@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_subscription",
+    srcs = glob(["**/*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:subscription_prost",
+        "//src/proto:subscription_tonic",
+        "//src/server/common:server_common",
+        "@crates//:tonic",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tracing",
+        "@crates//:prost",
+    ],
+    proc_macro_deps = [
+    ],
+    rustc_env = {
+        "SQLX_OFFLINE": "1",
+        "CARGO": "1",
+    },
+)
+
+rust_test(
+    name = "server_services_subscription_test",
+    crate = ":server_services_subscription",
+)
