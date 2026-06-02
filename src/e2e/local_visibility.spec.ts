@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Local Visibility CUJ', () => {
   test('connects Google Business Profile and approves an AI review reply', async ({ page }) => {
     // Navigate to the dashboard
-    await page.goto('http://localhost:3000/dashboard');
+    await page.goto('/dashboard');
 
     // Wait for the local visibility section to be visible
     const localVisibilitySection = page.locator('#local-visibility-section');
