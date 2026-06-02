@@ -153,5 +153,59 @@ mod tests {
         let raw_text = "This is a very long text that has many words and needs to be compressed.";
         let compressed_text = ::server_pricing::compression::reduce_tokens(raw_text);
         assert!(compressed_text.len() < raw_text.len());
+}
+
+    #[test]
+    fn test_chaos_pull_available_tasks_timeout() {
+        // Chaos test for pull_available_tasks latency bounding
+        use crate::orchestration::state::StateManager;
+        use std::sync::Arc;
+        use async_trait::async_trait;
+        use crate::orchestration::mesh::TeammateMesh;
+        use ohc_builtin_agent::mesh::transport::{Message, InProcessTransport, MeshTransport};
+
+        struct ChaosMesh {
+            transport: InProcessTransport,
+        }
+
+        #[async_trait]
+        impl TeammateMesh for ChaosMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+                // Simulate lock contention that stalls the state manager wrapper
+                tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+                Ok(true)
+            }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        temp_env::with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("500"), || {
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
+                let mesh: Arc<dyn TeammateMesh> = Arc::new(ChaosMesh { transport: InProcessTransport::new() });
+
+                let db = Arc::new(crate::db::DB {
+                    pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+                    store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()),
+                });
+
+                let _ = sqlx::query("CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT 'system', mission_id TEXT NOT NULL, parent_plan_id TEXT, dependencies TEXT NOT NULL DEFAULT '[]', title TEXT NOT NULL, description TEXT, priority TEXT, status TEXT NOT NULL DEFAULT 'PENDING');").execute(&db.pool).await;
+                let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+                let start = std::time::Instant::now();
+                let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+                let elapsed = start.elapsed();
+
+                assert_eq!(tasks.len(), 0);
+                assert!(elapsed < std::time::Duration::from_millis(1000), "Should have timed out at 500ms");
+            })
+        });
     }
 }
