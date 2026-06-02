@@ -109,6 +109,7 @@ pub struct AgentRunConfig {
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
+    pub enable_gpt_researcher: bool,
     pub enable_acon_context_strategy: bool,
     pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
@@ -168,6 +169,7 @@ impl Default for AgentRunConfig {
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
+            enable_gpt_researcher: false,
             enable_acon_context_strategy: false,
             acon_config: None,
             enable_progressive_skills: false,
@@ -1306,6 +1308,46 @@ impl Agent {
 
     /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
+    pub async fn run_gpt_researcher<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        struct WrapperClient {
+            llm: std::sync::Arc<dyn LlmClient>,
+        }
+        #[async_trait::async_trait]
+        impl crate::gpt_researcher::ResearcherLlmClient for WrapperClient {
+            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
+            }
+        }
+
+        let researcher_client = std::sync::Arc::new(WrapperClient { llm: self.llm.clone() });
+
+        let planner = std::sync::Arc::new(crate::gpt_researcher::PlannerAgent::new(researcher_client.clone(), cfg.model.clone()));
+        let executor = std::sync::Arc::new(crate::gpt_researcher::ExecutionAgent::new(researcher_client, cfg.model.clone()));
+
+        let manager = crate::gpt_researcher::GptResearcherManager::new(planner, executor);
+
+        let report = match manager.conduct_research(initial_message).await {
+            Ok(report) => report,
+            Err(e) => {
+                on_event(AgentEvent::TaskError { error: format!("GPT Researcher failed: {}", e) });
+                return Err(e.into());
+            }
+        };
+
+        on_event(AgentEvent::TaskComplete { content: report.clone() });
+        Ok(report)
+    }
+
     pub async fn run_plan_and_execute<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1955,6 +1997,9 @@ impl Agent {
         }
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+        }
+        if final_cfg.enable_gpt_researcher {
+            return self.run_gpt_researcher(&final_cfg, initial_message, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
@@ -3955,6 +4000,65 @@ mod tests {
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_gpt_researcher_mechanic() {
+        struct MockClient {
+            pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req.clone());
+
+                if req.system.contains("You are a research planner") {
+                    let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant(plan.to_string()),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                } else if req.system.contains("You are a specialized research execution agent") {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Detailed content here"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                } else {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Unknown"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                }
+            }
+        }
+
+        let client = std::sync::Arc::new(MockClient { requests: tokio::sync::Mutex::new(vec![]) });
+        let agent = Agent::new(client.clone(), vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_gpt_researcher = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Research quantum computing", &mut on_event).await;
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+
+        assert!(res_str.contains("# Research Report: Research quantum computing"));
+        assert!(res_str.contains("## Sub-topic A"));
+        assert!(res_str.contains("## Sub-topic B"));
+        assert!(res_str.contains("Detailed content here"));
+
+        let reqs = client.requests.lock().await;
+        // 1 planner + 2 executors = 3 calls
+        assert_eq!(reqs.len(), 3);
     }
 
     #[tokio::test]
