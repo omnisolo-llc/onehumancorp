@@ -233,3 +233,17 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "loyalty_proto",
+    srcs = ["loyalty.proto"],
+    visibility = ["//visibility:public"],
+)
+
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
+
+rust_prost_library(
+    name = "loyalty_prost",
+    proto = ":loyalty_proto",
+    visibility = ["//visibility:public"],
+)

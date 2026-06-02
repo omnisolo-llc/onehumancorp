@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ohc.loyalty.v1;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/loyalty/v1;loyaltyv1";
+
+message LoyaltyProgram {
+  string id = 1;
+  string tenant_id = 2;
+  bool is_active = 3;
+  string program_type = 4; // e.g., "points", "punch-card"
+  int32 spend_amount_cents_per_point = 5;
+  int32 points_per_reward = 6;
+}
+
+message CustomerLoyaltyProfile {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  int32 points_balance = 4;
+}
+
+message LoyaltyEvent {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string event_type = 4; // e.g., "earned", "redeemed"
+  int32 points = 5;
+  string transaction_id = 6;
+  int64 timestamp = 7;
+}
+
+message ToggleLoyaltyProgramRequest {
+  string tenant_id = 1;
+  bool is_active = 2;
+  string program_type = 3;
+  int32 spend_amount_cents_per_point = 4;
+  int32 points_per_reward = 5;
+}
+
+message ToggleLoyaltyProgramResponse {
+  LoyaltyProgram program = 1;
+}
+
+message GetPointsBalanceRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+}
+
+message GetPointsBalanceResponse {
+  CustomerLoyaltyProfile profile = 1;
+}
+
+service LoyaltyService {
+  rpc ToggleLoyaltyProgram(ToggleLoyaltyProgramRequest) returns (ToggleLoyaltyProgramResponse);
+  rpc GetPointsBalance(GetPointsBalanceRequest) returns (GetPointsBalanceResponse);
+}
