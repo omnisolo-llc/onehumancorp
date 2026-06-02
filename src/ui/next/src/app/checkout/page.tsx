@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
@@ -10,6 +10,53 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Offline Currency & Localization State
+  const [currency, setCurrency] = useState('USD');
+  const [language, setLanguage] = useState('en');
+  const [fxRates, setFxRates] = useState<Record<string, number>>({'USD': 1.0});
+
+  useEffect(() => {
+    // Load cached preferences
+    const cachedCurrency = localStorage.getItem('ohc_currency') || 'USD';
+    const cachedLanguage = localStorage.getItem('ohc_language') || 'en';
+    const cachedRates = localStorage.getItem('ohc_fx_rates');
+
+    setCurrency(cachedCurrency);
+    setLanguage(cachedLanguage);
+    if (cachedRates) {
+      try {
+        setFxRates(JSON.parse(cachedRates));
+      } catch (e) {}
+    }
+
+    // Try to fetch latest
+    if (navigator.onLine) {
+      fetch('/api/ledger/fx-rates')
+        .then(res => res.json())
+        .then(data => {
+          setFxRates(data);
+          localStorage.setItem('ohc_fx_rates', JSON.stringify(data));
+        })
+        .catch(console.error);
+    }
+  }, []);
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCurrency = e.target.value;
+    setCurrency(newCurrency);
+    localStorage.setItem('ohc_currency', newCurrency);
+    if (!navigator.onLine) {
+      alert(`Converted using last-known cached rate. Will finalize on sync.`);
+    }
+  };
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLang = e.target.value;
+    setLanguage(newLang);
+    localStorage.setItem('ohc_language', newLang);
+  };
+
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -40,6 +87,19 @@ export default function CheckoutPage() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <div className="flex gap-2 text-sm">
+          <select value={language} onChange={handleLanguageChange} className="bg-transparent border rounded p-1">
+            <option value="en">EN</option>
+            <option value="ar">AR</option>
+            <option value="es">ES</option>
+          </select>
+          <select value={currency} onChange={handleCurrencyChange} className="bg-transparent border rounded p-1">
+            <option value="USD">USD</option>
+            <option value="AED">AED</option>
+            <option value="EUR">EUR</option>
+            <option value="BRL">BRL</option>
+          </select>
+        </div>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
@@ -78,10 +138,12 @@ export default function CheckoutPage() {
                     amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
-                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
+                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7),
+                    currency: currency,
+                    exchange_rate: fxRates[currency] || 1.0
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  alert(`You are offline. Payment of ${amount} ${currency} saved locally and will process when reconnected.`);
                   router.push('/dashboard');
                 }
               }}

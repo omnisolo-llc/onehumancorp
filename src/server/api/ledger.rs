@@ -47,6 +47,8 @@ pub struct ApplyPaymentRequest {
     pub invoice_id: String,
     pub amount: f64,
     pub method: String,
+    pub exchange_rate: Option<f64>,
+    pub original_currency: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -56,11 +58,12 @@ pub struct GetInvoiceQuery {
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/api/ledger/invoice/:id", get(get_invoice))
-        .route("/api/ledger/invoice/draft", post(create_invoice_draft))
-        .route("/api/ledger/invoice/:id/update", put(update_invoice_status))
-        .route("/api/ledger/invoice/:id/pay", post(apply_payment))
-        .route("/api/ledger/entries/:tenant_id", get(get_ledger_entries))
+        .route("/invoice/:id", get(get_invoice))
+        .route("/invoice/draft", post(create_invoice_draft))
+        .route("/invoice/:id/update", put(update_invoice_status))
+        .route("/invoice/:id/pay", post(apply_payment))
+        .route("/entries/:tenant_id", get(get_ledger_entries))
+        .route("/fx-rates", get(get_fx_rates))
 }
 
 async fn get_invoice(
@@ -145,6 +148,8 @@ async fn apply_payment(
         method: payload.method,
         completed_at: Some(Utc::now()),
         created_at: Some(Utc::now()),
+        exchange_rate: payload.exchange_rate,
+        original_currency: payload.original_currency,
     };
 
     match repo.apply_payment_event(event).await {
@@ -162,4 +167,19 @@ async fn get_ledger_entries(
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
+}
+
+
+async fn get_fx_rates() -> impl IntoResponse {
+    // Dummy FX rates for edge caching
+    let rates = serde_json::json!({
+        "USD": 1.0,
+        "AED": 3.67,
+        "EUR": 0.92,
+        "GBP": 0.79,
+        "INR": 83.30,
+        "BRL": 4.95,
+        "MXN": 16.70
+    });
+    (StatusCode::OK, Json(rates)).into_response()
 }

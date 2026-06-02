@@ -164,17 +164,17 @@ impl LedgerRepository {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
-                    r#"INSERT INTO payment_events (id, tenant_id, invoice_id, amount, method, completed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"#
+                    r#"INSERT INTO payment_events (id, tenant_id, invoice_id, amount, method, completed_at, created_at, exchange_rate, original_currency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"#
                 )
-                .bind(&event.id).bind(&event.tenant_id).bind(&event.invoice_id).bind(&event.amount).bind(&event.method).bind(&event.completed_at).bind(&event.created_at)
+                .bind(&event.id).bind(&event.tenant_id).bind(&event.invoice_id).bind(&event.amount).bind(&event.method).bind(&event.completed_at).bind(&event.created_at).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
-                .bind(&credit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(event.amount).bind(0.0).bind("Revenue").bind(now).bind(now)
+                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#)
+                .bind(&credit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(event.amount).bind(0.0).bind("Revenue").bind(now).bind(now).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
-                .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now)
+                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"#)
+                .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = $1 WHERE tenant_id = $2 AND id = $3"#)
@@ -186,17 +186,17 @@ impl LedgerRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
-                    r#"INSERT INTO payment_events (id, tenant_id, invoice_id, amount, method, completed_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"#
+                    r#"INSERT INTO payment_events (id, tenant_id, invoice_id, amount, method, completed_at, created_at, exchange_rate, original_currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"#
                 )
-                .bind(&event.id).bind(&event.tenant_id).bind(&event.invoice_id).bind(&event.amount).bind(&event.method).bind(&event.completed_at).bind(&event.created_at)
+                .bind(&event.id).bind(&event.tenant_id).bind(&event.invoice_id).bind(&event.amount).bind(&event.method).bind(&event.completed_at).bind(&event.created_at).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
-                .bind(&credit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(event.amount).bind(0.0).bind("Revenue").bind(now).bind(now)
+                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#)
+                .bind(&credit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(event.amount).bind(0.0).bind("Revenue").bind(now).bind(now).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
-                .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now)
+                sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#)
+                .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now).bind(&event.exchange_rate).bind(&event.original_currency)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
@@ -214,7 +214,7 @@ impl LedgerRepository {
             DbStore::Postgres => {
                 sqlx::query_as::<_, LedgerEntry>(
                     r#"
-                    SELECT id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at
+                    SELECT id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency
                     FROM ledger_entries
                     WHERE tenant_id = $1
                     "#
@@ -227,7 +227,7 @@ impl LedgerRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, LedgerEntry>(
                     r#"
-                    SELECT id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at
+                    SELECT id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at, exchange_rate, original_currency
                     FROM ledger_entries
                     WHERE tenant_id = ?
                     "#
@@ -286,7 +286,9 @@ mod ledger_tests {
                 amount REAL,
                 method TEXT,
                 completed_at TEXT,
-                created_at TEXT
+                created_at TEXT,
+                exchange_rate REAL,
+                original_currency TEXT
             );
 
             CREATE TABLE ledger_entries (
@@ -297,7 +299,9 @@ mod ledger_tests {
                 debit REAL,
                 entry_type TEXT,
                 posted_at TEXT,
-                created_at TEXT
+                created_at TEXT,
+                exchange_rate REAL,
+                original_currency TEXT
             );
             "#
         )
@@ -379,6 +383,8 @@ mod ledger_tests {
             method: "Card".into(),
             completed_at: Some(Utc::now()),
             created_at: Some(Utc::now()),
+            exchange_rate: None,
+            original_currency: None,
         };
 
         repo.apply_payment_event(event).await.unwrap();
@@ -403,6 +409,8 @@ mod ledger_tests {
             method: "Cash".into(),
             completed_at: Some(Utc::now()),
             created_at: Some(Utc::now()),
+            exchange_rate: None,
+            original_currency: None,
         };
         let event2 = PaymentEvent {
             id: "evt_4".into(),
@@ -412,6 +420,8 @@ mod ledger_tests {
             method: "Cash".into(),
             completed_at: Some(Utc::now()),
             created_at: Some(Utc::now()),
+            exchange_rate: None,
+            original_currency: None,
         };
 
         let invoice1 = Invoice {
