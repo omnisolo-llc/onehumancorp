@@ -103,6 +103,19 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
+          <WithTooltip id="checkout-local-delivery-tooltip" defaultText="Get your order delivered directly to you via our local courier mesh.">
+            <button
+              onClick={() => {
+                alert("Local Delivery selected! ($5.00 added to total)");
+                setShowSuccessModal(true);
+              }}
+              className="w-full px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-medium hover:bg-emerald-100 transition-colors shadow-sm flex justify-between items-center"
+            >
+              <span>🚗 Local Delivery</span>
+              <span className="font-bold">+$5.00</span>
+            </button>
+          </WithTooltip>
+
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button
               onClick={() => router.push('/pricing')}
