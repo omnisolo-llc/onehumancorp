@@ -2,6 +2,7 @@ pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
+pub mod voice;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -2389,6 +2390,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .nest("/api/webhooks/voice", api::voice_webhook::router(std::sync::Arc::new(crate::voice::engine::VoiceAIEdgeEngine::new())))
+        .nest("/api/settings/voice-agent", api::voice_webhook::settings_router())
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
