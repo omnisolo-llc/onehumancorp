@@ -58,7 +58,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           0% { opacity: 0; transform: translate(-50%, -90%); }
           100% { opacity: 1; transform: translate(-50%, -100%); }
         }
-        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
+        .animate-fade-in-up { animation: fade-in-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}} />
     </TooltipContext.Provider>
   );

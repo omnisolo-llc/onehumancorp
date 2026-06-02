@@ -16,14 +16,15 @@ export default function HelpArticlePage() {
       fetch(`/api/help/${articleId}`)
         .then(res => {
           if (!res.ok) {
-            setError(true);
             throw new Error('Not found');
           }
           return res.json();
         })
         .then(data => setArticleData(data))
         .catch(err => {
-          console.error(err);
+          if (process.env.NODE_ENV !== 'test') {
+            console.error(err);
+          }
           setError(true);
         });
     }
