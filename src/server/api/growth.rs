@@ -184,9 +184,19 @@ pub struct ReferralGenerateResponse {
 }
 
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct GrowthMetrics {
+    pub team_invites_sent: i64,
+    pub active_referrals: i64,
+    pub revenue: f64,
+    pub pending_rewards: f64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
+    #[serde(default)]
+    pub metrics: GrowthMetrics,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -686,8 +696,22 @@ async fn handle_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
+    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&query.team_id)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+
     match tracker.get_team_invites_count(&query.team_id).await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse {
+            total_invites,
+            metrics: GrowthMetrics {
+                team_invites_sent: total_invites,
+                active_referrals,
+                revenue: 0.0,
+                pending_rewards: 0.0,
+            }
+        })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -932,6 +956,7 @@ mod tests {
         assert!(metrics_res.is_ok());
         let metrics_res_json = metrics_res.unwrap().0;
         assert_eq!(metrics_res_json.total_invites, 1);
+        assert_eq!(metrics_res_json.metrics.active_referrals, 0);
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
@@ -1158,8 +1183,21 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
+    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+
     match tracker.get_total_invites_count().await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse {
+            total_invites,
+            metrics: GrowthMetrics {
+                team_invites_sent: total_invites,
+                active_referrals,
+                revenue: 0.0,
+                pending_rewards: 0.0,
+            }
+        })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
