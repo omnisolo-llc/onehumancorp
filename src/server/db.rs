@@ -1044,7 +1044,7 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    .bind(id)
+                    .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()).to_string())
                     .bind(org_id)
                     .bind(agent_id)
                     .bind(task_id)
@@ -1289,6 +1289,65 @@ mod autodream_db_tests {
             .bind(uuid::Uuid::parse_str(id).unwrap())
             .execute(&db.pool)
             .await;
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_insert_knowledge_embedding_uuid_parsing() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE knowledge_embeddings (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                task_id TEXT,
+                content TEXT NOT NULL,
+                embedding BLOB,
+                source_type TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                _sync_status TEXT DEFAULT 'pending',
+                version INTEGER DEFAULT 1
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(pool.clone()),
+        };
+
+        let invalid_uuid_str = "invalid-uuid";
+        db.insert_knowledge_embedding(
+            invalid_uuid_str,
+            "org-1",
+            "agent-1",
+            "task-1",
+            "test content",
+            "[0.1, 0.2]",
+            "document",
+        )
+        .await
+        .unwrap();
+
+        let row = sqlx::query("SELECT id FROM knowledge_embeddings")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let fetched_id: String = sqlx::Row::get(&row, "id");
+
+        assert_ne!(fetched_id, invalid_uuid_str);
+        assert!(uuid::Uuid::parse_str(&fetched_id).is_ok());
     }
 
     #[tokio::test]
