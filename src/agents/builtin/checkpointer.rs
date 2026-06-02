@@ -194,7 +194,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         let clean_output = Command::new("git")
             .arg("clean")
-            .arg("-fd")
+            .arg("-fdx")
             .current_dir(&self.repo_path)
             .output()
             .map_err(|e| e.to_string())?;
@@ -574,6 +574,12 @@ mod tests {
 
         saver.put_checkpoint(cp2.clone()).await.unwrap();
 
+        // Create an untracked and an ignored file
+        let untracked_path = temp_dir.path().join("untracked_file.txt");
+        std::fs::write(&untracked_path, "untracked").unwrap();
+        let ignored_path = temp_dir.path().join("ignored_file.txt");
+        std::fs::write(&ignored_path, "ignored").unwrap();
+
         // Restore to first checkpoint
         saver.restore_checkpoint("cp-restore-1").await.unwrap();
 
@@ -581,5 +587,9 @@ mod tests {
         let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-restore"));
         let content = std::fs::read_to_string(&progress_path).unwrap();
         assert!(content.contains(r#""state": "1""#));
+
+        // Verify untracked/ignored are gone (because of git clean -fdx)
+        assert!(!untracked_path.exists());
+        assert!(!ignored_path.exists());
     }
 }

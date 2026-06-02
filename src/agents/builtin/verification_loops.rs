@@ -267,6 +267,12 @@ mod tests {
         manager.add_inferential(judge);
 
         assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
+
+        let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad output", "confidence": 0.99}"#.to_string() });
+        let judge_fail = Arc::new(LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() });
+        let mut fail_manager = VerificationManager::new();
+        fail_manager.add_inferential(judge_fail);
+        assert!(fail_manager.run_inferential_sensors("output", "task").await.is_err());
     }
 
     #[tokio::test]
