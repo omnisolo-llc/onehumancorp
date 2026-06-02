@@ -9,7 +9,6 @@ use serde_json::Value;
 use uuid::Uuid;
 use crate::hub::Hub;
 use crate::integrations::mcp::mcp_async::AsyncTaskTracker;
-use std::str::FromStr;
 
 #[derive(Debug, Deserialize)]
 pub struct McpWebhookPayload {
