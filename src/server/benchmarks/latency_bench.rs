@@ -399,7 +399,7 @@ mod tests {
 }
 
 pub async fn bench_draft_reply_latency() {
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let _database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 100;
 
     let pool = sqlx::sqlite::SqlitePoolOptions::new()

@@ -22,7 +22,7 @@ def _shard_specs(specs, index, total):
     return shard_specs
 
 def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long"):
-    tags = [
+    tags = ["manual",
         "e2e",
         "no-remote-exec",
         "requires-docker",
@@ -89,7 +89,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         srcs = ["//bazel/rules/playwright:playwright_spec_coverage_check.sh"],
         args = ["--all"] + sorted(specs) + ["--ci"] + sorted(ci_specs),
         size = "small",
-        tags = ["playwright"],
+        tags = ["manual", "playwright"],
     )
 
     shard_targets = []

@@ -221,16 +221,6 @@ mod tests {
         assert!(err.contains("Playwright") || err.contains("Failed to execute"));
     }
 
-    async fn test_playwright_visual_verifier() {
-        // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
-        // but test the struct initialization.
-        let verifier = PlaywrightVisualVerifier;
-        // Run against an invalid path, expecting an error
-        let res = verifier.verify_visual("invalid_path_123").await;
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:"));
-    }
 
     struct MockLlmClient {
         response_text: String,

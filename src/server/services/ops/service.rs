@@ -392,12 +392,11 @@ mod tests {
     use ::server_ohc::orchestration::{
         EmptyRequest, CreateIncidentRequest, IncidentStatusRequest, CreateComputeProfileRequest,
         GetClusterStatusRequest, CreateBudgetAlertRequest, CreatePipelineRequest,
-        PipelinePromoteRequest, UpdatePipelineStatusRequest, ScaleRequest,
+        PipelinePromoteRequest, UpdatePipelineStatusRequest,
     };
     use crate::hub::Hub;
     use std::sync::Arc;
     use tonic::Request;
-    use chrono::Utc;
 
     async fn setup_ops_service() -> MyOpsService {
         let database_url = "sqlite::memory:";

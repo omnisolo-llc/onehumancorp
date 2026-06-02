@@ -1,7 +1,4 @@
-use std::env;
 use std::fs;
-use std::path::PathBuf;
-use std::process::{Command, Output};
 use std::time::Duration;
 use tempfile::{tempdir, TempDir};
 use tokio::process::Command as AsyncCommand;
@@ -45,7 +42,7 @@ impl ExecutionEnvironment for LocalEnvironment {
 }
 
 impl LocalEnvironment {
-    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<Output> {
+    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<std::process::Output> {
         // Wrap command for Bash execution to disable extended globs
         let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
 
