@@ -178,6 +178,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E API', () => {
 
+
   test('operations agent triggers real edge cache invalidation endpoint', async ({ request }) => {
     // This is a REAL backend API test. We don't mock it here.
     const tenantId = "test-tenant-uuid";
@@ -190,7 +191,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E API', () => {
       // As long as the route exists it shouldn't 404
       expect(response.status()).not.toBe(404);
     } catch (e) {
-      if (e.message.includes('ECONNREFUSED')) {
+      if (e.message && e.message.includes('ECONNREFUSED')) {
         // In local development or isolated npx runs where the real server isn't bound to the default port,
         // we might get ECONNREFUSED. Bazel E2E harness will bind the server correctly.
         console.warn('Real server not reachable, skipping actual fetch assertion for isolated run.');
