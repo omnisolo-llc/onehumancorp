@@ -5643,6 +5643,16 @@ dependencies = [
 [[package]]
 name = "ohc_builtin_agent"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "oid-registry"

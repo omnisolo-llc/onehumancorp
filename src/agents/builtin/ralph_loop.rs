@@ -25,9 +25,9 @@ pub struct Feature {
 #[derive(Debug, PartialEq, Eq)]
 pub enum RalphPhase {
     /// Phase 1 (Initializer Agent): Sets up environment, writes init script, progress file, feature list, and makes initial git commit.
-    Phase1_Initialize,
+    Phase1Initialize,
     /// Phase 2 (Coding Agent): Reads git logs and progress files to orient itself, picks the highest-priority incomplete feature, works, commits.
-    Phase2_Coding,
+    Phase2Coding,
 }
 
 /// The "Ralph Loop": For long-running asynchronous tasks spanning multiple context windows.
@@ -58,11 +58,11 @@ impl RalphLoop {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if serde_json::from_str::<RalphProgress>(&data).is_ok() {
                 // If progress file exists and is valid, we are in Phase 2.
-                return RalphPhase::Phase2_Coding;
+                return RalphPhase::Phase2Coding;
             }
         }
         // Fallback or missing progress file means we must initialize.
-        RalphPhase::Phase1_Initialize
+        RalphPhase::Phase1Initialize
     }
 
     /// Run the full Ralph Loop
@@ -70,11 +70,11 @@ impl RalphLoop {
         let phase = self.determine_phase().await;
         
         let mut progress = match phase {
-            RalphPhase::Phase1_Initialize => {
+            RalphPhase::Phase1Initialize => {
                 tracing::info!("Ralph Loop executing Phase 1: Initialize.");
                 self.execute_phase1(initial_task).await?
             }
-            RalphPhase::Phase2_Coding => {
+            RalphPhase::Phase2Coding => {
                 tracing::info!("Ralph Loop executing Phase 2: Resume Coding.");
                 let data = fs::read_to_string(&self.progress_file_path).await?;
                 serde_json::from_str::<RalphProgress>(&data)?
@@ -202,18 +202,34 @@ impl RalphLoop {
         let pending_features_list = pending_features.join("
 ");
 
+        let git_status_output = Command::new("git")
+            .arg("status")
+            .arg("--short")
+            .current_dir(&self.repo_path)
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .unwrap_or_else(|| "".to_string());
+
         let feature_prompt = format!(
             "You are executing Phase 2 of a long-running task.
 Overall Task: {}
 Recent Git History:
+{}
+Uncommitted Changes:
 {}
 Progress File Content:
 {}
 Remaining Features:
 {}
 Feature to implement now (Highest Priority): {}
-Execute steps to complete this feature, verify it, and then stop.",
-            progress.task_description, git_log_output, progress_file_content, pending_features_list, feature_name
+
+Instructions:
+1. Review the uncommitted changes and recent history.
+2. Execute steps to fully implement this feature.
+3. Test your implementation.
+4. Stop when you consider the feature completed.",
+            progress.task_description, git_log_output, git_status_output, progress_file_content, pending_features_list, feature_name
         );
 
         // We use a fresh config to keep the context window small (compaction/reset)
@@ -245,13 +261,21 @@ Structured Scratchpad Notes:
                 let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                 let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
-                    let commit_msg = format!("Completed feature: {}
+                // Check if there are changes to commit
+                let status = Command::new("git").arg("status").arg("--porcelain").current_dir(&self.repo_path).output();
+                let has_changes = status.map(|out| !out.stdout.is_empty()).unwrap_or(false);
+
+                if has_changes {
+                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
+                        let commit_msg = format!("Completed feature: {}
 
 {}", feature_name, result);
-                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
+                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                            tracing::error!("Phase 2 failed to git commit: {}", e);
+                        }
                     }
+                } else {
+                    tracing::info!("No changes detected for feature {}, skipping git commit.", feature_name);
                 }
             }
             Err(e) => {
@@ -534,5 +558,68 @@ mod tests {
         assert_eq!(saved_progress.features[2].status, "completed");
         assert!(saved_progress.notes.iter().any(|n| n.contains("Implemented feature session 1")));
         assert!(saved_progress.notes.iter().any(|n| n.contains("Implemented feature session 2")));
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use tempfile::tempdir;
+    use crate::agent::Agent;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+
+    struct RalphMockLlm;
+
+    #[async_trait::async_trait]
+    impl LlmClient for RalphMockLlm {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message::assistant("I am done."),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id1".to_string()),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_with_uncommitted_changes() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+        let repo_dir = dir.path().to_path_buf();
+        let progress_file_str = progress_file.to_str().unwrap();
+
+        Command::new("git").arg("init").current_dir(&repo_dir).output().unwrap();
+        Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().unwrap();
+        Command::new("git").arg("config").arg("user.email").arg("test@example.com").current_dir(&repo_dir).output().unwrap();
+
+        let initial_progress = RalphProgress {
+            task_description: "Build feature".to_string(),
+            features: vec![
+                Feature { name: "Step 1".to_string(), status: "pending".to_string() },
+            ],
+            current_feature_index: 0,
+            notes: vec![],
+            is_complete: false,
+        };
+        fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).await.unwrap();
+
+        // Create uncommitted change
+        fs::write(repo_dir.join("test_file.rs"), "fn main() {}").await.unwrap();
+
+        let llm = Arc::new(RalphMockLlm);
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file_str);
+
+        // This runs phase 2 since progress.json exists
+        let result = ralph.run("Build feature").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = fs::read_to_string(&progress_file).await.unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+        assert!(saved_progress.is_complete);
     }
 }

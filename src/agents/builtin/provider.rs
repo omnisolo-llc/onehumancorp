@@ -4,7 +4,9 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
-#[async_trait]
+#[async_trait::async_trait]
+
+
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
 }
@@ -50,7 +52,7 @@ impl Credentials {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait Provider: Send + Sync {
     fn provider_type(&self) -> ProviderType;
     fn description(&self) -> String;
@@ -98,7 +100,9 @@ impl RedisIsolationTransport {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
+
+
 impl Transport for RedisIsolationTransport {
     async fn send(&self, message: &[u8]) -> Result<(), String> {
         use redis::AsyncCommands;
@@ -139,7 +143,7 @@ impl ClaudeProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for ClaudeProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::Claude }
     fn description(&self) -> String { "Anthropic Claude Code — advanced coding and reasoning agent backed by Claude Sonnet/Opus".to_string() }
@@ -175,7 +179,7 @@ impl GeminiProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for GeminiProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::Gemini }
     fn description(&self) -> String { "Google Gemini CLI — multimodal assistant agent backed by Gemini Pro/Ultra".to_string() }
@@ -211,7 +215,7 @@ impl OpenCodeProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for OpenCodeProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::OpenCode }
     fn description(&self) -> String { "OpenCode — open-source software-engineering agent with full terminal and file-system access".to_string() }
@@ -246,7 +250,7 @@ impl OpenClawProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for OpenClawProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::OpenClaw }
     fn description(&self) -> String { "OpenClaw — general-purpose assistant agent optimised for content strategy and growth tasks".to_string() }
@@ -282,7 +286,7 @@ impl IronClawProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for IronClawProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::IronClaw }
     fn description(&self) -> String { "IronClaw — security and audit-focused agent with deep static-analysis capabilities".to_string() }
@@ -317,7 +321,7 @@ impl MiniMaxiProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for MiniMaxiProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::MiniMaxi }
     fn description(&self) -> String { "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.).".to_string() }
@@ -352,7 +356,7 @@ impl BuiltinProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for BuiltinProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::Builtin }
     fn description(&self) -> String { "Built-in local agent — full agentic loop with tool execution; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured.".to_string() }
@@ -390,7 +394,7 @@ impl ScoutProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Provider for ScoutProvider {
     fn provider_type(&self) -> ProviderType { ProviderType::Scout }
     fn description(&self) -> String { "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities".to_string() }

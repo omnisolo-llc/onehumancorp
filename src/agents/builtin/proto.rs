@@ -4,7 +4,7 @@ pub mod agent_service {
     #![allow(clippy::all)]
     pub use agent_service_proto::ohc::agent::service::*;
 }
-pub use agent_service::*;
+
 
 pub mod interop {
     #![allow(clippy::all)]
