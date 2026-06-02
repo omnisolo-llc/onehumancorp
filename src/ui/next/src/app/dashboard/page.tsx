@@ -444,8 +444,8 @@ export default function Dashboard() {
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
-             <Link href="/plan" role="button" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-               Billing
+             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
+               My Plan
              </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
@@ -733,6 +733,50 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+         {/* Storefront Branding Soft Paywall */}
+         <section className="mb-6">
+            <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 165, 0, 0.3)' }}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                        Storefront Branding
+                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255, 165, 0, 0.1)', color: '#d97706' }}>
+                            Premium Feature
+                        </span>
+                    </h3>
+                </div>
+
+                <p className="text-gray-600 font-inter text-sm mb-4 leading-relaxed">
+                    Remove the "Powered by OHC" watermark from your storefront and embed widgets.
+                </p>
+
+                <div className="flex justify-between items-center bg-black/5 p-4 rounded-xl mb-4">
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900">Remove "Powered by OHC" Badge</span>
+                        <span className="text-sm text-gray-600">Show only your own brand on your storefront.</span>
+                    </div>
+                    <div className="relative">
+                        {/* Toggle Switch (Locked) */}
+                        <label className="relative inline-block w-12 h-7 opacity-50 cursor-not-allowed">
+                            <input type="checkbox" disabled className="opacity-0 w-0 h-0" />
+                            <span className="absolute cursor-not-allowed top-0 left-0 right-0 bottom-0 bg-gray-300 transition-all duration-300 rounded-full"></span>
+                            <span className="absolute h-5 w-5 left-1 bottom-1 bg-white transition-all duration-300 rounded-full"></span>
+                        </label>
+                        <div className="absolute -top-2.5 -right-2.5 text-base">🔒</div>
+                    </div>
+                </div>
+
+                <div className="text-center mt-4">
+                    <button
+                        onClick={() => { setShowSoftPaywall(true); }}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 shadow-md"
+                        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)' }}
+                    >
+                        Upgrade to Premium to Unlock
+                    </button>
+                </div>
             </div>
          </section>
 
@@ -1138,7 +1182,7 @@ export default function Dashboard() {
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
                         onClick={() => setShowSaleCelebration(false)}
                     >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -1461,7 +1505,7 @@ export default function Dashboard() {
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                  Share to X
+                  Share on X
                 </a>
               </div>
               <div className="flex justify-center pt-2">
@@ -2071,8 +2115,7 @@ export default function Dashboard() {
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-              style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free
