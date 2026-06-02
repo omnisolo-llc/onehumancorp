@@ -113,11 +113,11 @@ impl TaskManager {
     }
 
     pub fn set_broadcaster(&self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
-        *self.broadcaster.write().unwrap() = Some(broadcaster);
+        *self.broadcaster.write().unwrap_or_else(|e| e.into_inner()) = Some(broadcaster);
     }
 
     fn broadcast(&self, task: &SharedTask, event_type: &str) {
-        if let Some(ref b) = *self.broadcaster.read().unwrap() {
+        if let Some(ref b) = *self.broadcaster.read().unwrap_or_else(|e| e.into_inner()) {
             b(task.clone(), event_type.to_string());
         }
     }
@@ -167,7 +167,7 @@ impl TaskManager {
             proposed_content: None,
         };
         
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         tasks.insert(id, task.clone());
         
         Ok(task)
@@ -175,7 +175,7 @@ impl TaskManager {
 
 
     pub fn check_circular_dependency(&self, task_id: &str, dependencies: &[String]) -> Result<(), String> {
-        let tasks = self.tasks.read().unwrap();
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
         let mut to_visit = dependencies.to_vec();
         let mut visited = std::collections::HashSet::new();
 
@@ -194,17 +194,17 @@ impl TaskManager {
 
 
     pub fn insert_task(&self, task: SharedTask) {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         tasks.insert(task.id.clone(), task);
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
-        let tasks = self.tasks.read().unwrap();
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
         tasks.get(task_id).cloned().ok_or_else(|| "task not found".to_string())
     }
 
     pub fn update_task_status(&self, task_id: &str, new_status: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
@@ -216,7 +216,7 @@ impl TaskManager {
     }
 
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             let is_valid_state = task.status == "PENDING" || task.ultraplan_phase.as_deref() == Some("APPROVED");
             if is_valid_state && task.approval_status.as_deref() != Some("PENDING") {
@@ -231,7 +231,7 @@ impl TaskManager {
     }
 
     pub fn review_task(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
@@ -246,7 +246,7 @@ impl TaskManager {
     }
 
     pub fn complete_task(&self, task_id: &str, agent_id: &str, result: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "COMPLETED".to_string();
@@ -275,7 +275,7 @@ impl TaskManager {
 
 
     pub fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "FAILED".to_string();
@@ -304,7 +304,7 @@ impl TaskManager {
 
     pub async fn submit_for_approval(&self, task_id: &str, org_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), String> {
         let (new_approval_status, new_updated_at, new_proposed_content, new_action_risk) = {
-            let mut tasks = self.tasks.write().unwrap();
+            let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
             if let Some(task) = tasks.get_mut(task_id) {
                 if task.organization_id != org_id {
                     return Err("Unauthorized".to_string());
@@ -324,7 +324,7 @@ impl TaskManager {
             }
         };
 
-        let db_clone = self.db.read().unwrap().clone();
+        let db_clone = self.db.read().unwrap_or_else(|e| e.into_inner()).clone();
         if let Some(db) = db_clone {
             let risk_str = match new_action_risk {
                 Some(ActionRisk::High) => "HIGH",
@@ -367,7 +367,7 @@ impl TaskManager {
 
     pub async fn approve_task(&self, task_id: &str, is_approved: bool, required_org_id: &str) -> Result<(), String> {
         let (new_approval_status, new_status, new_payload_opt, new_updated_at, org_id) = {
-            let tasks_read = self.tasks.read().unwrap();
+            let tasks_read = self.tasks.read().unwrap_or_else(|e| e.into_inner());
             if let Some(task) = tasks_read.get(task_id) {
                 if task.organization_id != required_org_id {
                     return Err("Unauthorized".to_string());
@@ -398,7 +398,7 @@ impl TaskManager {
             }
         };
 
-        let db_clone = self.db.read().unwrap().clone();
+        let db_clone = self.db.read().unwrap_or_else(|e| e.into_inner()).clone();
         if let Some(db) = db_clone {
             if let Some(new_payload) = &new_payload_opt {
                 match &db.store {
@@ -434,7 +434,7 @@ impl TaskManager {
             }
         }
 
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             task.approval_status = new_approval_status;
             task.status = new_status;
@@ -449,7 +449,7 @@ impl TaskManager {
     }
 
     pub fn get_pending_approvals(&self, org_id: &str) -> Vec<SharedTask> {
-        let tasks = self.tasks.read().unwrap();
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
         tasks.values()
             .filter(|t| t.organization_id == org_id && t.approval_status.as_deref() == Some("PENDING"))
             .cloned()
@@ -457,7 +457,7 @@ impl TaskManager {
     }
 
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         let mut claimed_tasks = Vec::new();
         
         for task in tasks.values_mut() {
