@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
+use std::fmt::Write;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -304,9 +305,9 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
-                tool_defs.push_str(&format!("Description: {}\n", tool.description));
-                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
+                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
+                let _ = write!(tool_defs, "Description: {}\n", tool.description);
+                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }
