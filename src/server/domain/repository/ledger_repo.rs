@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use super::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry};
+use super::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry, Account, Transaction};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -450,5 +450,142 @@ mod ledger_tests {
 
         let entries_tenant4 = repo.get_ledger_entries("tenant_4").await.unwrap();
         assert_eq!(entries_tenant4.len(), 2);
+    }
+}
+
+impl LedgerRepository {
+    pub async fn record_transaction(&self, tenant_id: &str, amount: f64, currency: &str, credit_account: &str, debit_account: &str) -> Result<(), String> {
+        let tx_id = Uuid::new_v4().to_string();
+        let credit_entry_id = Uuid::new_v4().to_string();
+        let debit_entry_id = Uuid::new_v4().to_string();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)
+                    "#
+                )
+                .bind(tenant_id).bind(&tx_id).bind(amount).bind(currency)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO double_entry_ledger (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'credit', $5)
+                    "#
+                )
+                .bind(tenant_id).bind(&credit_entry_id).bind(&tx_id).bind(credit_account).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO double_entry_ledger (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'debit', $5)
+                    "#
+                )
+                .bind(tenant_id).bind(&debit_entry_id).bind(&tx_id).bind(debit_account).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, account_id, currency) DO UPDATE SET balance = ledger_accounts.balance + $4
+                    "#
+                )
+                .bind(tenant_id).bind(credit_account).bind(currency).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, -$4) ON CONFLICT (tenant_id, account_id, currency) DO UPDATE SET balance = ledger_accounts.balance - $4
+                    "#
+                )
+                .bind(tenant_id).bind(debit_account).bind(currency).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES (?, ?, ?, ?)
+                    "#
+                )
+                .bind(tenant_id).bind(&tx_id).bind(amount).bind(currency)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO double_entry_ledger (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES (?, ?, ?, ?, 'credit', ?)
+                    "#
+                )
+                .bind(tenant_id).bind(&credit_entry_id).bind(&tx_id).bind(credit_account).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO double_entry_ledger (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES (?, ?, ?, ?, 'debit', ?)
+                    "#
+                )
+                .bind(tenant_id).bind(&debit_entry_id).bind(&tx_id).bind(debit_account).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES (?, ?, ?, ?) ON CONFLICT (tenant_id, account_id, currency) DO UPDATE SET balance = ledger_accounts.balance + ?
+                    "#
+                )
+                .bind(tenant_id).bind(credit_account).bind(currency).bind(amount).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES (?, ?, ?, -?) ON CONFLICT (tenant_id, account_id, currency) DO UPDATE SET balance = ledger_accounts.balance - ?
+                    "#
+                )
+                .bind(tenant_id).bind(debit_account).bind(currency).bind(amount).bind(amount)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_account_balance(&self, tenant_id: &str, account_id: &str, currency: &str) -> Result<f64, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query!(
+                    r#"
+                    SELECT balance FROM ledger_accounts WHERE tenant_id = $1 AND account_id = $2 AND currency = $3
+                    "#,
+                    tenant_id, account_id, currency
+                )
+                .fetch_optional(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                match row {
+                    Some(record) => Ok(record.balance.to_string().parse::<f64>().unwrap_or(0.0)),
+                    None => Ok(0.0),
+                }
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query!(
+                    r#"
+                    SELECT balance FROM ledger_accounts WHERE tenant_id = ? AND account_id = ? AND currency = ?
+                    "#,
+                    tenant_id, account_id, currency
+                )
+                .fetch_optional(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                match row {
+                    Some(record) => Ok(record.balance),
+                    None => Ok(0.0),
+                }
+            }
+        }
     }
 }

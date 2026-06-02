@@ -123,3 +123,33 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LedgerAccount {
+    pub account_id: String,
+    pub tenant_id: String,
+    pub currency: String,
+    pub balance: bigdecimal::BigDecimal,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LedgerTransaction {
+    pub tx_id: String,
+    pub tenant_id: String,
+    pub amount: bigdecimal::BigDecimal,
+    pub currency: String,
+    pub timestamp: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DoubleEntryLedger {
+    pub entry_id: String,
+    pub tenant_id: String,
+    pub tx_id: String,
+    pub account_id: String,
+    pub direction: String,
+    pub amount: bigdecimal::BigDecimal,
+    pub created_at: Option<DateTime<Utc>>,
+}

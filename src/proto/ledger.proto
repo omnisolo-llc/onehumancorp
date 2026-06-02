@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package ohc.ledger.v1;
+
+option go_package = "github.com/onehumancorp/ohc/src/proto/ledger/v1;ledgerv1";
+
+// The Unified Ledger Service provides a double-entry accounting system
+// for multi-currency settlement across OHC tenants.
+service LedgerService {
+  // Records a multi-account, double-entry transaction.
+  // The sum of all debits must equal the sum of all credits within
+  // the transaction.
+  rpc RecordTransaction(RecordTransactionRequest) returns (RecordTransactionResponse) {}
+
+  // Retrieves the current balance for a given account.
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {}
+
+  // Retrieves the statement/transaction history for a given account.
+  rpc GetStatement(GetStatementRequest) returns (GetStatementResponse) {}
+}
+
+message RecordTransactionRequest {
+  string tenant_id = 1;
+  string transaction_id = 2; // Idempotency key / unique tx id
+  string currency = 3; // e.g. USD, EUR
+
+  message Entry {
+    string account_id = 1;
+    double amount = 2; // Positive amount
+    Direction direction = 3;
+
+    enum Direction {
+      DIRECTION_UNSPECIFIED = 0;
+      DEBIT = 1;
+      CREDIT = 2;
+    }
+  }
+
+  repeated Entry entries = 4;
+}
+
+message RecordTransactionResponse {
+  string transaction_id = 1;
+  bool success = 2;
+}
+
+message GetBalanceRequest {
+  string tenant_id = 1;
+  string account_id = 2;
+}
+
+message GetBalanceResponse {
+  string account_id = 1;
+  string currency = 2;
+  double balance = 3;
+}
+
+message GetStatementRequest {
+  string tenant_id = 1;
+  string account_id = 2;
+  int32 limit = 3; // Pagination limit
+  string cursor = 4; // Pagination cursor
+}
+
+message GetStatementResponse {
+  message TransactionEntry {
+    string transaction_id = 1;
+    double amount = 2;
+    string direction = 3; // DEBIT or CREDIT
+    string timestamp = 4;
+  }
+
+  string account_id = 1;
+  repeated TransactionEntry entries = 2;
+  string next_cursor = 3;
+}
