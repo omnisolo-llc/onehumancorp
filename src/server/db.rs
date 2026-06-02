@@ -835,6 +835,27 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
                     );
+                    CREATE TABLE IF NOT EXISTS customer360 (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        email TEXT,
+                        phone TEXT,
+                        mood TEXT,
+                        preferences TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_customer360_tenant_customer ON customer360(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS loyalty_ledger (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        points_balance INTEGER DEFAULT 0,
+                        tier_name TEXT,
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
@@ -1193,7 +1214,7 @@ mod tests {
                 tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .unwrap()
+                    .expect("Database URL or operation failed in test")
                     .block_on(async {
                         let db = DB::new().await;
                         assert!(db.is_err());
@@ -1213,7 +1234,7 @@ mod autodream_db_tests {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1224,7 +1245,7 @@ mod autodream_db_tests {
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let db = DB {
             pool: pool.clone(),
@@ -1243,7 +1264,7 @@ mod autodream_db_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1254,7 +1275,7 @@ mod autodream_db_tests {
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let db = DB {
             pool: pool.clone(),
@@ -1284,7 +1305,7 @@ mod autodream_db_tests {
 
         // Cleanup
         let _ = sqlx::query("DELETE FROM knowledge_embeddings WHERE id = $1")
-            .bind(uuid::Uuid::parse_str(id).unwrap())
+            .bind(uuid::Uuid::parse_str(id).expect("Database URL or operation failed in test"))
             .execute(&db.pool)
             .await;
     }
@@ -1294,7 +1315,7 @@ mod autodream_db_tests {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         sqlx::query(
             "CREATE TABLE knowledge_embeddings (
@@ -1313,11 +1334,11 @@ mod autodream_db_tests {
         )
         .execute(&pool)
         .await
-        .unwrap();
+        .expect("Database URL or operation failed in test");
 
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let db = DB {
             pool: pg_pool,
@@ -1335,12 +1356,12 @@ mod autodream_db_tests {
             "document",
         )
         .await
-        .unwrap();
+        .expect("Database URL or operation failed in test");
 
         let row = sqlx::query("SELECT id FROM knowledge_embeddings")
             .fetch_one(&pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let fetched_id: String = sqlx::Row::get(&row, "id");
 
@@ -1353,7 +1374,7 @@ mod autodream_db_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1364,7 +1385,7 @@ mod autodream_db_tests {
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
         // Just checking configuration parses ok for multitenancy logic
         let _ = pool;
     }
@@ -1385,23 +1406,23 @@ mod autodream_db_tests {
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // Create dummy schema
         sqlx::query("CREATE TABLE test_isolation (id TEXT, org_id TEXT, data TEXT);")
             .execute(&pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // Insert mixed tenant data
         sqlx::query("INSERT INTO test_isolation VALUES ('1', 'tenant_a', 'data_a');")
             .execute(&pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO test_isolation VALUES ('2', 'tenant_b', 'data_b');")
             .execute(&pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // Verify explicit tenant binding query structure strictly filters the other tenant
         let target_tenant = "tenant_a";
@@ -1409,7 +1430,7 @@ mod autodream_db_tests {
             .bind(target_tenant)
             .fetch_all(&pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         assert_eq!(rows.len(), 1);
         use sqlx::Row;
@@ -1428,7 +1449,7 @@ mod autodream_db_tests {
 
         // Ensure we handle cipher directives explicitly and gracefully
         let opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .unwrap()
+            .expect("Database URL or operation failed in test")
             .pragma("key", "secure_test_key_123");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
@@ -1461,11 +1482,11 @@ mod security_tests_final {
 
     #[test]
     fn test_sqlite_secure_directory_creation() {
-        let _lock = ENV_MUTEX.lock().unwrap();
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         // Run with a temporary directory
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir = tempfile::tempdir().expect("Database URL or operation failed in test");
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
-        let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
+        let database_url = format!("sqlite://{}", db_path.to_str().expect("Database URL or operation failed in test"));
 
         temp_env::with_vars(
             vec![
@@ -1476,12 +1497,12 @@ mod security_tests_final {
                 tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .unwrap()
+                    .expect("Database URL or operation failed in test")
                     .block_on(async {
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
                         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
-                        let parent_dir = db_path.parent().unwrap();
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
@@ -1490,7 +1511,7 @@ mod security_tests_final {
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
                         let _ = DB::new().await;
-                        let parent_dir = db_path.parent().unwrap();
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Securely create the database file with restricted permissions initially to avoid TOCTOU
@@ -1505,12 +1526,12 @@ mod security_tests_final {
                                 .create(true)
                                 .mode(0o600)
                                 .open(&db_path)
-                                .unwrap();
-                            let metadata = file.metadata().unwrap();
+                                .expect("Database URL or operation failed in test");
+                            let metadata = file.metadata().expect("Database URL or operation failed in test");
                             let mut perms = metadata.permissions();
                             if perms.mode() & 0o777 != 0o600 {
                                 perms.set_mode(0o600);
-                                file.set_permissions(perms).unwrap();
+                                file.set_permissions(perms).expect("Database URL or operation failed in test");
                             }
                         }
                         #[cfg(not(unix))]
@@ -1518,10 +1539,10 @@ mod security_tests_final {
                             let _ = fs::File::create(&db_path);
                         }
 
-                        let parent_dir = db_path.parent().unwrap();
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         assert!(parent_dir.exists(), "Secure directory should be created");
 
-                        let meta = fs::metadata(&db_path).unwrap();
+                        let meta = fs::metadata(&db_path).expect("Database URL or operation failed in test");
                         let mode = meta.permissions().mode();
                         assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
                     });
@@ -1538,7 +1559,7 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1556,7 +1577,7 @@ mod e2e_tenant_isolation_tests {
                 })
             })
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
@@ -1575,7 +1596,7 @@ mod e2e_tenant_isolation_tests {
                 })
             })
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
@@ -1588,7 +1609,7 @@ mod e2e_tenant_isolation_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Create a basic pool using our implementation logic
         let pool_opts = sqlx::postgres::PgPoolOptions::new()
@@ -1607,15 +1628,15 @@ mod e2e_tenant_isolation_tests {
                 })
             });
 
-        let pool = pool_opts.connect(&database_url).await.unwrap();
+        let pool = pool_opts.connect(&database_url).await.expect("Database URL or operation failed in test");
 
         // Check if the tenant was reset
-        let mut conn = pool.acquire().await.unwrap();
+        let mut conn = pool.acquire().await.expect("Database URL or operation failed in test");
         let row: (Option<String>,) =
             sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
                 .fetch_one(&mut *conn)
                 .await
-                .unwrap();
+                .expect("Database URL or operation failed in test");
 
         assert_eq!(
             row.0.unwrap_or_default(),
@@ -1633,7 +1654,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1651,7 +1672,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
                 })
             })
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
@@ -1670,10 +1691,10 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
                 })
             })
             .connect_lazy(&database_url)
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // 1) Clear out swarm_tasks
-        sqlx::query("DELETE FROM swarm_tasks").execute(&_pool).await.unwrap();
+        sqlx::query("DELETE FROM swarm_tasks").execute(&_pool).await.expect("Database URL or operation failed in test");
 
         let unique_mission_id = format!("mission_{}", uuid::Uuid::new_v4());
 
@@ -1682,14 +1703,14 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .bind(&unique_mission_id)
             .execute(&_pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         // 3) Verify tenant_1 can see it
         let count_t1: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
             .bind(&unique_mission_id)
             .fetch_one(&_pool)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
         assert_eq!(count_t1.0, 1, "tenant_1 should see their own task");
 
         // 4) Verify tenant_2 cannot see it
@@ -1697,7 +1718,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .bind(&unique_mission_id)
             .fetch_one(&_pool2)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }
@@ -1713,7 +1734,7 @@ mod e2e_cleanup_stagnant_missions_tests {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1724,7 +1745,7 @@ mod e2e_cleanup_stagnant_missions_tests {
             })
             .connect(&database_url)
             .await
-            .unwrap();
+            .expect("Database URL or operation failed in test");
 
         let db = DB {
             store: DbStore::Postgres,
@@ -1732,7 +1753,7 @@ mod e2e_cleanup_stagnant_missions_tests {
 
         };
 
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await.expect("failed to begin transaction");
 
         // Use a unique tenant for this test to avoid conflicting with other tests
         let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());
@@ -1740,41 +1761,41 @@ mod e2e_cleanup_stagnant_missions_tests {
         // 1. Stuck mission (should be updated)
         sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, $1)")
             .bind(&test_tenant)
-            .execute(&mut *tx).await.unwrap();
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
 
         // 2. Pending mission but updated recently (should NOT be updated)
         sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, $1)")
             .bind(&test_tenant)
-            .execute(&mut *tx).await.unwrap();
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
 
         // 3. Pending mission updated 2 hours ago (should be updated)
         sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', CURRENT_TIMESTAMP - INTERVAL '2 hours', $1)")
             .bind(&test_tenant)
-            .execute(&mut *tx).await.unwrap();
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
 
-        tx.commit().await.unwrap();
+        tx.commit().await.expect("Database URL or operation failed in test");
 
         // Clean up missions older than 3600 seconds
-        let _affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+        let _affected = db.cleanup_stagnant_missions(3600).await.expect("Database URL or operation failed in test");
 
         let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
             .bind(&test_tenant)
-            .fetch_one(&pool).await.unwrap().get("status");
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
         assert_eq!(status_1, "FAILED");
 
         let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = $1")
             .bind(&test_tenant)
-            .fetch_one(&pool).await.unwrap().get("status");
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
         assert_eq!(status_2, "PENDING");
 
         let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = $1")
             .bind(&test_tenant)
-            .fetch_one(&pool).await.unwrap().get("status");
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
         assert_eq!(status_3, "FAILED");
 
         // Clean up the table for the unique tenant
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
             .bind(&test_tenant)
-            .execute(&pool).await.unwrap();
+            .execute(&pool).await.expect("Database URL or operation failed in test");
     }
 }

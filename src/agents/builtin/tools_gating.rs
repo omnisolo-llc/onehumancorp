@@ -7,6 +7,13 @@ pub struct ToolGater;
 
 impl ToolGater {
     pub fn check_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
+        // OpenAI Guardrail: Check Tool Guardrail registry
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_tool(tc) {
+                return Err(ToolError::Fatal(format!("Tool Guardrail tripped: {}", e)));
+            }
+        }
+
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
             return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
