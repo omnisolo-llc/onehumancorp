@@ -7623,7 +7623,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>OHC Advanced API Reference</h1>
                             <p>This section is for developers directly integrating with our APIs.</p>
                         </div>
-                        <div id="swagger-ui"></div>
+                        <div id="swagger-ui" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px) saturate(200%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.5); padding: 24px; margin: 24px;"></div>
                     </div>
                 </body>
             </html>
