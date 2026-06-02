@@ -637,7 +637,24 @@ async fn http_login_handler(
     };
 
     let password_hash: String = row.get("password_hash");
-    match bcrypt::verify(&payload.password, &password_hash) {
+
+    let is_valid = {
+        let password = payload.password.clone();
+        let hash = password_hash.clone();
+        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
+            Ok(res) => res,
+            Err(e) => {
+                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+                )
+                    .into_response();
+            }
+        }
+    };
+
+    match is_valid {
         Ok(true) => {}
         Ok(false) => {
             return (
