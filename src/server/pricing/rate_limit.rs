@@ -74,15 +74,6 @@ impl PlanTier {
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
-
-    pub fn base_price(&self) -> f64 {
-        match self {
-            PlanTier::Free => 0.0,
-            PlanTier::Starter => 29.0,
-            PlanTier::Pro => 79.0,
-            PlanTier::Business => 299.0,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -399,11 +390,6 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
-
-        assert_eq!(PlanTier::Free.base_price(), 0.0);
-        assert_eq!(PlanTier::Starter.base_price(), 29.0);
-        assert_eq!(PlanTier::Pro.base_price(), 79.0);
-        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[tokio::test]

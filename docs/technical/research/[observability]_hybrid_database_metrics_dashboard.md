@@ -10,7 +10,7 @@ The One Human Corp (OHC) backend codebase heavily instruments database query lat
 - **Goal**: Implement a visually premium Grafana dashboard to track these database metrics across modes, fulfilling the "Full-Spectrum Observability" core value.
 
 ## Design Doc
-1. **File Location**: Create `src/server/monitoring/dashboards/database_metrics.json`.
+1. **File Location**: Create `monitoring/dashboards/database_metrics.json`.
 2. **Dashboard Structure**:
    - **Row 1: Overview**: Total QPS (Queries Per Second) and Global Error Rate, split by database type (Postgres vs SQLite).
    - **Row 2: Latency**: P50, P90, P99 query latency distributions (`db.client.operation.duration`).
@@ -22,7 +22,7 @@ The One Human Corp (OHC) backend codebase heavily instruments database query lat
 4. **Data Source**: Prometheus.
 
 ## Implementation Prompt
-Create a new Grafana dashboard JSON file at `src/server/monitoring/dashboards/database_metrics.json`.
+Create a new Grafana dashboard JSON file at `monitoring/dashboards/database_metrics.json`.
 The dashboard must visualize the following Prometheus metrics exported by our Rust backend:
 - `db_client_operation_duration_seconds_bucket` / `db_client_operation_duration_seconds_count`
 - `db_client_operation_errors_total`

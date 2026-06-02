@@ -1,10 +1,11 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
+use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer, RegisterProxyRequest, proxy_to_server};
 use tonic::transport::Channel;
 use tonic::Request;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::{info, error};
+use std::process::Stdio;
+use tracing::{info, warn, error};
 use super::blob::{create_blob_provider, BlobProvider};
 use std::sync::Arc;
 

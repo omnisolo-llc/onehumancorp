@@ -161,35 +161,3 @@ message GetVideoTutorialsRequest {
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
 }
-service BookingEngineService {
-  rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
-  rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
-}
-
-message CheckAvailabilityRequest {
-  string tenant_id = 1;
-  string product_id = 2;
-  string date = 3; // YYYY-MM-DD
-}
-
-message TimeSlot {
-  string start_time = 1; // RFC3339
-  string end_time = 2; // RFC3339
-}
-
-message CheckAvailabilityResponse {
-  repeated TimeSlot available_slots = 1;
-}
-
-message ReserveTimeSlotRequest {
-  string tenant_id = 1;
-  string customer_id = 2;
-  string product_id = 3;
-  string start_time = 4; // RFC3339
-  string end_time = 5; // RFC3339
-}
-
-message ReserveTimeSlotResponse {
-  string booking_id = 1;
-  string deposit_stripe_link = 2;
-}
