@@ -46,7 +46,7 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     await page.click('button[id="launch-btn"]');
 
     // Wait for the Live status
-    await page.waitForSelector('text=You\\'re Live!', { timeout: 15000 });
+    await page.waitForSelector("text=You're Live!", { timeout: 15000 });
 
     // Verify the Store Performance metric card is visible
     await expect(page.locator('text=Store Performance')).toBeVisible();
