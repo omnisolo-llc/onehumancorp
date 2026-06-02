@@ -637,7 +637,24 @@ async fn http_login_handler(
     };
 
     let password_hash: String = row.get("password_hash");
-    match bcrypt::verify(&payload.password, &password_hash) {
+
+    let is_valid = {
+        let password = payload.password.clone();
+        let hash = password_hash.clone();
+        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
+            Ok(res) => res,
+            Err(e) => {
+                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+                )
+                    .into_response();
+            }
+        }
+    };
+
+    match is_valid {
         Ok(true) => {}
         Ok(false) => {
             return (
@@ -3070,6 +3087,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
+    let ledger_service = crate::services::capital::double_entry_ledger_service::MyLedgerService::new(db.pool.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -3079,6 +3097,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+        .add_service(crate::services::capital::double_entry_ledger_service::ledgerpb::ledger_service_server::LedgerServiceServer::with_interceptor(ledger_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

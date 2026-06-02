@@ -13,6 +13,7 @@ exports_files([
     "model.proto",
     "organization.proto",
     "skills.proto",
+    "ledger.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -233,3 +234,14 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# ── Ledger ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "ledger_proto",
+    srcs = ["ledger.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "ledger",

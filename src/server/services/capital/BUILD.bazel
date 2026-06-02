@@ -13,11 +13,23 @@ rust_library(
     srcs = [
         "mod.rs",
         "ledger.rs",
+        "double_entry_repo.rs",
+        "double_entry_ledger_service.rs",
+        "double_entry_ledger_test.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
-    deps = [],
+    deps = [
+        "//src/proto:ledger_prost",
+        "//src/proto:ledger_tonic",
+        "//src/server/common:server_common",
+        "//src/server:server_lib",
+        "@crates//:chrono",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:uuid",
+    ],
 )
 
 rust_test(
