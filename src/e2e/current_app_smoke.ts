@@ -14,8 +14,7 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible();
 
     await page.goto('/integrations');
-    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Social Media Accounts' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
 
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible();

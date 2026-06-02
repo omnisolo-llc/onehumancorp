@@ -194,6 +194,8 @@ export default function AgentsPage() {
               {departments.map((dept) => (
                 <div
                   key={dept.id}
+                  role="button"
+                  tabIndex={0}
                   className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
