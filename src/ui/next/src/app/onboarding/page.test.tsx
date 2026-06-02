@@ -40,6 +40,46 @@ describe('OnboardingWizard', () => {
     expect(button).toBeDisabled();
   });
 
+  it('Handles enter key progression in chat steps', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Chat Step 1 - Use Enter Key
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Maya Bakery{Enter}');
+
+    // Chat Step 2 - Use Enter Key
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
+    await user.type(sellInput, 'Cakes{Enter}');
+
+    // Chat Step 3 - Use Enter Key
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
+    await user.type(locInput, 'NY{Enter}');
+
+    // Verify it transitions to Step 2: Review Details by triggering handleIntake
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+    });
+  });
+
   it('Handles multi-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 

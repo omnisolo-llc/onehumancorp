@@ -312,6 +312,17 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (businessName.trim().length < 3) {
+                              setValidationError('Business Name must be at least 3 characters.');
+                              return;
+                            }
+                            setValidationError('');
+                            setChatStep(2);
+                          }
+                        }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-3 sm:p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -364,6 +375,14 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (whatYouSell.trim()) {
+                              setChatStep(3);
+                            }
+                          }
+                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -409,6 +428,13 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            e.preventDefault();
+                            setValidationError('');
+                            handleIntake();
+                          }
+                        }}
                         placeholder="e.g. Portland, OR"
                         className="w-full p-3 sm:p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
