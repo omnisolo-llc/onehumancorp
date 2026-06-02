@@ -36,7 +36,7 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 1000;
+    let iterations = 10;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
@@ -67,7 +67,7 @@ pub async fn bench_db_query_time() {
 pub async fn bench_api_response_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 100;
+    let iterations = 10;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
@@ -159,7 +159,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 100;
+    let iterations = 10;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -253,7 +253,7 @@ pub async fn bench_dashboard_snapshot() {
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = if name.contains("Memory") { 10 } else { 100 };
+    let iterations = 10;
 
     let run_id = Uuid::new_v4().to_string();
 

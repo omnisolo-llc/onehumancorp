@@ -10,18 +10,33 @@ vi.mock('@/components/TooltipContext', () => ({
 }));
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  global.fetch = mockFetch;
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes('/api/agents/workflows')) {
+      return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
+    }
+    if (url.includes('/api/agents/feed')) {
+      return Promise.resolve({ ok: true, json: async () => ({ feed: [], next_cursor: null }) });
+    }
+    if (url.includes('/api/agents/approvals')) {
+      return Promise.resolve({ ok: true, json: async () => ({ pending_approvals: [], next_cursor: null }) });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+  });
 });
 
 test('renders AI Departments heading', async () => {
+<<<<<<< HEAD
+=======
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
+>>>>>>> ca73a8e3 (feat(ui): enhance onboarding styles and fix test mocks)
   render(<AgentsPage />);
 
   await waitFor(() => {
@@ -30,11 +45,14 @@ test('renders AI Departments heading', async () => {
 });
 
 test('switches tabs correctly', async () => {
+<<<<<<< HEAD
+=======
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
+>>>>>>> ca73a8e3 (feat(ui): enhance onboarding styles and fix test mocks)
   render(<AgentsPage />);
 
   // Default is 'teams'
@@ -49,6 +67,28 @@ test('switches tabs correctly', async () => {
 });
 
 test('renders approvals tab correctly', async () => {
+<<<<<<< HEAD
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes('/api/agents/workflows')) return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
+    if (url.includes('/api/agents/feed')) return Promise.resolve({ ok: true, json: async () => ({ feed: [], next_cursor: null }) });
+    if (url.includes('/api/agents/approvals')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pending_approvals: [
+            {
+              id: '123',
+              department: 'customer_success',
+              description: 'Draft reply to customer',
+              status: 'pending'
+            }
+          ],
+          next_cursor: null
+        })
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+=======
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -63,6 +103,7 @@ test('renders approvals tab correctly', async () => {
       ],
       next_cursor: null
     }),
+>>>>>>> ca73a8e3 (feat(ui): enhance onboarding styles and fix test mocks)
   });
 
   render(<AgentsPage />);
@@ -77,11 +118,14 @@ test('renders approvals tab correctly', async () => {
 });
 
 test('renders feed tab correctly', async () => {
+<<<<<<< HEAD
+=======
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
+>>>>>>> ca73a8e3 (feat(ui): enhance onboarding styles and fix test mocks)
   render(<AgentsPage />);
 
   fireEvent.click(screen.getByText('Activity Feed'));
@@ -92,6 +136,29 @@ test('renders feed tab correctly', async () => {
 });
 
 test('approves a draft successfully', async () => {
+<<<<<<< HEAD
+  mockFetch.mockImplementation((url: string) => {
+    if (url.includes('/api/agents/workflows')) return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
+    if (url.includes('/api/agents/feed')) return Promise.resolve({ ok: true, json: async () => ({ feed: [], next_cursor: null }) });
+    if (url.includes('/api/agents/approvals/123')) return Promise.resolve({ ok: true, json: async () => ({ success: true }) });
+    if (url.includes('/api/agents/approvals')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          pending_approvals: [
+            {
+              id: '123',
+              department: 'customer_success',
+              description: 'Draft reply to customer',
+              status: 'pending'
+            }
+          ],
+          next_cursor: null
+        })
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+=======
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -106,6 +173,7 @@ test('approves a draft successfully', async () => {
       ],
       next_cursor: null
     }),
+>>>>>>> ca73a8e3 (feat(ui): enhance onboarding styles and fix test mocks)
   });
 
   render(<AgentsPage />);
@@ -116,15 +184,10 @@ test('approves a draft successfully', async () => {
     expect(screen.getByText('Approve & Send')).toBeDefined();
   });
 
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ success: true }),
-  });
-
   fireEvent.click(screen.getByText('Approve & Send'));
 
-  // Use a softer assertion or wait for the mock to be called twice (initial load + action)
+  // Wait for the mock to have been called for the approval API
   await waitFor(() => {
-    expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/agents/approvals/123'), expect.objectContaining({ method: 'POST' }));
   });
 });
