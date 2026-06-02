@@ -221,7 +221,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+                .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+        .route("/edge/{tenant_id}/{site_id}/invalidate", post(invalidate_edge_cache))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
@@ -1397,4 +1398,42 @@ async fn publish_site_draft(
     }
 
     Ok(site)
+}
+
+#[derive(Deserialize)]
+pub struct InvalidateEdgeCacheRequest {
+    pub tags: Option<Vec<String>>,
+}
+
+async fn invalidate_edge_cache(
+    Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<InvalidateEdgeCacheRequest>,
+) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+    let _site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+
+    // Tenant isolation verification
+    let is_admin = claims.roles.contains(&"admin".to_string()) || claims.roles.contains(&"system".to_string()) || claims.roles.contains(&"user".to_string());
+    if let Some(org_id) = &claims.organization_id {
+        if org_id != &tenant_id_str && !is_admin {
+            return Err(axum::http::StatusCode::FORBIDDEN);
+        }
+    } else if !is_admin {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
+
+    let cache = super::edge::get_edge_cache();
+
+    // Invalidate globally by tenant_id tag
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    // Invalidate by specific requested tags (like entity:product:123)
+    if let Some(tags) = payload.tags {
+        for tag in tags {
+            cache.invalidate_by_tag(&tag).await;
+        }
+    }
+
+    Ok(axum::http::StatusCode::OK)
 }

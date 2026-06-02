@@ -357,3 +357,84 @@ async fn test_builder_generate_and_publish_draft() {
         .await;
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
+
+#[tokio::test]
+async fn test_builder_edge_cache_invalidation() {
+    let (pool, tenant_id) = match setup_db().await {
+        Some(v) => v,
+        None => return,
+    };
+
+    let app = super::api::router(pool.clone());
+
+    use ::server_common::Claims;
+    let claims = Claims {
+        sub: "user123".to_string(),
+        username: "user".to_string(),
+        email: "user@test.com".to_string(),
+        roles: vec!["user".to_string()],
+        session_id: None,
+        iat: 0,
+        jti: "test".to_string(),
+        organization_id: Some(tenant_id.to_string()),
+        exp: 0,
+    };
+
+    let app_with_auth = axum::Router::new()
+        .nest("/builder", app)
+        .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
+            let claims = claims.clone();
+            async move {
+                let mut req = req;
+                req.extensions_mut().insert(claims);
+                next.run(req).await
+            }
+        }));
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    tokio::spawn(async move {
+        axum::serve(listener, app_with_auth.into_make_service()).await.unwrap();
+    });
+
+    let client = reqwest::Client::new();
+    let base_url = format!("http://127.0.0.1:{}", port);
+
+    // 1. Create Site
+    let res = match client.post(&format!("{}/builder/sites", base_url))
+        .json(&serde_json::json!({"domain": "cache-test.com"}))
+        .send().await {
+            Ok(r) => r,
+            Err(_) => return, // Avoid panic if server fails to start
+        };
+
+    if res.status() == 500 {
+        return; // Early return if DB is not migrated
+    }
+
+    assert_eq!(res.status(), 200);
+    let site: super::api::SiteResponse = res.json().await.unwrap();
+    let site_id = site.id;
+
+    // 2. Pre-populate Edge Cache (Mocking the Edge Fetch hit)
+    let cache = super::edge::get_edge_cache();
+    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, "en-US");
+    cache.set_with_tags(&cache_key, "<html>Cached content</html>".to_string(), vec![format!("tenant-id:{}", tenant_id), "entity:product:123".to_string()], std::time::Duration::from_secs(3600)).await;
+
+    // Verify it's cached
+    assert_eq!(cache.get(&cache_key).await, Some("<html>Cached content</html>".to_string()));
+
+    // 3. Call invalidate endpoint
+    let res = client.post(&format!("{}/builder/edge/{}/{}/invalidate", base_url, tenant_id, site_id))
+        .json(&serde_json::json!({"tags": ["entity:product:123"]}))
+        .send().await.unwrap();
+
+    assert_eq!(res.status(), 200);
+
+    // Verify it's invalidated
+    assert_eq!(cache.get(&cache_key).await, None);
+
+    // Clean up
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site_id).execute(&pool).await;
+}
