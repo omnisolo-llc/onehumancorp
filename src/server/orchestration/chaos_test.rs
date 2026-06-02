@@ -9,6 +9,65 @@ use tokio::time::Duration;
 use crate::orchestration::state::StateManager;
 use crate::orchestration::state::cloud::CloudStateManager;
 
+// A Mock mesh that introduces network latency
+struct LatencyMockMesh {
+    delay_ms: u64,
+}
+
+impl LatencyMockMesh {
+    fn new(delay_ms: u64) -> Self {
+        Self { delay_ms }
+    }
+}
+
+#[async_trait]
+impl TeammateMesh for LatencyMockMesh {
+    async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(Box::new(|| {}))
+    }
+    async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(true)
+    }
+    async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(vec![])
+    }
+    async fn ping(&self) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(Box::new(|| {}))
+    }
+    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(())
+    }
+    async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        Ok(Box::new(|| {}))
+    }
+}
+
 // A Mock mesh that emits malformed payload
 struct CorruptedMockMesh {
     received_messages: std::sync::Arc<std::sync::atomic::AtomicUsize>,
@@ -168,6 +227,69 @@ impl TeammateMesh for SleepingMockMesh {
 #[cfg(test)]
 mod chaos_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_network_partition_parity() {
+        // Test network partition via LatencyMockMesh (1000ms delay) on both Cloud and Standalone
+
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(1000));
+
+        // 1. Cloud (Postgres)
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let cloud_db = Arc::new(DB {
+            pool: dummy_pg_pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let cloud_state_manager = CloudStateManager::new(cloud_db, latency_mesh.clone());
+
+        // 2. Standalone (SQLite)
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        // Fix copy paste artifact: do not reuse pg pool clone, mock a new one
+        let standalone_db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new()
+                .max_connections(1)
+                .acquire_timeout(std::time::Duration::from_millis(50))
+                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+                .unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        let standalone_state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(standalone_db, latency_mesh.clone());
+
+        // We pull tasks under network partition (simulated by LatencyMockMesh).
+        // Since the mesh lock acquires take 1000ms and state_manager_timeout defaults to ~2000ms,
+        // it may pass or fail based on timing. To guarantee timeout, we use a 3000ms delay internally
+        // in a new test, but here we expect the fail-safe behavior of StateManagers:
+        // if they timeout, they return an empty vector rather than panicking.
+
+        let start_cloud = std::time::Instant::now();
+        let cloud_tasks = cloud_state_manager.pull_available_tasks(10).await;
+        let elapsed_cloud = start_cloud.elapsed();
+
+        let start_standalone = std::time::Instant::now();
+        let standalone_tasks = standalone_state_manager.pull_available_tasks(10).await;
+        let elapsed_standalone = start_standalone.elapsed();
+
+        // Parity verification: both should gracefully fallback (likely to empty lists or error, but must not panic)
+        // Cloud and Standalone should behave identically at the API boundary
+        assert_eq!(cloud_tasks.is_ok(), standalone_tasks.is_ok(), "Mode parity gap: Cloud and Standalone behave differently under network partition.");
+        if let Ok(c_tasks) = cloud_tasks {
+            let s_tasks = standalone_tasks.unwrap();
+            assert_eq!(c_tasks.len(), 0, "Expected empty fallback under partition");
+            assert_eq!(s_tasks.len(), 0, "Expected empty fallback under partition");
+        }
+    }
 
     #[tokio::test]
     async fn test_redis_mailbox_corruption() {

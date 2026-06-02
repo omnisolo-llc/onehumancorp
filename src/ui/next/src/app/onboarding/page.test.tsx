@@ -198,21 +198,21 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 3,
+        chatStep: 1,
         businessName: 'A',
-        location: 'NY',
-        businessType: 'Bakery',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        location: '',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
       });
     });
 
     render(<OnboardingWizard />);
 
-    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
+    const nextButton = screen.getByRole('button', { name: /Next/i });
 
-    await user.click(generateButton);
+    await user.click(nextButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
@@ -242,14 +242,23 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
     render(<OnboardingWizard />);
+
+    // Verify initial Web Address options
+    const subdomainOption = screen.getByText('Free Subdomain');
+    const customOption = screen.getByText('Custom Domain');
+    expect(subdomainOption).toBeInTheDocument();
+    expect(customOption).toBeInTheDocument();
+
+    // Select Custom Domain
+    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -269,6 +278,7 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
+      expect(state.domainChoice).toBe('custom');
     });
   });
 
