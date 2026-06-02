@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Real-Time Multilingual KDS & Pre-Order Engine', () => {
   test('Fatima operates the KDS locally (offline first, Arabic UI, massive touch targets)', async ({ page, context }) => {
     // Navigate to the KDS route
-    await page.goto('http://localhost:3000/kds');
+    await page.goto('/kds');
 
     // 1. Multilingual Support
     // The initial language is English
