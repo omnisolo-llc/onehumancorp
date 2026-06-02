@@ -92,6 +92,10 @@ test.describe('OnboardingWizard CUJ', () => {
     const toggle = page.getByRole('checkbox');
     await expect(toggle).toBeChecked();
 
+    // Account Setup
+    await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
+    await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
+
     // Launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();
 
