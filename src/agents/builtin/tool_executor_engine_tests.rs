@@ -61,7 +61,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("unwrap replaced by expect"), "success");
         // The loop returns immediately, so no backoff occurs and count is exactly 1
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
@@ -92,10 +92,10 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("unwrap replaced by expect");
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        assert_eq!(res.expect("unwrap replaced by expect"), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
@@ -125,7 +125,7 @@ mod tests {
 
         tokio::time::advance(std::time::Duration::from_millis(5000)).await;
 
-        let res = handle.await.unwrap();
+        let res = handle.await.expect("unwrap replaced by expect");
 
         assert!(res.is_err());
         match res.unwrap_err() {
