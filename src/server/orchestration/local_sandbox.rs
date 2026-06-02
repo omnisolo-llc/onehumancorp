@@ -1,17 +1,20 @@
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::process::Command;
+use std::time::Duration;
 use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig, ViolationEvent};
 use crate::orchestration::sandbox_ask::SandboxAskCallback;
+use crate::agents::sandbox::LocalEnvironment;
 
 pub struct LocalSandbox {
     config: SandboxConfig,
     callback: Option<Arc<dyn SandboxAskCallback>>,
+    env: LocalEnvironment,
 }
 
 impl LocalSandbox {
     pub fn new(config: SandboxConfig, callback: Option<Arc<dyn SandboxAskCallback>>) -> Self {
-        Self { config, callback }
+        let env = LocalEnvironment::new().expect("Failed to initialize local sandbox environment");
+        Self { config, callback, env }
     }
 }
 
@@ -58,7 +61,8 @@ impl OHCSandboxManager for LocalSandbox {
             }
         }
 
-        match Command::new("sh").arg("-c").arg(cmd).output().await {
+        let work_dir = self.env.dir_path().to_str().unwrap_or("");
+        match self.env.execute(cmd, work_dir, Duration::from_secs(30)).await {
             Ok(output) => {
                 if output.status.success() {
                     Ok((true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string()))

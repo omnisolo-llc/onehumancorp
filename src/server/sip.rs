@@ -65,7 +65,7 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -185,13 +185,21 @@ impl SipDB {
             let root_path = std::path::Path::new(root);
 
             let agents_path = root_path.join("AGENTS.md");
-            if let Ok(content) = tokio::fs::read_to_string(&agents_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&agents_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read AGENTS.md: {}", e);
+                }
+                _ => {}
             }
 
             let claude_path = root_path.join("CLAUDE.md");
-            if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&claude_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                }
+                _ => {}
             }
         }
         None
@@ -623,6 +631,26 @@ mod tests {
                 .await
                 .unwrap();
 
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_running_mission_id")
+                .bind("RUNNING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_in_progress_mission_id")
+                .bind("IN_PROGRESS")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
             let very_old_time = chrono::Utc::now() - chrono::Duration::hours(48);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stale_pending_mission_id")
@@ -661,6 +689,22 @@ mod tests {
             let status_stuck: String = row_stuck.get("status");
             assert_eq!(status_stuck, "FAILED");
 
+            // Verify stuck RUNNING mission was marked FAILED
+            let row_running = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_running_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_running: String = row_running.get("status");
+            assert_eq!(status_running, "FAILED");
+
+            // Verify stuck IN_PROGRESS mission was marked FAILED
+            let row_in_progress = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_in_progress_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_in_progress: String = row_in_progress.get("status");
+            assert_eq!(status_in_progress, "FAILED");
+
             // Verify stale PENDING mission was marked FAILED
             let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
                 .fetch_one(&pool)
@@ -679,7 +723,7 @@ mod tests {
 
             // Clean up using a transaction
             let mut tx_clean = pool.begin().await.unwrap();
-            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stuck_running_mission_id', 'stuck_in_progress_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();

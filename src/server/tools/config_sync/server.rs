@@ -33,8 +33,10 @@ impl ConfigSyncServer {
             return Err(tonic::Status::invalid_argument("Invalid tool_id"));
         }
 
-        if req.spiffe_id.is_empty() {
-            return Err(tonic::Status::unauthenticated("Missing SPIFFE ID"));
+        let parsed = ::server_auth::parse_spiffe_id(&req.spiffe_id).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
+        let tenant_id = parsed.0;
+        if tenant_id.is_empty() {
+            return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
         }
 
         let params: SyncParams = serde_json::from_str(&req.params)
@@ -53,13 +55,13 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "hash": hash,
-                })).unwrap();
+                })).unwrap_or_else(|_| "".to_string());
                 Ok(McpInvokeResponse { payload: resp_payload })
             }
             "push_config" => {
                 let mut payload = params.payload.ok_or_else(|| tonic::Status::invalid_argument("Missing payload"))?;
 
-                let max_size: usize = std::env::var("OHC_MAX_CONFIG_SIZE")
+                let max_size: usize = std::env::var("MAX_CONFIG_SIZE")
                     .unwrap_or_else(|_| (1024 * 1024).to_string())
                     .parse()
                     .unwrap_or(1024 * 1024);
@@ -71,7 +73,7 @@ impl ConfigSyncServer {
                     }
                 }
 
-                let config_str = serde_json::to_string(&payload).unwrap();
+                let config_str = serde_json::to_string(&payload).unwrap_or_else(|_| "".to_string());
                 if config_str.len() > max_size {
                     return Err(tonic::Status::invalid_argument("Config payload too large"));
                 }
@@ -103,7 +105,7 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "merged": true,
-                })).unwrap();
+                })).unwrap_or_else(|_| "".to_string());
                 Ok(McpInvokeResponse { payload: resp_payload })
             }
             _ => Err(tonic::Status::invalid_argument("Invalid action")),

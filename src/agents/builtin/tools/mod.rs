@@ -106,6 +106,7 @@ pub fn all_tools(
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
+        aider_repo_map::aider_repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
@@ -143,8 +144,8 @@ pub fn all_tools(
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
         recall::recall_observation_tool(observation_store),
-        mcp_dynamic::mcp_discover_tool(std::env::var("OHC_MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        mcp_dynamic::mcp_invoke_tool(std::env::var("OHC_MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
     ];
 
@@ -155,3 +156,4 @@ pub fn all_tools(
 
     tools
 }
+pub mod aider_repo_map;

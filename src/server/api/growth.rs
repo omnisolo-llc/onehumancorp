@@ -1,3 +1,10 @@
+
+
+
+use std::sync::OnceLock;
+use crate::utils::cache::HybridCache;
+
+pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -361,6 +368,22 @@ async fn handle_og_card(
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&safe_name));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -374,10 +397,11 @@ async fn handle_og_card(
   <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_check_milestones(
@@ -387,13 +411,20 @@ async fn handle_check_milestones(
     use sqlx::Row;
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
-    let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-        .bind(tenant_id)
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default();
-
-    let reached_types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+    let cache_key = format!("growth:milestones:{}", tenant_id);
+    let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
+    let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
+        cached_types
+    } else {
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
+        types
+    };
 
     let milestones = vec![
         Milestone {
@@ -422,6 +453,7 @@ async fn handle_check_milestones(
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
+    pub mobile: Option<bool>,
 }
 
 async fn handle_get_milestone_card(
@@ -461,6 +493,22 @@ async fn handle_get_milestone_card(
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&title));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -480,10 +528,11 @@ async fn handle_get_milestone_card(
   <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_get_team_invites(
@@ -722,7 +771,7 @@ mod tests {
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -790,7 +839,7 @@ mod tests {
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -840,7 +889,7 @@ mod tests {
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -881,7 +930,7 @@ mod tests {
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -945,7 +994,7 @@ mod tests {
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -980,7 +1029,7 @@ mod tests {
     async fn test_onboarding_metrics() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 

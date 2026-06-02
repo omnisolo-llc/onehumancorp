@@ -99,7 +99,7 @@ impl RedisRateLimiter {
         self
     }
 
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?;
@@ -394,7 +394,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_product_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-no-mutation";
@@ -432,7 +432,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_storage_quota() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-quota";
@@ -463,7 +463,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_agent_quota() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-agent-quota";
@@ -489,7 +489,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_action_monthly_reset() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-monthly-reset";

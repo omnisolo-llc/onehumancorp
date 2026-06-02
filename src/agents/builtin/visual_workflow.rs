@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// AutoGPT Unique Harness Innovations: Block-based visual workflow
 /// No-code agent assembly via block-connect UI.
+/// SOTA Harness Patterns (2025-2026): 3. Visual/low-code orchestration -> democratizing agent construction
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -65,8 +66,15 @@ impl WorkflowExecutor {
             outgoing_edges.entry(edge.source.clone()).or_default().push(edge.target.clone());
         }
 
+        let mut visited = std::collections::HashSet::new();
+
         loop {
             let node = nodes_map.get(&current_node_id).ok_or_else(|| format!("Node not found: {}", current_node_id))?;
+
+            if visited.contains(&current_node_id) {
+                return Err("Visual Orchestrator cycle detected".to_string());
+            }
+            visited.insert(current_node_id.clone());
 
             match &node.node_type {
                 NodeType::Input { name: _ } => {
@@ -116,18 +124,16 @@ impl WorkflowExecutor {
                     };
 
                     current_node_id = if is_true { true_target.clone() } else { false_target.clone() };
+                    // Condition nodes dictate explicit routing, skip standard edge traversal
                     continue;
                 }
                 NodeType::Output => {
-                    // For an output node, we find the state value from the node that points to it
-                    // Wait, our loop just follows edges.
-                    let incoming = self.graph.edges.iter().find(|e| e.target == current_node_id).map(|e| e.source.clone());
-                    if let Some(src) = incoming {
-                        if let Some(val) = state.get(&src) {
+                    if let Some(edge) = self.graph.edges.iter().find(|e| e.target == current_node_id) {
+                        if let Some(val) = state.get(&edge.source) {
                             return Ok(val.clone());
                         }
                     }
-                    return Ok("Execution finished but no output found".to_string());
+                    return Ok("Visual orchestration completed with no data".to_string());
                 }
             }
 
@@ -144,7 +150,7 @@ impl WorkflowExecutor {
             }
         }
 
-        Ok("Execution halted unexpectedly".to_string())
+        Ok("Execution halted without reaching output".to_string())
     }
 }
 
@@ -245,4 +251,34 @@ mod tests {
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: True branch");
     }
+
+    #[tokio::test]
+    async fn test_visual_workflow_cycle() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
+                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Loop: {{in}}".to_string() } },
+                Node { id: "llm2".to_string(), node_type: NodeType::Llm { prompt_template: "Loop2: {{llm1}}".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "llm1".to_string() },
+                Edge { source: "llm1".to_string(), target: "llm2".to_string() },
+                Edge { source: "llm2".to_string(), target: "llm1".to_string() }, // CYCLE
+            ],
+        };
+
+        let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Visual Orchestrator cycle detected");
+    }
+
 }

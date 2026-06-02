@@ -15,6 +15,7 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
+      domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -122,7 +123,7 @@ describe('OnboardingWizard', () => {
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -172,7 +173,7 @@ describe('OnboardingWizard', () => {
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -192,26 +193,27 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 2: Displays validation error when business name is too short', async () => {
+  it('Step 1: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
-    // Set initial state to Step 2
     act(() => {
       useOnboardingStore.setState({
-        step: 2,
+        step: 1,
+        chatStep: 1,
         businessName: 'A',
-        businessType: 'Bakery',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        location: '',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
       });
     });
 
     render(<OnboardingWizard />);
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const nextButton = screen.getByRole('button', { name: /Next/i });
 
-    await user.click(continueButton);
+    await user.click(nextButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
@@ -226,6 +228,7 @@ describe('OnboardingWizard', () => {
         businessName: 'Valid Name',
         businessType: 'Bakery',
         categories: ['food'],
+        domainChoice: 'subdomain',
         firstProductName: 'Cake',
         firstProductPrice: '20'
       });
@@ -241,14 +244,23 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
     render(<OnboardingWizard />);
+
+    // Verify initial Web Address options
+    const subdomainOption = screen.getByText('Free Subdomain');
+    const customOption = screen.getByText('Custom Domain');
+    expect(subdomainOption).toBeInTheDocument();
+    expect(customOption).toBeInTheDocument();
+
+    // Select Custom Domain
+    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -268,6 +280,7 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
+      expect(state.domainChoice).toBe('custom');
     });
   });
 
@@ -287,5 +300,41 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
+  });
+
+  it('Save Draft button triggers draft API and shows success message', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock draft API success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({})
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    // Start at Step 2
+    act(() => {
+      useOnboardingStore.setState({ step: 2 });
+    });
+
+    render(<OnboardingWizard />);
+
+    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    expect(saveDraftButton).toBeInTheDocument();
+
+    await user.click(saveDraftButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    });
+
+    // Verify API was called
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
+      method: 'POST'
+    }));
   });
 });
