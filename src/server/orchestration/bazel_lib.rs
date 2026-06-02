@@ -1,6 +1,4 @@
 #![allow(unused_imports)]
-#![allow(ambiguous_glob_reexports)]
-#![allow(ambiguous_glob_imports)]
 
 pub use ::server_lib::*;
 

@@ -51,12 +51,6 @@ This report analyzes the global Small and Medium Business (SMB) platform market,
 - **Pain Point 3: The "Blank Slate" Paralysis.** Even with themes, users spend days or weeks configuring navigation, policies, and collections.
 - **Pain Point 4: AI is Reactive, Not Proactive.** Shopify's AI helps write descriptions, but it doesn't *manage* the business. It won't automatically reorder stock or draft a response to an angry customer without prompting.
 
-### Expanded Shopify Audit: Ecosystem Dependency and the "App Tax"
-A key finding from our analysis of r/ecommerce is the widespread frustration with Shopify's reliance on third-party apps for core business functions. While Shopify's core offering is robust for standard retail, businesses requiring bookings (like Leo the tutor) or custom order flows (like Maya the baker) must cobble together multiple paid apps.
-*   **The "App Tax":** Users report paying $50-$200/month extra just to achieve functional parity with specialized platforms.
-*   **Performance Degradation:** Every installed app injects additional JavaScript into the storefront, significantly impacting load times and conversion rates on mobile devices.
-*   **OHC Advantage:** By building these capabilities natively into the core Hybrid Agentic OS, OHC eliminates the "App Tax" and guarantees unified performance, specifically targeting the frustration voiced by semi-technical users like Priya.
-
 ## Track 3: OHC Gap & Pain Point Identification
 
 ### Gap Matrix: OHC vs. Shopify
@@ -90,14 +84,9 @@ A key finding from our analysis of r/ecommerce is the widespread frustration wit
 
 ## Actionable Recommendations for Engineering Swarm
 
-These recommendations are designed to be explicitly executed by the engineering swarm to resolve the gaps identified in this report.
-
 1.  **Implement the AI Agent Department Base Interface (P0):** Create the core coordination layer (`src/agents/builtin/core.rs` and related) that allows the 7 defined departments to share memory (`pgvector`) and coordinate via Redis locks.
 2.  **Build the "Draft-for-Review" UI/UX Flow (P0):** Ensure the frontend dashboard natively supports surfacing agent-drafted actions (emails, quotes, orders) for one-tap approval on mobile (375px).
 3.  **Develop the Omnichannel Inbox Architecture (P1):** Design the schema and webhook ingestors to unify external communication channels into the central Agent job queue.
-4.  **Launch Autonomous Predictive Inventory Sync (P1):** Ensure `pgvector` models correctly trace Maya's physical inventory to her digital storefront without manual intervention, mitigating the "Omnichannel Sync" nightmare.
-5.  **Expand "Draft-for-Review" Scope (P2):** Include automatically drafted social media responses (e.g. from the `Customer Success` department) directly into the one-tap approval queue.
-6.  **Refine Advisory Plain-Language Briefs (P2):** Ensure the daily briefing strictly follows a non-technical, 3-bullet push notification constraint across the mobile application.
 
 ## Mermaid Charts
 

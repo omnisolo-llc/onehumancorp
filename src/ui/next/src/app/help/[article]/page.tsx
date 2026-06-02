@@ -148,19 +148,14 @@ export default function HelpArticlePage() {
   const articleData = article && typeof article === 'string' && articles[article] ? articles[article] : { title: "Article Not Found", content: <p>We couldn't find the article you're looking for.</p> };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-8 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-3xl mx-auto w-full">
-        <button
-          onClick={() => router.push('/help')}
-          className="mb-6 text-blue-600 hover:text-blue-800 font-bold flex items-center gap-2 px-3 py-2 -ml-3 rounded-xl hover:bg-blue-50/50 min-h-[44px] transition-colors"
-          aria-label="Back to Help Center"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          Back to Help Center
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+      <div className="max-w-3xl mx-auto">
+        <button onClick={() => router.push('/help')} className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
+          &larr; Back to Help Center
         </button>
-        <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 sm:p-10 rounded-3xl shadow-xl border border-white/40 transition-all">
-          <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 tracking-tight">{articleData.title}</h1>
-          <div className="prose prose-blue prose-lg max-w-none text-gray-700 leading-relaxed marker:text-blue-500 prose-headings:font-outfit prose-headings:text-[#1D1D1F]">
+        <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">{articleData.title}</h1>
+          <div className="prose prose-blue max-w-none text-gray-700">
             {articleData.content}
           </div>
         </div>

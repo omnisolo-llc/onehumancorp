@@ -467,9 +467,6 @@ export default function Dashboard() {
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
-             <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
-               Business Analytics
-             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
@@ -509,7 +506,7 @@ export default function Dashboard() {
                    <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
                    </WithTooltip>
-                   <div className="text-4xl font-bold font-outfit text-gray-900">${(todaysSales || 0).toFixed(2)}</div>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
                </WalkthroughTarget>
                <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
                    <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
@@ -766,7 +763,7 @@ export default function Dashboard() {
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${(todaysSales || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -1449,12 +1446,12 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(revenueFromReferrals || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${revenueFromReferrals.toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(pendingRewards || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${pendingRewards.toFixed(2)}</div>
                 </div>
             </div>
          </section>

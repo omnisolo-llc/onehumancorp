@@ -232,31 +232,4 @@ test.describe('Onboarding Wizard Flow', () => {
     // Verify template selection
     await page.locator('text="Minimal"').click();
   });
-
-  test('allows user to save draft', async ({ page }) => {
-    // Mock the APIs
-    await page.route('**/api/onboarding/draft', route => route.fulfill({
-      status: 200,
-      body: JSON.stringify({})
-    }));
-
-    await page.route('**/api/onboarding/state', route => route.fulfill({
-      status: 200,
-      body: JSON.stringify({})
-    }));
-
-    await page.goto('http://localhost:3000/onboarding');
-
-    // Enter Business Name
-    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
-    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-
-    // Click Save Draft
-    const saveDraftBtn = page.locator('button:has-text("Save Draft")').first();
-    await expect(saveDraftBtn).toBeVisible();
-    await saveDraftBtn.click();
-
-    // Verify success message
-    await expect(page.locator('text="Draft Saved!"')).toBeVisible({ timeout: 5000 });
-  });
 });

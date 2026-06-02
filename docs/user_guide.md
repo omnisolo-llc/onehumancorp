@@ -3,104 +3,221 @@
 # User Guide: One Human Corp Platform
 
 ## Introduction
-Welcome to OneHumanCorp (OHC)! OHC is the simplest platform that empowers anyone—with zero technical knowledge—to launch, run, and grow a small business entirely on their own. We put the power of a full business stack (website, storefront, customer management, AI agents, analytics, marketing) into your hands, accessible from your phone or desktop in minutes.
+One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It gives your organisation a virtual workforce of AI agents that can collaborate, escalate high-risk actions, and manage entire product development life cycles autonomously under your guidance as CEO.
 
-Our mission is radical simplicity: No code. No servers. No jargon.
+## Prerequisites
+- A modern web browser (Chrome, Firefox, Safari).
+- Access credentials provided by your platform administrator.
+- For local development: Docker and Docker Compose installed.
 
-## Getting Started with Your Store
+## Setup
+1. **Login**: Navigate to your platform URL (e.g., `http://localhost:8081`).
+2. **Initial Configuration**: Follow the on-screen prompts to set your Organisation Name and Domain.
+3. **Seed Data (Optional)**: If you are in a development environment, you can seed demo data by clicking "Seed Demo" in the settings menu.
 
-Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
+## Key Concepts
+- **AI Agents**: Specialized virtual employees assigned to specific roles.
+- **Meeting Rooms**: Virtual spaces where agents collaborate on tasks.
+- **Approvals**: A safety mechanism where high-risk agent actions require your sign-off.
+- **Skill Packs**: Add-ons that provide agents with new capabilities or domain knowledge.
 
-### Step 1: Tell us about your business
-Start by telling us what you sell and who your customers are. Keep it simple! Just describe what makes your shop special.
+---
 
-### Step 2: Let AI build your store
-Once you tell us about your business, click the "Generate" button. Our AI will build your store for you. It will pick a design and write some text to get you started.
+## Accessing the Platform
 
-### Step 3: Launch to the world
-When you are happy with how your store looks, click the "Launch" button. This makes your store live on the internet so customers can visit and buy from you!
+Open your browser and navigate to the platform URL provided by your administrator (default: **http://localhost:8081** for local installations).
 
-## Managing My Store
+---
 
-Your store is where you show off what you sell. You can easily add new items, keep track of what you have in stock, and change how your store looks.
+## Dashboard Overview
 
-### Adding Products
-To add a new item, go to the products page and click "Add Product". You can upload a picture, type in a name and description, and set the price. Our AI can even help you write a catchy description! We support all types of products: physical items (baked goods, clothing), digital downloads (e-books, templates), services and bookings (tutoring, repairs), food pre-orders, and even subscriptions.
+When you first open the platform you will see the **One Human Corp Dashboard** with the following sections:
 
-### Tracking Your Stock
-When you add a product, you can tell the app how many you have to sell. When someone buys it, the number goes down on its own. This helps you know when you need to make or buy more.
+| Section | Description |
+|---------|-------------|
+| **Organisation Info** | Your org name, domain, and employee count |
+| **Org Chart** | Hierarchical view of departments and employees |
+| **Active Meetings** | Live meeting rooms and recent messages |
+| **Agents** | Registered AI agents and their current status |
+| **Costs** | Token usage and estimated cost per model |
+| **Approvals** | Pending and decided approval requests |
+| **Handoffs** | Warm-handoff packages awaiting human action |
 
-### Changing How Your Store Looks
-You can pick different colors, fonts, and layouts to make your store match your brand. Just go to the Storefront Builder to try out different styles.
+---
 
-## Getting Paid
+## Sending a Message
 
-Getting paid is the most exciting part! We make it secure and easy for your customers to pay you.
+1. Scroll to the **Send Message** panel on the dashboard.
+2. Enter your message in the **Content** field.
+3. Click **Send Message**.
+4. The message will appear in the active meeting room transcript immediately.
 
-### Connecting Your Bank Account
-To start taking money, you need to connect a bank account. We use Stripe, a safe and trusted system. Just click the "Connect Stripe" button in your setup to securely link your bank.
+---
 
-### Viewing Your Deposits
-When a customer buys something, the money goes into your connected bank account. You can check the Dashboard to see your recent sales and see when the money will arrive in your bank.
+## Managing Agents
 
-### Taxes and Fees
-We help handle simple taxes for you at checkout. A small fee is taken out of each sale to cover the cost of securely moving the money from the customer's card to your bank.
+### Hiring a New Agent
 
-## Finding Customers
+1. Navigate to the **Agents** section.
+2. Click **Hire Agent**.
+3. Fill in:
+   - **Name**: display name for the agent
+   - **Role**: e.g. `PRODUCT_MANAGER`, `SOFTWARE_ENGINEER`, `GUARDIAN`
+   - **Model** (optional): AI model override, e.g. `gpt-4o-mini`, `gemini-pro`
+4. Click **Confirm**.
 
-To grow your business, you need people to know about it. We have tools to help you find and talk to customers.
+The new agent appears in the agent list and is available for meetings.
 
-### Sending Emails
-You can send emails to people who have bought from you before or signed up on your store. You can use this to tell them about new products or special sales. Our AI can even help you write the emails!
+### Firing an Agent
 
-### Running Promos and Sales
-Everyone loves a good deal. You can easily set up a weekend sale or a holiday promotion. You can choose to give a percentage off or a set amount of money off.
+1. Locate the agent in the **Agents** list.
+2. Click **Fire** next to the agent.
+3. Confirm the action.
 
-### Sharing Your Store
-Don't forget to share your store link on social media or with your friends and family. You can find your store's link on your Dashboard.
+> **Note**: Firing an agent removes it from all active meetings.
 
-## Your AI Helpers
+---
 
-Running a business takes a lot of work. That's why we give you AI helpers—smart computer programs that can do tasks for you invisibly, like a real team!
+## Approvals
 
-### Hiring AI Helpers
-Go to the AI Departments page to see all the helpers you can hire. They are organized into simple functional areas:
-- **Operations (The Manager)**: Handles day-to-day orders and bookings.
-- **Marketing & Advertising (The Promoter)**: Gets your business noticed and designs your site.
-- **Sales & Acquisition (The Salesperson)**: Helps you turn interest into revenue.
-- **Customer Success (The Ambassador)**: Responds to your customers (even while you sleep!) and handles questions.
-- **Finance & Payments (The Accountant)**: Makes sure money flows right and provides financial visibility.
-- **Legal & Compliance (The Protector)**: Keeps your business safe.
-- **Business Advisory (The Advisor)**: Acts as your personal consultant.
+The Approval system ensures that high-risk agent actions require human sign-off before proceeding.
 
-### Giving Them Tasks
-Once you hire a helper, you can tell them what to do. You just type what you need in plain English. For example, "Write an email to my customers about a summer sale." The helper will do the work and show it to you.
+### Reviewing a Pending Approval
 
-### Approving Their Work
-Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
+1. Navigate to the **Approvals** section.
+2. Pending approvals are highlighted in amber.
+3. Click on an approval to view:
+   - **Action**: what the agent wants to do
+   - **Reason**: why the agent believes it is necessary
+   - **Estimated Cost**: projected USD cost
+   - **Risk Level**: `low` / `medium` / `high` / `critical`
+4. Click **Approve** or **Reject**.
 
-## Account & Billing
+> **Critical** risk approvals require a second reviewer.
 
-Manage your monthly plan, view your past bills, and invite people to help run your business.
+---
 
-### Managing Your Plan
-You can check what plan you are on by going to the Billing page. If your business is growing and you need more features, you can upgrade your plan at any time.
+## Warm Handoffs
 
-### Viewing Your Bills
-You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
+When an agent cannot complete a task, it creates a **Warm Handoff** for a human manager.
 
-### Inviting Team Members
-If you have business partners or staff who need to access your store settings, you can invite them to your team. Just enter their email address and they will get an invite to join.
+### Acknowledging a Handoff
+
+1. Navigate to the **Handoffs** section.
+2. Click **Acknowledge** on the relevant package.
+3. Review the `Intent` and `Current State` fields.
+4. Take the described action or re-assign to another agent.
+
+---
+
+## Skill Packs
+
+Skill Packs extend what your agents can do.
+
+### Importing a Skill Pack
+
+1. Navigate to **Skill Packs**.
+2. Click **Import Skill Pack**.
+3. Provide:
+   - **Name** and **Domain**
+   - **Roles** — the agent roles that gain the new capability
+4. Click **Import**.
+
+---
+
+## Billing & Cost Tracking
+
+The **Costs** panel shows real-time token usage across all agents.
+
+| Column | Description |
+|--------|-------------|
+| Model | The AI model used (e.g. `gpt-4o-mini`, `gemini-pro`) |
+| Prompt Tokens | Tokens sent to the model |
+| Completion Tokens | Tokens returned by the model |
+| Cost (USD) | Estimated cost based on public pricing |
+
+---
+
+## Marketplace
+
+Browse community-published agents, domains, and skill packs in the **Marketplace**.
+
+1. Navigate to **Marketplace**.
+2. Filter by **Type** (`agent`, `domain`, `skill_pack`, `tool`) or **Tags**.
+3. Click **Install** to add an item to your platform.
+
+---
+
+## Org Snapshots
+
+Snapshots let you capture the current state of your organisation and restore it later.
+
+### Creating a Snapshot
+
+1. Navigate to **Snapshots**.
+2. Click **Create Snapshot**.
+3. Enter a descriptive **Label** (e.g. `pre-Q3-restructure`).
+4. Click **Save**.
+
+### Restoring a Snapshot
+
+1. Navigate to **Snapshots**.
+2. Find the snapshot by label or date.
+3. Click **Restore**.
+4. Confirm — the org state will roll back to that point in time.
+
+> ⚠️ Restore is destructive. Current agents and meetings will be replaced.
 
 ---
 
 ## Health Status
-The platform provides simple ways to check if everything is running smoothly. Contact your platform administrator if you encounter any issues.
+
+The platform exposes machine-readable health endpoints:
+
+- **Liveness**: `GET /healthz` — returns `200 OK` when the server is running
+- **Readiness**: `GET /readyz` — returns `200 OK` when the server is ready to serve traffic
+
+Your Kubernetes or load-balancer operator can use these endpoints for automatic traffic management.
+
+---
 
 ## FAQ
 
 **Q: What AI models are supported?**
-A: The platform uses state-of-the-art AI models, such as Gemini Pro, to power your helpers invisibly.
+A: The platform supports any model referenced in the billing catalog. Current defaults include `gpt-4o`, `gpt-4o-mini`, `gpt-3.5-turbo`, `gemini-pro`, and `claude-3-sonnet`.
+
+**Q: Is my data stored persistently?**
+A: When deployed with the Helm chart (Redis + CloudNative PG), all data is persisted. In the Docker Compose dev stack the backend uses in-memory storage by default.
+
+**Q: How do I reset demo data?**
+A: Call `POST /api/dev/seed` with `{"scenario":"launch-readiness"}` to reload the seeded demo scenario.
+
+**Q: Who can approve a critical-risk action?**
+A: Any user with the `approver` platform role. Reach out to your administrator to have this role assigned.
+
+**Q: How do I add a new integration?**
+A: Integrations are registered at server startup via the `integrations.Registry`. Contact your platform administrator or DevOps team to add a new integration.
+
+## Implementation Details
+- **Architecture**: The Dashboard UI is built with React/Vite/Next.js aesthetics, fetching data from the Rust backend via REST and Server-Sent Events (SSE).
+- **Deployment**: Deployed via the OHC Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
+- **State Management**: The UI is fully real-time. Actions like "Hire Agent" or "Send Message" immediately update the append-only `events.jsonl` Postgres log, which the LangGraph checkpointers use to resume agent states.
+
+## Edge Cases
+- **Browser Disconnects**: If the SSE connection to the backend drops, the UI will automatically attempt exponential backoff reconnection and refetch missed events.
+- **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI virtualizes the transcript list to prevent DOM bloat and memory leaks in the browser.
+- **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
+
+</div>
+## Health Status
+The platform provides simple ways to check if everything is running smoothly. Contact your platform administrator if you encounter any issues.
+
+---
+
+## FAQ
+
+**Q: What AI models are supported?**
+A: The platform supports any model referenced in the billing catalog. Current defaults include standard industry models.
 
 **Q: Is my data stored persistently?**
 A: Yes, all data is saved securely in the cloud storage system.
@@ -108,7 +225,19 @@ A: Yes, all data is saved securely in the cloud storage system.
 **Q: How do I reset demo data?**
 A: You can reload the seeded demo scenario from the settings menu.
 
-**Q: How do I access my business on my phone?**
-A: OHC is completely mobile-first! You can manage everything from a beautiful, native-feeling app right on your phone browser.
+**Q: Who can approve a critical-risk action?**
+A: Any user with the `approver` platform role. Reach out to your administrator to have this role assigned.
 
+**Q: How do I add a new integration?**
+A: Integrations are managed by your platform administrator. Contact them to add new capabilities.
+
+## Implementation Details
+- **Architecture**: The Dashboard UI provides a real-time, responsive experience to interact with your agents.
+- **Deployment**: Managed automatically via our cloud infrastructure.
+- **State Management**: The UI is fully real-time. Actions immediately update the central system, which the agents use to resume states.
+
+## Edge Cases
+- **Browser Disconnects**: If the connection drops, the UI will automatically attempt to reconnect and fetch missed events.
+- **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI manages the transcript list to prevent slowdowns.
+- **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the system enforces a lock; the second manager receives a conflict error.
 </div>

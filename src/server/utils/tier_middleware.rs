@@ -11,7 +11,7 @@ pub async fn tier_middleware(
     req: Request,
     next: Next,
 ) -> Response {
-    let tenant_id = match req.extensions().get::<::server_common::Claims>() {
+    let tenant_id = match req.extensions().get::<::server_auth::common::Claims>() {
         Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
         None => "system".to_string(), // In tests or unauth paths
     };
@@ -28,7 +28,7 @@ pub async fn tier_middleware(
                         return axum::response::IntoResponse::into_response((
                             axum::http::StatusCode::PAYMENT_REQUIRED,
                             axum::Json(serde_json::json!({
-                                "error": "LIMIT_EXCEEDED",
+                                "error": "Quota Exceeded",
                                 "message": warning_msg.unwrap()
                             }))
                         ));
