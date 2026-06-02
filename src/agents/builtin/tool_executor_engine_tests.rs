@@ -135,18 +135,15 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
     }
 
-    // --- LLM RECOVERABLE TESTS ---
-
     #[tokio::test]
-    async fn test_llm_recoverable_bubbles_up() {
-        let raw_error_msg = "parse error: invalid schema".to_string();
+    async fn test_llm_recoverable() {
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
             parameters: json!({}),
             is_read_only: false,
             execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::LlmRecoverable(raw_error_msg.clone())),
+                result: Err(ToolError::LlmRecoverable("parse error".to_string())),
             }),
         };
 
@@ -159,12 +156,13 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => {
-                // Ensure it correctly bubbles up without mutating into a fatal/unexpected error.
-                assert_eq!(msg, raw_error_msg);
-            }
-            _ => panic!("Expected LlmRecoverable error to be passed through"),
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
+            _ => panic!("Expected LlmRecoverable error"),
         }
+        // In actual implementation (agent.rs), this LlmRecoverable error is caught
+        // by the orchestration loop and injected back into the messages list as a ToolResult
+        // with the error formatted as "Error (LLM Recoverable): parse error"
+        // so the model can self-correct instead of crashing the loop.
     }
 
     #[tokio::test]
