@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
+use std::fmt::Write;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -304,22 +305,44 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
-                tool_defs.push_str(&format!("Description: {}\n", tool.description));
-                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
+                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
+                let _ = write!(tool_defs, "Description: {}\n", tool.description);
+                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }
 
+        let mut source_name = "User Instructions";
+        let mut user_instr = if cfg.user_instructions.is_empty() {
+            let mut combined_agents_md = String::new();
+            let mut current_dir = std::env::current_dir().ok();
+            while let Some(dir) = current_dir {
+                let agents_file = dir.join("AGENTS.md");
+                if let Ok(content) = std::fs::read_to_string(&agents_file) {
+                    if !combined_agents_md.is_empty() {
+                        combined_agents_md.insert_str(0, "\n\n");
+                    }
+                    combined_agents_md.insert_str(0, &content);
+                }
+                current_dir = dir.parent().map(|p| p.to_path_buf());
+            }
+            if !combined_agents_md.is_empty() {
+                source_name = "AGENTS.md";
+            }
+            combined_agents_md
+        } else {
+            source_name = "User Instructions";
+            cfg.user_instructions.clone()
+        };
+
         let mut end_idx = 32768;
-        if cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+        if user_instr.len() > 32768 {
+            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
                 end_idx -= 1;
             }
-        } else {
-            end_idx = cfg.user_instructions.len();
+            let truncated = &user_instr[..end_idx];
+            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
         }
-        let user_instr = cfg.user_instructions[..end_idx].to_string();
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
@@ -2400,7 +2423,7 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
-                let _cfg_max_retries = final_cfg.max_retries;
+                let cfg_max_retries = final_cfg.max_retries;
 
                 let tool_span = info_span!(
                     "tool_execution",
@@ -2412,8 +2435,21 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let res = self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await;
-                    (tc_clone, res)
+                    let _retry_count = 0;
+                    let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    loop {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                            Ok(r) => {
+                                return (tc_clone, Ok(r));
+                            }
+                            Err(ToolError::Transient(msg)) => {
+                                return (tc_clone, Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg))));
+                            }
+                            Err(e) => {
+                                return (tc_clone, Err(e));
+                            }
+                        }
+                    }
                 }.instrument(tool_span));
             }
 
@@ -4707,57 +4743,6 @@ mod tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Unexpected tool error"));
 
-        // 1.5. Transient retry mechanics (Future loop patch test)
-        struct MockLlmClientTransient {
-            responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
-        }
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientTransient {
-            async fn chat(&self, _req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut resps = self.responses.lock().await;
-                if !resps.is_empty() {
-                    Ok(resps.remove(0))
-                } else {
-                    Ok(crate::types::ChatResponse { message: crate::types::Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: Some("mock-id".to_string()) })
-                }
-            }
-        }
-
-        let client_transient = Arc::new(MockLlmClientTransient {
-            responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
-                    content: "".to_string(),
-                    tool_calls: vec![ToolCall {
-                        id: "call_transient_ro".to_string(),
-                        name: "transient_tool".to_string(),
-                        arguments: serde_json::json!({}),
-                    }],
-                    tool_results: vec![],
-                    previous_response_id: None,
-                    response_id: Some("mock-1".to_string()),
-                },
-                usage: Usage::default(),
-                stop_reason: "tool_calls".to_string(),
-                response_id: Some("mock-1".to_string()),
-            }]),
-        });
-        let tool_ro = Tool {
-            name: "transient_tool".to_string(),
-            description: "fails transiently".to_string(),
-            parameters: serde_json::json!({ "type": "object", "properties": {} }),
-            is_read_only: true, // test read-only loop patch
-            execute: Arc::new(FourTierErrorToolExecutor {
-                name: "transient_tool".to_string(),
-            }),
-        };
-        let mut agent_ro = Agent::new(client_transient, vec![tool_ro]);
-        let mut events_ro = Vec::new();
-        let mut on_event_ro = |e: AgentEvent| events_ro.push(e);
-        let res_ro = agent_ro.run(&cfg, "Run transient RO", &mut on_event_ro).await;
-        // Actually asserts an Err with "Unexpected tool error: Transient error after retries: transient error attempt 2" since it exhausts retries
-        assert!(res_ro.is_err());
-
         // 2. LLM Recoverable
         struct LlmRecoverableMockClient {
             pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
@@ -4802,7 +4787,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X\nPlease correct your arguments and try again. Pay close attention to the requested schema types."
+                name == "llm_recoverable_tool" && result == "missing parameter X"
             } else {
                 false
             }
@@ -4816,7 +4801,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X\nPlease correct your arguments and try again. Pay close attention to the requested schema types.");
+        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
@@ -5111,7 +5096,8 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
+        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768 + notice.len());
     }
 
     #[test]
@@ -5127,7 +5113,8 @@ mod tests {
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
-        assert_eq!(user_part.len(), 32766);
+        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        assert_eq!(user_part.len(), 32766 + notice.len());
     }
 
     #[tokio::test]

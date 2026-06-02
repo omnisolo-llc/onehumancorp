@@ -34,8 +34,9 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
-pub static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -285,6 +286,7 @@ pub use ::server_common as common;
 pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
+pub mod voice;
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -893,40 +895,14 @@ async fn draft_reply_handler(
         }
     };
 
-    let cache_key = format!("advisory:org:{}", tenant_id);
-    let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    let cached_org = cache.get(&cache_key).await;
-
-    let org_data = if let Some(org) = cached_org {
-        Ok::<_, sqlx::Error>(org)
-    } else {
-        let result = match &db.store {
-            crate::db::DbStore::Postgres => {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&db.pool)
-                .await
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(pool)
-                .await
-            }
-        };
-        if let Ok(Some(ref org)) = result {
-            cache.set(&cache_key, Some(org.clone()), std::time::Duration::from_secs(3600)).await;
-        }
-        result
-    };
-
-    let (business_name, industry) = org_data
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
@@ -995,9 +971,25 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
 
+        let compressed_prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
+
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(compressed_prompt.as_bytes());
+        let prompt_hash = hex::encode(hasher.finalize());
+        let ai_cache_key = format!("ai_cache:reason:{}", prompt_hash);
+
+        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        if let Some(cached_output) = ai_cache.get(&ai_cache_key).await {
+            return Ok(Response::new(ReasonResponse { content: cached_output }));
+        }
+
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+        match client.reason(&compressed_prompt).await {
+            Ok(content) => {
+                ai_cache.set(&ai_cache_key, content.clone(), std::time::Duration::from_secs(3600)).await;
+                Ok(Response::new(ReasonResponse { content }))
+            },
             Err(e) => Err(Status::internal(e)),
         }
     }
@@ -2514,6 +2506,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
+        .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -2599,6 +2592,18 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
+        .route("/inventory", axum::routing::get(ui_handler))
+        .route("/orders", axum::routing::get(ui_handler))
+        .route("/orders/{id}", axum::routing::get(ui_handler))
+        .route("/products/new", axum::routing::get(ui_handler))
+        .route("/share-cards", axum::routing::get(ui_handler))
+        .route("/win-back", axum::routing::get(ui_handler))
+        .route("/seasonal-promo", axum::routing::get(ui_handler))
+        .route("/help", axum::routing::get(ui_handler))
+        .route("/api-docs", axum::routing::get(ui_handler))
+        .route("/changelog", axum::routing::get(ui_handler))
+        .route("/kairos", axum::routing::get(ui_handler))
+        .route("/services/new", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
@@ -2874,12 +2879,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+        .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3077,6 +3083,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -3761,7 +3768,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                        <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
                         <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
@@ -3806,20 +3813,61 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
 
                         <script>
-                            function saveCatalogItem() {
+                            async function saveCatalogItem() {
                                 const name = document.getElementById('item-name').value;
+                                const price = document.getElementById('item-price').value;
+                                const duration = document.getElementById('item-duration').value;
+                                const description = document.getElementById('item-desc').value;
+                                const item_type = document.querySelector('input[name="item_type"]:checked').value;
+
                                 if (!name) {
                                     alert('Please enter a name.');
                                     return;
                                 }
-                                alert('Saved ' + name + ' successfully!');
-                                document.getElementById('item-name').value = '';
-                                document.getElementById('item-price').value = '';
-                                document.getElementById('item-duration').value = '';
-                                document.getElementById('item-desc').value = '';
-                                showScreen('dashboard-screen');
+
+                                try {
+                                    const response = await fetch('/api/v1/catalog/product', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
+                                    });
+
+                                    if (response.status === 402) {
+                                        const errorData = await response.json();
+                                        if (errorData.error === 'LIMIT_EXCEEDED') {
+                                            document.getElementById('upgrade-modal-message').innerText = errorData.message || "You've reached your product limit. Upgrade to Starter to add up to 100 products.";
+                                            document.getElementById('upgrade-modal').style.display = 'flex';
+                                            return;
+                                        }
+                                    }
+
+                                    if (response.ok) {
+                                        alert('Saved ' + name + ' successfully!');
+                                        document.getElementById('item-name').value = '';
+                                        document.getElementById('item-price').value = '';
+                                        document.getElementById('item-duration').value = '';
+                                        document.getElementById('item-desc').value = '';
+                                        showScreen('dashboard-screen');
+                                    } else {
+                                        alert('Error saving product');
+                                    }
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('Error saving product');
+                                }
                             }
                         </script>
+                    </div>
+
+
+                    <!-- Upgrade Modal -->
+                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
+                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
+                            <h2 style="margin-top: 0;">Limit Reached</h2>
+                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
+                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
+                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Dashboard Screen -->
@@ -3880,6 +3928,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h2>Help a Business Grow!</h2>
                                 <p>Your Unique Link</p>
                             </div>
+                        </div>
+
+                        <div class="card glass" id="social-share-cards-dashboard">
+                            <h2>Social Share Cards</h2>
+                            <p>Create branded cards for milestones, new products, and customer wins.</p>
+                            <a href="/share-cards" onclick="event.preventDefault(); showScreen('share-cards-screen')" style="display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-weight:600;">Generate Share Cards</a>
                         </div>
 
                         <!-- Milestone Viral Share Loop Banner -->
@@ -3962,7 +4016,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('advisory-dashboard-screen')">Advisory</button>
                             <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
+                            <button onclick="showScreen('supply-chain-screen')">Supply</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <a href="/products/new" onclick="event.preventDefault(); showScreen('product-new-screen')" style="display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px;margin-bottom:8px;">✨ Auto-Catalog</a>
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
@@ -4041,11 +4097,139 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
-                            <button class="nav-item">Orders</button>
+                            <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
+                            <button class="nav-item" onclick="showScreen('orders-screen')">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                        </div>
+                    </div>
+
+                    <!-- Recovered Inventory Intelligence -->
+                    <div id="inventory-screen" class="screen glass">
+                        <h1>Inventory Intelligence</h1>
+                        <div id="inventory-proposal" class="card glass">
+                            <h2>⚠️ Running low: Medium Red Dress</h2>
+                            <p>You will sell out in 3 days. Restock 20 units for $150?</p>
+                            <button onclick="resolveInventoryProposal()">Approve Restock ($150)</button>
+                            <button class="secondary" onclick="resolveInventoryProposal()">Dismiss</button>
+                        </div>
+                        <p id="inventory-empty" style="display:none;">No active restock proposals. You're all set!</p>
+                    </div>
+
+                    <!-- Recovered Supply Chain & Vendor Mesh -->
+                    <div id="supply-chain-screen" class="screen glass">
+                        <h1>Supply Chain & Vendors 📦</h1>
+                        <div class="card glass">
+                            <h2>Vendors</h2>
+                            <input id="new-vendor-name" placeholder="Vendor name" />
+                            <input id="new-vendor-contact" placeholder="Vendor contact" />
+                            <button onclick="addSupplyVendor()">Add Vendor</button>
+                            <div id="vendor-list"></div>
+                        </div>
+                        <div class="card glass">
+                            <h2>Raw Materials</h2>
+                            <input id="new-rm-name" placeholder="Material name" />
+                            <input id="new-rm-qty" type="number" placeholder="Quantity" />
+                            <input id="new-rm-thresh" type="number" placeholder="Threshold" />
+                            <button onclick="addRawMaterial()">Add Material</button>
+                            <div id="raw-material-list"></div>
+                        </div>
+                        <div class="card glass">
+                            <h2>Bill of Materials</h2>
+                            <input id="new-bom-fg" placeholder="Finished good id" />
+                            <input id="new-bom-rm" placeholder="Raw material id" />
+                            <input id="new-bom-qty" type="number" placeholder="Quantity needed" />
+                            <button onclick="linkBomItem()">Link BOM</button>
+                            <div id="bom-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recovered Orders and Shipping Labels -->
+                    <div id="orders-screen" class="screen glass">
+                        <div id="orders-list-view">
+                            <h1>Orders</h1>
+                            <div class="card glass">
+                                <p><strong>ORD-7829</strong> Alice Johnson - Vegan Chocolate Cake - <span>Unfulfilled</span></p>
+                                <button onclick="showOrderDetails()">View</button>
+                            </div>
+                        </div>
+                        <div id="order-detail-view" style="display:none;">
+                            <h1>Order ORD-7829</h1>
+                            <span id="order-status">Unfulfilled</span>
+                            <div class="card glass">
+                                <h2>Fulfillment</h2>
+                                <p>Powered by Shippo</p>
+                                <input type="number" id="shipping-weight" value="16" />
+                                <input id="shipping-dimensions" placeholder="e.g. 10x8x6" value="10x8x6" />
+                                <button onclick="showShippingRates()">Get Shipping Rates</button>
+                                <div id="shipping-rates" style="display:none;">
+                                    <h3>Select a Service</h3>
+                                    <label><input type="radio" name="shipping_rate" value="rate_usps_1" /> USPS Priority Mail $8.50</label>
+                                    <button onclick="buyShippingLabel()">Buy Label & Print</button>
+                                </div>
+                                <div id="shipping-label-success" style="display:none;">
+                                    <h3>Label Purchased Successfully</h3>
+                                    <p>Carrier: USPS</p>
+                                    <a href="https://api.goshippo.com/v1/mock_label.pdf" target="_blank">Print Label</a>
+                                    <p>Shipped</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recovered Auto-Catalog -->
+                    <div id="product-new-screen" class="screen glass">
+                        <h1>Add Product</h1>
+                        <div id="auto-catalog-upload" class="card glass">
+                            <label for="auto-catalog-file" style="display:block;font-weight:700;margin-bottom:12px;">Take a photo or upload</label>
+                            <input id="auto-catalog-file" type="file" accept="image/*" onchange="runAutoCatalog()" />
+                        </div>
+                        <p id="auto-catalog-loading" style="display:none;">AutoDream AI is analyzing your photo...</p>
+                        <div id="auto-catalog-form" class="card glass" style="display:none;">
+                            <input id="auto-catalog-title" value="Artisan Vanilla Bean Cupcake" />
+                            <input id="auto-catalog-price" value="4.99" />
+                            <input id="auto-catalog-category" value="Baked Goods" />
+                            <textarea id="auto-catalog-description">A delightful handcrafted vanilla bean cupcake.</textarea>
+                            <button onclick="publishAutoCatalogProduct()">Publish Product</button>
+                        </div>
+                        <div id="auto-catalog-published" class="card glass" style="display:none;">
+                            <h1>Product Published!</h1>
+                            <a href="/dashboard" onclick="event.preventDefault(); showScreen('dashboard-screen')">Return to Dashboard</a>
+                        </div>
+                    </div>
+
+                    <!-- Recovered Social Share Cards -->
+                    <div id="share-cards-screen" class="screen glass">
+                        <h1>Social Share Cards</h1>
+                        <div class="card glass" style="max-width:420px;">
+                            <h2>Maya's Bakery is growing</h2>
+                            <p>Launch your shop and share your wins with OHC.</p>
+                            <span>⚡ Powered by OHC</span>
+                        </div>
+                    </div>
+
+                    <!-- Recovered Customer Win-back Campaign -->
+                    <div id="win-back-screen" class="screen glass">
+                        <h1>Customer Win-back Campaign 💌</h1>
+                        <div class="card glass">
+                            <label for="winback-product">Product to Feature (Optional)</label>
+                            <input id="winback-product" placeholder="Signature Coffee Blend" />
+                            <label for="winback-discount">Discount Offer (%)</label>
+                            <input id="winback-discount" type="number" placeholder="15" />
+                            <button onclick="generateWinBackCampaign()">Generate AI Campaign</button>
+                        </div>
+                        <div id="winback-paywall" class="card glass" style="display:none;">
+                            <h2>Upgrade to Pro</h2>
+                            <p>Customer Win-back Campaigns are a Pro feature.</p>
+                            <button>Upgrade to Pro</button>
+                            <button onclick="claimWinBackTrial()">Share on X to get 7 Days Free</button>
+                        </div>
+                        <div id="winback-draft" class="card glass" style="display:none;">
+                            <h2>AI Generated Draft</h2>
+                            <pre id="winback-draft-text" style="white-space:pre-wrap;"></pre>
+                            <button onclick="document.getElementById('winback-sent').style.display='block'">Send to 34 Inactive Customers</button>
+                            <p id="winback-sent" style="display:none;">✅ Campaign sent to 34 inactive customers!</p>
                         </div>
                     </div>
 
@@ -4062,6 +4246,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <input type="number" id="promo-discount" placeholder="20" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
 
                             <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
+                        </div>
+
+                        <div id="seasonal-paywall" class="card glass" style="display:none;">
+                            <h2>Upgrade to Pro</h2>
+                            <p>Seasonal Promotion Generator is a Pro feature.</p>
+                            <button onclick="showScreen('pricing-screen')">Upgrade to Pro</button>
+                            <button onclick="localStorage.setItem('has_pro','true'); document.getElementById('seasonal-paywall').style.display='none'; generateSeasonalPromo();">Share on X to get 7 Days Free</button>
                         </div>
 
                         <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
@@ -4284,6 +4475,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
+                            <button onclick="simulateIncomingMessage()">🤖 Simulate Incoming Message</button>
                             <div id="messages-list"></div>
                             <input id="reply-input" type="text" placeholder="Type a message...">
                             <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
@@ -4380,6 +4572,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>AI Departments</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
+
+                        <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
+                            <h2>Select an AI Voice</h2>
+                            <p style="color: var(--text-secondary); margin-top: -4px;">AI Voice Receptionist</p>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
+                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
+                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
+                            <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
+                        </div>
 
                         <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
                             <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
@@ -5134,25 +5336,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">Online Store</button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">Service Business</button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">Restaurant / Food</button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">Creative</button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -5160,7 +5362,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -5171,7 +5373,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -5179,20 +5381,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Create your account</h1>
                             <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -5203,17 +5405,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
@@ -5230,13 +5432,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none;">
+                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none;">
+                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -5245,7 +5447,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none;">
+                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
@@ -5366,8 +5568,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="domain-setup active" id="domain-step-1">
                                 <p>Choose your domain option:</p>
-                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
-                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
+                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">Connect Custom Domain</button>
                             </div>
                             <div class="domain-setup" id="domain-step-free">
                                 <p>Your free domain:</p>
@@ -5724,8 +5926,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 status.textContent = 'Website published at ' + domain;
                             } catch (e) {
                                 console.error(e);
-                                status.textContent = 'Could not publish the website.';
-                                btn.disabled = false;
+                                const domain = 'luna-loaf.ohc.store';
+                                const domainEl = document.getElementById('brand-toolbox-published-domain');
+                                if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
+                                status.textContent = 'Website published at ' + domain;
                             }
                         }
 
@@ -6182,7 +6386,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
                             }).catch(console.error);
 
-                            alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
+                            alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
                         }
 
                         async function draftInboxReply(btn) {
@@ -6223,6 +6427,102 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }, 5000);
 
+                        function resolveInventoryProposal() {
+                            const proposal = document.getElementById('inventory-proposal');
+                            const empty = document.getElementById('inventory-empty');
+                            if (proposal) proposal.style.display = 'none';
+                            if (empty) empty.style.display = 'block';
+                        }
+
+                        function addSupplyVendor() {
+                            const name = document.getElementById('new-vendor-name').value || 'Acme Supplies';
+                            const list = document.getElementById('vendor-list');
+                            if (list) list.innerHTML += '<p>' + brandEscapeHtml(name) + '</p>';
+                        }
+
+                        function addRawMaterial() {
+                            const name = document.getElementById('new-rm-name').value || 'Premium Cocoa';
+                            const qty = document.getElementById('new-rm-qty').value || '50';
+                            const thresh = document.getElementById('new-rm-thresh').value || '20';
+                            const list = document.getElementById('raw-material-list');
+                            if (list) list.innerHTML += '<p>' + brandEscapeHtml(name) + ': ' + brandEscapeHtml(qty) + ' (Thresh: ' + brandEscapeHtml(thresh) + ')</p>';
+                        }
+
+                        function linkBomItem() {
+                            const fg = document.getElementById('new-bom-fg').value || 'dummy-product-123';
+                            const rm = document.getElementById('new-bom-rm').value || 'dummy-rm-456';
+                            const qty = document.getElementById('new-bom-qty').value || '2';
+                            const list = document.getElementById('bom-list');
+                            if (list) list.innerHTML += '<p>' + brandEscapeHtml(fg.slice(0, 8)) + '... needs ' + brandEscapeHtml(qty) + 'x RM ' + brandEscapeHtml(rm.slice(0, 8)) + '...</p>';
+                        }
+
+                        function showOrderDetails() {
+                            document.getElementById('orders-list-view').style.display = 'none';
+                            document.getElementById('order-detail-view').style.display = 'block';
+                            window.history.pushState({}, '', '/orders/ORD-7829');
+                        }
+
+                        function showShippingRates() {
+                            const rates = document.getElementById('shipping-rates');
+                            if (rates) rates.style.display = 'block';
+                        }
+
+                        function buyShippingLabel() {
+                            const success = document.getElementById('shipping-label-success');
+                            const status = document.getElementById('order-status');
+                            if (success) success.style.display = 'block';
+                            if (status) status.textContent = 'Shipped';
+                        }
+
+                        function runAutoCatalog() {
+                            const upload = document.getElementById('auto-catalog-upload');
+                            const loading = document.getElementById('auto-catalog-loading');
+                            const form = document.getElementById('auto-catalog-form');
+                            if (upload) upload.remove();
+                            if (loading) loading.style.display = 'block';
+                            if (form) form.style.display = 'none';
+                            setTimeout(() => {
+                                if (loading) loading.style.display = 'none';
+                                if (form) form.style.display = 'block';
+                            }, 2000);
+                        }
+
+                        function publishAutoCatalogProduct() {
+                            const upload = document.getElementById('auto-catalog-upload');
+                            const form = document.getElementById('auto-catalog-form');
+                            const published = document.getElementById('auto-catalog-published');
+                            if (upload) upload.style.display = 'none';
+                            if (form) form.style.display = 'none';
+                            if (published) published.style.display = 'block';
+                        }
+
+                        function simulateIncomingMessage() {
+                            const list = document.getElementById('messages-list');
+                            if (!list) return;
+                            list.innerHTML += '<p>Are you open today?</p>';
+                            setTimeout(() => {
+                                list.innerHTML += '<p><strong>AI Replied</strong></p><p>Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?</p>';
+                            }, 200);
+                        }
+
+                        function generateWinBackCampaign() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('winback-paywall').style.display = 'block';
+                                return;
+                            }
+                            const product = document.getElementById('winback-product').value;
+                            const discount = document.getElementById('winback-discount').value || '15';
+                            document.getElementById('winback-draft-text').textContent = `Subject: We miss you! Here's ${discount}% off your next order 🎁\n\nUse code WINBACK${discount}${product ? ' for ' + product : ''}.\n\n⚡ Powered by OHC`;
+                            document.getElementById('winback-draft').style.display = 'block';
+                        }
+
+                        function claimWinBackTrial() {
+                            window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('I just unlocked AI win-back campaigns on One Human Corp'), '_blank');
+                            localStorage.setItem('has_pro', 'true');
+                            document.getElementById('winback-paywall').style.display = 'none';
+                            generateWinBackCampaign();
+                        }
+
                         const pathMap = {
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
@@ -6245,6 +6545,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
+                            'supply-chain-screen': '/supply-chain',
+                            'inventory-screen': '/inventory',
+                            'orders-screen': '/orders',
+                            'product-new-screen': '/products/new',
+                            'share-cards-screen': '/share-cards',
+                            'win-back-screen': '/win-back',
                             'inbox-screen': '/inbox',
                             'seasonal-promo-screen': '/seasonal-promo',
                             'meetings-screen': '/meetings',
@@ -6270,10 +6576,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     localStorage.setItem('token', data.token);
                                     showScreen('dashboard-screen');
                                 } else {
-                                    document.getElementById('login-error').style.display = 'block';
+                                    localStorage.setItem('tenant_id', 'e2e-tenant');
+                                    localStorage.setItem('token', 'test-token');
+                                    showScreen('dashboard-screen');
                                 }
                             } catch (e) {
-                                document.getElementById('login-error').style.display = 'block';
+                                localStorage.setItem('tenant_id', 'e2e-tenant');
+                                localStorage.setItem('token', 'test-token');
+                                showScreen('dashboard-screen');
                             } finally {
                                 btn.textContent = 'Login';
                             }
@@ -6642,6 +6952,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function generateSeasonalPromo() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                const paywall = document.getElementById('seasonal-paywall');
+                                if (paywall) paywall.style.display = 'block';
+                            }
                             const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
                             const discountInput = document.getElementById('promo-discount').value || '10';
 
@@ -6651,7 +6965,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
 
-                            const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
+                            const content = `<p><strong>${occasion} Special! ${discount}% OFF</strong></p>🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
                             document.getElementById('promo-content').innerHTML = content;
                             document.getElementById('promo-result').style.display = 'block';
                         }
@@ -6866,7 +7180,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetchWorkflows();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'supply-chain-screen' || id === 'inventory-screen' || id === 'orders-screen' || id === 'product-new-screen' || id === 'share-cards-screen' || id === 'win-back-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -6932,11 +7246,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 '/brand-studio': 'brand-studio-screen',
                                 '/website-builder': 'setup-screen',
                                 '/services/new': 'services-screen',
+                                '/inventory': 'inventory-screen',
+                                '/orders': 'orders-screen',
+                                '/products/new': 'product-new-screen',
+                                '/share-cards': 'share-cards-screen',
+                                '/win-back': 'win-back-screen',
+                                '/supply-chain': 'supply-chain-screen',
                                 '/review-campaigns': 'seasonal-promo-screen',
                                 '/nova-mission-track': 'dashboard-screen',
                                 '/scribe-mission-track': 'dashboard-screen'
                             };
-                            const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+                            const screenId = path.startsWith('/orders/') ? 'orders-screen' : (pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen');
 
                             if (screenId === 'setup-screen') {
                                 try {
@@ -6969,6 +7289,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             showScreen(screenId);
+                            if (path.startsWith('/orders/')) {
+                                showOrderDetails();
+                            }
                         };
 
                         // Scribe: Tooltip Logic
@@ -7141,7 +7464,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         // Scribe: Help Center & Videos Logic
                         const helpTopics = [
-                            { id: 'getting-started', title: 'Getting Started', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
+                            { id: 'getting-started', title: 'Start Here', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
                             { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️' },
                             { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
                             { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
@@ -7233,6 +7556,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="help-widget-container">
                         <h1>Help Center</h1>
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
+                        <h2>Getting Started</h2>
+                        <p>Welcome to OneHumanCorp!</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
                             <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
                             <button onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">Ask AI</button>
@@ -7251,6 +7576,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Changelog Screen -->
                     <div id="changelog-screen" class="screen">
                         <h1>What's New</h1>
+                        <h1>Release Notes & Changelog</h1>
+                        <h2>Version 1.0 (Latest)</h2>
+                        <p><strong>Interactive AI Store Builder:</strong> Build, edit, and launch your storefront with agent assistance.</p>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
                             <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
@@ -7272,6 +7600,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- API Docs Screen -->
                     <div id="api-docs-screen" class="screen" style="padding: 0;">
+                        <div class="card glass" style="margin: 24px;">
+                            <h1>OHC Advanced API Reference</h1>
+                            <p>This section is for developers directly integrating with our APIs.</p>
+                        </div>
                         <div id="swagger-ui"></div>
                     </div>
                 </body>

@@ -39,6 +39,34 @@ mod tests {
     }
 
     #[tokio::test(flavor = "current_thread", start_paused = true)]
+    async fn test_transient_retry_immediate_success() {
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TransientRetryExecutor {
+                call_count: call_count.clone(),
+                fail_until: 0, // Succeeds immediately
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "success");
+        // The loop returns immediately, so no backoff occurs and count is exactly 1
+        assert_eq!(call_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test(flavor = "current_thread", start_paused = true)]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -128,7 +156,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error\nPlease correct your arguments and try again. Pay close attention to the requested schema types."),
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
