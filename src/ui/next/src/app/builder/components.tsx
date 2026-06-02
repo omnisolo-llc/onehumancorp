@@ -34,6 +34,7 @@ export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: bool
 }
 
 export function DraggableBlock({
+  className,
   children,
   onDragStart,
   onDragOver,
@@ -44,6 +45,7 @@ export function DraggableBlock({
   isSelected,
   onClick
 }: {
+  className?: string;
   children: React.ReactNode;
   onDragStart: (e: React.TouchEvent | React.DragEvent) => void;
   onDragOver: (e: React.TouchEvent | React.DragEvent) => void;
@@ -57,7 +59,7 @@ export function DraggableBlock({
   return (
     <div
       draggable
-      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      className={`relative builder-block group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
       onDragStart={onDragStart as (e: React.DragEvent) => void}
       onDragOver={(e) => {
         e.preventDefault();
@@ -124,7 +126,7 @@ export function QRCode({ value }: { value: string }) {
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
-      <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
+      <div className="builder-block relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}

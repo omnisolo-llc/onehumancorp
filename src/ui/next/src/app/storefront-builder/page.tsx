@@ -184,7 +184,7 @@ export default function StorefrontBuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+        <div id="setup-screen" className="builder-block w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
@@ -280,13 +280,13 @@ export default function StorefrontBuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+      <div className="builder-block w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar builder-block">
           {blocks.map((b, i) => (
             <DraggableBlock
               key={b.type + i}
