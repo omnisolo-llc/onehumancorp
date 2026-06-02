@@ -2878,6 +2878,7 @@ impl Agent {
                         for m in &messages[middle_start..middle_end] {
                             middle_text.push_str(&format!("[Role: {}]\n", m.role));
                             if !m.content.is_empty() {
+                                middle_text.push_str("Reasoning Trace:\n");
                                 middle_text.push_str(&m.content);
                                 middle_text.push('\n');
                             }
@@ -2888,11 +2889,11 @@ impl Agent {
                                 }
                             }
                             if !m.tool_results.is_empty() {
-                                middle_text.push_str("Tool Results:\n");
+                                middle_text.push_str("Raw Tool Output:\n");
                                 for tr in &m.tool_results {
                                     // Discard redundant/raw tool outputs, but preserve errors if any
                                     let status = if tr.error.is_empty() {
-                                        "Success (raw output discarded during compaction)"
+                                        "[ACON: Tool output omitted to prioritize reasoning traces.]"
                                     } else {
                                         &tr.error
                                     };
@@ -2904,7 +2905,7 @@ impl Agent {
 
                         let summary_req = ChatRequest {
                             model: final_cfg.model.clone(),
-                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
+                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Prioritize reasoning traces over raw tool outputs (ACON Research Metric: this yields 26-54% token reduction while preserving 95%+ accuracy). Be concise.".to_string(),
                             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
                             tools: vec![],
                             max_tokens: 2000,

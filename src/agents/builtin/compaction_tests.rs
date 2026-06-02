@@ -141,10 +141,11 @@ mod tests {
         assert!(compaction_req.system.contains("expert context compactor for an AI agent"));
         assert!(compaction_req.system.contains("Preserve architectural decisions and unresolved bugs"));
         assert!(compaction_req.system.contains("discard redundant/raw tool outputs"));
+        assert!(compaction_req.system.contains("ACON Research Metric"));
 
         // Verify that the compaction text correctly formatted the tool results to discard raw output
         // The compaction prompt includes the middle text. Since our injected context didn't have tool results,
-        // we won't see "Success (raw output discarded during compaction)" here, but we will in the next test.
+        // we won't see "[ACON: Tool output omitted to prioritize reasoning traces.]" here, but we will in the next test.
 
         // Check the third request to see if the compaction message was injected
         let final_req = &requests[2];
@@ -246,7 +247,7 @@ mod tests {
         let compaction_req = &requests[1];
 
         let prompt = &compaction_req.messages[0].content;
-        assert!(prompt.contains("Success (raw output discarded during compaction)"));
+        assert!(prompt.contains("[ACON: Tool output omitted to prioritize reasoning traces.]"));
         assert!(!prompt.contains("THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED"));
     }
 
