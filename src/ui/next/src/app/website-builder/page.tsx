@@ -521,14 +521,72 @@ export default function WebsiteBuilderPage() {
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
+                      onClick={async () => {
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        try {
+                          const response = await fetch('/api/v1/builder/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ description: bio })
+                          });
+
+                          if (!response.ok) {
+                            throw new Error('Failed to generate storefront');
+                          }
+
+                          const draftData = await response.json();
+                          const draftBlocks = draftData.pages[0].blocks;
+
+                          const publishPayload = {
+                            domain: null,
+                            draft: {
+                              domain: null,
+                              pages: [{
+                                path: '/',
+                                title: 'Home',
+                                blocks: draftBlocks,
+                                seo_metadata: {
+                                  "@context": "https://schema.org",
+                                  "@type": "LocalBusiness",
+                                  "name": bio
+                                }
+                              }]
+                            }
+                          };
+
+                          const publishResponse = await fetch('/api/v1/builder/publish_draft', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(publishPayload)
+                          });
+
+                          if (publishResponse.ok) {
+                            const publishData = await publishResponse.json();
+                            const url = `https://${publishData.domain || 'myshop'}.ohc.store`;
+                            setLiveUrl(url);
+                            localStorage.setItem("ohc_builder_liveUrl", url);
+
+                            const convertedBlocks = draftBlocks.map((b: any) => ({
+                              type: b.block_type === 'HeroBlock' ? 'Hero' :
+                                    b.block_type === 'ProductGridBlock' ? 'Catalog' :
+                                    b.block_type === 'ServiceBookingBlock' ? 'Booking' :
+                                    b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
+                              props: b.content
+                            }));
+                            setBlocks(convertedBlocks);
+                            localStorage.setItem("ohc_builder_blocks", JSON.stringify(convertedBlocks));
+
+                            setStatus('live');
+                          } else {
+                            throw new Error('Failed to publish');
+                          }
+                        } catch (error) {
+                          console.error('Error during zero-touch generation:', error);
+                          setStatus('idle');
+                        }
                       }}
                     >
-                      Generate Storefront
+                      Approve & Launch
                     </button>
                   </div>
                 </>
