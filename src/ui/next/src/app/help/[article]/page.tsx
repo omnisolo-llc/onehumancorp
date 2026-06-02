@@ -13,7 +13,7 @@ export default function HelpArticlePage() {
       content: (
         <>
           <p className="text-gray-700 mb-4 leading-relaxed text-lg">
-            Welcome to OneHumanCorp! Setting up your store is quick and easy. Our system helps you get everything ready to sell online.
+            Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Step 1: Tell us about your business</h2>
           <p className="text-gray-700 mb-4">
@@ -46,7 +46,7 @@ export default function HelpArticlePage() {
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Tracking Your Stock</h2>
           <p className="text-gray-700 mb-4">
-            When you add a product, you can tell the system how many you have to sell. When someone buys it, the number goes down automatically. This helps you know when you need to make or buy more.
+            When you add a product, you can tell the app how many you have to sell. When someone buys it, the number goes down on its own. This helps you know when you need to make or buy more.
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Changing How Your Store Looks</h2>
           <p className="text-gray-700 mb-4">
@@ -82,7 +82,7 @@ export default function HelpArticlePage() {
       content: (
         <>
           <p className="text-gray-700 mb-4 leading-relaxed text-lg">
-            Manage your subscription plan, view your past bills, and invite people to help run your business.
+            Manage your monthly plan, view your past bills, and invite people to help run your business.
           </p>
           <h2 className="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Managing Your Plan</h2>
           <p className="text-gray-700 mb-4">
