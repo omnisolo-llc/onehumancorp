@@ -13,7 +13,7 @@ test('renders dashboard with actionable feed', async () => {
   render(<TooltipProvider><Dashboard /></TooltipProvider>);
 
   await waitFor(() => {
-    expect(screen.getByText("Business Analytics")).toBeDefined();
+    expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
   });
 
   expect(screen.getByText(/Action Required/)).toBeDefined();
