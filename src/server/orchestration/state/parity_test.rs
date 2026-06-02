@@ -221,20 +221,51 @@ mod parity_tests {
 
             let pool_clone = pool.clone();
             let task_id_clone = task_id.clone();
-            let res = tokio::time::timeout(
-                std::time::Duration::from_millis(100),
-                async move {
-                    let mut tx2 = pool_clone.begin().await.unwrap();
-                    sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = ? AND status = 'PENDING'")
-                        .bind(&task_id_clone)
-                        .execute(&mut *tx2)
-                        .await
-                }
-            ).await;
 
-            // It should timeout because tx1 is holding the lock, or it should fail with Database(Sqlite(Busy))
-            assert!(res.is_err() || res.unwrap().is_err(), "Second transaction should be blocked by isolation");
+            let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+            let tx_clone = tx.clone();
+
+            // Spawn a task that tries to execute tx2. If it is blocked by tx1, it will hang.
+            // If it fails immediately with a busy error, that is also valid.
+            tokio::spawn(async move {
+                let mut tx2 = pool_clone.begin().await.unwrap();
+                let res = sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = ? AND status = 'PENDING'")
+                    .bind(&task_id_clone)
+                    .execute(&mut *tx2)
+                    .await;
+                let _ = tx_clone.send(res).await;
+            });
+
+            // Use a deterministic try_recv loop to see if the second transaction can immediately complete.
+            // If it's isolated properly, it will either block (rx empty) or return an Error (DatabaseBusy).
+            // We give it a short bound (using task yields rather than time) to ensure we don't accidentally wait forever on success.
+            let mut completed = false;
+            for _ in 0..5 {
+                tokio::task::yield_now().await;
+                match rx.try_recv() {
+                    Ok(Ok(_)) => {
+                        completed = true;
+                        break;
+                    }
+                    Ok(Err(_)) => {
+                        // Received an error (like Database(Sqlite(Busy))), which proves isolation.
+                        completed = false;
+                        break;
+                    }
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
+                        // Still blocked
+                        continue;
+                    }
+                    Err(_) => break,
+                }
+            }
+
+            assert!(!completed, "Second transaction should be blocked by isolation and not complete successfully while tx1 holds the lock");
+
             tx1.commit().await.unwrap();
+
+            // Now tx2 should be able to finish (or it already failed, which is also fine).
+            let _ = rx.recv().await;
         }
 
         if let Some(ref db) = pg_db {

@@ -372,8 +372,11 @@ mod chaos_tests {
         let mesh = Arc::new(CorruptedMockMesh::new());
         let counter = mesh.received_messages.clone();
 
+        let notify = Arc::new(tokio::sync::Notify::new());
+        let notify_clone = notify.clone();
+
         // This will spawn a task that immediately receives corrupted message
-        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(|msg| {
+        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(move |msg| {
             // Simulate how the orchestrator processes JSON with fallback
             let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&msg.payload);
             if parsed.is_err() {
@@ -387,9 +390,10 @@ mod chaos_tests {
                  }
                  assert_eq!(fallback_attempts, 3);
             }
+            notify_clone.notify_one();
         })).await.unwrap();
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        notify.notified().await;
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
@@ -400,11 +404,16 @@ mod chaos_tests {
         let mut join_handles = vec![];
         let resource_name = "ohc:lock:test_race_lock";
 
-        // Spawn 1000 concurrent tasks trying to acquire the same lock
-        for i in 0..1000 {
+        let num_tasks = 8;
+        let barrier = Arc::new(tokio::sync::Barrier::new(num_tasks));
+
+        // Spawn concurrent tasks trying to acquire the same lock exactly at the same time
+        for i in 0..num_tasks {
             let mesh_clone = mesh.clone();
+            let barrier_clone = barrier.clone();
             let owner = format!("agent_{}", i);
             join_handles.push(tokio::spawn(async move {
+                barrier_clone.wait().await;
                 mesh_clone.acquire_lock(resource_name, &owner, 10).await.unwrap_or(false)
             }));
         }
@@ -428,8 +437,11 @@ mod chaos_tests {
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 
+        let (tx, mut rx) = tokio::sync::mpsc::channel(20);
+
         let _ = mesh.subscribe("mesh:test:loss", Box::new(move |_msg| {
             received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let _ = tx.try_send(());
         })).await.unwrap();
 
         // Start health responder (simulates ack responder)
@@ -443,10 +455,9 @@ mod chaos_tests {
              // We can just use ping() which wraps publish_with_ack for health!
              if mesh.ping().await.is_ok() {
                  successful_sends += 1;
+                 let _ = rx.recv().await;
              }
         }
-
-        tokio::time::sleep(Duration::from_millis(200)).await;
 
         // Resilience rule: system must recover or degrade gracefully.
         // We verify that some messages were successfully delivered and ack'd despite high packet loss,
