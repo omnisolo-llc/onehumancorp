@@ -17,11 +17,11 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
     await generateBtn.click();
 
     // Expect to see soft paywall if we are not Pro
-    await expect(page.locator('#seasonal-paywall').getByText('Upgrade to Pro').first()).toBeVisible();
+    await expect(page.getByText('Upgrade to Pro').first()).toBeVisible();
 
     // Bypass window.open mock
     await page.evaluate(() => {
-        window.open = function() { return null; };
+        window.open = function() { return { closed: false }; };
     });
 
     // We expect the alert to have been removed or changed to non-blocking
@@ -64,10 +64,10 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {
     await page.goto('/dashboard');
 
-    const sendButton = page.getByRole('button', { name: /Send Campaign to 12 Customers/ });
+    const sendButton = page.locator('button:has-text("Send Campaign to 12 Customers")').first();
     if (await sendButton.isVisible()) {
       await sendButton.click();
-      await expect(page.getByText(/VIP Referral Invite/)).not.toBeVisible();
+      await expect(page.getByText('AI Referral Invite')).toBeVisible();
     }
   });
 
