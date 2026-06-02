@@ -62,6 +62,7 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
+pub mod visual_orchestration;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
@@ -264,3 +265,5 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+pub mod compaction;

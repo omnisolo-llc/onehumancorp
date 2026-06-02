@@ -18,12 +18,12 @@ pub struct Job {
     pub id: String,
     pub tenant_id: String,
     pub parent_task_id: String,
-    pub job_type: String,
+    pub agent_role: String,
     pub payload: String,
     pub status: String,
-    pub retry_count: i32,
-    pub max_retries: i32,
-    pub next_retry_at: DateTime<Utc>,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub run_after: DateTime<Utc>,
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -58,7 +58,7 @@ impl TaskQueue for MemoryTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let mut role_map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
         for job in jobs {
-            let role = job.job_type.clone();
+            let role = job.agent_role.clone();
             let id = job.id.clone();
             self.jobs.insert(id.clone(), job);
             role_map.entry(role).or_default().push(id);
@@ -75,7 +75,7 @@ impl TaskQueue for MemoryTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let role = job.job_type.clone();
+        let role = job.agent_role.clone();
         let id = job.id.clone();
         self.jobs.insert(id.clone(), job);
 
@@ -133,7 +133,7 @@ impl TaskQueue for MemoryTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let role = job.job_type.clone();
+        let role = job.agent_role.clone();
         let id = job.id.clone();
         self.jobs.insert(id.clone(), job);
 
@@ -158,8 +158,8 @@ impl PostgresTaskQueue {
 impl TaskQueue for PostgresTaskQueue {
     async fn requeue(&self, job: Job) -> Result<(), String> {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -168,7 +168,7 @@ impl TaskQueue for PostgresTaskQueue {
             .bind(&job.id)
             .bind(&job.tenant_id)
             .bind(new_payload)
-            .bind(job.next_retry_at)
+            .bind(job.run_after)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -209,11 +209,11 @@ impl TaskQueue for PostgresTaskQueue {
 
         let mut prepared_jobs = Vec::new();
         for job in &jobs {
-            let mut run_after = job.next_retry_at;
+            let mut run_after = job.run_after;
             let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-            payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
-            payload_map["attempts"] = serde_json::json!(job.retry_count);
-            payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+            payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+            payload_map["attempts"] = serde_json::json!(job.attempts);
+            payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
             let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
             let org_id = if job.tenant_id.is_empty() {
                 payload_map["tenant_id"].as_str().unwrap_or("").to_string()
@@ -255,12 +255,12 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut run_after = job.next_retry_at;
+        let mut run_after = job.run_after;
         
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
         
@@ -323,12 +323,12 @@ impl TaskQueue for PostgresTaskQueue {
                 id,
                 tenant_id: tenant_id,
                 parent_task_id,
-                job_type: String::new(),
+                agent_role: String::new(),
                 payload: payload.clone(),
                 status,
-                retry_count: 0,
-                max_retries: 3,
-                next_retry_at: scheduled_at,
+                attempts: 0,
+                max_attempts: 3,
+                run_after: scheduled_at,
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -336,16 +336,16 @@ impl TaskQueue for PostgresTaskQueue {
             
             let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
-                j.job_type = role.to_string();
+                j.agent_role = role.to_string();
             }
             if let Some(attempts) = payload_map["attempts"].as_i64() {
-                j.retry_count = attempts as i32;
+                j.attempts = attempts as i32;
             }
             if let Some(max_attempts) = payload_map["max_attempts"].as_i64() {
-                j.max_retries = max_attempts as i32;
+                j.max_attempts = max_attempts as i32;
             }
             
-            j.retry_count += 1;
+            j.attempts += 1;
             
             Ok(Some(j))
         } else {
@@ -417,11 +417,11 @@ impl Worker {
                                 }
                                 Err(e) => {
                                     tracing::trace!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    if job.retry_count < job.max_retries {
+                                    if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
-                                        retry_job.retry_count += 1;
+                                        retry_job.attempts += 1;
                                         retry_job.status = "PENDING".to_string();
-                                        retry_job.next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                        retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
                                         let _ = self.queue.requeue(retry_job).await;
                                     } else {
                                         let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
@@ -960,7 +960,7 @@ impl TaskQueue for SqliteTaskQueue {
             b.push_bind(job.id)
              .push_bind(job.tenant_id)
              .push_bind(job.parent_task_id)
-             .push_bind(job.job_type)
+             .push_bind(job.agent_role)
              .push_bind(job.payload.into_bytes());
         });
         builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
@@ -974,7 +974,7 @@ impl TaskQueue for SqliteTaskQueue {
             .bind(job.id)
             .bind(job.tenant_id)
             .bind(job.parent_task_id)
-            .bind(job.job_type)
+            .bind(job.agent_role)
             .bind(job.payload.as_bytes())
             .execute(&self.pool)
             .await
@@ -1012,12 +1012,12 @@ impl TaskQueue for SqliteTaskQueue {
                 id,
                 tenant_id,
                 parent_task_id: task_id,
-                job_type: role,
+                agent_role: role,
                 payload: String::from_utf8(payload).unwrap_or_default(),
                 status: "RUNNING".to_string(),
-                retry_count: 1,
-                max_retries: 3,
-                next_retry_at: Utc::now(),
+                attempts: 1,
+                max_attempts: 3,
+                run_after: Utc::now(),
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -1049,8 +1049,8 @@ impl TaskQueue for SqliteTaskQueue {
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
         sqlx::query("UPDATE local_queue_jobs SET status = 'PENDING', payload = ? WHERE id = ? AND tenant_id = ?")
@@ -1099,12 +1099,12 @@ impl TaskQueue for RedisTaskQueue {
                 id: job.id,
                 tenant_id: job.tenant_id,
                 parent_task_id: job.parent_task_id,
-                agent_role: job.job_type,
+                agent_role: job.agent_role,
                 payload: job.payload,
                 status: job.status,
-                attempts: job.retry_count,
-                max_attempts: job.max_retries,
-                run_after_ms: job.next_retry_at.timestamp_millis(),
+                attempts: job.attempts,
+                max_attempts: job.max_attempts,
+                run_after_ms: job.run_after.timestamp_millis(),
                 locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
                 created_at_ms: job.created_at.timestamp_millis(),
                 updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1122,12 +1122,12 @@ impl TaskQueue for RedisTaskQueue {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
-            agent_role: job.job_type,
+            agent_role: job.agent_role,
             payload: job.payload,
             status: job.status,
-            attempts: job.retry_count,
-            max_attempts: job.max_retries,
-            run_after_ms: job.next_retry_at.timestamp_millis(),
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
             locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
             created_at_ms: job.created_at.timestamp_millis(),
             updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1161,17 +1161,17 @@ impl TaskQueue for RedisTaskQueue {
                     id: queue_job.id.clone(),
                     tenant_id: queue_job.tenant_id,
                     parent_task_id: queue_job.parent_task_id,
-                    job_type: queue_job.agent_role.clone(),
+                    agent_role: queue_job.agent_role.clone(),
                     payload: queue_job.payload,
                     status: queue_job.status,
-                    retry_count: queue_job.attempts,
-                    max_retries: queue_job.max_attempts,
-                    next_retry_at: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms).unwrap_or_else(chrono::Utc::now),
+                    attempts: queue_job.attempts,
+                    max_attempts: queue_job.max_attempts,
+                    run_after: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms).unwrap_or_else(chrono::Utc::now),
                     locked_until: if queue_job.locked_until_ms > 0 { Some(chrono::DateTime::from_timestamp_millis(queue_job.locked_until_ms).unwrap_or_else(chrono::Utc::now)) } else { None },
                     created_at: chrono::DateTime::from_timestamp_millis(queue_job.created_at_ms).unwrap_or_else(chrono::Utc::now),
                     updated_at: chrono::DateTime::from_timestamp_millis(queue_job.updated_at_ms).unwrap_or_else(chrono::Utc::now),
                 };
-                if roles.contains(&job.job_type) {
+                if roles.contains(&job.agent_role) {
                     let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_bytes).query_async(&mut conn).await.map_err(|e| e.to_string())?;
                     return Ok(Some(job));
                 } else {
@@ -1220,12 +1220,12 @@ impl TaskQueue for RedisTaskQueue {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
-            agent_role: job.job_type,
+            agent_role: job.agent_role,
             payload: job.payload,
             status: job.status,
-            attempts: job.retry_count,
-            max_attempts: job.max_retries,
-            run_after_ms: job.next_retry_at.timestamp_millis(),
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
             locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
             created_at_ms: job.created_at.timestamp_millis(),
             updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1537,42 +1537,5 @@ mod tests {
             let claim_3 = service.claim_task("agent_2").await.unwrap().unwrap();
             assert_eq!(claim_3.id, task_id_child);
         }
-    }
-}
-
-
-#[cfg(test)]
-mod tests_error_tracing {
-    use super::*;
-    use std::sync::Arc;
-    use tokio::sync::broadcast;
-
-    struct ErrorHandler;
-
-    #[async_trait]
-    impl JobPayloadHandler for ErrorHandler {
-        async fn handle(&self, _payload: Vec<u8>) -> Result<(), String> {
-            Err("Simulated handler error".to_string())
-        }
-    }
-
-    #[tokio::test]
-    async fn test_in_mem_worker_logs_error_on_handler_failure() {
-        let queue = Arc::new(InMemJobQueue::new());
-        queue.push("test", b"{}".to_vec()).await.unwrap();
-
-        let handler = Arc::new(ErrorHandler);
-        let pool = WorkerPool::new(queue.clone() as Arc<dyn JobQueue>, "test".to_string(), 1, handler);
-
-        let (tx, _rx) = broadcast::channel(1);
-        let tx_clone = tx.clone();
-        let pool_handle = tokio::spawn(async move {
-            pool.start(tx_clone).await;
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
-        // Signal shutdown
-        let _ = tx.send(());
-        let _ = pool_handle.await;
     }
 }

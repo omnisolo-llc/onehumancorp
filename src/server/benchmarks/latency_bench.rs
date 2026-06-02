@@ -269,12 +269,12 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
                 id: format!("job_{}_{}_{}", name, run_id, i),
                 tenant_id: "benchmark_tenant".to_string(),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
-                job_type: "test_agent".to_string(),
+                agent_role: "test_agent".to_string(),
                 payload: "{}".to_string(),
                 status: "PENDING".to_string(),
-                retry_count: 0,
-                max_retries: 3,
-                next_retry_at: Utc::now(),
+                attempts: 0,
+                max_attempts: 3,
+                run_after: Utc::now(),
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -385,12 +385,90 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_draft_reply_latency() {
+        bench_draft_reply_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_run_bench_ops_service() {
         // Just verify ops service is accessible and runs, if we wanted to bench it we'd add it here.
         // The instructions ask for a performance benchmark and comprehensive unit tests.
         // We added the tests in the actual file.
     }
 
+}
+
+pub async fn bench_draft_reply_latency() {
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = 100;
+
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)")
+        .execute(&pool)
+        .await;
+    let _ = sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('system', 'Test Org', 'Tech')")
+        .execute(&pool)
+        .await;
+
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db = std::sync::Arc::new(crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(pool) });
+
+    let mut fetch_times = Vec::new();
+    let tenant_id = "system".to_string();
+
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+        let cache_key = format!("advisory:org:{}", tenant_id);
+
+        let org_data = {
+            let cache = crate::ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            let cached_org = cache.get(&cache_key).await;
+
+            if let Some(org) = cached_org {
+                Ok::<_, sqlx::Error>(org)
+            } else {
+                let result = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_as::<_, (String, String)>(
+                            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        )
+                        .bind(&tenant_id)
+                        .fetch_optional(&db.pool)
+                        .await
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query_as::<_, (String, String)>(
+                            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        )
+                        .bind(&tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                    }
+                };
+                if let Ok(Some(ref org)) = result {
+                    cache.set(&cache_key, Some(org.clone()), std::time::Duration::from_secs(3600)).await;
+                }
+                result
+            }
+        };
+
+        let (_business_name, _industry) = org_data
+            .unwrap_or(None)
+            .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    tracing::info!("Draft Reply Latency (Cached): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
 }
 
 pub async fn bench_advisory_insights_latency() {
@@ -448,51 +526,4 @@ pub async fn bench_advisory_insights_latency() {
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
-
-    // Standalone Mode (SQLite)
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:?cache=shared")
-        .await
-        .unwrap();
-
-    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
-
-    let mut fetch_times_sqlite = Vec::with_capacity(iterations);
-    let tenant_id = "system".to_string();
-
-    for _ in 0..iterations {
-        let start = std::time::Instant::now();
-
-        let (_org_res, _active_orders_res) = tokio::join!(
-            async {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&sqlite_pool)
-                .await
-                .unwrap()
-            },
-            async {
-                sqlx::query_scalar::<_, i64>(
-                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
-                )
-                .bind(&tenant_id)
-                .fetch_one(&sqlite_pool)
-                .await
-                .unwrap()
-            }
-        );
-
-        fetch_times_sqlite.push(start.elapsed().as_micros());
-    }
-
-    fetch_times_sqlite.sort();
-    println!(
-        "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
-        fetch_times_sqlite[iterations / 2],
-        fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
-        fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
-    );
 }

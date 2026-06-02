@@ -8,16 +8,16 @@ async fn test_sqlite_task_queue() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 
     sqlx::query(
-        "CREATE TABLE ohc_job_queue (
+        "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT,
+            organization_id TEXT,
             parent_task_id TEXT,
-            job_type TEXT NOT NULL,
+            agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'PENDING',
-            retry_count INTEGER DEFAULT 0,
-            max_retries INTEGER DEFAULT 3,
-            next_retry_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             locked_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -30,12 +30,12 @@ async fn test_sqlite_task_queue() {
         id: "job-1".to_string(),
         tenant_id: "system".to_string(),
         parent_task_id: "parent-1".to_string(),
-        job_type: "test-role".to_string(),
+        agent_role: "test-role".to_string(),
         payload: "{}".to_string(),
-        status: "PENDING".to_string(),
-        retry_count: 0,
-        max_retries: 3,
-        next_retry_at: Utc::now() - chrono::Duration::seconds(1),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: Utc::now() - chrono::Duration::seconds(1),
         locked_until: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
@@ -44,7 +44,7 @@ async fn test_sqlite_task_queue() {
     queue.enqueue(job).await.unwrap();
 
     let dequeued_opt = queue.dequeue(vec!["test-role".to_string()], 100, 100).await.unwrap();
-    if dequeued_opt.is_none() { return; } let dequeued = dequeued_opt.unwrap();
+    let dequeued = dequeued_opt.unwrap();
     assert_eq!(dequeued.id, "job-1");
     assert_eq!(dequeued.tenant_id, "system");
 
@@ -56,16 +56,16 @@ async fn test_sqlite_task_queue_empty_dequeue() {
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 
     sqlx::query(
-        "CREATE TABLE ohc_job_queue (
+        "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT,
+            organization_id TEXT,
             parent_task_id TEXT,
-            job_type TEXT NOT NULL,
+            agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'PENDING',
-            retry_count INTEGER DEFAULT 0,
-            max_retries INTEGER DEFAULT 3,
-            next_retry_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             locked_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -83,16 +83,16 @@ async fn test_sqlite_fail_backoff() {
     let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
 
     sqlx::query(
-        "CREATE TABLE ohc_job_queue (
+        "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT,
+            organization_id TEXT,
             parent_task_id TEXT,
-            job_type TEXT NOT NULL,
+            agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'PENDING',
-            retry_count INTEGER DEFAULT 0,
-            max_retries INTEGER DEFAULT 3,
-            next_retry_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             locked_until TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -105,12 +105,12 @@ async fn test_sqlite_fail_backoff() {
         id: "job-fail-1".to_string(),
         tenant_id: "system".to_string(),
         parent_task_id: "parent-1".to_string(),
-        job_type: "test-role".to_string(),
+        agent_role: "test-role".to_string(),
         payload: "{}".to_string(),
-        status: "PENDING".to_string(),
-        retry_count: 0,
-        max_retries: 3,
-        next_retry_at: chrono::Utc::now() - chrono::Duration::seconds(10),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: chrono::Utc::now() - chrono::Duration::seconds(10),
         locked_until: None,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
@@ -121,24 +121,24 @@ async fn test_sqlite_fail_backoff() {
     let before_fail = chrono::Utc::now();
     queue.fail("job-fail-1", "test").await.unwrap();
 
-    // After fail, retry_count should be 1, status QUEUED, and next_retry_at should be updated
+    // After fail, attempts should be 1, status QUEUED, and run_after should be updated
     use sqlx::Row;
-    let row = sqlx::query("SELECT retry_count, status, next_retry_at FROM ohc_job_queue WHERE id = 'job-fail-1'").fetch_one(&pool).await.unwrap();
+    let row = sqlx::query("SELECT attempts, status, run_after FROM sub_agent_jobs WHERE id = 'job-fail-1'").fetch_one(&pool).await.unwrap();
 
-    let retry_count: i32 = row.get("retry_count");
-    assert_eq!(retry_count, 1);
+    let attempts: i32 = row.get("attempts");
+    assert_eq!(attempts, 1);
 
     let status: String = row.get("status");
-    assert_eq!(status, "PENDING");
+    assert_eq!(status, "QUEUED");
 
     // Test if parsing to DateTime works successfully (which guarantees the fix works)
-    let next_retry_at_str: String = row.get("next_retry_at");
-    let next_retry_at: chrono::DateTime<chrono::Utc> = next_retry_at_str.parse().expect("next_retry_at must be a valid ISO 8601 string");
+    let run_after_str: String = row.get("run_after");
+    let run_after: chrono::DateTime<chrono::Utc> = run_after_str.parse().expect("run_after must be a valid ISO 8601 string");
 
-    // Verify next_retry_at is approximately now + 2 seconds (1 << 1 attempt)
+    // Verify run_after is approximately now + 2 seconds (1 << 1 attempt)
     let backoff_duration = chrono::Duration::seconds(2);
     let expected_time = before_fail + backoff_duration;
 
-    let diff = next_retry_at.signed_duration_since(expected_time).num_milliseconds().abs();
-    assert!(diff < 1000, "next_retry_at timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
+    let diff = run_after.signed_duration_since(expected_time).num_milliseconds().abs();
+    assert!(diff < 1000, "run_after timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
 }
