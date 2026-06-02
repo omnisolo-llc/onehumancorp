@@ -31,7 +31,10 @@ mod tests {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             let count = self.call_count.fetch_add(1, Ordering::SeqCst);
             if count < self.fail_until {
-                Err(ToolError::Transient(format!("transient error attempt {}", count)))
+                Err(ToolError::Transient(format!(
+                    "transient error attempt {}",
+                    count
+                )))
             } else {
                 Ok("success".to_string())
             }
@@ -101,7 +104,10 @@ mod tests {
 
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            ToolError::Unexpected(msg) => assert_eq!(
+                msg,
+                "Transient error after retries: transient error attempt 2"
+            ),
             _ => panic!("Expected Unexpected error"),
         }
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
@@ -128,7 +134,10 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error\nPlease correct your arguments and try again. Pay close attention to the requested schema types."),
+            ToolError::LlmRecoverable(msg) => assert_eq!(
+                msg,
+                "parse error\nPlease correct your arguments and try again. Pay close attention to the requested schema types."
+            ),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
