@@ -55,7 +55,7 @@ test.describe('Autonomous Subscription Box & Membership Engine', () => {
         await expect(page.locator('h1').filter({ hasText: 'Subscription Management' })).toBeVisible();
 
         // Check active subscribers count (mocked in API as 2)
-        await expect(page.locator('#active-subscribers-count')).toBeVisible();
+        await expect(page.locator('#subscribers-list')).toBeVisible();
 
         // Wait for mocked API to populate
         await page.waitForTimeout(1000);
