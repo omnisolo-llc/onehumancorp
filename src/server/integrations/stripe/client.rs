@@ -30,6 +30,17 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
+    pub async fn create_payment_link(&self, amount_usd: f64, customer_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            customer_id,
+            "stripe_create_payment_link",
+            0.10
+        ).await;
+
+        Ok(format!("https://buy.stripe.com/test_{}_{}", customer_id, amount_usd as i64))
+    }
+
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),

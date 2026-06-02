@@ -282,6 +282,7 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+  rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
 }
 
 message StartOnboardingRequest {
@@ -1714,4 +1715,31 @@ message GenerateMeetingForBookingRequest {
 
 message GenerateMeetingForBookingResponse {
   string link = 1;
+}
+
+
+message InvoiceItem {
+  string id = 1;
+  string description = 2;
+  int32 quantity = 3;
+  double unit_price = 4;
+  double amount = 5;
+}
+
+message Invoice {
+  string id = 1;
+  string status = 2;
+  double total_amount = 3;
+  string customer_id = 4;
+  string payment_link = 5;
+  repeated InvoiceItem items = 6;
+}
+
+message CreateInvoiceRequest {
+  string customer_id = 1;
+  repeated InvoiceItem items = 2;
+}
+
+message CreateInvoiceResponse {
+  Invoice invoice = 1;
 }

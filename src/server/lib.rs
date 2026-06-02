@@ -1226,6 +1226,90 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn create_invoice(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::CreateInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CreateInvoiceResponse>, tonic::Status> {
+        let tenant_id = request
+            .metadata()
+            .get("tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("test_tenant")
+            .to_string();
+
+        let req = request.into_inner();
+        let invoice_id = format!("inv_{}", uuid::Uuid::new_v4().simple());
+
+        let mut total_amount = 0.0;
+        let mut invoice_items = Vec::new();
+        for item in &req.items {
+            let amount = item.unit_price * (item.quantity as f64);
+            total_amount += amount;
+            let item_id = format!("ii_{}", uuid::Uuid::new_v4().simple());
+
+            sqlx::query("INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                .bind(&item_id)
+                .bind(&tenant_id)
+                .bind(&invoice_id)
+                .bind(&item.description)
+                .bind(item.quantity)
+                .bind(item.unit_price)
+                .bind(amount)
+                .execute(&self.hub.pool)
+                .await
+                .map_err(|e| tonic::Status::internal(format!("DB error: {}", e)))?;
+
+            invoice_items.push(::server_ohc::orchestration::InvoiceItem {
+                id: item_id,
+                description: item.description.clone(),
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                amount,
+            });
+        }
+
+        // Generate Stripe payment link
+        let stripe_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let payment_link = stripe_client.create_payment_link(total_amount, &req.customer_id).await.unwrap_or_default();
+
+        let status = "draft";
+        sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, total_amount, payment_link) VALUES ($1, $2, $3, $4, $5, $6)")
+            .bind(&invoice_id)
+            .bind(&tenant_id)
+            .bind(&req.customer_id)
+            .bind(status)
+            .bind(total_amount)
+            .bind(&payment_link)
+            .execute(&self.hub.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("DB error: {}", e)))?;
+
+        let pi_id = format!("pi_{}", uuid::Uuid::new_v4().simple());
+        sqlx::query("INSERT INTO payment_intents (id, tenant_id, invoice_id, provider_id, status) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&pi_id)
+            .bind(&tenant_id)
+            .bind(&invoice_id)
+            .bind("stripe")
+            .bind("pending")
+            .execute(&self.hub.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("DB error: {}", e)))?;
+
+        let resp_invoice = ::server_ohc::orchestration::Invoice {
+            id: invoice_id,
+            status: status.to_string(),
+            total_amount,
+            customer_id: req.customer_id,
+            payment_link,
+            items: invoice_items,
+        };
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::CreateInvoiceResponse {
+            invoice: Some(resp_invoice),
+        }))
+    }
+
     async fn download_invoice(
         &self,
         _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,

@@ -15,11 +15,15 @@ function routeIntent(message: string) {
       agent: 'The Promoter',
       description: `Drafted marketing action based on: "${message}"`
     };
-  } else if (lowerMsg.includes('refund') || lowerMsg.includes('account') || lowerMsg.includes('finance') || lowerMsg.includes('invoice')) {
+  } else if (lowerMsg.includes('refund') || lowerMsg.includes('account') || lowerMsg.includes('finance') || lowerMsg.includes('invoice') || lowerMsg.includes('bill')) {
+    let desc = `Drafted finance action based on: "${message}"`;
+    if (lowerMsg.includes('invoice') || lowerMsg.includes('bill')) {
+        desc = `I have drafted an invoice based on your request. I will generate a Stripe payment link and send it via your preferred omnichannel route (WhatsApp/SMS/Email).`;
+    }
     return {
       department_assigned: 'finance',
       agent: 'The Accountant',
-      description: `Drafted finance action based on: "${message}"`
+      description: desc
     };
   } else if (lowerMsg.includes('legal') || lowerMsg.includes('contract')) {
     return {
