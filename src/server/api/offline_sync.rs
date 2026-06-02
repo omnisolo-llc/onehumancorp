@@ -94,7 +94,7 @@ mod tests {
     use axum::http::HeaderMap;
     use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
     use sqlx::postgres::PgPoolOptions;
-    use sqlx::Executor;
+
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
