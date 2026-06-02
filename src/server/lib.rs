@@ -37,6 +37,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -291,6 +292,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -298,6 +300,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+
     pub use ::server_services_b2b as b2b;
     pub mod integration;
     pub mod ops;
@@ -479,7 +482,7 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
@@ -520,6 +523,12 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let cache_key = format!("metrics:{}", tenant_id);
+    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(metrics) = cache.get(&cache_key).await {
+        return (StatusCode::OK, axum::Json(metrics)).into_response();
+    }
+
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
             match &db.store {
@@ -552,9 +561,12 @@ async fn http_metrics_handler(
     let total_sales = sales_res.unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
+    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
+    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
+
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent }),
+        axum::Json(metrics),
     )
         .into_response()
 }
@@ -637,7 +649,24 @@ async fn http_login_handler(
     };
 
     let password_hash: String = row.get("password_hash");
-    match bcrypt::verify(&payload.password, &password_hash) {
+
+    let is_valid = {
+        let password = payload.password.clone();
+        let hash = password_hash.clone();
+        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
+            Ok(res) => res,
+            Err(e) => {
+                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+                )
+                    .into_response();
+            }
+        }
+    };
+
+    match is_valid {
         Ok(true) => {}
         Ok(false) => {
             return (
@@ -2856,7 +2885,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(|headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(headers, payload).await }))
+        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
@@ -2884,7 +2913,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
-        .nest("/api/agents/aiaas", api::agents::aiaas::router(dept_orchestrator.clone()))
         .nest("/api/agents/aiaas", api::agents::aiaas::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
@@ -3020,6 +3048,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
         let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
@@ -3858,12 +3887,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                     <!-- Upgrade Modal -->
-                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
-                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
-                            <h2 style="margin-top: 0;">Limit Reached</h2>
-                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
-                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
-                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
+                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; backdrop-filter: blur(8px);">
+                        <div style="background: rgba(255, 255, 255, 0.65); width: 100%; max-width: 400px; padding: 32px 24px; border-radius: 24px 24px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,0.1); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: 'Outfit', 'Inter', sans-serif;">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <div style="font-size: 48px; margin-bottom: 12px;">📈</div>
+                                <h2 style="margin-top: 0; font-weight: 700; color: #1D1D1F;">Business is Growing!</h2>
+                            </div>
+                            <p id="upgrade-modal-message" style="margin-bottom: 32px; color: #444; line-height: 1.6; text-align: center; font-size: 16px;"></p>
+                            <button style="width: 100%; margin-bottom: 12px; background-color: #1D1D1F; color: white; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#333'" onmouseout="this.style.backgroundColor='#1D1D1F'" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">
+                                 Pay Upgrade
+                            </button>
+                            <button style="width: 100%; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: #444; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(0,0,0,0.05)'" onmouseout="this.style.backgroundColor='transparent'" onclick="document.getElementById('upgrade-modal').style.display='none';">
+                                Maybe Later
+                            </button>
                         </div>
                     </div>
 
@@ -5106,15 +5142,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
-                        <h1>Pricing Plans</h1>
-                        <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
+                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Pricing Plans</h1>
+                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass">
-                            <h3>Free</h3>
-                            <p>$0 / month</p>
-                            <ul>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
+                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
                                 <li>1 Agent Limit</li>
                                 <li>100 AI actions / month</li>
                                 <li>500MB Storage Quota</li>
@@ -5123,11 +5159,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
 
-                        <div class="card glass">
-                            <h3>Starter</h3>
-                            <p>$29 / month</p>
-                            <p>Suggested for growing stores</p>
-                            <ul>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Starter</h3>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
+                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
                                 <li>3 Agents Limit</li>
                                 <li>1,000 AI actions / month</li>
                                 <li>5GB Storage Quota</li>
@@ -5136,10 +5172,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
 
-                        <div class="card glass">
-                            <h3>Pro</h3>
-                            <p>$79 / month</p>
-                            <ul>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
+                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
                                 <li>10 Agents Limit</li>
                                 <li>Unlimited AI actions</li>
                                 <li>50GB Storage Quota</li>
@@ -5148,10 +5184,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
 
-                        <div class="card glass">
-                            <h3>Business</h3>
-                            <p>$299 / month</p>
-                            <ul>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
+                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
                                 <li>Unlimited Agents</li>
                                 <li>Unlimited AI actions</li>
                                 <li>500GB Storage Quota</li>
@@ -5160,31 +5196,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
                         </div>
 
-                        <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
+                        <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
-                            <h2>Frequently Asked Questions</h2>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
+                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>How do I upgrade, downgrade, or cancel?</h3>
-                                <p class="answer">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">How do I upgrade, downgrade, or cancel?</h3>
+                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
                             </div>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3>What is the storage limit?</h3>
-                                <p class="answer">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">What is the storage limit?</h3>
+                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass">
-                        <h1>My Plan</h1>
-                        <p id="my-plan-name">Plan: Free</p>
-                        <p>Status: Active</p>
-                        <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
-                        <div class="card glass">
-                            <h3>Your Current Usage</h3>
-                            <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
+                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
+                        <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
+                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
+                        <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
+                            <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
+                            <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
@@ -5197,32 +5233,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass">
-                        <h1>Cost Transparency Dashboard</h1>
-                        <p>Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass">
-                            <h2>Billing Period</h2>
-                            <p id="cost-dashboard-period">Period: -</p>
+                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Cost Transparency Dashboard</h1>
+                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
+                            <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
 
-                            <h2 style="margin-top: 24px;">Costs</h2>
+                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif; margin-top: 24px;">Costs</h2>
                             <ul style="list-style: none; padding: 0;">
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>LLM Inference Cost</span>
                                     <strong id="cost-dashboard-llm">$0.00</strong>
                                 </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>Storage & CDN</span>
                                     <strong id="cost-dashboard-storage">$0.00</strong>
                                 </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>Payment Processor Fees</span>
                                     <strong id="cost-dashboard-payment-fees">$0.00</strong>
                                 </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary);">
+                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary); font-family: 'Outfit', 'Inter', sans-serif;">
                                     <strong>Total Costs</strong>
                                     <strong id="cost-dashboard-total">$0.00</strong>
                                 </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green);">
+                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green); font-family: 'Outfit', 'Inter', sans-serif;">
                                     <strong>Total Revenue</strong>
                                     <strong id="cost-dashboard-revenue">$0.00</strong>
                                 </li>
@@ -5727,8 +5763,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             return (items || []).map(renderItem).join('');
                         }
 
-                        function syncWebsiteDraftToBuilder(draft) {
-                            currentSiteDraft = draft;
+                        function syncStoreProfileToBuilder(draft) {
+                            currentStoreProfile = draft;
                             if (draft && draft.pages && draft.pages.length > 0) {
                                 storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
                                     id: 'brand-toolbox-' + index,
@@ -5747,8 +5783,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             content.style.display = 'block';
                             const dna = toolbox.brand_dna || {};
                             const colors = dna.colors || [];
-                            const websiteBlocks = toolbox.website_draft && toolbox.website_draft.pages && toolbox.website_draft.pages[0]
-                                ? toolbox.website_draft.pages[0].blocks || []
+                            const websiteBlocks = toolbox.store_profile && toolbox.store_profile.pages && toolbox.store_profile.pages[0]
+                                ? toolbox.store_profile.pages[0].blocks || []
                                 : [];
 
                             content.innerHTML = `
@@ -5890,7 +5926,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (!response.ok) throw new Error('Brand toolbox generation failed');
                                 currentBrandToolbox = await response.json();
                                 renderBrandToolbox(currentBrandToolbox);
-                                syncWebsiteDraftToBuilder(currentBrandToolbox.website_draft);
+                                syncStoreProfileToBuilder(currentBrandToolbox.store_profile);
                                 publishBtn.disabled = !currentBrandToolbox.id;
                                 status.textContent = 'Brand toolbox ready.';
                             } catch (e) {
@@ -6201,7 +6237,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         path: '/',
                                         title: 'Home',
                                         blocks: draftBlocks,
-                                        seo_metadata: currentSiteDraft ? currentSiteDraft.pages[0].seo_metadata : {}
+                                        seo_metadata: currentStoreProfile ? currentStoreProfile.pages[0].seo_metadata : {}
                                     }]
                                 }
                             };
@@ -6894,7 +6930,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let currentSiteDraft = null;
+                        let currentStoreProfile = null;
 
                         async function generateAI() {
                             const descInput = document.querySelector('#step-ai input');
@@ -6908,7 +6944,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (response.ok) {
                                     const data = await response.json();
-                                    currentSiteDraft = data;
+                                    currentStoreProfile = data;
 
                                     // Update storefrontDraftState
                                     if (data.pages && data.pages.length > 0) {
