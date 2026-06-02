@@ -171,59 +171,20 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  docker rm -f "$POSTGRES_NAME" "$VALKEY_NAME" >/dev/null 2>&1 || true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
-echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
+# Note: We are bypassing pgvector for E2E tests and using SQLite in Standalone Mode
+# to avoid Docker Hub unauthenticated pull rate limits on the pgvector container.
+echo "[playwright] Using Standalone Mode for E2E infrastructure..."
 
-PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
+export OHC_STANDALONE_MODE="true"
+export E2E_SQLITE_DB="$TEST_TMPDIR/ohc-e2e-${RAND_ID}.db"
+VK_PORT=6379
 
-echo "[playwright] Waiting for postgres on port $PG_PORT..."
-for i in $(seq 1 120); do
-  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
-    break
-  fi
-  if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
-    echo "[playwright] Postgres container exited before readiness."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  if (( i == 120 )); then
-    echo "[playwright] Error: Postgres failed to become ready after 120 seconds."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  sleep 1
-done
 
-postgres_exec() {
-  local sql="$1"
-  local label="$2"
-  for i in $(seq 1 30); do
-    if docker exec "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc -c "$sql"; then
-      return 0
-    fi
-    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
-      echo "[playwright] Postgres container exited while running: $label"
-      docker logs "$POSTGRES_NAME" || true
-      return 1
-    fi
-    sleep 1
-  done
-  echo "[playwright] Error: failed to run Postgres setup SQL: $label"
-  docker logs "$POSTGRES_NAME" || true
-  return 1
-}
 
-echo "[playwright] Initializing database roles..."
-postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
-postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -245,8 +206,9 @@ export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  DATABASE_URL="sqlite://${E2E_SQLITE_DB}" \
+  REDIS_URL="redis://127.0.0.1:$VK_PORT/" \
+  OHC_STANDALONE_MODE="true" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   OHC_PORT="$OHC_SERVER_PORT" \
