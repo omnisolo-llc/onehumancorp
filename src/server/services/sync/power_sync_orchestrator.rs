@@ -39,7 +39,7 @@ impl PowerSyncOrchestrator {
             _ => return Ok(()), // Only runs in Standalone mode with SQLite
         };
 
-        // For simplicity, we just sync agent_missions for now.
+        // Sync agent_missions
         // We look for rows that have been updated locally and need syncing.
         let rows = sqlx::query(
             "SELECT id, status, payload, created_at, updated_at, organization_id, _sync_status, version
@@ -49,10 +49,6 @@ impl PowerSyncOrchestrator {
         .fetch_all(sqlite_pool)
         .await
         .map_err(|e| e.to_string())?;
-
-        if rows.is_empty() {
-            return Ok(());
-        }
 
         let mut payload_items = Vec::new();
         for row in rows {
@@ -72,6 +68,41 @@ impl PowerSyncOrchestrator {
                 "updated_at": updated_at,
                 "version": version
             }));
+        }
+
+        // Sync sync_mutation_queue
+        let mutation_rows = sqlx::query(
+            "SELECT id, organization_id, entity_type, entity_id, mutation_type, payload, created_at, synced_to_cloud, sync_error, last_synced_at, version
+             FROM sync_mutation_queue
+             WHERE synced_to_cloud = FALSE AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))"
+        )
+        .fetch_all(sqlite_pool)
+        .await
+        .unwrap_or_default();
+
+        for row in mutation_rows {
+            let id: String = row.get("id");
+            let org_id: String = row.get("organization_id");
+            let entity_type: String = row.get("entity_type");
+            let entity_id: String = row.get("entity_id");
+            let mutation_type: String = row.get("mutation_type");
+            let payload: serde_json::Value = row.get("payload");
+            let version: i64 = row.try_get("version").unwrap_or(1);
+
+            payload_items.push(json!({
+                "table": "sync_mutation_queue",
+                "id": id,
+                "organization_id": org_id,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "mutation_type": mutation_type,
+                "payload": payload,
+                "version": version
+            }));
+        }
+
+        if payload_items.is_empty() {
+            return Ok(());
         }
 
         let payload_str = serde_json::to_string(&payload_items).map_err(|e| e.to_string())?;
@@ -110,11 +141,19 @@ impl PowerSyncOrchestrator {
         if res.into_inner().status == "ok" {
             // Update _sync_status to synced
             for item in payload_items {
+                let table = item["table"].as_str().unwrap();
                 let id = item["id"].as_str().unwrap();
-                let _ = sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = ?")
-                    .bind(id)
-                    .execute(sqlite_pool)
-                    .await;
+                if table == "agent_missions" {
+                    let _ = sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = ?")
+                        .bind(id)
+                        .execute(sqlite_pool)
+                        .await;
+                } else if table == "sync_mutation_queue" {
+                    let _ = sqlx::query("UPDATE sync_mutation_queue SET synced_to_cloud = TRUE, sync_error = NULL, last_synced_at = datetime('now') WHERE id = ?")
+                        .bind(id)
+                        .execute(sqlite_pool)
+                        .await;
+                }
             }
         }
 
@@ -190,6 +229,45 @@ impl PowerSyncOrchestrator {
                     .await
                 {
                     tracing::error!("PowerSync pull failed to save to database: error={}", e);
+                }
+            } else if item["table"].as_str() == Some("sync_mutation_queue") {
+                let id = item["id"].as_str().unwrap_or("");
+                let org_id = item["organization_id"].as_str().unwrap_or("system");
+                let entity_type = item["entity_type"].as_str().unwrap_or("");
+                let entity_id = item["entity_id"].as_str().unwrap_or("");
+                let mutation_type = item["mutation_type"].as_str().unwrap_or("");
+                let payload_data = item["payload"].clone();
+                let version = item["version"].as_i64().unwrap_or(1);
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO sync_mutation_queue (id, organization_id, entity_type, entity_id, mutation_type, payload, synced_to_cloud, version)
+                    VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        entity_type = excluded.entity_type,
+                        entity_id = excluded.entity_id,
+                        mutation_type = excluded.mutation_type,
+                        payload = excluded.payload,
+                        synced_to_cloud = TRUE,
+                        version = excluded.version
+                    WHERE sync_mutation_queue.version < excluded.version
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(entity_type)
+                    .bind(entity_id)
+                    .bind(mutation_type)
+                    .bind(payload_data)
+                    .bind(version)
+                    .execute(sqlite_pool)
+                    .await
+                {
+                    tracing::error!("PowerSync pull failed to save mutation to database: error={}", e);
                 }
             }
         }

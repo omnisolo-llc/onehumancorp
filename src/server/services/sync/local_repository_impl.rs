@@ -139,3 +139,91 @@ impl LocalRepository for PgLocalRepository {
         Ok(())
     }
 }
+
+#[async_trait::async_trait]
+impl crate::services::sync::local_repository::OfflineSyncRepository for PgLocalRepository {
+    async fn enqueue_mutation(&self, mutation: crate::services::sync::local_repository::SyncMutation) -> Result<(), String> {
+        sqlx::query(
+            "INSERT INTO sync_mutation_queue (id, organization_id, entity_type, entity_id, mutation_type, payload, created_at, version)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+        )
+        .bind(mutation.id)
+        .bind(mutation.organization_id)
+        .bind(mutation.entity_type)
+        .bind(mutation.entity_id)
+        .bind(mutation.mutation_type)
+        .bind(mutation.payload)
+        .bind(mutation.created_at)
+        .bind(mutation.version)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn get_pending_mutations(&self, organization_id: &str, limit: i32) -> Result<Vec<crate::services::sync::local_repository::SyncMutation>, String> {
+        let rows = sqlx::query(
+            "SELECT id, organization_id, entity_type, entity_id, mutation_type, payload, created_at, synced_to_cloud, sync_error, last_synced_at, version
+             FROM sync_mutation_queue
+             WHERE organization_id = $1 AND synced_to_cloud = FALSE AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')
+             ORDER BY created_at ASC
+             LIMIT $2"
+        )
+        .bind(organization_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut mutations = Vec::new();
+        for row in rows {
+            mutations.push(crate::services::sync::local_repository::SyncMutation {
+                id: row.get("id"),
+                organization_id: row.get("organization_id"),
+                entity_type: row.get("entity_type"),
+                entity_id: row.get("entity_id"),
+                mutation_type: row.get("mutation_type"),
+                payload: row.get("payload"),
+                created_at: row.try_get("created_at").unwrap_or_default(),
+                synced_to_cloud: row.try_get("synced_to_cloud").unwrap_or(false),
+                sync_error: row.try_get("sync_error").unwrap_or(None),
+                last_synced_at: row.try_get("last_synced_at").unwrap_or(None),
+                version: row.try_get("version").unwrap_or(1),
+            });
+        }
+
+        Ok(mutations)
+    }
+
+    async fn mark_mutation_synced(&self, organization_id: &str, id: &str) -> Result<(), String> {
+        sqlx::query(
+            "UPDATE sync_mutation_queue
+             SET synced_to_cloud = TRUE, sync_error = NULL, last_synced_at = NOW()
+             WHERE id = $1 AND organization_id = $2"
+        )
+        .bind(id)
+        .bind(organization_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn mark_mutation_error(&self, organization_id: &str, id: &str, error: &str) -> Result<(), String> {
+        sqlx::query(
+            "UPDATE sync_mutation_queue
+             SET sync_error = $1, last_synced_at = NOW()
+             WHERE id = $2 AND organization_id = $3"
+        )
+        .bind(error)
+        .bind(id)
+        .bind(organization_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+}

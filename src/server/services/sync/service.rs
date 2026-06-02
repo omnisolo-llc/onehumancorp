@@ -143,6 +143,45 @@ impl SyncService for MySyncService {
                 {
                     tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
                 }
+            } else if item["table"].as_str() == Some("sync_mutation_queue") {
+                let id = item["id"].as_str().unwrap_or("");
+                let entity_type = item["entity_type"].as_str().unwrap_or("");
+                let entity_id = item["entity_id"].as_str().unwrap_or("");
+                let mutation_type = item["mutation_type"].as_str().unwrap_or("");
+                let payload = item["payload"].clone();
+                let org_id = item["organization_id"].as_str().unwrap_or(&tenant_id);
+                let version = item["version"].as_i64().unwrap_or(1);
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO sync_mutation_queue (id, organization_id, entity_type, entity_id, mutation_type, payload, synced_to_cloud, version)
+                    VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
+                    ON CONFLICT(id) DO UPDATE SET
+                        entity_type = excluded.entity_type,
+                        entity_id = excluded.entity_id,
+                        mutation_type = excluded.mutation_type,
+                        payload = excluded.payload,
+                        synced_to_cloud = TRUE,
+                        version = excluded.version
+                    WHERE sync_mutation_queue.version < excluded.version
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(entity_type)
+                    .bind(entity_id)
+                    .bind(mutation_type)
+                    .bind(payload)
+                    .bind(version)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    tracing::error!("failed to upsert sync_mutation_queue via PowerSync: {}", e);
+                }
             }
         }
 

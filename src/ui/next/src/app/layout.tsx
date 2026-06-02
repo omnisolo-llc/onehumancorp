@@ -5,6 +5,7 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
+import { NetworkIndicator } from '../components/NetworkIndicator';
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
@@ -28,6 +29,7 @@ export default function RootLayout({
             {children}
             <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
             <HelpChat />
+            <NetworkIndicator />
           </WalkthroughProvider>
                 </TooltipProvider>
       </body>
