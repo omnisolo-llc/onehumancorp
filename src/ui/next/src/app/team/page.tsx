@@ -194,6 +194,18 @@ export default function TeamPage() {
                   navigator.clipboard.writeText(inviteLink);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
+
+                  // Record invite generation for growth metrics
+                  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default') : 'team-default';
+                  fetch('/api/v1/growth/team-invites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      team_id: tenantId,
+                      inviter_id: tenantId, // in standalone, user is team owner
+                      invitee_id: 'pending' // placeholder until accepted
+                    })
+                  }).catch(console.error);
                 }}
                 className={`w-full py-3 rounded-xl text-sm font-bold shadow-md transition-all active:scale-[0.98] ${linkCopied ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
