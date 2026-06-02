@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
+use sqlx;
 
 pub async fn bench_queue_latency() {
 
@@ -314,6 +315,73 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 }
 
 #[cfg(test)]
+pub async fn bench_get_analytics() {
+    tracing::info!("Benchmarking MyOrgService get_analytics...");
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    // Pre-populate some agents and meetings for the analytics calculation
+    let org_id = "benchmark_org";
+    for i in 0..10 {
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: format!("agent-{}", i),
+            name: format!("Agent {}", i),
+            role: "test".to_string(),
+            organization_id: org_id.to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+    }
+
+    let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
+    hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
+
+    let org_service = crate::services::org::service::MyOrgService::new(hub);
+    let iterations = 100;
+
+    // First run (cold start, no cache)
+    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+    let start_cold = std::time::Instant::now();
+    use ::server_ohc::orchestration::org_service_server::OrgService;
+    let _ = org_service.get_analytics(request_cold).await;
+    tracing::info!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
+
+    // Warm runs (hot start, hits hybrid cache)
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+
+        let start = std::time::Instant::now();
+        let _ = org_service.get_analytics(request).await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    tracing::info!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
+}
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -380,16 +448,15 @@ mod tests {
 
 
     #[tokio::test]
-    async fn test_run_bench_advisory_insights_latency() {
-        bench_advisory_insights_latency().await;
+    async fn test_bench_get_analytics() {
+        bench_get_analytics().await;
     }
 
-    #[tokio::test]
-    async fn test_run_bench_ops_service() {
-        // Just verify ops service is accessible and runs, if we wanted to bench it we'd add it here.
-        // The instructions ask for a performance benchmark and comprehensive unit tests.
-        // We added the tests in the actual file.
+    async fn test_run_bench_advisory_insights_latency() {
+        bench_advisory_insights_latency().await;
+        bench_get_analytics().await;
     }
+
 
 }
 
@@ -400,7 +467,7 @@ pub async fn bench_advisory_insights_latency() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(crate::auth::Store::new());
+        let _store = std::sync::Arc::new(::server_auth::Store::new());
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
