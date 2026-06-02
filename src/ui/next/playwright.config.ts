@@ -9,7 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:4567',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,8 +19,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    ignoreHTTPSErrors: true,
+    command: 'PORT=4567 npm run dev',
+    url: 'http://localhost:4567',
     reuseExistingServer: !process.env.CI,
   },
 });
