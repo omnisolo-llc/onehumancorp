@@ -261,7 +261,7 @@ export default function OnboardingWizard() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container sm:rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container sm:rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
@@ -449,7 +449,7 @@ export default function OnboardingWizard() {
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
