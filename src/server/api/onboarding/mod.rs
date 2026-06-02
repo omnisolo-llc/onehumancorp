@@ -14,6 +14,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
+        .route("/zero-touch", post(zero_touch_handler))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -23,6 +24,19 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 #[derive(serde::Deserialize)]
 pub struct IntakeRequest {
     pub description: String,
+}
+
+async fn zero_touch_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<IntakeRequest>,
+) -> Result<Json<crate::services::onboarding::onboarding_agent::StoreProfile>, axum::http::StatusCode> {
+    match agent.zero_touch(&payload.description).await {
+        Ok(profile) => Ok(Json(profile)),
+        Err(e) => {
+            tracing::error!("Zero-touch generation failed: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn process_intake_handler(

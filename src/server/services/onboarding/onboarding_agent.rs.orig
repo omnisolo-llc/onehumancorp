@@ -17,17 +17,6 @@ pub struct IntakeProduct {
     pub price: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StoreProfile {
-    pub tenant_id: String,
-    pub business_name: String,
-    pub business_type: String,
-    pub theme: String,
-    pub sample_products: Vec<IntakeProduct>,
-    pub shipping_defaults: std::collections::HashMap<String, String>,
-    pub tax_defaults: std::collections::HashMap<String, String>,
-}
-
 #[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
@@ -136,49 +125,6 @@ impl OnboardingAgent {
         } else {
             Ok(serde_json::json!({ "step": 0 }))
         }
-    }
-
-    pub async fn zero_touch(&self, description: &str) -> Result<StoreProfile, String> {
-        let intake_data = self.process_intake(description).await?;
-
-        let first_product_name = intake_data.initial_products.get(0).map(|p| p.name.clone()).unwrap_or_else(|| "First Product".to_string());
-        let first_product_price = intake_data.initial_products.get(0).map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
-
-        let req = StartOnboardingRequest {
-            business_type: intake_data.business_type.clone(),
-            company_name: intake_data.business_name.clone(),
-            company_description: description.to_string(),
-            selling_categories: intake_data.categories.clone(),
-            payment_pref: "online".to_string(),
-            admin_email: "admin@ohc.app".to_string(),
-            admin_name: "Admin".to_string(),
-            admin_password: "password123".to_string(),
-            website_template: "Modern".to_string(),
-            first_product_name,
-            first_product_price,
-            domain_choice: "subdomain".to_string(),
-            price_type: "fixed".to_string(),
-            location: "Local".to_string(),
-        };
-
-        let res = self.start_onboarding(req).await?;
-
-        let mut shipping_defaults = std::collections::HashMap::new();
-        shipping_defaults.insert("local".to_string(), "5.00".to_string());
-        shipping_defaults.insert("national".to_string(), "10.00".to_string());
-
-        let mut tax_defaults = std::collections::HashMap::new();
-        tax_defaults.insert("default_rate".to_string(), "0.08".to_string());
-
-        Ok(StoreProfile {
-            tenant_id: res.organization_id,
-            business_name: intake_data.business_name,
-            business_type: intake_data.business_type,
-            theme: "Modern".to_string(),
-            sample_products: intake_data.initial_products,
-            shipping_defaults,
-            tax_defaults,
-        })
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
@@ -2683,19 +2629,5 @@ mod tests {
 
         let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
-    }
-
-    #[tokio::test]
-    async fn test_zero_touch_api() {
-        let db = match setup_test_db().await {
-            Some(db) => db,
-            None => return,
-        };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let agent = OnboardingAgent::new(db, hub);
-
-        // We can't really call zero_touch because process_intake relies on MiniMax API
-        // But we can verify it compiles
     }
 }
