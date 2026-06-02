@@ -8,6 +8,7 @@ pub mod bash;
 pub mod read;
 pub mod write;
 pub mod edit;
+pub mod tree;
 pub mod glob;
 pub mod grep;
 pub mod webfetch;
@@ -114,6 +115,7 @@ pub fn all_tools(
         tail::tail_tool(working_dir.clone()),
         write::write_tool(working_dir.clone(), runner.clone()),
         edit::edit_tool(working_dir.clone(), runner.clone()),
+        tree::tree_tool(),
         glob::glob_tool(working_dir.clone()),
         grep::grep_tool(working_dir.clone()),
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::path::PathBuf::from("."))),
