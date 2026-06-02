@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard Flow', () => {
   test('completes full onboarding flow', async ({ page }) => {
     // Navigate to onboarding page
-    await page.goto('http://localhost:3000/onboarding');
+    await page.goto('/onboarding');
 
     // Step 1: Business Name
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
@@ -61,7 +61,7 @@ test.describe('Onboarding Wizard Flow', () => {
     // Sell: "Custom vegan and gluten-free cakes for weddings and birthdays."
     // Location: "Portland, OR"
 
-    await page.goto('http://localhost:3000/onboarding');
+    await page.goto('/onboarding');
 
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill("Maya's Dream Cakes");
@@ -107,7 +107,7 @@ test.describe('Onboarding Wizard Flow', () => {
       body: JSON.stringify({ error: 'Internal Server Error' })
     }));
 
-    await page.goto('http://localhost:3000/onboarding');
+    await page.goto('/onboarding');
 
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
@@ -129,7 +129,7 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
-    await page.goto('http://localhost:3000/onboarding');
+    await page.goto('/onboarding');
 
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
