@@ -155,6 +155,7 @@ export function HelpWidget() {
   const nextMessageId = useRef(1);
 
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
+  const [changelog, setChangelog] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/help")
@@ -165,6 +166,11 @@ export function HelpWidget() {
       .then(data => {
         setHelpArticles(normalizeArticles(data));
       })
+      .catch(() => {});
+
+    fetch("/api/changelog")
+      .then(res => res.json())
+      .then(data => setChangelog(data))
       .catch(() => {});
   }, []);
 
@@ -324,18 +330,18 @@ export function HelpWidget() {
             )}
 
             {tab === "videos" && (
-              <div>
+              <div className="animate-fade-in">
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm border border-white/30">
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm border border-white/30 hover:scale-[1.02] active:scale-95 transition-all">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+                      <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg z-20 group-hover:bg-white/40 transition-all border border-white/30">
+                        <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                       </div>
-                      <div className="absolute bottom-2 left-2 right-2 z-10">
-                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
-                        <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
+                      <div className="absolute bottom-3 left-3 right-3 z-20">
+                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight font-outfit">{v.title}</p>
+                        <p className="text-white/80 text-[10px] font-medium mt-1 font-inter">{v.duration}</p>
                       </div>
                     </div>
                   ))}
@@ -344,22 +350,23 @@ export function HelpWidget() {
             )}
 
             {tab === "whatsnew" && (
-              <div>
+              <div className="space-y-6">
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">What's New</h3>
-                <div className="w-full aspect-video bg-gray-200 rounded-2xl mb-6 relative overflow-hidden border border-white/50 shadow-md flex items-center justify-center">
-                   <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-400">
-                     <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                   </div>
-                </div>
-                <div className="bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
-                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md mb-2">LATEST</span>
-                  <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Store Builder</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">You can now generate a complete storefront from just a short description of your business. Try it out in the Storefront Builder.</p>
+                {changelog.map((item, idx) => (
+                  <div key={idx} className="bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/50 p-5 rounded-2xl shadow-sm">
+                    {idx === 0 && <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-md mb-2 uppercase tracking-wider">Latest</span>}
+                    <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">{item.version}</h4>
+                    <div className="text-sm text-gray-600 leading-relaxed mb-4 line-clamp-3">
+                      {item.contentLines.find((l: string) => !l.startsWith('#') && !l.startsWith('-')) || item.contentLines.find((l: string) => l.startsWith('-'))?.replace('- ', '')}
+                    </div>
+                  </div>
+                ))}
 
+                <div className="pt-2 text-center">
                   <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">
-                    <a href="/changelog" className="inline-flex items-center text-blue-600 text-sm font-bold hover:text-blue-800 transition-colors bg-blue-50/80 px-4 py-2 rounded-xl min-h-[44px]">
-                      Read full release notes
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    <a href="/changelog" className="inline-flex items-center justify-center w-full text-blue-600 text-sm font-bold hover:text-blue-800 transition-colors bg-blue-50/80 px-4 py-3 rounded-2xl border border-blue-100 min-h-[44px]">
+                      View full release notes
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </a>
                   </WithTooltip>
                 </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function OnboardingWizard() {
   const {
@@ -308,6 +309,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
+                      <WithTooltip id="onboarding-business-name-tooltip" defaultText="Choose a name that reflects your brand and is easy for customers to remember.">
                       <input
                         type="text"
                         autoFocus
@@ -327,6 +329,7 @@ export default function OnboardingWizard() {
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
+                      </WithTooltip>
                     </div>
                   </div>
 
@@ -372,6 +375,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
+                      <WithTooltip id="onboarding-what-you-sell-tooltip" defaultText="Briefly describe your products or services. This helps AI set up your catalog.">
                       <textarea
                         autoFocus
                         value={whatYouSell}
@@ -387,6 +391,7 @@ export default function OnboardingWizard() {
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
+                      </WithTooltip>
                     </div>
                   </div>
 
@@ -424,6 +429,7 @@ export default function OnboardingWizard() {
 
                   <div className="space-y-4 flex-1">
                     <div>
+                      <WithTooltip id="onboarding-location-tooltip" defaultText="Your city and state/region help us calculate taxes and shipping for your customers.">
                       <input
                         type="text"
                         autoFocus
@@ -439,6 +445,7 @@ export default function OnboardingWizard() {
                         placeholder="e.g. Portland, OR"
                         className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
+                      </WithTooltip>
                     </div>
                   </div>
 

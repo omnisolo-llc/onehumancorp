@@ -2,6 +2,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
@@ -33,7 +34,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -59,7 +60,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -105,7 +106,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -168,7 +169,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -218,7 +219,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -249,7 +250,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
@@ -274,7 +275,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -291,7 +292,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -332,7 +333,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -361,7 +362,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 2 });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();

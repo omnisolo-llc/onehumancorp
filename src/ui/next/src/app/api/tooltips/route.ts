@@ -22,6 +22,9 @@ export async function GET() {
     "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
     "total-sales-tooltip": "Total revenue generated from your sales today.",
     "visitors-tooltip": "Number of unique visitors who viewed your store today.",
-    "agents-tab-tooltip": "Hire and manage your AI assistants here."
+    "agents-tab-tooltip": "Hire and manage your AI assistants here.",
+    "onboarding-business-name-tooltip": "Choose a name that reflects your brand and is easy for customers to remember.",
+    "onboarding-what-you-sell-tooltip": "Briefly describe your products or services. This helps AI set up your catalog.",
+    "onboarding-location-tooltip": "Your city and state/region help us calculate taxes and shipping for your customers."
   });
 }
