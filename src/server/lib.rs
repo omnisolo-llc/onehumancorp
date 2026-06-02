@@ -2385,6 +2385,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
         .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
         .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
+        .route("/api/v1/webhooks/voice/incoming", axum::routing::post(crate::api::voice_webhook::voice_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2489,6 +2490,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     );
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
+        .route("/api/v1/voice/config", axum::routing::get(crate::api::voice_config::get_voice_config))
+        .route("/api/v1/voice/config", axum::routing::post(crate::api::voice_config::update_voice_config))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 

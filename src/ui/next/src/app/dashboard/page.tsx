@@ -522,6 +522,69 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* AI Voice Agent Panel */}
+         <section className="mb-6 animate-fade-in" id="voice-agent-section">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                 <div>
+                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Voice Receptionist</h2>
+                     <p className="text-sm text-gray-500">Your Business Phone Number: <strong>{voiceAgentConfig.phone_number}</strong></p>
+                 </div>
+             </div>
+             <div className="p-6 rounded-2xl border bg-white/60 backdrop-blur-[30px] shadow-sm flex flex-col gap-4">
+                 <div className="flex items-center justify-between">
+                     <span className="font-medium text-gray-900">Enable AI Receptionist</span>
+                     <label className="relative inline-flex items-center cursor-pointer">
+                         <input type="checkbox" className="sr-only peer" checked={voiceAgentConfig.is_enabled} onChange={(e) => setVoiceAgentConfig({ ...voiceAgentConfig, is_enabled: e.target.checked })} />
+                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                     </label>
+                 </div>
+                 <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Primary Language</label>
+                     <select className="w-full p-2 border border-gray-300 rounded-md bg-white/50" value={voiceAgentConfig.primary_language} onChange={(e) => setVoiceAgentConfig({ ...voiceAgentConfig, primary_language: e.target.value })}>
+                         <option value="English">English</option>
+                         <option value="Spanish">Spanish</option>
+                         <option value="Arabic">Arabic</option>
+                         <option value="French">French</option>
+                     </select>
+                 </div>
+                 <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">What should the agent know?</label>
+                     <textarea
+                         className="w-full p-3 border border-gray-300 rounded-md bg-white/50 text-sm h-24"
+                         placeholder="e.g. Tell callers to park in the back. Do not take reservations for more than 10 people."
+                         value={voiceAgentConfig.custom_instructions}
+                         onChange={(e) => setVoiceAgentConfig({ ...voiceAgentConfig, custom_instructions: e.target.value })}
+                     />
+                 </div>
+                 <div className="flex gap-4 items-center">
+                     <button onClick={saveVoiceAgentConfig} disabled={isSavingVoiceAgent} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                         {isSavingVoiceAgent ? "Saving..." : "Save Voice Settings"}
+                     </button>
+                     {voiceAgentSaveMsg && <span className="text-green-600 text-sm font-medium">{voiceAgentSaveMsg}</span>}
+                     <button onClick={() => setCallLogsOpen(!callLogsOpen)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors ml-auto">
+                         Call History
+                     </button>
+                 </div>
+                 {callLogsOpen && (
+                     <div className="mt-4 border-t pt-4">
+                         <h3 className="text-lg font-medium mb-3">Recent Calls</h3>
+                         <div className="flex flex-col gap-2">
+                             <div className="p-3 bg-white/40 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                 <div>
+                                     <span className="font-semibold block text-sm">+1 (555) 987-6543</span>
+                                     <span className="text-xs text-gray-500">Today, 2:15 PM (2m 14s)</span>
+                                 </div>
+                                 <div className="text-sm text-gray-700 max-w-md">
+                                     <strong>Summary:</strong> Caller asked about vegan cake options. Agent informed them of chocolate and vanilla availability and directed them to the website.
+                                 </div>
+                                 <button className="text-blue-600 text-sm font-medium hover:underline whitespace-nowrap">View Transcript</button>
+                             </div>
+                         </div>
+                     </div>
+                 )}
+             </div>
+         </section>
+
          {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
          {!hasPro && (
            <section className="mb-6 animate-fade-in">
