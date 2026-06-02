@@ -551,9 +551,19 @@ export default function OnboardingWizard() {
                             type="text"
                             inputMode="decimal"
                             value={firstProductPrice}
-                            onChange={(e) => setFirstProductPrice(e.target.value)}
-                            className="w-full p-2 rounded-[6px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm"
+                            onChange={(e) => {
+                               setFirstProductPrice(e.target.value);
+                               if (e.target.value.trim().length === 0) {
+                                  setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
+                               } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                                  setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
+                               } else {
+                                  setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
+                               }
+                            }}
+                            className={`w-full p-2 rounded-[6px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm`}
                           />
+                          {validationErrors.firstProductPrice && <p className="text-red-500 text-[10px] mt-1">{validationErrors.firstProductPrice}</p>}
                        </div>
                     </div>
                     <div>
@@ -576,6 +586,10 @@ export default function OnboardingWizard() {
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
+                      return;
+                    }
+                    if (Object.keys(validationErrors).length > 0) {
+                      setValidationError('Please fix the errors before continuing.');
                       return;
                     }
                     setValidationError('');
