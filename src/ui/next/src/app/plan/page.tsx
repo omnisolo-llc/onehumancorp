@@ -154,7 +154,7 @@ export default function MyPlanPage() {
                             }}
                         ></div>
                     </div>
-                    {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
+                    {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes * 0.9 && (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 flex items-start gap-2">
                             <span className="text-lg">📦</span>
                             <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
