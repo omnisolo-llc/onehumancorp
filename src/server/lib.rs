@@ -1251,6 +1251,25 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn create_terminal_connection_token(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::CreateTerminalTokenRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CreateTerminalTokenResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = auth_info.map(|i| i.org_id).ok_or_else(|| tonic::Status::unauthenticated("Missing authentication context"))?;
+
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
+        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+        let token = client.create_terminal_connection_token(&tenant_id).await
+            .map_err(|e| tonic::Status::internal(e))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::CreateTerminalTokenResponse {
+            success: true,
+            token,
+        }))
+    }
 
     async fn register_agent(
         &self,
@@ -2613,6 +2632,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/team", axum::routing::get(ui_handler))
+        .route("/team/chat", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
@@ -2888,10 +2908,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
-        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
+        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
-        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()))
+        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
             "/api/v1/advisory/insights",
