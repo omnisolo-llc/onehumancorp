@@ -351,4 +351,90 @@ mod parity_tests {
             assert_eq!(created_at.timestamp(), dt.timestamp());
         }
     }
+
+    #[tokio::test]
+    async fn test_department_tasks_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = "tenant_parity";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload) VALUES (?, ?, 'ops', 'test', '{}')")
+                .bind(&task_id)
+                .bind(tenant_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let dept: String = sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(dept, "ops");
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload) VALUES ($1, $2, 'ops', 'test', '{}')")
+                .bind(&task_id)
+                .bind(tenant_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let dept: String = sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = $1")
+                .bind(&task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(dept, "ops");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_shared_tasks_parity() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "org_parity";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO shared_tasks (id, organization_id, title) VALUES (?, ?, 'test_task')")
+                .bind(&task_id)
+                .bind(org_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let title: String = sqlx::query_scalar("SELECT title FROM shared_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(title, "test_task");
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO shared_tasks (id, organization_id, title) VALUES ($1, $2, 'test_task')")
+                .bind(&task_id)
+                .bind(org_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let title: String = sqlx::query_scalar("SELECT title FROM shared_tasks WHERE id = $1")
+                .bind(&task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(title, "test_task");
+        }
+    }
 }
