@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
+use sqlx;
 
 pub async fn bench_queue_latency() {
 
@@ -400,7 +401,7 @@ pub async fn bench_advisory_insights_latency() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(crate::auth::Store::new());
+        let _store = std::sync::Arc::new(::server_auth::Store::new());
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
