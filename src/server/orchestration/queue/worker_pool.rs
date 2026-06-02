@@ -9,19 +9,19 @@ pub trait JobHandler: Send + Sync {
 }
 
 pub struct WorkerPool {
-    queue: Arc<OHCJobQueue>,
+    _queue: Arc<OHCJobQueue>,
     workers: Vec<JoinHandle<()>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl WorkerPool {
-    pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
+    pub fn new(_queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let mut workers = Vec::with_capacity(num_workers);
 
         for i in 0..num_workers {
             let mut shutdown_rx = shutdown_tx.subscribe();
-            let queue_clone = queue.clone();
+            let queue_clone = _queue.clone();
             let types_clone = job_types.clone();
             let handler_clone = handler.clone();
 

@@ -158,8 +158,18 @@ pub struct ReferralGenerateResponse {
 
 
 #[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralMetrics {
+    pub team_invites_sent: i64,
+    pub active_referrals: i64,
+    pub revenue: f64,
+    pub pending_rewards: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
+    pub metrics: Option<ReferralMetrics>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -584,7 +594,7 @@ async fn handle_team_invites_metrics(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.get_team_invites_count(&query.team_id).await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites, metrics: Some(ReferralMetrics { team_invites_sent: total_invites, active_referrals: total_invites, revenue: 0.0, pending_rewards: 0.0 }) })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -1056,7 +1066,7 @@ async fn handle_aggregated_team_invites_metrics(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.get_total_invites_count().await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites, metrics: Some(ReferralMetrics { team_invites_sent: total_invites, active_referrals: total_invites, revenue: 0.0, pending_rewards: 0.0 }) })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
