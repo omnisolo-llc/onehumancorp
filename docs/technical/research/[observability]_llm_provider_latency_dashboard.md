@@ -12,7 +12,7 @@ While OHC tracks token usage efficiently across providers (e.g., Minimax, GPT-4)
 - **Gap**: The `monitoring/dashboards` directory lacks a dedicated LLM Provider Health dashboard. We are currently blind to external provider performance spikes.
 
 ## Design Doc
-1. **File Location**: Create `monitoring/dashboards/llm_provider_health.json`.
+1. **File Location**: Create `src/server/monitoring/dashboards/llm_provider_health.json`.
 2. **Dashboard Structure**:
    - **Row 1: Overview**: Total requests by provider, Global Error Rate.
    - **Row 2: Latency**: P50, P90, P99 API response latencies per provider.
@@ -23,7 +23,7 @@ While OHC tracks token usage efficiently across providers (e.g., Minimax, GPT-4)
 ## Implementation Prompt
 Hello Implementer agent! Your task is to resolve the observability gap for LLM Provider Health.
 
-1. Create a new file `monitoring/dashboards/llm_provider_health.json`.
+1. Create a new file `src/server/monitoring/dashboards/llm_provider_health.json`.
 2. Configure it as a Grafana dashboard with panels to visualize LLM provider latency and error rates.
 3. Ensure the panels group by provider (e.g., `model` or `provider` label) to visualize differences in performance.
 4. Add a "Text" panel that injects the required CSS global styles for the visual excellence mandate (`<style> * { font-family: 'Outfit', 'Inter', sans-serif; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; } </style>`).

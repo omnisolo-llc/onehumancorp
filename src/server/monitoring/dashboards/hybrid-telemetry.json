@@ -33,7 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -46,7 +46,7 @@
       },
       "id": 2,
       "options": {
-        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  OHC Premium Telemetry\n</div>",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -3218,7 +3218,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
+          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -3747,7 +3747,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
+          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"
@@ -4089,117 +4089,6 @@
           }
         },
         "overrides": []
-      },
-      "transparent": true
-    },
-    {
-      "type": "row",
-      "title": "Agent Efficiency & ROI",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 21
-      },
-      "id": 69025,
-      "panels": []
-    },
-    {
-      "type": "barchart",
-      "title": "Tokens per Success by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 22
-      },
-      "id": 69026,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "expr": "sum(increase(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[1h])) by (agent_role)",
-          "legendFormat": "{{agent_role}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "xTickLabelRotation": 45,
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "transparent": true
-    },
-    {
-      "type": "timeseries",
-      "title": "Waste Ratio (Failed / Successful Tokens)",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 22
-      },
-      "id": 69027,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "expr": "sum(increase(ohc_token_usage_by_outcome{outcome=\"FAILED\"}[1h])) / sum(increase(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[1h]))",
-          "legendFormat": "Waste Ratio",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
-      },
-      "transparent": true
-    },
-    {
-      "type": "stat",
-      "title": "Swarm ROI (Tokens / USD Cost)",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 22
-      },
-      "id": 69028,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "expr": "sum(increase(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[1h])) / (sum(increase(ohc_mission_cost_cents[1h])) / 100)",
-          "legendFormat": "ROI",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
       },
       "transparent": true
     }
