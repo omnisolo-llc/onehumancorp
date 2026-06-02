@@ -4,6 +4,8 @@ test.describe('Dynamic Edge-Caching Storefront', () => {
     test('Maya can build a storefront and sees edge-caching performance metrics', async ({ page, request }) => {
         // We will intercept the initial storefront builder page load because the builder fetches current state
         // Let's go to storefront-builder
+        // IMPORTANT: Playwright tests running under bazel test usually get the base URL automatically injected.
+        // If it's missing, default to hitting the root or relative paths.
         await page.goto('/storefront-builder');
 
         // Wait for bio input to be visible and type a description
