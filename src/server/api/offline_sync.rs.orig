@@ -4,13 +4,9 @@ use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
 pub struct OfflineMutation {
-    pub r#type: Option<String>,
-    pub amount: Option<f64>,
-    pub currency: Option<String>,
-    pub exchange_rate: Option<f64>,
-    pub transaction_id: Option<String>,
-    pub product_id: Option<String>,
-    pub quantity_deducted: Option<i32>,
+    pub transaction_id: String,
+    pub product_id: String,
+    pub quantity_deducted: i32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -44,49 +40,7 @@ pub async fn offline_sync_handler(
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     for mutation in &payload.mutations {
-        if let Some(ref t) = mutation.r#type {
-            if t == "tap_to_pay" {
-                if let Some(amount) = mutation.amount {
-                    let currency = mutation.currency.as_deref().unwrap_or("USD");
-                    let cached_rate = mutation.exchange_rate.unwrap_or(1.0);
-                    let ledger = crate::finance::multi_currency_ledger::MultiCurrencyLedger::new("USD");
-                    let result = ledger.reconcile_transaction(amount, currency, cached_rate);
-                    tracing::info!("Reconciled offline payment for {}: base amount {} (diff {}, flagged: {})", tenant_id, result.base_amount, result.margin_diff, result.flagged_for_review);
-                    let payload_json = serde_json::json!({
-                        "amount": amount,
-                        "currency": currency,
-                        "cached_rate": cached_rate,
-                        "base_amount": result.base_amount,
-                        "margin_diff": result.margin_diff,
-                        "flagged_for_review": result.flagged_for_review,
-                        "transaction_id": mutation.transaction_id.as_deref().unwrap_or("")
-                    });
-                    let entry_id = uuid::Uuid::new_v4().to_string();
-                    let payload_str = serde_json::to_string(&payload_json).unwrap_or_default();
-                    let res = sqlx::query(
-                        "INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload, created_at)
-                         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
-                    )
-                    .bind(&entry_id)
-                    .bind(&tenant_id)
-                    .bind("tap_to_pay")
-                    .bind("finance")
-                    .bind(&payload_str)
-                    .execute(&db)
-                    .await;
-                    if let Err(e) = res {
-                       tracing::error!("Failed to persist offline tap_to_pay for {}: {}", tenant_id, e);
-                    } else {
-                       tracing::info!("Persisted offline tap_to_pay to universal ledger for {}", tenant_id);
-                    }
-                }
-                continue;
-            }
-        }
-
-        if let Some(ref pid) = mutation.product_id {
-            cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
-        }
+        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
         let query = "
             UPDATE products
@@ -96,8 +50,8 @@ pub async fn offline_sync_handler(
         ";
 
         let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted.unwrap_or(0))
-            .bind(&mutation.product_id.as_deref().unwrap_or(""))
+            .bind(mutation.quantity_deducted)
+            .bind(&mutation.product_id)
             .bind(&tenant_id)
             .fetch_optional(&db)
             .await;
@@ -111,19 +65,19 @@ pub async fn offline_sync_handler(
                     status: "".to_string(),
                     msg_id: uuid::Uuid::new_v4().to_string(),
                     payload: serde_json::json!({
-                        "product_id": mutation.product_id.as_deref().unwrap_or(""),
-                        "transaction_id": mutation.transaction_id.as_deref().unwrap_or(""),
-                        "quantity_deducted": mutation.quantity_deducted.unwrap_or(0),
+                        "product_id": mutation.product_id,
+                        "transaction_id": mutation.transaction_id,
+                        "quantity_deducted": mutation.quantity_deducted,
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
             }
             Ok(None) => {
-                tracing::warn!("Product {:?} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
+                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
             }
             Err(e) => {
-                tracing::error!("Failed to deduct inventory for product {:?}: {}", mutation.product_id, e);
+                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
             }
         }
     }
@@ -176,13 +130,9 @@ mod tests {
         let req = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
-                    r#type: None,
-                    amount: None,
-                    currency: None,
-                    exchange_rate: None,
-                    transaction_id: Some("tx1".to_string()),
-                    product_id: Some("prod-offline-1".to_string()),
-                    quantity_deducted: Some(3),
+                    transaction_id: "tx1".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 3,
                 },
             ],
         };
@@ -201,13 +151,9 @@ mod tests {
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
-                    r#type: None,
-                    amount: None,
-                    currency: None,
-                    exchange_rate: None,
-                    transaction_id: Some("tx2".to_string()),
-                    product_id: Some("prod-offline-1".to_string()),
-                    quantity_deducted: Some(10),
+                    transaction_id: "tx2".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 10,
                 },
             ],
         };
