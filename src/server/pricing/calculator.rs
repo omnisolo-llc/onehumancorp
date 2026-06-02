@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct ModelPricing {
     pub input_cost: f64,
     pub output_cost: f64,
@@ -7,9 +8,12 @@ pub struct ModelPricing {
 pub fn get_pricing(model: &str) -> ModelPricing {
     match model {
         // Anthropic — Claude 3 family
-        "claude-3-opus" => ModelPricing { input_cost: 15.00, output_cost: 75.00, cached_cost: 0.0 },
-        "claude-3-sonnet" => ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.0 },
-        "claude-3-haiku" => ModelPricing { input_cost: 0.25, output_cost: 1.25, cached_cost: 0.0 },
+        "claude-3-opus" | "claude-3-opus-20240229" =>
+            ModelPricing { input_cost: 15.00, output_cost: 75.00, cached_cost: 1.50 },
+        "claude-3-sonnet" | "claude-3-sonnet-20240229" =>
+            ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
+        "claude-3-haiku" | "claude-3-haiku-20240307" =>
+            ModelPricing { input_cost: 0.25, output_cost: 1.25, cached_cost: 0.025 },
         // Anthropic — Claude 3.5 family
         "claude-3.5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-3-5-sonnet-20240620" => 
             ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
@@ -250,5 +254,37 @@ mod tests {
     fn test_calculate_cost_invalid_negative() {
         let cost = calculate_cost("invalid-model", -10, -20, -5);
         assert!(cost < 0.0);
+    }
+
+    #[test]
+    fn test_gemini_1_5_pro_pricing() {
+        let cost = calculate_cost("gemini-1.5-pro", 1_000_000, 1_000_000, 0);
+        assert_eq!(cost, 3.50 + 10.50);
+        let cost_cents = calculate_cost_cents("gemini-1.5-pro", 1_000_000, 1_000_000, 0);
+        assert_eq!(cost_cents, 1400);
+    }
+
+    #[test]
+    fn test_gemini_2_0_flash_pricing() {
+        let cost = calculate_cost("gemini-2.0-flash", 1_000_000, 1_000_000, 0);
+        assert_eq!(cost, 0.10 + 0.40);
+        let cost_cents = calculate_cost_cents("gemini-2.0-flash", 1_000_000, 1_000_000, 0);
+        assert_eq!(cost_cents, 50);
+    }
+
+    #[test]
+    fn test_claude_3_5_sonnet_pricing() {
+        let cost = calculate_cost("claude-3.5-sonnet", 1_000_000, 1_000_000, 1_000_000);
+        assert_eq!(cost, 3.00 + 15.00 + 0.30);
+        let cost_cents = calculate_cost_cents("claude-3.5-sonnet", 1_000_000, 1_000_000, 1_000_000);
+        assert_eq!(cost_cents, 1830);
+    }
+
+    #[test]
+    fn test_gpt_4o_pricing() {
+        let cost = calculate_cost("gpt-4o", 1_000_000, 1_000_000, 1_000_000);
+        assert_eq!(cost, 5.00 + 15.00 + 2.50);
+        let cost_cents = calculate_cost_cents("gpt-4o", 1_000_000, 1_000_000, 1_000_000);
+        assert_eq!(cost_cents, 2250);
     }
 }
