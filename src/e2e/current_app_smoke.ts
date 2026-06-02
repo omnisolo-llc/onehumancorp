@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 
 export function currentAppSmoke(label: string) {
+test.describe(`current embedded app smoke suite: ${label}`, () => {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
@@ -27,4 +28,5 @@ export function currentAppSmoke(label: string) {
     expect(ogCard.ok()).toBeTruthy();
     expect(ogCard.headers()['content-type']).toContain('image/svg+xml');
   });
+});
 }
