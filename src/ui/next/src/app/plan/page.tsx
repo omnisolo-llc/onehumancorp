@@ -122,7 +122,7 @@ export default function MyPlanPage() {
                         <div
                             className="bg-blue-600 h-2.5 rounded-full"
                             style={{
-                                width: planData?.ai_actions_limit ?
+                                width: planData?.ai_actions_limit && planData.ai_actions_limit > 0 ?
                                     `${Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100)}%`
                                     : '100%'
                             }}
@@ -148,7 +148,7 @@ export default function MyPlanPage() {
                         <div
                             className="bg-green-500 h-2.5 rounded-full"
                             style={{
-                                width: planData?.storage_limit_bytes ?
+                                width: planData?.storage_limit_bytes && planData.storage_limit_bytes > 0 ?
                                     `${Math.min(((planData.storage_used_bytes || 0) / planData.storage_limit_bytes) * 100, 100)}%`
                                     : '100%'
                             }}
