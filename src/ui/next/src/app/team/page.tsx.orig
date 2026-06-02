@@ -25,25 +25,10 @@ const DEPARTMENTS = [
   { id: 'discovery', name: 'The Scout' },
 ];
 
-export type StaffMember = {
-  id: string;
-  name: string;
-  phone_number: string;
-  role: string;
-  status: string;
-};
-
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
-  const [newStaffName, setNewStaffName] = useState('');
-  const [newStaffPhone, setNewStaffPhone] = useState('');
-  const [newStaffRole, setNewStaffRole] = useState('Cashier');
-
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
@@ -62,21 +47,8 @@ export default function TeamPage() {
     }
   };
 
-  const fetchStaff = async () => {
-    try {
-      const response = await fetch('/api/v1/staff');
-      if (response.ok) {
-        const data = await response.json();
-        setStaffList(data || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch staff", error);
-    }
-  };
-
   useEffect(() => {
     fetchApprovals();
-    fetchStaff();
 
     if (typeof window !== 'undefined' && window.localStorage) {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
@@ -111,25 +83,6 @@ export default function TeamPage() {
     } catch (error) {
       console.error("Failed to reject", error);
       fetchApprovals();
-    }
-  };
-
-  const handleAddStaff = async () => {
-    if (!newStaffName || !newStaffPhone) return;
-    try {
-      const response = await fetch('/api/v1/staff', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newStaffName, phone_number: newStaffPhone, role: newStaffRole })
-      });
-      if (response.ok) {
-        setNewStaffName('');
-        setNewStaffPhone('');
-        setShowAddStaffForm(false);
-        fetchStaff();
-      }
-    } catch (error) {
-      console.error("Failed to add staff", error);
     }
   };
 
