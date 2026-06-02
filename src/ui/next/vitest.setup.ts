@@ -52,7 +52,29 @@ vi.mock('next/server', () => {
 
 // Add fetch mock if needed
 if (typeof global.fetch === 'undefined') {
-  global.fetch = vi.fn() as any
+  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+    // Mock for dashboard metrics and other relative URLs in tests
+    return Promise.resolve(new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+    }));
+  }) as any
+} else {
+  // Override existing global.fetch for Vitest env if it throws Invalid URL on relative paths
+  const originalFetch = global.fetch;
+  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof url === 'string' && url.startsWith('/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+            ok: true,
+            // Provide sensible defaults for the failed API calls in tests
+            metrics: {}, approvals: [], workflows: [], milestones: []
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        }));
+    }
+    return originalFetch(url, init);
+  }) as any
 }
 
 // Add standard window mocks
@@ -86,3 +108,20 @@ Object.defineProperty(window, 'IntersectionObserver', {
   configurable: true,
   value: IntersectionObserver,
 })
+// Add fetch mock if needed
+const originalFetch = global.fetch;
+global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
+    let urlString = '';
+    if (typeof url === 'string') {
+        urlString = url;
+    } else if (url instanceof URL) {
+        urlString = url.toString();
+    } else if (url instanceof Request) {
+        urlString = url.url;
+    }
+
+    if (urlString.startsWith('/')) {
+        url = 'http://localhost:3000' + urlString;
+    }
+    return originalFetch(url, init);
+};

@@ -705,6 +705,7 @@ impl Agent {
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
+        let mut budget_tracker = crate::budget::BudgetTracker::default();
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -743,6 +744,19 @@ impl Agent {
             // 4. Termination Condition: Token budget exhausted
             if cfg.max_task_tokens > 0 && total_tokens > cfg.max_task_tokens {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
+            }
+            if resp.stop_reason == "max_tokens" || resp.stop_reason == "length" {
+                let decision = crate::budget::check_token_budget(&mut budget_tracker, cfg.max_task_tokens, total_tokens);
+                if decision.action == crate::budget::BudgetAction::Stop {
+                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
+                }
+                if decision.action == crate::budget::BudgetAction::Continue {
+                    if !msg.content.is_empty() {
+                        messages.push(msg.clone());
+                    }
+                    messages.push(crate::types::Message::user(&decision.nudge_message));
+                    continue;
+                }
             }
 
             // 5. Parse output / check tool calls
@@ -789,6 +803,9 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(err_msg)) | Err(crate::types::ToolError::Unexpected(err_msg)) => {
                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
+                        }
+                        Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
                         }
                         Err(e) => {
                             let err_str = e.to_string();
@@ -2315,6 +2332,15 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // OpenAI Guardrail: Check Output Guardrail registry
+                if let Some(guardrails) = &final_cfg.guardrails {
+                    if let Err(e) = guardrails.check_output(&resp.message.content) {
+                        let err_msg = format!("Output Guardrail tripped: {}", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
+                    }
+                }
+
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2323,7 +2349,7 @@ impl Agent {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
                 }
 
                 if let Err(e) = verification_manager.run_computational_guides("", "").await {
@@ -3581,6 +3607,82 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_termination_token_budget_nudge() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("I am thinking very long"),
+                    usage: crate::types::Usage { input_tokens: 500, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "max_tokens".to_string(), // Triggers budget logic
+                    response_id: None,
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Done!"),
+                    usage: crate::types::Usage { input_tokens: 10, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.max_task_tokens = 1000; // 500+100 = 600, which is < 1000, so it will continue with a nudge
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Done!");
+    }
+
+    #[tokio::test]
+    async fn test_tao_termination_guardrail_user_fixable() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "test".to_string(), arguments: serde_json::json!({}) }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        struct UserFixableExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("needs human".to_string()))
+            }
+        }
+
+        let dummy_tool = ohc_builtin_agent_tools::Tool {
+            name: "test".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(UserFixableExecutor),
+        };
+
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("Guardrail tripwire fires (UserFixable): needs human"));
     }
 
     #[tokio::test]
@@ -5177,7 +5279,18 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5189,7 +5302,18 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_2".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
