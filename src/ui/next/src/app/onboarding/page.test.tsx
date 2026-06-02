@@ -15,6 +15,7 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
+      domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -227,6 +228,7 @@ describe('OnboardingWizard', () => {
         businessName: 'Valid Name',
         businessType: 'Bakery',
         categories: ['food'],
+        domainChoice: 'subdomain',
         firstProductName: 'Cake',
         firstProductPrice: '20'
       });

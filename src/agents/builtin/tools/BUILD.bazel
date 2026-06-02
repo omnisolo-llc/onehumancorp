@@ -67,8 +67,6 @@ rust_library(
         "@crates//:tracing",
         "@crates//:urlencoding",
         "@crates//:uuid",
-        "@crates//:tree-sitter",
-        "@crates//:tree-sitter-bash",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",

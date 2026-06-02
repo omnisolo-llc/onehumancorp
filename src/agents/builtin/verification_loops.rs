@@ -78,58 +78,19 @@ pub struct PlaywrightVisualVerifier;
 #[async_trait::async_trait]
 impl VisualVerifier for PlaywrightVisualVerifier {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-        let output = tokio::process::Command::new("npx")
+        let output = std::process::Command::new("npx")
             .arg("playwright")
             .arg("screenshot")
             .arg(ui_state_path)
             .arg("test.png")
-            .output().await
+            .output()
             .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
 
         if output.status.success() {
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}. Please fix the UI and try again.", stderr))
-        }
-    }
-}
-
-pub struct PlaywrightE2EVerifier;
-
-#[async_trait::async_trait]
-impl ComputationalGuide for PlaywrightE2EVerifier {
-    async fn verify(&self, code: &str, context: &str) -> Result<(), String> {
-        // Interpret `code` or `context` as the test path or fallback to a default suite
-        let test_path = if !code.is_empty() {
-            code
-        } else if !context.is_empty() {
-            context
-        } else {
-            "tests/e2e"
-        };
-
-        let output = tokio::process::Command::new("npx")
-            .arg("playwright")
-            .arg("test")
-            .arg(test_path)
-            .arg("--reporter=list")
-            .output().await
-            .map_err(|e| format!("Failed to execute Playwright E2E tests: {}", e))?;
-
-        if output.status.success() {
-            Ok(())
-        } else {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let mut err_msg = format!("Playwright E2E tests failed with exit code {}. Please fix the tests or the implementation.", output.status.code().unwrap_or(-1));
-            if !stdout.is_empty() {
-                err_msg.push_str(&format!("\nStdout: {}", stdout));
-            }
-            if !stderr.is_empty() {
-                err_msg.push_str(&format!("\nStderr: {}", stderr));
-            }
-            Err(err_msg)
+            Err(format!("Visual check failed. Playwright error: {}", stderr))
         }
     }
 }
@@ -213,14 +174,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_playwright_e2e_verifier() {
-        let verifier = PlaywrightE2EVerifier;
-        let res = verifier.verify("invalid_test_path_xyz", "").await;
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(err.contains("Playwright") || err.contains("Failed to execute"));
-    }
-
     async fn test_playwright_visual_verifier() {
         // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
         // but test the struct initialization.
