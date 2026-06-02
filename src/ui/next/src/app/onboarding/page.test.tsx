@@ -377,4 +377,109 @@ describe('OnboardingWizard', () => {
       method: 'POST'
     }));
   });
+
+  it('Step 2: Validates inline fields (Business Type, First Product Price)', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Bakery',
+        categories: ['food'],
+        domainChoice: 'subdomain',
+        firstProductName: 'Cake',
+        firstProductPrice: '20'
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const businessTypeInput = screen.getByDisplayValue('Bakery');
+    await user.clear(businessTypeInput);
+    expect(await screen.findByText('Required field.')).toBeInTheDocument();
+
+    const priceInput = screen.getByDisplayValue('20');
+    await user.clear(priceInput);
+    await user.type(priceInput, 'abc');
+    expect(await screen.findByText('Must be a number.')).toBeInTheDocument();
+  });
+
+  it('Step 2: Prevents continue if Business Name is short, allows Back', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'ab',
+        businessType: 'Bakery',
+        categories: ['food'],
+        domainChoice: 'subdomain',
+        firstProductName: 'Cake',
+        firstProductPrice: '20'
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    await user.click(continueButton);
+
+    expect(screen.getByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+  });
+
+  it('Step 3: Can navigate back to Step 2', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, domainChoice: 'subdomain' });
+    });
+
+    render(<OnboardingWizard />);
+
+    expect(screen.getByText('Style & Team')).toBeInTheDocument();
+
+    const backButton = screen.getByRole('button', { name: /Back/i });
+    await user.click(backButton);
+
+    expect(screen.getByText('Review Details')).toBeInTheDocument();
+  });
+
+  it('Step 3: Toggle subdomain / custom domain and templates', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, domainChoice: 'subdomain' });
+    });
+
+    render(<OnboardingWizard />);
+
+    const subdomainOption = screen.getByText('Free Subdomain');
+    const customOption = screen.getByText('Custom Domain');
+
+    await user.click(customOption);
+    expect(useOnboardingStore.getState().domainChoice).toBe('custom');
+
+    await user.click(subdomainOption);
+    expect(useOnboardingStore.getState().domainChoice).toBe('subdomain');
+
+    const boldTemplate = screen.getByText('Bold');
+    await user.click(boldTemplate);
+    expect(useOnboardingStore.getState().websiteTemplate).toBe('Bold');
+  });
+
+  it('Step 3: Can toggle Sales Agent off', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, aiAgents: ['Sales Agent'] });
+    });
+
+    render(<OnboardingWizard />);
+
+    const salesAgent = screen.getByText('Sales Agent');
+    await user.click(salesAgent);
+
+    expect(useOnboardingStore.getState().aiAgents).not.toContain('Sales Agent');
+  });
 });
