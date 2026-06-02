@@ -2376,10 +2376,23 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
 
+    let webhook_cache = std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(redis::Client::open(redis_url.clone()).ok()));
+    let is_standalone = is_standalone_runtime();
+    let temp_sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone())),
+        }
+    };
+
     let webhook_state = crate::api::billing_webhook::WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: db.clone(),
+        cache: webhook_cache,
+        queue: temp_sub_agent_queue,
     };
 
     let webhook_router = axum::Router::new()
@@ -2392,6 +2405,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
         .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
         .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
+        .layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_mesh))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()

@@ -32,6 +32,8 @@ async fn test_stripe_webhook_handler_completed() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        cache: std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None)),
+        queue: std::sync::Arc::new(crate::queue::MemoryTaskQueue::new()),
     };
 
     // Seed the database with a test tenant
@@ -42,6 +44,7 @@ async fn test_stripe_webhook_handler_completed() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_mesh))
         .with_state(webhook_state);
 
     let payload = json!({
@@ -64,7 +67,7 @@ async fn test_stripe_webhook_handler_completed() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).header("Stripe-Signature", "dummy-sig").send().await.unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -104,6 +107,8 @@ async fn test_stripe_webhook_handler_deleted() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        cache: std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None)),
+        queue: std::sync::Arc::new(crate::queue::MemoryTaskQueue::new()),
     };
 
     // Seed the database with a test tenant
@@ -114,6 +119,7 @@ async fn test_stripe_webhook_handler_deleted() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_mesh))
         .with_state(webhook_state);
 
     let payload = json!({
@@ -135,7 +141,7 @@ async fn test_stripe_webhook_handler_deleted() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).header("Stripe-Signature", "dummy-sig").send().await.unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -180,6 +186,8 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: Arc::new(db),
+        cache: std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None)),
+        queue: std::sync::Arc::new(crate::queue::MemoryTaskQueue::new()),
     };
 
     let event = MercadoPagoEvent {
@@ -199,4 +207,98 @@ async fn test_mercadopago_webhook_handler_payment_created() {
 
     let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_webhook_missing_signature() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+    let db = match DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        cache: std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None)),
+        queue: std::sync::Arc::new(crate::queue::MemoryTaskQueue::new()),
+        rate_limiter: rate_limiter.clone(),
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db.clone()),
+    };
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_mesh))
+        .with_state(webhook_state);
+
+    let payload = json!({"id": "evt_test_missing_sig", "type": "some_event", "data": {"object": {}}});
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).json(&payload).send().await.unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_webhook_replay() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+    let db = match DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        cache: std::sync::Arc::new(crate::utils::cache::HybridCache::<String>::new(None)),
+        queue: std::sync::Arc::new(crate::queue::MemoryTaskQueue::new()),
+        rate_limiter: rate_limiter.clone(),
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db.clone()),
+    };
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_mesh))
+        .with_state(webhook_state);
+
+    let payload = json!({"id": "evt_test_replay", "type": "checkout.session.completed", "data": {"object": {"metadata": {"tenant_id": "test_tenant", "tier": "Pro"}}}});
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+
+    // First request should succeed
+    let response1 = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", "dummy-sig")
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response1.status(), reqwest::StatusCode::OK);
+
+    // Second request (replay) should also return 200 OK (Duplicate ignored)
+    let response2 = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", "dummy-sig")
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response2.status(), reqwest::StatusCode::OK);
 }
