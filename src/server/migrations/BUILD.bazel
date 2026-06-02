@@ -7,3 +7,14 @@ filegroup(
         "//src/server/db:__pkg__",
     ],
 )
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "migrations_test",
+    srcs = ["mod.rs"],
+    deps = [
+        "//src/server/common:server_common",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+    ],
+)
