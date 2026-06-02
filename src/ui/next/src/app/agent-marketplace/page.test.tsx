@@ -33,7 +33,10 @@ describe('Agent Marketplace Page', () => {
 
   it('renders the marketplace header', async () => {
     render(<AgentMarketplacePage />);
-    expect(screen.getByText('Agent Marketplace')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('Agent Marketplace')).toBeInTheDocument();
+    });
     expect(screen.getByPlaceholderText('Search for agents...')).toBeInTheDocument();
   });
 
