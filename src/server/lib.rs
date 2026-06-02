@@ -2856,7 +2856,11 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(|headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(headers, payload).await }))
+        .route("/api/v1/sync/offline", axum::routing::post({
+            let db = db.clone();
+            let orchestrator = dept_orchestrator.clone();
+            move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(db, orchestrator, headers, payload).await }
+        }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
