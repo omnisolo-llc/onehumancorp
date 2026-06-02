@@ -50,9 +50,8 @@ pub fn check_token(provided: &str, expected_hash: &[u8]) -> bool {
 /// Compute HMAC-SHA256 of the token using the application key.
 /// Mirrors Go hmacToken.
 pub fn hmac_token(tok: &str) -> Vec<u8> {
-    let key = std::env::var("OHC_AGENT_AUTH_KEY")
-        .unwrap_or_else(|_| "default_auth_key_change_me".to_string());
-    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC init failed");
+    let app_key = b"ohc-builtin-agent-2025";
+    let mut mac = HmacSha256::new_from_slice(app_key).expect("HMAC init failed");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }

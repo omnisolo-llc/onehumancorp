@@ -10,6 +10,7 @@ interface OnboardingState {
   location: string;
   businessType: string;
   preferredLanguage: string;
+  preferredLanguage: string;
   categories: string[];
   websiteTemplate: string;
   domainChoice: string;
@@ -27,6 +28,7 @@ interface OnboardingState {
   setWhatYouSell: (what: string) => void;
   setLocation: (location: string) => void;
   setBusinessType: (type: string) => void;
+  setPreferredLanguage: (lang: string) => void;
   setPreferredLanguage: (lang: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
@@ -51,6 +53,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       location: '',
       businessType: 'Online Store',
       preferredLanguage: 'English',
+      preferredLanguage: 'English',
       categories: [],
       websiteTemplate: 'Modern',
   domainChoice: 'subdomain',
@@ -68,6 +71,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
       setLocation: (location) => set({ location }),
       setBusinessType: (businessType) => set({ businessType }),
+      setPreferredLanguage: (preferredLanguage) => set({ preferredLanguage }),
       setPreferredLanguage: (preferredLanguage) => set({ preferredLanguage }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),

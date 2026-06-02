@@ -37,7 +37,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "args": ["$(rootpath {})".format(spec) for spec in spec_args],
         "data": spec_args + common_data,
         "env": {
-            "OHC_BASE_URL": "http://localhost:18789",
+            "BASE_URL": "http://localhost:18789",
             "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             "PLAYWRIGHT_RETRIES": "0",
         },
@@ -51,7 +51,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
     }
     sh_test(**attrs)
 
-def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = [], server = None):
+def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 8, data = [], server = None):
     """Generate one sharded all-spec CI test plus manual per-spec debug targets."""
     common_data = [
         "//src/e2e:fixtures.ts",
