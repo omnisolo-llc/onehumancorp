@@ -1,4 +1,5 @@
 "use client";
+import { OneTapReferral } from "../components/OneTapReferral";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
