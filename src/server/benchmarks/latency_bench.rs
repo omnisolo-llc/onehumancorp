@@ -90,7 +90,11 @@ pub async fn bench_api_response_time() {
             cloud_times.push(start.elapsed().as_micros());
         }
         cloud_times.sort();
-        tracing::info!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
+        let p50 = cloud_times[iterations / 2];
+        let p95 = cloud_times[(iterations as f32 * 0.95) as usize];
+        let p99 = cloud_times[(iterations as f32 * 0.99) as usize];
+        tracing::info!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+        assert!(p95 < 1000000, "Cloud API Response Time regression: p95 is {} us", p95); // 1000ms limit
     }
 
     // Standalone setup
@@ -116,7 +120,11 @@ pub async fn bench_api_response_time() {
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    tracing::info!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+    let p50 = standalone_times[iterations / 2];
+    let p95 = standalone_times[(iterations as f32 * 0.95) as usize];
+    let p99 = standalone_times[(iterations as f32 * 0.99) as usize];
+    tracing::info!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+    assert!(p95 < 500000, "Standalone Desktop API Response Time regression: p95 is {} us", p95); // 500ms limit
 
     let mut standalone_mobile_times = Vec::new();
     for _ in 0..iterations {
@@ -129,7 +137,11 @@ pub async fn bench_api_response_time() {
         standalone_mobile_times.push(start.elapsed().as_micros());
     }
     standalone_mobile_times.sort();
-    tracing::info!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[(iterations as f32 * 0.95) as usize], standalone_mobile_times[(iterations as f32 * 0.99) as usize]);
+    let p50 = standalone_mobile_times[iterations / 2];
+    let p95 = standalone_mobile_times[(iterations as f32 * 0.95) as usize];
+    let p99 = standalone_mobile_times[(iterations as f32 * 0.99) as usize];
+    tracing::info!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+    assert!(p95 < 500000, "Standalone Mobile API Response Time regression: p95 is {} us", p95); // 500ms limit
 }
 
 pub async fn bench_dashboard_snapshot() {
