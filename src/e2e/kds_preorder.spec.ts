@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Real-Time Multilingual KDS & Pre-Order Engine', () => {
   test('Fatima operates the KDS locally (offline first, Arabic UI, massive touch targets)', async ({ page, context }) => {
