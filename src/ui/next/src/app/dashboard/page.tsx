@@ -318,7 +318,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -669,7 +669,7 @@ export default function Dashboard() {
                      <button
                          onClick={() => {
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
@@ -1202,7 +1202,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1222,7 +1222,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
@@ -1249,7 +1249,7 @@ export default function Dashboard() {
                       <button
                           onClick={() => {
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `ohc://join?ref=${tenant}`;
+                              const url = `https://ohc.store/join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
