@@ -1,15 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('CUJ: Inventory and Supply Chain Management', () => {
   test('Persona: Business Owner approves an automated purchase order', async ({ page }) => {
     // Navigate to the inventory page
     await page.goto('/inventory');
 
-    // Check page title
-    await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+    // Check page title using robust Role
+    await expect(page.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible({ timeout: 10000 });
 
     // Check low stock alert is present
-    await expect(page.getByRole('heading', { name: 'Low Stock Alerts' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Low Stock Alerts', exact: true })).toBeVisible();
 
     // Verify the simulated low stock item is displayed
     const alertCard = page.locator('[data-testid="alert-card-mat1"]');
@@ -29,7 +29,7 @@ test.describe('CUJ: Inventory and Supply Chain Management', () => {
     await expect(alertCard).toBeHidden();
 
     // Verify all caught up message
-    await expect(page.locator('text=All stock levels are looking good!')).toBeVisible();
+    await expect(page.getByText('All stock levels are looking good!')).toBeVisible();
   });
 });
 // TODO: Validate E2E tests in a proper CI environment, as local sandbox runs encounter a Docker/PGVector permission issue.
