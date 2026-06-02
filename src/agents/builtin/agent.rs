@@ -2323,7 +2323,7 @@ impl Agent {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
                 }
 
                 if let Err(e) = verification_manager.run_computational_guides("", "").await {
