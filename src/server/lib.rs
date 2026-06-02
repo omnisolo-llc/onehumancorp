@@ -2963,16 +2963,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
+            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
+            { "id": 4, "title": "Add a product", "duration": "1:05" },
+            { "id": 5, "title": "Review an order", "duration": "1:10" },
+            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
+            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
+            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
+            { "id": 9, "title": "View analytics", "duration": "0:45" },
+            { "id": 10, "title": "Update your profile", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![

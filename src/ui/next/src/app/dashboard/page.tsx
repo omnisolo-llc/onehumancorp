@@ -415,15 +415,21 @@ export default function Dashboard() {
 
   const walkthroughSteps = [
     {
-      targetId: "sales-card-target",
-      title: "Track Your Revenue",
-      content: "This card shows the total amount of money your store has made today. Keep an eye on it to see your business grow!",
+      targetId: "store-setup-target",
+      title: "Set up your store",
+      content: "Click here to set up your business details and launch your storefront.",
       position: "bottom" as const
     },
     {
-      targetId: "visitors-card-target",
-      title: "Monitor Your Traffic",
-      content: "Here you can see how many people have visited your store today. More visitors means more chances to make a sale.",
+      targetId: "stripe-setup-btn",
+      title: "Accept your first payment",
+      content: "Connect your bank account securely to start accepting payments from customers.",
+      position: "bottom" as const
+    },
+    {
+      targetId: "agents-tab-target",
+      title: "Activate your AI Support Agent",
+      content: "Hire and manage your AI assistants here to handle customer support while you sleep.",
       position: "bottom" as const
     }
   ];
@@ -475,9 +481,11 @@ export default function Dashboard() {
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
              <WithTooltip id="agents-tab-tooltip" defaultText="Hire and manage your AI assistants here.">
-               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-                 <span>🤖</span> AI Departments
-               </Link>
+               <WalkthroughTarget id="agents-tab-target">
+                 <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+                   <span>🤖</span> AI Departments
+                 </Link>
+               </WalkthroughTarget>
              </WithTooltip>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
@@ -555,7 +563,7 @@ export default function Dashboard() {
                  <div className="text-2xl">🌅</div>
                  <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
                </div>
-               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+               <p id="store-setup-target" className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
                  Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
                </p>
                <div className="flex gap-4">
