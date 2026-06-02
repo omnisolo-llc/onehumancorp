@@ -652,6 +652,18 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE TABLE IF NOT EXISTS aiaas_workflows (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        task TEXT NOT NULL,
+                        workflow_type TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'queued',
+                        command TEXT,
+                        output TEXT,
+                        error TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -700,6 +712,18 @@ impl DB {
                         content TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS aiaas_workflows (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        task TEXT NOT NULL,
+                        workflow_type TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'queued',
+                        command TEXT,
+                        output TEXT,
+                        error TEXT,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS memories (
                         id TEXT PRIMARY KEY,

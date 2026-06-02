@@ -114,3 +114,26 @@ pub struct TimelineEvent {
     pub metadata: Option<serde_json::Value>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIAgentPersona {
+    pub id: String,
+    pub name: String,
+    pub department: DepartmentType,
+    pub system_prompt: String,
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIaaSWorkflow {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub task: String,
+    pub workflow_type: String,
+    pub status: String,
+    pub command: Option<String>,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
