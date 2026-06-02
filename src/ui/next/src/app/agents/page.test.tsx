@@ -17,9 +17,9 @@ beforeEach(() => {
 });
 
 test('renders AI Departments heading', async () => {
-  mockFetch.mockResolvedValueOnce({
+  mockFetch.mockResolvedValue({
     ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
+    json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
   render(<AgentsPage />);
@@ -30,9 +30,9 @@ test('renders AI Departments heading', async () => {
 });
 
 test('switches tabs correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
+  mockFetch.mockResolvedValue({
     ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
+    json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
   render(<AgentsPage />);
@@ -49,9 +49,10 @@ test('switches tabs correctly', async () => {
 });
 
 test('renders approvals tab correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
+  mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
+      workflows: [],
       pending_approvals: [
         {
           id: '123',
@@ -76,9 +77,9 @@ test('renders approvals tab correctly', async () => {
 });
 
 test('renders feed tab correctly', async () => {
-  mockFetch.mockResolvedValueOnce({
+  mockFetch.mockResolvedValue({
     ok: true,
-    json: async () => ({ pending_approvals: [], next_cursor: null }),
+    json: async () => ({ pending_approvals: [], next_cursor: null, workflows: [] }),
   });
 
   render(<AgentsPage />);
@@ -91,9 +92,10 @@ test('renders feed tab correctly', async () => {
 });
 
 test('approves a draft successfully', async () => {
-  mockFetch.mockResolvedValueOnce({
+  mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
+      workflows: [],
       pending_approvals: [
         {
           id: '123',

@@ -298,9 +298,10 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      disabled={isLoading}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Save Draft
+                      {isLoading ? 'Saving...' : 'Save Draft'}
                     </button>
                   </div>
 
@@ -362,9 +363,10 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      disabled={isLoading}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Save Draft
+                      {isLoading ? 'Saving...' : 'Save Draft'}
                     </button>
                   </div>
 
@@ -414,9 +416,10 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      disabled={isLoading}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Save Draft
+                      {isLoading ? 'Saving...' : 'Save Draft'}
                     </button>
                   </div>
 
@@ -479,9 +482,10 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  disabled={isLoading}
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Draft
+                  {isLoading ? 'Saving...' : 'Save Draft'}
                 </button>
               </div>
 
@@ -597,9 +601,10 @@ export default function OnboardingWizard() {
                 </p>
                 <button
                   onClick={handleSaveDraft}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  disabled={isLoading}
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save Draft
+                  {isLoading ? 'Saving...' : 'Save Draft'}
                 </button>
               </div>
 
