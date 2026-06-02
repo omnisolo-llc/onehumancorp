@@ -35,9 +35,18 @@ pub struct DraftPage {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct StoreProfile {
+    pub theme: Option<Value>,
+    pub sample_products: Option<Vec<Value>>,
+    pub shipping_settings: Option<Value>,
+    pub tax_settings: Option<Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SiteDraft {
     pub domain: Option<String>,
     pub pages: Vec<DraftPage>,
+    pub store_profile: Option<StoreProfile>,
 }
 
 #[derive(Deserialize)]
@@ -713,6 +722,16 @@ fn synthesize_site_draft(description: &str, brand_dna: Option<&BrandDna>) -> Sit
 
     SiteDraft {
         domain: None,
+        store_profile: Some(StoreProfile {
+            theme: Some(serde_json::json!({ "primary_color": "#000000", "font": "Inter" })),
+            sample_products: Some(vec![serde_json::json!({
+                "name": if is_service { "Signature Service" } else { "Featured Product" },
+                "price": if is_service { 99.00 } else { 29.00 },
+                "description": format!("A brand-aligned offer written in a {} voice.", context.vibe)
+            })]),
+            shipping_settings: Some(serde_json::json!({ "type": "standard", "cost": 5.00 })),
+            tax_settings: Some(serde_json::json!({ "rate": 0.08, "inclusive": false })),
+        }),
         pages: vec![DraftPage {
             path: "/".to_string(),
             title: "Home".to_string(),
@@ -1238,7 +1257,7 @@ Only return the JSON. No markdown formatting, no explanations."#,
     .collect::<Vec<_>>()
     .join("\n");
 
-    // Step 2: The Promoter generates the layout and content
+    // Step 2: The Promoter generates the layout, content, and theme
     let promoter_prompt = format!(
         r#"You are The Promoter (Marketing & Advertising & SEO). Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
 Use the following business context extracted by The Advisor:
@@ -1257,6 +1276,9 @@ Then, instantly generate a structural layout draft that optimizes for the 375px 
 The JSON must exactly match this structure:
 {{
   "domain": null,
+  "store_profile": {{
+    "theme": {{ "primary_color": "...", "font": "..." }}
+  }},
   "pages": [
     {{
       "path": "/",
@@ -1300,7 +1322,52 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         source_context
     );
 
-    let site_draft: SiteDraft = match minimax.reason(&promoter_prompt).await {
+    let operations_prompt = format!(
+        r#"You are The Operations Agent. Based on the business context, generate 3 sample products and default shipping settings.
+Context: Name: {}, Type: {}, Vibe: {}, Description: "{}"
+
+Return a JSON object exactly matching this structure:
+{{
+  "sample_products": [
+    {{ "name": "...", "price": 0.00, "description": "..." }}
+  ],
+  "shipping_settings": {{
+    "type": "...",
+    "cost": 0.00
+  }}
+}}
+Only return the JSON. No markdown formatting."#,
+        business_context.name,
+        business_context.business_type,
+        business_context.vibe,
+        payload.description
+    );
+
+    let finance_prompt = format!(
+        r#"You are The Finance Agent. Based on the business context, generate default tax settings.
+Context: Name: {}, Type: {}, Vibe: {}, Description: "{}"
+
+Return a JSON object exactly matching this structure:
+{{
+  "tax_settings": {{
+    "rate": 0.00,
+    "inclusive": false
+  }}
+}}
+Only return the JSON. No markdown formatting."#,
+        business_context.name,
+        business_context.business_type,
+        business_context.vibe,
+        payload.description
+    );
+
+    let promoter_future = minimax.reason(&promoter_prompt);
+    let operations_future = minimax.reason(&operations_prompt);
+    let finance_future = minimax.reason(&finance_prompt);
+
+    let (promoter_result, operations_result, finance_result) = tokio::join!(promoter_future, operations_future, finance_future);
+
+    let mut site_draft: SiteDraft = match promoter_result {
         Ok(promoter_response) => {
             let cleaned_response = clean_model_json(&promoter_response);
             serde_json::from_str(cleaned_response).unwrap_or_else(|e| {
@@ -1313,6 +1380,39 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
             synthesize_site_draft(&payload.description, active_brand_dna)
         }
     };
+
+    if let Ok(operations_response) = operations_result {
+        let cleaned_ops = clean_model_json(&operations_response);
+        if let Ok(ops_json) = serde_json::from_str::<serde_json::Value>(&cleaned_ops) {
+            if let Some(profile) = site_draft.store_profile.as_mut() {
+                profile.sample_products = ops_json.get("sample_products").cloned().and_then(|v| v.as_array().cloned());
+                profile.shipping_settings = ops_json.get("shipping_settings").cloned();
+            } else {
+                site_draft.store_profile = Some(StoreProfile {
+                    theme: None,
+                    sample_products: ops_json.get("sample_products").cloned().and_then(|v| v.as_array().cloned()),
+                    shipping_settings: ops_json.get("shipping_settings").cloned(),
+                    tax_settings: None,
+                });
+            }
+        }
+    }
+
+    if let Ok(finance_response) = finance_result {
+        let cleaned_fin = clean_model_json(&finance_response);
+        if let Ok(fin_json) = serde_json::from_str::<serde_json::Value>(&cleaned_fin) {
+            if let Some(profile) = site_draft.store_profile.as_mut() {
+                profile.tax_settings = fin_json.get("tax_settings").cloned();
+            } else {
+                site_draft.store_profile = Some(StoreProfile {
+                    theme: None,
+                    sample_products: None,
+                    shipping_settings: None,
+                    tax_settings: fin_json.get("tax_settings").cloned(),
+                });
+            }
+        }
+    }
 
     Ok(Json(site_draft))
 }

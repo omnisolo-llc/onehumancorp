@@ -5993,6 +5993,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 container.appendChild(el);
                             });
 
+                            if (currentSiteDraft && currentSiteDraft.store_profile) {
+                                const profileEl = document.createElement('div');
+                                profileEl.className = 'builder-block glass';
+                                profileEl.style.marginTop = '24px';
+                                profileEl.style.borderTop = '2px dashed var(--border)';
+
+                                let profileHtml = `<h2>Store Profile Details</h2>`;
+
+                                if (currentSiteDraft.store_profile.theme) {
+                                    profileHtml += `<p><strong>Theme:</strong> ${JSON.stringify(currentSiteDraft.store_profile.theme)}</p>`;
+                                }
+                                if (currentSiteDraft.store_profile.sample_products) {
+                                    profileHtml += `<p><strong>Sample Products:</strong></p><ul>`;
+                                    currentSiteDraft.store_profile.sample_products.forEach(p => {
+                                        profileHtml += `<li>${p.name || 'Product'} - $${p.price || 0}</li>`;
+                                    });
+                                    profileHtml += `</ul>`;
+                                }
+                                if (currentSiteDraft.store_profile.shipping_settings) {
+                                    profileHtml += `<p><strong>Shipping Settings:</strong> ${JSON.stringify(currentSiteDraft.store_profile.shipping_settings)}</p>`;
+                                }
+                                if (currentSiteDraft.store_profile.tax_settings) {
+                                    profileHtml += `<p><strong>Tax Settings:</strong> ${JSON.stringify(currentSiteDraft.store_profile.tax_settings)}</p>`;
+                                }
+                                profileEl.innerHTML = profileHtml;
+                                container.appendChild(profileEl);
+                            }
+
                             const footer = document.createElement('div');
                             footer.className = 'builder-block powered-by-footer';
                             footer.style.textAlign = 'center';
