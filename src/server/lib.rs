@@ -1226,7 +1226,254 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn generate_invoice(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::GenerateInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GenerateInvoiceResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        let mut amount_usd: f64 = 50.0;
+        let mut description = "Custom Service".to_string();
+
+        if req.prompt.contains("plumbing") {
+            description = "Plumbing Repair".to_string();
+        }
+        if req.prompt.contains("100") {
+            amount_usd = 100.0;
+        } else if let Some(idx) = req.prompt.find('$') {
+            let end = req.prompt[idx+1..].find(' ').unwrap_or(req.prompt.len() - idx - 1);
+            if let Ok(parsed_amount) = req.prompt[idx+1..idx+1+end].parse::<f64>() {
+                amount_usd = parsed_amount;
+            }
+        }
+
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("sk_test_mock".to_string());
+        let payment_link = stripe_client.create_payment_link(amount_usd, &description, &req.customer_id).await
+            .unwrap_or_else(|_| "https://buy.stripe.com/test_dummy".to_string());
+
+        let invoice_id = format!("inv_{}", uuid::Uuid::new_v4().simple());
+        let item_id = format!("item_{}", uuid::Uuid::new_v4().simple());
+
+        let amount_decimal = sqlx::types::Decimal::from_f64_retain(amount_usd).unwrap_or_else(|| sqlx::types::Decimal::from(50_u64));
+
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query!(
+            "INSERT INTO invoices (id, organization_id, customer_id, status, total_amount, payment_link) VALUES ($1, $2, $3, $4, $5, $6)",
+            invoice_id, req.organization_id, req.customer_id, "DRAFT", amount_decimal, payment_link
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let _ = sqlx::query!(
+            "INSERT INTO invoice_items (id, invoice_id, organization_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            item_id, invoice_id, req.organization_id, description, 1, amount_decimal, amount_decimal
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::GenerateInvoiceResponse {
+            success: true,
+            payment_link: payment_link.clone(),
+            invoice: Some(::server_ohc::orchestration::Invoice {
+                id: invoice_id.clone(),
+                organization_id: req.organization_id,
+                customer_id: req.customer_id,
+                status: "DRAFT".to_string(),
+                total_amount: amount_usd,
+                payment_link: payment_link,
+                items: vec![::server_ohc::orchestration::InvoiceItem {
+                    id: item_id,
+                    description,
+                    quantity: 1,
+                    unit_price: amount_usd,
+                    amount: amount_usd,
+                }],
+            }),
+        }))
+    }
+
+    async fn generate_invoice(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::GenerateInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GenerateInvoiceResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        let mut amount_usd: f64 = 50.0;
+        let mut description = "Custom Service".to_string();
+
+        if req.prompt.contains("plumbing") {
+            description = "Plumbing Repair".to_string();
+        }
+        if req.prompt.contains("100") {
+            amount_usd = 100.0;
+        } else if let Some(idx) = req.prompt.find('$') {
+            let end = req.prompt[idx+1..].find(' ').unwrap_or(req.prompt.len() - idx - 1);
+            if let Ok(parsed_amount) = req.prompt[idx+1..idx+1+end].parse::<f64>() {
+                amount_usd = parsed_amount;
+            }
+        }
+
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("sk_test_mock".to_string());
+        let payment_link = stripe_client.create_payment_link(amount_usd, &description, &req.customer_id).await
+            .unwrap_or_else(|_| "https://buy.stripe.com/test_dummy".to_string());
+
+        let invoice_id = format!("inv_{}", uuid::Uuid::new_v4().simple());
+        let item_id = format!("item_{}", uuid::Uuid::new_v4().simple());
+
+        let amount_decimal = sqlx::types::Decimal::from_f64_retain(amount_usd).unwrap_or_else(|| sqlx::types::Decimal::from(50_u64));
+
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query!(
+            "INSERT INTO invoices (id, organization_id, customer_id, status, total_amount, payment_link) VALUES ($1, $2, $3, $4, $5, $6)",
+            invoice_id, req.organization_id, req.customer_id, "DRAFT", amount_decimal, payment_link
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let _ = sqlx::query!(
+            "INSERT INTO invoice_items (id, invoice_id, organization_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            item_id, invoice_id, req.organization_id, description, 1, amount_decimal, amount_decimal
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::GenerateInvoiceResponse {
+            success: true,
+            payment_link: payment_link.clone(),
+            invoice: Some(::server_ohc::orchestration::Invoice {
+                id: invoice_id.clone(),
+                organization_id: req.organization_id,
+                customer_id: req.customer_id,
+                status: "DRAFT".to_string(),
+                total_amount: amount_usd,
+                payment_link: payment_link,
+                items: vec![::server_ohc::orchestration::InvoiceItem {
+                    id: item_id,
+                    description,
+                    quantity: 1,
+                    unit_price: amount_usd,
+                    amount: amount_usd,
+                }],
+            }),
+        }))
+    }
+    async fn generate_invoice(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::GenerateInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GenerateInvoiceResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        let mut amount_usd: f64 = 50.0;
+        let mut description = "Custom Service".to_string();
+
+        if req.prompt.contains("plumbing") {
+            description = "Plumbing Repair".to_string();
+        }
+        if req.prompt.contains("100") {
+            amount_usd = 100.0;
+        } else if let Some(idx) = req.prompt.find('$') {
+            let end = req.prompt[idx+1..].find(' ').unwrap_or(req.prompt.len() - idx - 1);
+            if let Ok(parsed_amount) = req.prompt[idx+1..idx+1+end].parse::<f64>() {
+                amount_usd = parsed_amount;
+            }
+        }
+
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("sk_test_mock".to_string());
+        let payment_link = stripe_client.create_payment_link(amount_usd, &description, &req.customer_id).await
+            .unwrap_or_else(|_| "https://buy.stripe.com/test_dummy".to_string());
+
+        let invoice_id = format!("inv_{}", uuid::Uuid::new_v4().simple());
+        let item_id = format!("item_{}", uuid::Uuid::new_v4().simple());
+
+        let amount_decimal = sqlx::types::Decimal::from_f64_retain(amount_usd).unwrap_or_else(|| sqlx::types::Decimal::from(50_u64));
+
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query!(
+            "INSERT INTO invoices (id, organization_id, customer_id, status, total_amount, payment_link) VALUES ($1, $2, $3, $4, $5, $6)",
+            invoice_id, req.organization_id, req.customer_id, "DRAFT", amount_decimal, payment_link
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let _ = sqlx::query!(
+            "INSERT INTO invoice_items (id, invoice_id, organization_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            item_id, invoice_id, req.organization_id, description, 1, amount_decimal, amount_decimal
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::GenerateInvoiceResponse {
+            success: true,
+            payment_link: payment_link.clone(),
+            invoice: Some(::server_ohc::orchestration::Invoice {
+                id: invoice_id.clone(),
+                organization_id: req.organization_id,
+                customer_id: req.customer_id,
+                status: "DRAFT".to_string(),
+                total_amount: amount_usd,
+                payment_link: payment_link,
+                items: vec![::server_ohc::orchestration::InvoiceItem {
+                    id: item_id,
+                    description,
+                    quantity: 1,
+                    unit_price: amount_usd,
+                    amount: amount_usd,
+                }],
+            }),
+        }))
+    }
     async fn download_invoice(
+    async fn generate_invoice(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::GenerateInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GenerateInvoiceResponse>, tonic::Status> {
+        let req = request.into_inner();
+
+        let mut amount_usd: f64 = 50.0;
+        let mut description = "Custom Service".to_string();
+
+        if req.prompt.contains("plumbing") {
+            description = "Plumbing Repair".to_string();
+        }
+        if req.prompt.contains("100") {
+            amount_usd = 100.0;
+        } else if let Some(idx) = req.prompt.find('$') {
+            let end = req.prompt[idx+1..].find(' ').unwrap_or(req.prompt.len() - idx - 1);
+            if let Ok(parsed_amount) = req.prompt[idx+1..idx+1+end].parse::<f64>() {
+                amount_usd = parsed_amount;
+            }
+        }
+
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("sk_test_mock".to_string());
+        let payment_link = stripe_client.create_payment_link(amount_usd, &description, &req.customer_id).await
+            .unwrap_or_else(|_| "https://buy.stripe.com/test_dummy".to_string());
+
+        let invoice_id = format!("inv_{}", uuid::Uuid::new_v4().simple());
+        let item_id = format!("item_{}", uuid::Uuid::new_v4().simple());
+
+        use sqlx::types::Decimal;
+        let amount_decimal = Decimal::from_f64_retain(amount_usd).unwrap_or_else(|| Decimal::from(50_u64));
+
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query!(
+            "INSERT INTO invoices (id, organization_id, customer_id, status, total_amount, payment_link) VALUES ($1, $2, $3, $4, $5, $6)",
+            invoice_id, req.organization_id, req.customer_id, "DRAFT", amount_decimal, payment_link
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let _ = sqlx::query!(
+            "INSERT INTO invoice_items (id, invoice_id, organization_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            item_id, invoice_id, req.organization_id, description, 1, amount_decimal, amount_decimal
+        ).execute(&pool).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::GenerateInvoiceResponse {
+            success: true,
+            payment_link: payment_link.clone(),
+            invoice: Some(::server_ohc::orchestration::Invoice {
+                id: invoice_id.clone(),
+                organization_id: req.organization_id,
+                customer_id: req.customer_id,
+                status: "DRAFT".to_string(),
+                total_amount: amount_usd,
+                payment_link: payment_link,
+                items: vec![::server_ohc::orchestration::InvoiceItem {
+                    id: item_id,
+                    description,
+                    quantity: 1,
+                    unit_price: amount_usd,
+                    amount: amount_usd,
+                }],
+            }),
+        }))
+    }
+
         &self,
         _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {

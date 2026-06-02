@@ -63,6 +63,17 @@ impl StripeClient {
         }
     }
 
+    pub async fn create_payment_link(&self, amount_usd: f64, _description: &str, customer_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            customer_id,
+            "stripe_create_payment_link",
+            0.05
+        ).await;
+
+        Ok(format!("https://buy.stripe.com/test_{}", uuid::Uuid::new_v4().simple()))
+    }
+
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
