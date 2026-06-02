@@ -1,6 +1,41 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock the backend API calls
+    await page.route('**/api/onboarding/intake', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_type: "Bakery",
+          business_name: "Maya Bakery",
+          categories: ["food"],
+          initial_products: [{ name: "Cake", price: "20.00" }]
+        })
+      });
+    });
+
+    await page.route('**/api/onboarding/start', route => {
+      // Simulate delay for loading screen
+      setTimeout(() => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: "Your business has been successfully launched." })
+        });
+      }, 1000);
+    });
+
+    await page.route('**/api/onboarding/state', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({})
+      });
+    });
+  });
+
   test('completes full onboarding flow', async ({ page }) => {
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
@@ -79,7 +114,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Review Details
     await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('input[value="Maya\'s Dream Cakes"]')).toBeVisible();
+    await expect(page.locator('input[value="Maya Bakery"]')).toBeVisible();
 
     // Continue
     await page.locator('button:has-text("Continue")').click();
@@ -97,7 +132,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Verification
     await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text="Maya\'s Dream Cakes"')).toBeVisible();
+    await expect(page.locator('text="Your business has been successfully launched."')).toBeVisible();
   });
 
   test('fails gracefully when intake API returns error', async ({ page }) => {

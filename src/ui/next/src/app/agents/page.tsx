@@ -4,37 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AgentsPage() {
-  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals' | 'voice'>('departments');
-  const [voiceConfig, setVoiceConfig] = useState({
-    is_enabled: false,
-    custom_instructions: '',
-    allow_appointments: false,
-    allow_links: false,
-  });
-  const [voiceSaved, setVoiceSaved] = useState(false);
-
-  useEffect(() => {
-    if (activeTab === 'voice') {
-      fetch('/api/agents/voice/config')
-        .then(res => res.json())
-        .then(data => setVoiceConfig(data))
-        .catch(console.error);
-    }
-  }, [activeTab]);
-
-  const saveVoiceSettings = async () => {
-    try {
-      await fetch('/api/agents/voice/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(voiceConfig),
-      });
-      setVoiceSaved(true);
-      setTimeout(() => setVoiceSaved(false), 3000);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
   const [feed, setFeed] = useState<any[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -185,34 +155,28 @@ export default function AgentsPage() {
         </header>
 
         {/* Tabs */}
-        <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-100 pb-1">
+        <div className="flex border-b border-gray-100">
           <button
             onClick={() => setActiveTab('departments')}
-            className={`flex-none px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === 'departments' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'departments' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             My Team
           </button>
           <button
-            onClick={() => setActiveTab('voice')}
-            className={`flex-none px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === 'voice' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Voice AI
-          </button>
-          <button
             onClick={() => setActiveTab('workflows')}
-            className={`flex-none px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === 'workflows' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'workflows' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             Workflows
           </button>
           <button
             onClick={() => setActiveTab('feed')}
-            className={`flex-none px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${activeTab === 'feed' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'feed' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             Activity Feed
           </button>
           <button
             onClick={() => setActiveTab('approvals')}
-            className={`flex-none px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
             Needs Approval
             {approvals.length > 0 && (
@@ -225,117 +189,7 @@ export default function AgentsPage() {
 
         {/* Main Content */}
         <main className="flex-1 p-5 overflow-y-auto pb-24 bg-gray-50">
-          {activeTab === 'voice' ? (
-            <div id="voice-ai-config" className="space-y-6 pb-8">
-              <div className="bg-white/70 backdrop-blur-[20px] saturate-[210%] border border-white/50 shadow-sm p-6 rounded-[16px] font-inter">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="font-bold text-gray-900 font-outfit text-xl">Voice Settings</h2>
-                    <p className="text-sm text-gray-500 mt-1">Configure your AI Receptionist</p>
-                  </div>
-                </div>
-
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700 cursor-pointer" htmlFor="enable-ai">
-                      Activate AI Receptionist
-                    </label>
-                    <input
-                      id="enable-ai"
-                      type="checkbox"
-                      checked={voiceConfig.is_enabled}
-                      onChange={(e) => setVoiceConfig({ ...voiceConfig, is_enabled: e.target.checked })}
-                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700 cursor-pointer" htmlFor="allow-appointments">
-                      Allow AI to book appointments
-                    </label>
-                    <input
-                      id="allow-appointments"
-                      type="checkbox"
-                      checked={voiceConfig.allow_appointments}
-                      onChange={(e) => setVoiceConfig({ ...voiceConfig, allow_appointments: e.target.checked })}
-                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700 cursor-pointer" htmlFor="allow-links">
-                      Allow AI to text callers links
-                    </label>
-                    <input
-                      id="allow-links"
-                      type="checkbox"
-                      checked={voiceConfig.allow_links}
-                      onChange={(e) => setVoiceConfig({ ...voiceConfig, allow_links: e.target.checked })}
-                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2" htmlFor="custom-instructions">
-                      Custom Instructions
-                    </label>
-                    <textarea
-                      id="custom-instructions"
-                      value={voiceConfig.custom_instructions}
-                      onChange={(e) => setVoiceConfig({ ...voiceConfig, custom_instructions: e.target.value })}
-                      className="w-full min-h-[100px] rounded-xl border border-gray-200 p-3 text-sm text-gray-900 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                      placeholder="e.g. Tell callers to park in the back"
-                    />
-                  </div>
-
-                  <button
-                    onClick={saveVoiceSettings}
-                    className="w-full min-h-[44px] rounded-xl font-semibold text-sm transition-colors shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-                  >
-                    Save Voice Settings
-                  </button>
-
-                  {voiceSaved && (
-                    <p className="text-center text-sm font-medium text-green-600 mt-2 transition-opacity duration-300">
-                      Voice settings updated successfully
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-[20px] saturate-[210%] border border-white/50 shadow-sm p-6 rounded-[16px] font-inter">
-                <h3 className="font-bold text-gray-900 font-outfit text-lg mb-4">Recent Calls</h3>
-                <div className="space-y-4">
-                  {/* Mocked Call Log entry for UI */}
-                  <div className="p-4 border border-gray-100 rounded-xl bg-white shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900 text-sm">John Doe</span>
-                        <span className="text-xs text-gray-500">+1 (555) 123-4567 • 2 mins</span>
-                      </div>
-                      <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-1 rounded-md uppercase">
-                        Booked
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700">Booked plumbing estimate for Tuesday</p>
-                  </div>
-
-                  <div className="p-4 border border-gray-100 rounded-xl bg-white shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900 text-sm">Unknown Caller</span>
-                        <span className="text-xs text-gray-500">+1 (555) 987-6543 • 1 min</span>
-                      </div>
-                      <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-md uppercase">
-                        Message
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700">Asked about hours. Informed them we open at 9am.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'departments' ? (
+          {activeTab === 'departments' ? (
             <div className="space-y-4">
               {departments.map((dept) => (
                 <div

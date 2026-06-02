@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use server_voice::engine::VoiceAIEdgeEngine;
+use ::voice::engine::VoiceAIEdgeEngine;
 use std::sync::Mutex;
 
 #[derive(Clone)]

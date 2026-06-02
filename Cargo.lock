@@ -5558,7 +5558,6 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
- "lazy_static",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
