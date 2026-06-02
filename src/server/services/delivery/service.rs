@@ -6,7 +6,10 @@ use delivery_proto::ohc::api::v1::{
     ConfigureDeliveryZoneRequest, ConfigureDeliveryZoneResponse, DeliveryTask, DeliveryZone,
     GetDailyItineraryRequest, GetDailyItineraryResponse, GetDeliveryZoneRequest,
     GetDeliveryZoneResponse, RoutePlan, UpdateDeliveryTaskStatusRequest,
-    UpdateDeliveryTaskStatusResponse, CanDeliverToLocationRequest, CanDeliverToLocationResponse
+    UpdateDeliveryTaskStatusResponse, CanDeliverToLocationRequest, CanDeliverToLocationResponse,
+    RegisterCourierRequest, RegisterCourierResponse, ListAvailableDeliveryJobsRequest, ListAvailableDeliveryJobsResponse,
+    ClaimDeliveryJobRequest, ClaimDeliveryJobResponse, MarkDeliveryJobDeliveredRequest, MarkDeliveryJobDeliveredResponse, Courier, DeliveryJob
+
 };
 use tracing::instrument;
 
@@ -78,7 +81,7 @@ impl DeliveryService for DeliveryServiceImpl {
     async fn get_delivery_zone(
         &self,
         request: Request<GetDeliveryZoneRequest>,
-    ) -> Result<Response<GetDeliveryZoneResponse>, Status> {
+    ) -> Result<Response<ClaimDeliveryJobResponse>, Status> {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
@@ -250,7 +253,10 @@ impl DeliveryService for DeliveryServiceImpl {
     async fn can_deliver_to_location(
         &self,
         request: Request<CanDeliverToLocationRequest>,
-    ) -> Result<Response<CanDeliverToLocationResponse>, Status> {
+    ) -> Result<Response<CanDeliverToLocationResponse,
+    RegisterCourierRequest, RegisterCourierResponse, ListAvailableDeliveryJobsRequest, ListAvailableDeliveryJobsResponse,
+    ClaimDeliveryJobRequest, ClaimDeliveryJobResponse, MarkDeliveryJobDeliveredRequest, MarkDeliveryJobDeliveredResponse, Courier, DeliveryJob
+>, Status> {
          let req = request.into_inner();
 
          if req.organization_id.is_empty() {
@@ -275,12 +281,18 @@ impl DeliveryService for DeliveryServiceImpl {
              Some(r) => {
                  let can_deliver = r.get::<bool, _>("can_deliver");
                  let fee = if can_deliver { r.get::<i64, _>("flat_fee_cents") } else { 0 };
-                 Ok(Response::new(CanDeliverToLocationResponse {
+                 Ok(Response::new(CanDeliverToLocationResponse,
+    RegisterCourierRequest, RegisterCourierResponse, ListAvailableDeliveryJobsRequest, ListAvailableDeliveryJobsResponse,
+    ClaimDeliveryJobRequest, ClaimDeliveryJobResponse, MarkDeliveryJobDeliveredRequest, MarkDeliveryJobDeliveredResponse, Courier, DeliveryJob
+ {
                      can_deliver,
                      flat_fee_cents: fee,
                  }))
              }
-             None => Ok(Response::new(CanDeliverToLocationResponse {
+             None => Ok(Response::new(CanDeliverToLocationResponse,
+    RegisterCourierRequest, RegisterCourierResponse, ListAvailableDeliveryJobsRequest, ListAvailableDeliveryJobsResponse,
+    ClaimDeliveryJobRequest, ClaimDeliveryJobResponse, MarkDeliveryJobDeliveredRequest, MarkDeliveryJobDeliveredResponse, Courier, DeliveryJob
+ {
                  can_deliver: false,
                  flat_fee_cents: 0,
              })),
