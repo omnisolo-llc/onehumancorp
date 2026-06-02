@@ -452,6 +452,7 @@ mod tests {
         bench_get_analytics().await;
     }
 
+    #[tokio::test]
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
