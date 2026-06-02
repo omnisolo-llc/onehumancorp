@@ -2334,7 +2334,7 @@ impl Agent {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
                     messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
                     continue;
                 }
@@ -5204,7 +5204,7 @@ mod tests {
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
 
-        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        let result = agent.run(&cfg, "Build a web server", &mut on_event).await;
         assert!(result.is_ok());
         let content = result.unwrap();
         assert_eq!(content, "Better answer");

@@ -110,7 +110,7 @@ struct JudgeEvaluation {
 impl InferentialSensor for LlmJudgeSensor {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
         let system_prompt = "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.";
-        let user_prompt = format!("Task: {}\nOutput: {}", task, output);
+        let user_prompt = format!("Task: {}\nOutput: {}", if task.is_empty() { "Follow general instructions" } else { task }, output);
 
         let req = ChatRequest {
             model: "judge-model".to_string(),
@@ -253,11 +253,11 @@ mod tests {
     async fn test_llm_judge_sensor() {
         let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
         let judge = LlmJudgeSensor { llm: pass_llm };
-        assert!(judge.verify_inferential("output", "task").await.is_ok());
+        assert!(judge.verify_inferential("output", "Some task to accomplish").await.is_ok());
 
         let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
         let judge_fail = LlmJudgeSensor { llm: fail_llm };
-        let res = judge_fail.verify_inferential("output", "task").await;
+        let res = judge_fail.verify_inferential("output", "Some task to accomplish").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));
     }
