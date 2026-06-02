@@ -6341,6 +6341,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 3000);
                         }
 
+                                                function simulateFailedPayment() {
+                            alert("Webhook triggered: Customer Success Agent is generating a dunning email to recover the failed payment...");
+                            setTimeout(() => {
+                                const feed = document.getElementById('activity-feed');
+                                if (feed) {
+                                    feed.innerHTML = `
+                                        <div style="padding: 12px; border-left: 4px solid #f59e0b; background: rgba(255,255,255,0.8); margin-bottom: 8px;">
+                                            <strong>Customer Success Agent:</strong> Sent payment recovery email to Subscriber #cust_1. (Confidence: 98%)
+                                        </div>
+                                    ` + feed.innerHTML;
+                                }
+                            }, 1000);
+                        }
+
                         function receive5StarReview() {
                             showMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.');
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
