@@ -10,6 +10,8 @@ pub struct RalphProgress {
     pub task_description: String,
     pub features: Vec<Feature>,
     pub current_feature_index: usize,
+    #[serde(default)]
+    pub notes: Vec<String>,
     pub is_complete: bool,
 }
 
@@ -79,14 +81,27 @@ impl RalphLoop {
                 .unwrap_or_else(|| "No git history available".to_string());
 
             // Execute the agent run for this specific feature
+            let mut pending_features = Vec::new();
+            for (i, f) in progress.features.iter().enumerate() {
+                if f.status == "pending" {
+                    pending_features.push(format!("{}. {}", i + 1, f.name));
+                }
+            }
+            let pending_features_list = pending_features.join("\n");
+
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
+                "You are executing Phase 2 of a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nRemaining Features:\n{}\nFeature to implement now (Highest Priority): {}\nExecute steps to complete this feature, verify it, and then stop.",
+                progress.task_description, git_log_output, pending_features_list, feature_name
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
-            feature_config.user_instructions = feature_prompt.clone();
+            let scratchpad_context = if !progress.notes.is_empty() {
+                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
+            } else {
+                String::new()
+            };
+            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
             
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
@@ -98,20 +113,19 @@ impl RalphLoop {
                 Ok(result) => {
                     tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
+                    progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
-                    let commit_msg = format!("Completed feature: {}", feature_name);
-
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                     let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
+                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
+                        let commit_msg = format!("Completed feature: {}\n\n{}", feature_name, result);
+                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                            tracing::error!("Phase 2 failed to git commit: {}", e);
+                        }
                     }
                 }
                 Err(e) => {
@@ -154,6 +168,7 @@ impl RalphLoop {
             task_description: task.to_string(),
             features,
             current_feature_index: 0,
+            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
 
@@ -196,7 +211,11 @@ impl RalphLoop {
 
     async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
-        fs::write(&self.progress_file_path, json).await?;
+        let tmp_path = format!("{}.tmp", self.progress_file_path);
+        fs::write(&tmp_path, json).await?;
+        if let Err(e) = fs::rename(&tmp_path, &self.progress_file_path).await {
+            tracing::error!("Failed to rename progress file: {}", e);
+        }
         Ok(())
     }
 }
@@ -266,6 +285,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ralph_loop_updates_progress() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+        let progress_file_str = progress_file.to_str().unwrap();
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file_str);
+
+        let result = ralph.run("Build a small feature").await;
+        assert!(result.is_ok());
+
+        assert!(progress_file.exists());
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        // "Feat1" is returned by the mock as the first feature.
+        assert!(saved_progress.notes.iter().any(|note| note.contains("Completed feature Feat1: Feature implemented")));
+    }
+
+    #[tokio::test]
     async fn test_ralph_loop_with_completed_features() {
         let dir = tempdir().unwrap();
         let progress_file = dir.path().join("progress.json");
@@ -277,6 +319,7 @@ mod tests {
                 Feature { name: "Step 2".to_string(), status: "pending".to_string() },
             ],
             current_feature_index: 0,
+            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
         std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();

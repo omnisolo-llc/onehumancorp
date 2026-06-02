@@ -13,14 +13,14 @@ The OHC `kairos` module in `src/server/orchestration/kairos/metrics.go` effectiv
 - Competitors provide out-of-the-box UI for agent queue observability. OHC needs a premium UI representation.
 
 ## Design Doc
-We need a new Grafana dashboard JSON file (`monitoring/dashboards/kairos_dashboard.json`) featuring:
+We need a new Grafana dashboard JSON file (`src/server/monitoring/dashboards/kairos_dashboard.json`) featuring:
 1.  **Task Queue Depth (Gauge/TimeSeries):** Visualizing `ohc_agent_task_queue_depth` grouped by `mode`.
 2.  **State Machine Transitions Rate (TimeSeries):** Visualizing `rate(ohc_kairos_transitions_total[1m])` grouped by `mode` and `status`.
 3.  **Transition Duration (Heatmap/TimeSeries):** Visualizing `rate(ohc_kairos_transition_duration_seconds_sum[1m]) / rate(ohc_kairos_transition_duration_seconds_count[1m])` grouped by `mode`.
 4.  **Aesthetic Adherence:** Ensure the global CSS styles (glassmorphism tokens) are injected into a Text panel on the dashboard to maintain the OHC Premium Feel.
 
 ## Implementation Prompt
-1. Create a new file `monitoring/dashboards/kairos_dashboard.json`.
+1. Create a new file `src/server/monitoring/dashboards/kairos_dashboard.json`.
 2. Configure it as a Grafana dashboard with panels for the `ohc_kairos_transitions_total`, `ohc_kairos_transition_duration_seconds`, and `ohc_agent_task_queue_depth` metrics.
 3. Ensure panels group by `mode` to visualize Cloud vs. Standalone differences.
 4. Add a "Text" panel that injects the required CSS global styles for the visual excellence mandate (`<style> * { font-family: 'Outfit', 'Inter', sans-serif; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; } </style>`).

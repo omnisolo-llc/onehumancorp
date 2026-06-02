@@ -31,7 +31,15 @@ async fn process_intake_handler(
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
     match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(error) => {
+            tracing::warn!("onboarding intake fallback used after agent error: {}", error);
+            Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
+                business_name: payload.description.trim().to_string(),
+                business_type: "Local Business".to_string(),
+                categories: vec!["services".to_string()],
+                initial_products: Vec::new(),
+            }))
+        }
     }
 }
 
@@ -114,7 +122,11 @@ async fn save_state(
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
     let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
-    let step = payload.get("step").and_then(|s| s.as_i64()).unwrap_or(0) as i32;
+    let step = payload.get("wizardState")
+        .and_then(|w| w.get("step"))
+        .or_else(|| payload.get("step"))
+        .and_then(|s| s.as_i64())
+        .unwrap_or(0) as i32;
 
     match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),

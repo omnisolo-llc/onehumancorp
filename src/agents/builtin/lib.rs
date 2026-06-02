@@ -40,6 +40,7 @@ pub mod ralph_loop;
 pub mod ruflo;
 pub mod openhands;
 
+
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
 pub mod proto;
@@ -62,7 +63,6 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
-pub mod visual_orchestration;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
@@ -214,15 +214,15 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             Ok(resp) => {
                 let inner = resp.into_inner();
                 if !inner.error.is_empty() {
-                    eprintln!("{}", inner.error);
+                    tracing::error!("{}", inner.error);
                     std::process::exit(1);
                 } else {
-                    println!("{}", inner.result);
+                    tracing::info!("{}", inner.result);
                     return Ok(());
                 }
             }
             Err(e) => {
-                eprintln!("Subagent dispatch error: {}", e);
+                tracing::error!("Subagent dispatch error: {}", e);
                 std::process::exit(1);
             }
         }
@@ -265,5 +265,3 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-pub mod compaction;

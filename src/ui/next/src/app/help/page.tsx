@@ -20,44 +20,36 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Help Center</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
 
-        <div className="mb-8">
+        <div className="mb-10 w-full sm:w-3/4 mx-auto">
           <input
             type="text"
             placeholder="Search for help articles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-800"
+            className="w-full p-4 rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-gray-900 backdrop-blur-[20px] saturate-200 bg-white/60 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
           />
         </div>
 
         {filteredArticles.length === 0 ? (
-          <p className="text-center text-gray-500">No articles found matching "{searchQuery}"</p>
+          <p className="text-center text-gray-500 font-medium bg-white/40 backdrop-blur-[20px] saturate-200 py-8 rounded-2xl border border-white/30 w-full">
+            No articles found matching "{searchQuery}"
+          </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {filteredArticles.map((article, idx) => (
-              <Link key={idx} href={article.link}>
-                <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer h-full">
-                  <h2 className="text-xl font-bold text-blue-600 mb-2">{article.title}</h2>
-                  <p className="text-gray-600">{article.desc}</p>
+              <Link key={idx} href={article.link} className="block group">
+                <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-sm border border-white/40 group-hover:border-blue-300 group-hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[140px]">
+                  <h2 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h2>
+                  <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                 </div>
               </Link>
             ))}
           </div>
         )}
-
-        <div className="mt-16 pt-8 border-t border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Advanced Users</h2>
-          <p className="text-gray-600 mb-4">
-            Are you a developer looking to integrate directly with our systems? Check out our API reference.
-          </p>
-          <Link href="/api-docs">
-            <span className="text-blue-600 font-bold hover:underline">View API Documentation &rarr;</span>
-          </Link>
-        </div>
       </div>
     </div>
   );
