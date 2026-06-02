@@ -268,7 +268,7 @@ export default function Dashboard() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
-                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                fetch(`/api/v1/growth/team-invites/aggregated-metrics?team_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
