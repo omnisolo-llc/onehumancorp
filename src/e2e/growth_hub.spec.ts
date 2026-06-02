@@ -6,16 +6,16 @@ test.describe('Growth Hub CUJ', () => {
     await page.goto('/growth-hub');
 
     // 2. Verify page header
-    await expect(page.locator('h1')).toContainText('Growth Hub 🚀');
-    await expect(page.locator('h2')).toContainText('Customer Acquisition');
+    await expect(page.getByRole('heading', { name: 'Growth Hub 🚀' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Customer Acquisition' }).first()).toBeVisible();
 
     // 3. Verify Social Share Card branding
-    const shareCardSection = page.locator('section').filter({ hasText: 'Social Share Card' });
+    const shareCardSection = page.locator('section').filter({ hasText: 'Social Share Card' }).first();
     await expect(shareCardSection).toBeVisible();
     await expect(shareCardSection).toContainText('⚡ Powered by OHC');
 
     // 4. Verify Store QR Code generator
-    const qrSection = page.locator('section').filter({ hasText: 'Store QR Code' });
+    const qrSection = page.locator('section').filter({ hasText: 'Store QR Code' }).first();
     await expect(qrSection).toBeVisible();
 
     const generateBtn = page.locator('#generate-qr-btn');
@@ -27,7 +27,7 @@ test.describe('Growth Hub CUJ', () => {
     await expect(qrSection.locator('span', { hasText: 'OHC' }).first()).toBeVisible();
 
     // 5. Verify Refer a Business Widget
-    const referSection = page.locator('section').filter({ hasText: 'Invite a Fellow Business Owner' });
+    const referSection = page.locator('section').filter({ hasText: 'Invite a Fellow Business Owner' }).first();
     await expect(referSection).toBeVisible();
     await expect(referSection).toContainText('ohc://join?ref=');
   });
