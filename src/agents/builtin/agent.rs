@@ -150,6 +150,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_ralph_loop: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -209,6 +210,7 @@ enable_llmcompiler_plan_and_execute: false,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
+            enable_ralph_loop: false,
         }
     }
 }
@@ -1887,6 +1889,32 @@ impl Agent {
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
+        if final_cfg.enable_ralph_loop {
+            let progress_file = if let Some(ref path) = final_cfg.state_scratchpad_path {
+                path.clone()
+            } else {
+                ".ralph_progress.json".to_string()
+            };
+
+            let owned_self = Agent {
+                event_stream: None,
+                llm: self_with_memory.llm.clone(),
+                tools: self_with_memory.tools.clone(),
+                progress: self_with_memory.progress.clone(),
+                memory_store: self_with_memory.memory_store.clone(),
+                checkpointer: self_with_memory.checkpointer.clone(),
+                observation_store: self_with_memory.observation_store.clone(),
+                native_env: self_with_memory.native_env.clone(),
+            };
+            let ralph = crate::ralph_loop::RalphLoop::new(Arc::new(owned_self), final_cfg.clone(), &progress_file);
+            if let Err(e) = ralph.run(initial_message).await {
+                let err_msg = format!("Ralph Loop failed: {}", e);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(e);
+            }
+            return Ok("Ralph Loop completed successfully".to_string());
+        }
+
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
@@ -7118,5 +7146,101 @@ mod tao_tests {
         let _action = "Call LLM API -> Parse output -> Execute tool calls";
         let _observation = "Format results back -> Repeat";
         assert_eq!(_thought, "Assemble prompt");
+    }
+}
+
+#[cfg(test)]
+mod ralph_loop_integration_tests {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use std::sync::Arc;
+    use tempfile::tempdir;
+
+    struct TestRalphLlmClient {
+        call_count: tokio::sync::Mutex<usize>,
+        fail: bool,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for TestRalphLlmClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            if self.fail {
+                return Err("API Error".into());
+            }
+
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if req.system.contains("expert context compactor") {
+                return Ok(ChatResponse {
+                    message: Message::assistant("Compacted"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                });
+            }
+
+            if req.messages.iter().any(|m| m.content.contains("Break down the following task")) {
+                return Ok(ChatResponse {
+                    message: Message::assistant(r#"["Feat1"]"#),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                });
+            }
+
+            Ok(ChatResponse {
+                message: Message::assistant("Feature implemented!"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id3".to_string()),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_run_with_ralph_loop_success() {
+        let llm = Arc::new(TestRalphLlmClient { call_count: tokio::sync::Mutex::new(0), fail: false });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_ralph_loop = true;
+
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+        cfg.state_scratchpad_path = Some(progress_file.to_str().unwrap().to_string());
+
+        let mut on_event = |_| {};
+
+        let result = agent.run(&cfg, "Build a feature", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Ralph Loop completed successfully");
+
+        // Let's verify progress was written
+        let progress_content = std::fs::read_to_string(&progress_file).unwrap();
+        assert!(progress_content.contains("Feat1"));
+        assert!(progress_content.contains("completed"));
+    }
+
+    #[tokio::test]
+    async fn test_agent_run_with_ralph_loop_error() {
+        let llm = Arc::new(TestRalphLlmClient { call_count: tokio::sync::Mutex::new(0), fail: true });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_ralph_loop = true;
+
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+        cfg.state_scratchpad_path = Some(progress_file.to_str().unwrap().to_string());
+
+        let mut events = Vec::new();
+        let mut on_event = |e| { events.push(e) };
+
+        let result = agent.run(&cfg, "Build a feature", &mut on_event).await;
+
+        assert!(result.is_err());
     }
 }
