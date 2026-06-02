@@ -5,17 +5,29 @@ use tokio::sync::broadcast;
 use dashmap::DashMap;
 
 pub use crate::proto::hub::TeammateMeshEvent as Message;
-
+/// MeshTransport is the core interface for the Teammate Mesh APIs.
+/// It provides real-time bidirectional communication, distributed locking, and presence tracking.
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
+    /// Adds a known peer to this transport instance (used primarily for overlay/hybrid setups).
     fn add_peer(&self, _peer: Peer) {}
+
+    /// Publishes a TeammateMeshEvent to the specified topic/channel.
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
+
+    /// Subscribes to a topic/channel, returning a cancellation function.
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    /// Acquires a distributed lock on a resource for a specified duration.
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+
+    /// Releases a previously acquired distributed lock.
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
+    /// Registers the agent's presence status in the mesh.
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+
+    /// Returns a list of all active agents and their statuses.
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 

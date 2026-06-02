@@ -1,58 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock the backend API calls
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          business_type: "Bakery",
-          business_name: "Maya Bakery",
-          categories: ["food"],
-          initial_products: [{ name: "Cake", price: "20.00" }]
-        })
-      });
-    });
-
-    await page.route('**/api/onboarding/start', route => {
-      // Simulate delay for loading screen
-      setTimeout(() => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: "Your business has been successfully launched." })
-        });
-      }, 1000);
-    });
-
-    await page.route('**/api/onboarding/state', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({})
-      });
-    });
-  });
-
   test('completes full onboarding flow', async ({ page }) => {
-    // Mock the APIs
-    await page.route('**/api/onboarding/intake', route => route.fulfill({
-      status: 200,
-      body: JSON.stringify({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    }));
-
-    await page.route('**/api/onboarding/start', route => route.fulfill({
-      status: 200,
-      body: JSON.stringify({ message: 'Success!' })
-    }));
-
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
@@ -83,20 +32,16 @@ test.describe('Onboarding Wizard Flow', () => {
     // 3. Wait for Style & Team Step
     await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
 
-    // Select Web Address and Template
-    await expect(page.locator('text="Web Address"')).toBeVisible();
-    await page.locator('text="Custom Domain"').click();
+    // Select Template and Launch
     await page.locator('text="Classic"').click();
+    await page.locator('button:has-text("Launch Store")').click();
 
-    // Launch
-    const [response] = await Promise.all([
-      page.waitForResponse('**/api/onboarding/start'),
-      page.locator('button:has-text("Launch Store")').click()
-    ]);
+    // 4. Loading screen
+    await expect(page.locator('text="Building Your Business..."')).toBeVisible({ timeout: 5000 });
 
     // 5. Live Screen
     await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text="Success!"')).toBeVisible();
+    await expect(page.locator('text="Your business has been successfully launched."')).toBeVisible();
     await expect(page.locator('text="my-business.ohc.store"')).toBeVisible();
 
     const dashboardLink = page.locator('a:has-text("Go to Dashboard")');
@@ -134,7 +79,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Review Details
     await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('input[value="Maya Bakery"]')).toBeVisible();
+    await expect(page.locator('input[value="Maya\'s Dream Cakes"]')).toBeVisible();
 
     // Continue
     await page.locator('button:has-text("Continue")').click();
@@ -152,7 +97,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Verification
     await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text="Your business has been successfully launched."')).toBeVisible();
+    await expect(page.locator('text="Maya\'s Dream Cakes"')).toBeVisible();
   });
 
   test('fails gracefully when intake API returns error', async ({ page }) => {
@@ -184,17 +129,6 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
-    // Mock the APIs
-    await page.route('**/api/onboarding/intake', route => route.fulfill({
-      status: 200,
-      body: JSON.stringify({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    }));
-
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AgentsPage() {
-  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
+  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals' | 'voice'>('departments');
   const [feed, setFeed] = useState<any[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -16,6 +16,42 @@ export default function AgentsPage() {
   const [workflowLoading, setWorkflowLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Voice Agent States
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [primaryLanguage, setPrimaryLanguage] = useState('English');
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [voiceConfigLoaded, setVoiceConfigLoaded] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'voice' && !voiceConfigLoaded) {
+      fetch('/api/agents/voice/config')
+        .then(r => r.json())
+        .then(d => {
+           setVoiceEnabled(d.is_enabled);
+           setPrimaryLanguage(d.primary_language);
+           setCustomInstructions(d.custom_instructions);
+           setPhoneNumber(d.phone_number);
+           setVoiceConfigLoaded(true);
+        })
+        .catch(console.error);
+    }
+  }, [activeTab, voiceConfigLoaded]);
+
+  const saveVoiceConfig = async () => {
+    await fetch('/api/agents/voice/config', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         is_enabled: voiceEnabled,
+         primary_language: primaryLanguage,
+         custom_instructions: customInstructions
+       })
+    });
+    alert('Voice settings saved.');
+  };
+
 
   const fetchFeed = async () => {
     setFeedLoading(true);

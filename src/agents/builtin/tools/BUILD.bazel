@@ -24,7 +24,6 @@ rust_library(
         "marketplace_tool.rs",
         "pydantic.rs",
         "repo_map.rs",
-        "aider_repo_map.rs",
         "ollama.rs",
         "read.rs",
         "recall.rs",
@@ -67,8 +66,6 @@ rust_library(
         "@crates//:tracing",
         "@crates//:urlencoding",
         "@crates//:uuid",
-        "@crates//:tree-sitter",
-        "@crates//:tree-sitter-bash",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",

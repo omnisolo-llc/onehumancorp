@@ -1,0 +1,17 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "voice",
+    srcs = [
+        "bazel_lib.rs",
+        "webhook.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crate_index//:actix-web",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:tracing",
+    ],
+)

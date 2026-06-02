@@ -64,8 +64,21 @@ test.describe('Onboarding Wizard CUJ', () => {
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('M');
     await page.getByRole('button', { name: /Next/i }).click();
+    // In UI tests, name validation check returns true on short name when generating business, not next.
+    // Let's test the entire intake workflow error boundary
 
-    // Expect validation failure message immediately
+    // We enter what they sell
+    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
+    await sellInput.fill('Cakes');
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // We enter location
+    const locInput = page.getByPlaceholder(/Portland, OR/i);
+    await locInput.fill('NY');
+
+    // Click generate, expect validation failure message
+    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
+    await generateBtn.click();
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
   });
 
@@ -129,7 +142,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(page.getByText('Style & Team')).toBeVisible();
 
     // Toggle auto-respond
-    const autoRespondToggle = page.getByRole('checkbox', { name: /Allow AI to Auto-Respond/i });
+    const autoRespondToggle = page.getByRole('checkbox', { name: /Have my AI team automatically/i });
     await expect(autoRespondToggle).toBeChecked();
     await autoRespondToggle.uncheck();
     await expect(autoRespondToggle).not.toBeChecked();

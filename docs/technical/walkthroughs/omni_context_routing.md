@@ -9,7 +9,7 @@ The Omni-Context Sub-agent Routing feature eliminates context latency and ground
 ```mermaid
 graph TD
     A[KAIROS Orchestrator] -->|Delegates Task| B{Context Injector}
-    B -->|Reads Grounding| C[(AGENTS.md / CLAUDE.md)]
+    B -->|Reads Grounding| C[(AGENTS.md / CLAUDE_OHC.md)]
     B -->|Writes Mission+Context| D[(Postgres / SQLite: agent_missions)]
     D -->|Instantiates| E[Specialized Sub-Agent]
     E -->|Executes with Zero Latency| F[Task Completion]
