@@ -41,7 +41,7 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let universal_ledger = crate::orchestration::queue::ohc_universal_ledger::OHCUniversalLedger::new(db.clone().into());
+
 
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
@@ -77,8 +77,28 @@ pub async fn offline_sync_handler(
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
 
+
                 if let (Some(currency), Some(amount)) = (&mutation.currency, mutation.amount) {
-                    let _ = universal_ledger.append_multi_currency_entry(&tenant_id, "Finance", &mutation.transaction_id, &mutation.product_id, mutation.quantity_deducted, currency, *amount).await;
+                    let ledger_payload = serde_json::json!({
+                        "product_id": mutation.product_id,
+                        "transaction_id": mutation.transaction_id,
+                        "quantity_deducted": mutation.quantity_deducted,
+                        "currency": currency,
+                        "amount": amount
+                    });
+
+                    let entry_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload, created_at)
+                         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&entry_id)
+                    .bind(&tenant_id)
+                    .bind("OfflineSync")
+                    .bind("Finance")
+                    .bind(&ledger_payload)
+                    .execute(&db)
+                    .await;
                 }
             }
             Ok(None) => {
