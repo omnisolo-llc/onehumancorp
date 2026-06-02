@@ -17,6 +17,7 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    adminEmail, setAdminEmail,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
@@ -102,6 +103,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
@@ -213,7 +215,7 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: 'admin@ohc.app',
+          admin_email: adminEmail,
           admin_name: 'Admin',
           admin_password: 'password123',
           website_template: websiteTemplate,
@@ -532,6 +534,25 @@ export default function OnboardingWizard() {
                     className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
+                <div>
+                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Admin Email</label>
+                   <input
+                     type="email"
+                     value={adminEmail}
+                     onChange={(e) => {
+                       setAdminEmail(e.target.value);
+                       if (e.target.value.trim() && !/^\S+@\S+\.\S+$/.test(e.target.value)) {
+                         setValidationErrors(prev => ({ ...prev, adminEmail: 'Invalid email address.' }));
+                       } else {
+                         setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                       }
+                     }}
+                     placeholder="admin@example.com"
+                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                   />
+                   {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
@@ -573,6 +594,10 @@ export default function OnboardingWizard() {
                       setValidationError('Business Name must be at least 3 characters.');
                       return;
                     }
+                    if (!adminEmail.trim() || !/^\S+@\S+\.\S+$/.test(adminEmail)) {
+                      setValidationError('A valid Admin Email is required.');
+                      return;
+                    }
                     if (Object.keys(validationErrors).length > 0) {
                       setValidationError('Please fix the errors before continuing.');
                       return;
@@ -580,7 +605,7 @@ export default function OnboardingWizard() {
                     setValidationError('');
                     setStep(3);
                   }}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim() || !adminEmail.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue

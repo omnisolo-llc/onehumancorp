@@ -137,6 +137,10 @@ describe('OnboardingWizard', () => {
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
     });
 
+    // Need to fill in admin email before continuing to step 3
+    const emailInput = screen.getByPlaceholderText('admin@example.com');
+    await user.type(emailInput, 'testadmin@ohc.app');
+
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     await user.click(continueButton);
 
@@ -245,7 +249,8 @@ describe('OnboardingWizard', () => {
         businessType: 'Online Store',
         categories: [],
         firstProductName: '',
-        firstProductPrice: ''
+        firstProductPrice: '',
+        adminEmail: ''
       });
     });
 
@@ -269,7 +274,8 @@ describe('OnboardingWizard', () => {
         categories: ['food'],
         domainChoice: 'subdomain',
         firstProductName: 'Cake',
-        firstProductPrice: 'abc' // Invalid price
+        firstProductPrice: '10', // Changed to valid initially because input type="number" doesn't accept 'abc' easily with type() and testing library
+        adminEmail: 'test@example.com'
       });
     });
 
@@ -278,8 +284,9 @@ describe('OnboardingWizard', () => {
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
 
-    const priceInput = screen.getByDisplayValue('abc');
-    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
+    // It's a type="number" input now. Type invalid characters that get handled by the regex check.
+    const priceInput = screen.getByDisplayValue('10');
+    await user.type(priceInput, '.001'); // Type '.001' to trigger the onChange validation for > 2 decimal places.
 
     await user.click(continueButton);
 
@@ -305,7 +312,8 @@ describe('OnboardingWizard', () => {
         categories: ['food'],
         domainChoice: 'subdomain',
         firstProductName: 'Cake',
-        firstProductPrice: '20'
+        firstProductPrice: '20',
+        adminEmail: 'test@example.com'
       });
     });
 
