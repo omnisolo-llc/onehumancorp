@@ -7,30 +7,31 @@ pub struct CachedResponse {
     pub text: String,
     pub created_at: Instant,
     pub token_count: usize,
+    pub ttl: Duration,
 }
 
 pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
-    ttl: Duration,
+    default_ttl: Duration,
 }
 
 impl PromptCache {
-    pub fn new(ttl: Duration) -> Self {
+    pub fn new(default_ttl: Duration) -> Self {
         PromptCache {
             cache: Arc::new(DashMap::new()),
-            ttl,
+            default_ttl,
         }
     }
 
     pub fn get(&self, prompt: &str) -> Option<CachedResponse> {
         let entry = self.cache.get(prompt);
         if let Some(entry_ref) = entry {
-            if entry_ref.created_at.elapsed() <= self.ttl {
+            if entry_ref.created_at.elapsed() <= entry_ref.ttl {
                 return Some(entry_ref.clone());
             }
             drop(entry_ref);
             // Remove expired entry atomically
-            self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > self.ttl);
+            self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > v.ttl);
         }
         None
     }
@@ -55,16 +56,21 @@ impl PromptCache {
     }
 
     pub fn set(&self, prompt: &str, response: &str, token_count: usize) {
+        self.set_with_ttl(prompt, response, token_count, self.default_ttl);
+    }
+
+    pub fn set_with_ttl(&self, prompt: &str, response: &str, token_count: usize, ttl: Duration) {
         self.cache.insert(prompt.to_string(), CachedResponse {
             text: response.to_string(),
             created_at: Instant::now(),
             token_count,
+            ttl,
         });
     }
 
     pub fn clear_expired(&self) {
         let now = Instant::now();
-        self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= self.ttl);
+        self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= entry.ttl);
     }
 }
 
