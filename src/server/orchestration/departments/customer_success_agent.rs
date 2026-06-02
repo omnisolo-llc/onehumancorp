@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -33,6 +37,122 @@ impl Department for CustomerSuccessAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let config = self.get_config(&event.tenant_id);
+
+        if event.event_type == "agent:customer_success:approved" {
+            let payload = &event.payload;
+            let original = payload.get("original_payload");
+            let message = if let Some(orig) = original {
+                orig.get("generated_response")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown response")
+            } else {
+                "Unknown response"
+            };
+            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+
+            let content = format!("Sent response to customer: {}", message);
+
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                agent_id: "customer_success_agent".to_string(),
+                content,
+                embedding: vec![0.0; 1536],
+                source_type: "AGENT_ACTION".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: false,
+                metadata: None,
+            };
+            self.orchestrator
+                .write_long_term_memory(record)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.message.received" {
+            let message = event
+                .payload
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let platform = event
+                .payload
+                .get("platform")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+
+            // Dummy query embedding for simulation
+            let query_embedding = vec![0.5; 1536];
+            let memories = self
+                .orchestrator
+                .query_long_term_memory(&event.tenant_id, &query_embedding, 5)
+                .await
+                .unwrap_or_default();
+
+            let context_summary = if !memories.is_empty() {
+                memories.join("\n")
+            } else {
+                "No relevant memory found.".to_string()
+            };
+
+            // Calculate confidence score based on dummy logic
+            let mut confidence_score: f64 = 85.0; // Default
+            let generated_response = if message.to_lowercase().contains("vegan")
+                && context_summary.to_lowercase().contains("vegan")
+            {
+                confidence_score = 95.0;
+                "Yes, we do vegan cakes!"
+            } else if message.to_lowercase().contains("vegan") {
+                confidence_score = 70.0;
+                "Let me check if we can make a vegan version of that."
+            } else {
+                "Thank you for your message. We will get back to you shortly."
+            };
+
+            // Evaluate Confidence Score for Routing
+            let risk = if confidence_score >= 90.0 {
+                ActionRisk::AutoExecute
+            } else {
+                ActionRisk::DraftForReview
+            };
+
+            let description = if risk == ActionRisk::AutoExecute {
+                format!(
+                    "Auto-replied to message on {}: '{}' with '{}'",
+                    platform, message, generated_response
+                )
+            } else {
+                format!("Draft reply for review on {}", platform)
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "ambassador_reply",
+                "platform": platform,
+                "original_message": message,
+                "generated_response": generated_response,
+                "context_used": context_summary,
+                "confidence_score": confidence_score
+            });
+
+            self.orchestrator
+                .execute_action(
+                    DepartmentType::CustomerSuccess,
+                    description,
+                    event.tenant_id.clone(),
+                    risk,
+                    action_payload,
+                )
+                .await
+                .map(|_| ())?;
+
+            return Ok(());
+        }
+
         let risk = if let Some(cfg) = &config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute
@@ -43,90 +163,16 @@ impl Department for CustomerSuccessAgent {
             ActionRisk::DraftForReview
         };
 
-        if event.event_type == "agent:customer_success:approved" {
-            let payload = &event.payload;
-            let original = payload.get("original_payload");
-            let message = if let Some(orig) = original {
-                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
-            } else {
-                "Unknown response"
-            };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
-
-            let content = format!("Sent response to customer: {}", message);
-
-            // Log the action in the agent's memory, handling errors and using proper defaults
-            // Assuming we don't have an embedding service here, we use a zero vector
-            // but properly await and map the error.
-            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
-                id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: event.tenant_id.clone(),
-                agent_id: "customer_success_agent".to_string(),
-                content,
-                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
-                source_type: "AGENT_ACTION".to_string(),
-                created_at: chrono::Utc::now(),
-                last_referenced_at: chrono::Utc::now(),
-                reference_count: 0,
-                reliability_score: 100,
-                owner_override: false,
-                metadata: None,
-            };
-            self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
-
-            return Ok(());
-        }
-
-        if event.event_type == "tenant.message.received" {
-            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-
-            // Dummy query embedding for simulation
-            let query_embedding = vec![0.5; 1536];
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
-
-            let context_summary = if !memories.is_empty() {
-                memories.join("\n")
-            } else {
-                "No relevant memory found.".to_string()
-            };
-
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
-            } else {
-                "Thank you for your message. We will get back to you shortly."
-            };
-
-            let description = if risk == ActionRisk::AutoExecute {
-                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
-            } else {
-                "Draft email for review".to_string()
-            };
-
-            let action_payload = serde_json::json!({
-                "feature_type": "ambassador_reply",
-                "original_message": message,
-                "generated_response": generated_response,
-                "context_used": context_summary,
-            });
-
-            self.orchestrator.execute_action(
+        self.orchestrator
+            .execute_action(
                 DepartmentType::CustomerSuccess,
-                description,
+                "Send personalized thank you & shipping ETA".to_string(),
                 event.tenant_id.clone(),
                 risk,
-                action_payload,
-            ).await.map(|_| ())?;
-
-            return Ok(());
-        }
-
-        self.orchestrator.execute_action(
-            DepartmentType::CustomerSuccess,
-            "Send personalized thank you & shipping ETA".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+                event.payload.clone(),
+            )
+            .await
+            .map(|_| ())
     }
 
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
@@ -141,8 +187,21 @@ impl Department for CustomerSuccessAgent {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 
