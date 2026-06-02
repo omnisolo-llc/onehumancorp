@@ -86,3 +86,20 @@ Object.defineProperty(window, 'IntersectionObserver', {
   configurable: true,
   value: IntersectionObserver,
 })
+// Add fetch mock if needed
+const originalFetch = global.fetch;
+global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
+    let urlString = '';
+    if (typeof url === 'string') {
+        urlString = url;
+    } else if (url instanceof URL) {
+        urlString = url.toString();
+    } else if (url instanceof Request) {
+        urlString = url.url;
+    }
+
+    if (urlString.startsWith('/')) {
+        url = 'http://localhost:3000' + urlString;
+    }
+    return originalFetch(url, init);
+};
