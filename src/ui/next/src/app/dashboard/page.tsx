@@ -2207,6 +2207,10 @@ export default function Dashboard() {
       )}
 
       {/* Referral Modal */}
+      <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
+        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
+      </div>
+
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
