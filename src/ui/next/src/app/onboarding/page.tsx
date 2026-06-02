@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -186,6 +186,8 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
+      setStep(1);
+      setChatStep(3);
     } finally {
       setIsLoading(false);
     }
@@ -278,7 +280,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -290,7 +292,7 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
@@ -351,7 +353,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -403,7 +405,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -468,7 +470,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -586,7 +588,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
