@@ -374,7 +374,7 @@ impl Hub {
             tokio::task::spawn_blocking(move || {
                 if let Ok(mut conn) = client.get_connection() {
                     if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 5);
                     }
                 }
             });
