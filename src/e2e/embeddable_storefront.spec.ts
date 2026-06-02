@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Embeddable Storefront Widget Growth Loop', () => {
     test('dashboard shows the embed storefront widget and copies HTML', async ({ page }) => {
         // Go to dashboard
-        await page.goto('http://localhost:3000/dashboard');
+        await page.goto('/dashboard');
 
         // Look for the "Embed Your Store" section
-        const sectionHeader = page.locator('text=Embed Your Store');
+        const sectionHeader = page.locator('h2:has-text("Embed Your Store")').first();
         await expect(sectionHeader).toBeVisible();
 
         // Check for the "New Growth Loop" badge next to the header
@@ -23,6 +23,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
 
         // The textarea should contain the iframe snippet
         const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://ohc.app/api/v1/growth/storefront/embed' });
+
         await expect(textarea).toBeVisible();
 
         // Verify the HTML snippet structure (e.g. contains the theme=light, width, height, frameborder, etc.)
@@ -38,7 +39,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
     });
 
     test('embed API endpoint returns the storefront HTML', async ({ request }) => {
-        const response = await request.get('http://localhost:3000/api/v1/growth/storefront/embed?tenant=maya-cakes&theme=light');
+        const response = await request.get('/api/v1/growth/storefront/embed?tenant=maya-cakes&theme=light');
         expect(response.ok()).toBeTruthy();
 
         const html = await response.text();
@@ -50,6 +51,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         expect(html).toContain('Buy Now');
 
         // Ensure the referral growth loop is intact in the footer
-        expect(html).toContain('Powered by OHC');
+        expect(html).toContain('Powered by');
+        expect(html).toContain('<a href="https://ohc.app/join?ref=maya-cakes"');
     });
 });

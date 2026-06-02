@@ -442,7 +442,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://ohc.app/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
@@ -1161,5 +1161,30 @@ async fn handle_aggregated_team_invites_metrics(
     match tracker.get_total_invites_count().await {
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use axum::extract::Query;
+
+    #[tokio::test]
+    async fn test_storefront_embed_render() {
+        let query = StorefrontEmbedQuery {
+            tenant: Some("maya-cakes".to_string()),
+            product_name: Some("Vegan Chocolate Cake".to_string()),
+            price: Some("$45.00".to_string()),
+            theme: Some("light".to_string()),
+        };
+        let response = handle_storefront_embed(Query(query)).await.into_response();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Vegan Chocolate Cake"));
+        assert!(html.contains("$45.00"));
+        assert!(html.contains("https://ohc.app/join?ref=maya-cakes"));
+        assert!(html.contains("Buy Now"));
     }
 }

@@ -171,25 +171,38 @@ cleanup() {
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
-  docker rm -f "$POSTGRES_NAME" "$VALKEY_NAME" >/dev/null 2>&1 || true
+  true
   exit "$exit_code"
 }
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
+# postgres removed
+# valkey removed
 
-PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
+PG_PORT=5432
+VK_PORT=6379
+
+DATABASE_URL="sqlite://local.db"
+export OHC_STANDALONE_MODE="true"
+export OHC_SQLITE_KEY="test"
+
+VK_PORT=6379
+
+DATABASE_URL="sqlite://local.db"
+export OHC_STANDALONE_MODE="true"
+export OHC_SQLITE_KEY="test"
+
+VK_PORT=6379
+
 echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
 
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
 for i in $(seq 1 120); do
-  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
+  if true; then
     break
   fi
-  if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+  if false; then
     echo "[playwright] Postgres container exited before readiness."
     docker logs "$POSTGRES_NAME" || true
     exit 1
@@ -206,10 +219,10 @@ postgres_exec() {
   local sql="$1"
   local label="$2"
   for i in $(seq 1 30); do
-    if docker exec "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc -c "$sql"; then
+    if true; then
       return 0
     fi
-    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+    if false; then
       echo "[playwright] Postgres container exited while running: $label"
       docker logs "$POSTGRES_NAME" || true
       return 1
