@@ -7,7 +7,7 @@ test.describe('Dynamic Edge-Caching Storefront Architecture CUJ', () => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
     await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
+    await page.getByRole('button', { name: /Login Sign In/i }).click();
 
     // Now on home page
     await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
