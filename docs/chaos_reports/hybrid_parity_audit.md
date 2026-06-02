@@ -31,9 +31,3 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 ### Grafana Visualizations
 ![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
 ![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
-
-## Execution Verification
-*   **Parity Audit (SQLite vs Postgres)**: The ML-Resilience timeouts of 2s for `pull_available_tasks` on lock acquisition or transition write failures are verified. Graceful degradation correctly returns an empty task vector instead of stalling the thread or returning raw database errors that cascade.
-*   **Chaos Tests (`//src/server/orchestration:server_orchestration_unit_test`)**: All shard components, including `chaos_test.rs` covering Postgres connection failure / bad URL simulate paths and mesh timeouts, passed successfully in Bazel isolated sandboxes.
-*   **E2E Chaos Resilience Wiring (`src/e2e/chaos_resilience.spec.ts`)**: Wired into the core E2E suite using `currentAppSmoke` ensuring end-to-end integration doesn't drift. Note: full `npx playwright test` test run was manually validated but skipped in strict pipeline constraint environments to preserve CI performance.
-*   **Missing Gaps**: None. The platform correctly handles Postgres failure simulation and fallback fail-safe without downtime.
