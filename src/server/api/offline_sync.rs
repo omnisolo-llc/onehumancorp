@@ -94,7 +94,12 @@ mod tests {
     use axum::http::HeaderMap;
     use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
     use sqlx::postgres::PgPoolOptions;
+<<<<<<< HEAD
 
+
+=======
+
+>>>>>>> 9380488c (🧙 Wizard: Fix cross-device resume and premium styling)
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
         let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
