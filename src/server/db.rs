@@ -56,6 +56,34 @@ impl DB {
         }
     }
 
+    pub fn placeholder(&self, index: usize) -> String {
+        if self.is_sqlite() {
+            "?".to_string()
+        } else {
+            format!("${}", index)
+        }
+    }
+
+    pub fn json_set_sql(&self, column: &str, path: &str, value_placeholder: &str) -> String {
+        if self.is_sqlite() {
+            format!("json_patch({}, ?)", column)
+        } else {
+            format!("jsonb_set({}, '{}', {})", column, path, value_placeholder)
+        }
+    }
+
+    pub fn skip_locked(&self) -> &str {
+        if self.is_sqlite() {
+            ""
+        } else {
+            "FOR UPDATE SKIP LOCKED"
+        }
+    }
+
+    pub fn returning_id_tenant_payload(&self) -> &str {
+        "RETURNING id, tenant_id, payload"
+    }
+
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| {

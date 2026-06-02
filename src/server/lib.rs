@@ -272,6 +272,8 @@ pub use ::server_pricing as pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
 pub mod chaos;
+#[cfg(test)]
+pub mod db_parity_test;
 pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;

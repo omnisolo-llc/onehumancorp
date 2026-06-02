@@ -600,6 +600,7 @@ mod tests {
         let cp95 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.95) as usize] };
         let cp99 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.99) as usize] };
         tracing::info!("Cloud Stress Results: p50={}us, p95={}us, p99={}us", cp50, cp95, cp99);
+        println!("OHC_METRIC_HISTOGRAM: cloud_latency_us p50={}, p95={}, p99={}", cp50, cp95, cp99);
 
         // Standalone Mode Simulation (10 simultaneous business owners)
         let mut standalone_handles = vec![];
@@ -625,6 +626,7 @@ mod tests {
         let sp95 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.95) as usize] };
         let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
         tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
+        println!("OHC_METRIC_HISTOGRAM: standalone_latency_us p50={}, p95={}, p99={}", sp50, sp95, sp99);
 
         assert!(cp50 <= cp95);
         assert!(sp50 <= sp95);
@@ -649,4 +651,3 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
-

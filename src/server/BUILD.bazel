@@ -10,6 +10,7 @@ SERVER_RS_SRCS = [
     "chaos.rs",
     "crypto.rs",
     "db.rs",
+    "db_parity_test.rs",
     "hub.rs",
     "lib.rs",
     "minimax.rs",
