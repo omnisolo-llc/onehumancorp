@@ -1,5 +1,5 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer, RegisterProxyRequest, proxy_to_server};
+use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
 use tonic::transport::Channel;
 use tonic::Request;
 use tokio::sync::mpsc;

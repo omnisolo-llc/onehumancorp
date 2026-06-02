@@ -1,9 +1,8 @@
-use chrono::Utc;
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::ops_service_server::OpsService;
 use std::sync::{Arc, RwLock};
-
+use chrono::Utc;
 use crate::hub::Hub;
 use tokio_stream::Stream;
 use std::pin::Pin;
@@ -398,7 +397,7 @@ mod tests {
     use crate::hub::Hub;
     use std::sync::Arc;
     use tonic::Request;
-
+    use chrono::Utc;
 
     async fn setup_ops_service() -> MyOpsService {
         let database_url = "sqlite::memory:";

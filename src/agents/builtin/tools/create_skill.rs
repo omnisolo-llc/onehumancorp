@@ -53,6 +53,6 @@ pub fn create_skill_tool(memory_store: ()) -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(CreateSkillExecutor { memory_store }),
+        execute: Arc::new(CreateSkillExecutor {}),
     }
 }
