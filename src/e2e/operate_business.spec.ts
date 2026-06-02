@@ -33,10 +33,10 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
   await page.getByRole('button', { name: /Free OHC Domain/ }).click();
   await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
-  await page.getByRole('button', { name: /Publish my business/ }).click();
+  await page.getByRole('button', { name: /1-Tap Launch/ }).click();
 
   await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
-  await page.getByRole('button', { name: /Launch My Business/ }).click();
+  await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 });
