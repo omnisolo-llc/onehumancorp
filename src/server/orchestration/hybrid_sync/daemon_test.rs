@@ -6,9 +6,6 @@ mod tests {
     use sqlx::sqlite::SqlitePoolOptions;
     use std::time::Duration;
 
-    pub fn clear_semaphore() {
-        // Mock clear semaphore function
-    }
 
     #[tokio::test]
     async fn test_hybrid_sync_daemon_redaction() {
@@ -97,7 +94,6 @@ mod tests {
 
         let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.sync_step().await.unwrap();
-        clear_semaphore();
 
         let row = sqlx::query(
             "SELECT sync_status FROM swarm_truth_embeddings WHERE memory_id = 'test_mem_1'",
@@ -181,9 +177,6 @@ mod tests {
     }
 }
 
-pub fn clear_semaphore() {
-    // Mock clear semaphore function
-}
 
 #[tokio::test]
 async fn test_hybrid_sync_daemon_telemetry_opt_out() {
