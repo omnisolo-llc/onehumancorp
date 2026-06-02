@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS loyalty_programs (
+    tenant_id VARCHAR(255) PRIMARY KEY,
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    program_type VARCHAR(50) NOT NULL DEFAULT 'punch_card',
+    reward_threshold INT NOT NULL DEFAULT 10,
+    reward_description VARCHAR(255) NOT NULL,
+    points_per_dollar INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
