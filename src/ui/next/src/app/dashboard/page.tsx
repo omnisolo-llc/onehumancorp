@@ -14,10 +14,6 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
-  const [showInfluencerModal, setShowInfluencerModal] = useState(false);
-  const [affiliateLink, setAffiliateLink] = useState('');
-  const [isGeneratingAffiliate, setIsGeneratingAffiliate] = useState(false);
-  const [affiliateCopied, setAffiliateCopied] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -1308,27 +1304,6 @@ export default function Dashboard() {
 
 
 
-         {/* Owner Dashboard - Viral Growth Metrics */}
-         <section className="mb-8">
-            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Viral Growth & Affiliates</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Affiliates</p>
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl font-bold font-outfit text-indigo-600">1</span>
-                  <span className="text-sm bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-semibold">+1 this week</span>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Affiliate Revenue</p>
-                <div className="flex items-center gap-3">
-                  <span className="text-4xl font-bold font-outfit text-green-600">$0.00</span>
-                  <span className="text-sm bg-green-50 text-green-700 px-2 py-1 rounded-md font-semibold">Pending payouts</span>
-                </div>
-              </div>
-            </div>
-         </section>
-
          {/* Products & Monetization Snapshot */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -2242,100 +2217,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Influencer Modal */}
-      {showInfluencerModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
-
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600">
-                💸
-              </div>
-              <button
-                onClick={() => {
-                  setShowInfluencerModal(false);
-                  setAffiliateCopied(false);
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Your Affiliate Link</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Earn a <strong className="text-gray-900">10% commission</strong> for every sale you bring in using your unique affiliate link. Payouts happen automatically.
-            </p>
-
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-6 flex justify-between items-center">
-              <div>
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Earnings</p>
-                <p className="text-2xl font-bold text-gray-900 font-outfit">$0.00</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Conversions</p>
-                <p className="text-2xl font-bold text-gray-900 font-outfit">0</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Share this link</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={affiliateLink || 'Click Generate to get your link'}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
-                  />
-                  {!affiliateLink ? (
-                    <button
-                      onClick={async () => {
-                        setIsGeneratingAffiliate(true);
-                        try {
-                          const response = await fetch('/api/v1/growth/affiliate/generate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              tenant_id: typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant',
-                              user_id: typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'e2e-user' : 'e2e-user'
-                            })
-                          });
-                          const data = await response.json();
-                          setAffiliateLink(data.link_url);
-                        } catch (e) {
-                          console.error("Failed to generate link", e);
-                          // Fallback
-                          setAffiliateLink(`https://ohc.store/?ref=affiliate-${Date.now().toString().slice(-4)}`);
-                        } finally {
-                          setIsGeneratingAffiliate(false);
-                        }
-                      }}
-                      disabled={isGeneratingAffiliate}
-                      className="px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700"
-                    >
-                      {isGeneratingAffiliate ? '...' : 'Generate'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(affiliateLink);
-                        setAffiliateCopied(true);
-                        setTimeout(() => setAffiliateCopied(false), 2000);
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${affiliateCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
-                    >
-                      {affiliateCopied ? 'Copied!' : 'Copy'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Referral Modal */}
       <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
         <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
@@ -2346,14 +2227,6 @@ export default function Dashboard() {
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
-
-            <button
-                  onClick={() => setShowInfluencerModal(true)}
-                  className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 mb-4"
-                >
-                  Open Influencer View
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
 
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
