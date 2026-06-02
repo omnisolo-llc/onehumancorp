@@ -127,6 +127,103 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
+        "terminal.reader.action.succeeded" | "pos_transaction" => {
+            let obj = &payload.data.object;
+
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+
+            let product_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("product_id"))
+                .and_then(|id| id.as_str());
+
+            if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
+                let quantity = obj.get("metadata")
+                    .and_then(|m| m.get("quantity"))
+                    .and_then(|q| q.as_str())
+                    .and_then(|q| q.parse::<i32>().ok())
+                    .unwrap_or(1);
+
+                if let Ok(mut conn) = webhook_state.rate_limiter.get_connection().await {
+                    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&lock_key)
+                        .arg("1")
+                        .arg("NX")
+                        .arg("PX")
+                        .arg(5000)
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap_or(false);
+
+                    if acquired {
+                        let update_res = match &webhook_state.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ?")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                    .map(|_| ())
+                            }
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&webhook_state.db.pool)
+                                    .await
+                                    .map(|_| ())
+                            }
+                        };
+
+                        // Release lock
+                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+
+                        if let Err(e) = update_res {
+                            tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
+                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                        }
+                    } else {
+                        tracing::warn!("Failed to acquire inventory lock for product {} on POS transaction", product_id);
+                        return StatusCode::CONFLICT.into_response();
+                    }
+                }
+            }
+
+            // Also try to update the order status to Paid if order_id is present
+            let order_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("order_id"))
+                .and_then(|id| id.as_str());
+
+            if let Some(order_id) = order_id_opt {
+                let res = match &webhook_state.db.store {
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
+                            .bind(order_id)
+                            .execute(pool)
+                            .await
+                            .map(|_| ())
+                    }
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
+                            .bind(order_id)
+                            .execute(&webhook_state.db.pool)
+                            .await
+                            .map(|_| ())
+                    }
+                };
+
+                if let Err(e) = res {
+                    tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
+
+            StatusCode::OK.into_response()
+        },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
