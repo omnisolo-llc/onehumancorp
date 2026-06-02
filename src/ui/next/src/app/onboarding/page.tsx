@@ -167,11 +167,10 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedDescription })
       });
 
-      if (!intakeRes.ok) {
-        throw new Error('Failed to process business details');
-      }
-
       const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
 
       setBusinessType(intakeData.business_type || 'Online Store');
       setBusinessName(intakeData.business_name || 'My Business');
@@ -221,11 +220,11 @@ export default function OnboardingWizard() {
         })
       });
 
+      const result = await startRes.json();
       if (!startRes.ok) {
-        throw new Error('Failed to start onboarding');
+        throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       setStep(5); // Go to "You're Live" screen
@@ -408,15 +407,15 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (location.trim().length < 2) {
-                          setValidationError('Location must be at least 2 characters.');
+                        if (businessName.trim().length < 3) {
+                          setValidationError('Business Name must be at least 3 characters.');
                           return;
                         }
                         setValidationError('');
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -626,7 +625,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>

@@ -20,7 +20,20 @@ pub fn get_ongoing_generation() -> Arc<Mutex<HashSet<String>>> {
 pub static EDGE_CACHE: OnceLock<Arc<HybridCache<String>>> = OnceLock::new();
 
 pub fn get_edge_cache() -> Arc<HybridCache<String>> {
-    EDGE_CACHE.get_or_init(|| Arc::new(HybridCache::new(None))).clone()
+    EDGE_CACHE.get_or_init(|| {
+        let redis_client = if let Ok(url) = std::env::var("REDIS_URL") {
+            match redis::Client::open(url.clone()) {
+                Ok(client) => Some(client),
+                Err(e) => {
+                    tracing::warn!("Failed to initialize Redis client for EDGE_CACHE at {}: {}. Falling back to in-memory cache.", url, e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        Arc::new(HybridCache::new(redis_client))
+    }).clone()
 }
 
 pub struct EdgeWorkerState {
@@ -38,11 +51,13 @@ fn escape_html(s: &str) -> String {
 pub async fn handle_edge_request(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Response<Body>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
-    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id);
+    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
+    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {

@@ -6,17 +6,18 @@ test.describe('Real-Time Multilingual KDS & Pre-Order Engine', () => {
     await page.goto('/kds');
 
     // Default language is English
-    await expect(page.locator('h1')).toContainText('Kitchen Display System');
+    // Use first() to avoid strict mode violations if multiple matches are found (e.g. Next.js development overlay)
+    await expect(page.locator('h1').filter({ hasText: 'Kitchen Display System' }).first()).toBeVisible();
     await expect(page.locator('#lang-toggle-btn')).toContainText('عربي');
 
     // Toggle to Arabic
     await page.click('#lang-toggle-btn');
-    await expect(page.locator('h1')).toContainText('نظام عرض المطبخ');
+    await expect(page.locator('h1').filter({ hasText: 'نظام عرض المطبخ' }).first()).toBeVisible();
     await expect(page.locator('#lang-toggle-btn')).toContainText('English');
 
     // Toggle back to English for easier assertions
     await page.click('#lang-toggle-btn');
-    await expect(page.locator('h1')).toContainText('Kitchen Display System');
+    await expect(page.locator('h1').filter({ hasText: 'Kitchen Display System' }).first()).toBeVisible();
 
     // Go Offline
     await context.setOffline(true);
