@@ -719,10 +719,18 @@ impl Agent {
             on_event(AgentEvent::IterationStarted { iteration: turn_count, message_count: messages.len() });
 
             // 1. Assemble prompt
+            let mut final_messages = messages.clone();
+            if cfg.enable_observation_masking {
+                crate::observation_masking::apply_observation_masking(
+                    &mut final_messages,
+                    cfg.observation_masking_threshold,
+                    cfg.observation_masking_size_limit,
+                );
+            }
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
                 system: system_prompt.clone(),
-                messages: messages.clone(),
+                messages: final_messages,
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
@@ -2810,13 +2818,6 @@ impl Agent {
                 };
             }
 
-            if final_cfg.enable_observation_masking {
-                crate::observation_masking::apply_observation_masking(
-                    &mut messages,
-                    final_cfg.observation_masking_threshold,
-                    final_cfg.observation_masking_size_limit,
-                );
-            }
 
             // Append tool results as a user turn.
             messages.push(Message {
