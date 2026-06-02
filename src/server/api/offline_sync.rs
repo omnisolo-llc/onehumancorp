@@ -30,7 +30,6 @@ pub async fn offline_sync_handler(
             }
         }
     }
-
     (
         StatusCode::OK,
         Json(OfflineSyncResponse { success: true }),
