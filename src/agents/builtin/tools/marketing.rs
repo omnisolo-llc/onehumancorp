@@ -1,21 +1,26 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
+use tracing::info;
+
+#[derive(Deserialize)]
+pub struct QrGenerateArgs {
+    pub content: String,
+    pub label: Option<String>,
+}
 
 pub struct QrGenerateExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for QrGenerateExecutor {
-    async fn execute(
+impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: QrGenerateArgs,
     ) -> Result<String, ToolError> {
-        let content = args["content"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("qr_generate: content is required".to_string()))?;
-
-        let label = args["label"].as_str().unwrap_or("QR Code");
+        let content = args.content;
+        let label = args.label.unwrap_or_else(|| "QR Code".to_string());
 
         // Functional QR generation using qrcode crate.
         info!("Generating QR code for content: {} with label: {}", content, label);
@@ -23,7 +28,7 @@ impl ToolExecutor for QrGenerateExecutor {
         use qrcode::QrCode;
 
         let code = QrCode::new(content.as_bytes())
-            .map_err(|e| format!("failed to generate QR code: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| ToolError::LlmRecoverable(format!("failed to generate QR code: {}", e)))?;
 
         // Render the bits into a string.
         let image_str = code.render::<char>()
@@ -31,9 +36,11 @@ impl ToolExecutor for QrGenerateExecutor {
             .module_dimensions(1, 1)
             .build();
 
+        let message = format!("QR code for '{}' has been generated.", content);
+
         Ok(json!({
             "status": "success",
-            "message": format!("QR code for '{}' has been generated.", content),
+            "message": message,
             "label": label,
             "ascii_art": image_str
         }).to_string())
@@ -59,8 +66,6 @@ pub fn qr_generate_tool() -> Tool {
             },
             "required": ["content"]
         }),
-        execute: Arc::new(QrGenerateExecutor),
+        execute: Arc::new(PydanticAdapter::new(QrGenerateExecutor)),
     }
 }
-
-use tracing::info;
