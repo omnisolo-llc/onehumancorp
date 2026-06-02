@@ -10,6 +10,8 @@ static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = Once
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static DASHBOARD_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::MeetingRoom>>> = OnceLock::new();
+static COSTS_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -77,6 +79,11 @@ impl DashboardService for MyDashboardService {
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
+        let hub_meetings = self.hub.clone();
+        let hub_costs = self.hub.clone();
+        let org_id_meetings = req.organization_id.clone();
+        let org_id_costs = req.organization_id.clone();
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
                 let cache_key = format!("hub:agents:{}:{}", org_id_agents, mobile_optimized);
@@ -91,15 +98,53 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let cache_key = format!("hub:meetings:{}:{}", org_id_meetings, mobile_optimized);
+                let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(hub_meetings.redis_client.clone()));
+                if let Some(meetings) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(meetings);
+                }
+                let meetings = hub2.get_meetings().await;
+                let mut out_meetings = Vec::new();
+                for m in meetings.iter() {
+                    let mut transcript = Vec::new();
+                    if !mobile_optimized {
+                        for msg in &m.transcript {
+                            transcript.push(::server_ohc::agent::AgentMessage {
+                                id: msg.id.clone(),
+                                from_agent_id: msg.from_agent.clone(),
+                                to_agent_id: msg.to_agent.clone(),
+                                message_type: msg.r#type.clone(),
+                                content: msg.content.clone(),
+                                meeting_id: m.id.clone(),
+                                occurred_at_unix: msg.occurred_at_unix,
+                            });
+                        }
+                    }
+                    out_meetings.push(::server_ohc::app::MeetingRoom {
+                        id: m.id.clone(),
+                        participants: m.participants.clone(),
+                        transcript,
+                    });
+                }
+                let meetings = out_meetings;
+                cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(meetings)
             }),
-            tokio::task::spawn_blocking(move || {
+            tokio::spawn(async move {
+                let cache_key = format!("hub:costs:{}:{}", org_id_costs, mobile_optimized);
+                let cache = COSTS_CACHE.get_or_init(|| HybridCache::new(hub_costs.redis_client.clone()));
+                if let Some(costs) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(costs);
+                }
+
                 let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
+                let costs = (
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
-                ))
+                );
+                cache.set(&cache_key, costs.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(costs)
             }),
             tokio::spawn(async move {
                 let org_id = org_id1;
@@ -334,30 +379,9 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
-            let mut transcript = Vec::new();
-            if !req.mobile_optimized {
-                for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
-                        id: msg.id.clone(),
-                        from_agent_id: msg.from_agent.clone(),
-                        to_agent_id: msg.to_agent.clone(),
-                        message_type: msg.r#type.clone(),
-                        content: msg.content.clone(),
-                        meeting_id: m.id.clone(),
-                        occurred_at_unix: msg.occurred_at_unix,
-                    });
-                }
-            }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
-                id: m.id.clone(),
-                participants: m.participants.clone(),
-                transcript,
-            });
-        }
+        let out_meetings: Vec<::server_ohc::app::MeetingRoom> = _meetings;
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let final_meetings = out_meetings;
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
