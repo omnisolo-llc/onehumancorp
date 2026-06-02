@@ -1,30 +1,32 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde::Serialize;
+use serde_json::json;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Serialize, Deserialize)]
+struct LazyLoadArgs {
+    tool_names: Vec<String>,
+}
 
 struct LazyLoadToolsExecutor {
     active_tools: Arc<RwLock<HashSet<String>>>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for LazyLoadToolsExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let tool_names = args["tool_names"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("lazy_load_tools: 'tool_names' must be an array of strings".to_string()))?;
-
+impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
+    async fn execute_typed(&self, args: LazyLoadArgs) -> Result<String, ToolError> {
+        let tool_names = args.tool_names;
         let mut active = self.active_tools.write().await;
         let mut loaded = Vec::new();
 
-        for name_val in tool_names {
-            if let Some(name) = name_val.as_str() {
-                active.insert(name.to_string());
-                loaded.push(name.to_string());
-            }
+        for name in tool_names {
+            active.insert(name.clone());
+            loaded.push(name);
         }
 
         if loaded.is_empty() {
@@ -56,6 +58,58 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
             },
             "required": ["tool_names"]
         }),
-        execute: Arc::new(LazyLoadToolsExecutor { active_tools }),
+        execute: Arc::new(PydanticAdapter::new(LazyLoadToolsExecutor { active_tools })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::ToolError;
+    use serde_json::json;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    use super::super::ToolExecutor;
+
+    #[tokio::test]
+    async fn test_lazy_load_success() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let executor = PydanticAdapter::new(LazyLoadToolsExecutor { active_tools: active_tools.clone() });
+        let args = json!({ "tool_names": ["tool1", "tool2"] });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Successfully loaded tool1, tool2 tools into your context window. You may now use them in the next turn.");
+
+        let active = active_tools.read().await;
+        assert!(active.contains("tool1"));
+        assert!(active.contains("tool2"));
+    }
+
+    #[tokio::test]
+    async fn test_lazy_load_empty() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let executor = PydanticAdapter::new(LazyLoadToolsExecutor { active_tools: active_tools.clone() });
+        let args = json!({ "tool_names": [] });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "No valid tool names provided to load.");
+    }
+
+    #[tokio::test]
+    async fn test_lazy_load_invalid_args() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let executor = PydanticAdapter::new(LazyLoadToolsExecutor { active_tools: active_tools.clone() });
+        let args = json!({ "tool_names": "tool1" }); // string instead of array
+
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
     }
 }
