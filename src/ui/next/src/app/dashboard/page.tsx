@@ -318,7 +318,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -672,7 +672,7 @@ export default function Dashboard() {
                      <button
                          onClick={() => {
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
@@ -738,7 +738,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
@@ -1153,7 +1153,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
@@ -1205,7 +1205,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1225,7 +1225,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
@@ -1252,7 +1252,7 @@ export default function Dashboard() {
                       <button
                           onClick={() => {
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `ohc://join?ref=${tenant}`;
+                              const url = `https://ohc.store/join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
@@ -1281,7 +1281,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
