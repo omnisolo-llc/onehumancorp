@@ -254,7 +254,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is your business called?"
                       value={businessName}
@@ -316,7 +316,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is the name of this product?"
                       value={productName}
@@ -324,7 +324,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="0.00"
                       value={productPrice}
@@ -366,7 +366,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya Smith"
                       value={userName}
@@ -374,7 +374,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="email"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="you@email.com"
                       value={userEmail}
@@ -382,7 +382,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="password"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="Password"
                       value={userPassword}
@@ -488,7 +488,7 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
