@@ -2448,7 +2448,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let is_standalone = is_standalone_runtime();
     let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
     } else {
         match &db.store {
             crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
