@@ -1175,6 +1175,45 @@ impl DB {
 
         Ok(())
     }
+
+
+    pub async fn record_pos_transaction(&self, tenant_id: &str, amount_cents: i64, status: &str) -> Result<uuid::Uuid, Box<dyn std::error::Error + Send + Sync>> {
+        match &self.store {
+            DbStore::Postgres => {
+                let id: uuid::Uuid = sqlx::query_scalar(
+                    r#"
+                    INSERT INTO pos_transactions (tenant_id, amount_cents, status)
+                    VALUES ($1, $2, $3)
+                    RETURNING id
+                    "#
+                )
+                .bind(tenant_id)
+                .bind(amount_cents)
+                .bind(status)
+                .fetch_one(&self.pool)
+                .await?;
+                Ok(id)
+            }
+            DbStore::Sqlite(pool) => {
+                // Return dummy for now, since sqlite won't have the table mapped properly in memory tests right away
+                // or we execute sqlite directly.
+                let id = uuid::Uuid::new_v4();
+                sqlx::query(
+                    r#"
+                    INSERT INTO pos_transactions (id, tenant_id, amount_cents, status)
+                    VALUES ($1, $2, $3, $4)
+                    "#
+                )
+                .bind(id.to_string())
+                .bind(tenant_id)
+                .bind(amount_cents)
+                .bind(status)
+                .execute(pool)
+                .await?;
+                Ok(id)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
