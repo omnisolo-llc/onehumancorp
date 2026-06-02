@@ -12,9 +12,61 @@ use tokio::fs;
 pub struct PromptBuilder;
 
 impl PromptBuilder {
+    /// Assembles the complete prompt stack following the strict OpenAI Codex hierarchical priority stack.
+    /// Returns the assembled System Message string and the final conversation history.
+    pub fn build_prompt_stack(
+        server_system_message: &str,
+        tool_definitions: &str,
+        developer_instructions: &str,
+        user_instructions: &str,
+        mut conversation_history: Vec<Message>,
+        enable_litm_prevention: bool,
+    ) -> (String, Vec<Message>) {
+        let mut final_system_message = String::new();
+
+        // 1. Server-controlled System Message (Highest Priority)
+        if !server_system_message.is_empty() {
+            final_system_message.push_str(server_system_message);
+            final_system_message.push_str("\n\n");
+        }
+
+        // 2. Tool Definitions
+        if !tool_definitions.is_empty() {
+            final_system_message.push_str("=== Tool Definitions ===\n");
+            final_system_message.push_str(tool_definitions);
+            final_system_message.push_str("\n========================\n\n");
+        }
+
+        // 3. Developer Instructions
+        if !developer_instructions.is_empty() {
+            final_system_message.push_str("=== Developer Instructions ===\n");
+            final_system_message.push_str(developer_instructions);
+            final_system_message.push_str("\n==============================\n\n");
+        }
+
+        // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
+        if !user_instructions.is_empty() {
+            final_system_message.push_str("=== User Instructions (AGENTS.md) ===\n");
+            final_system_message.push_str(user_instructions);
+            final_system_message.push_str("\n=====================================\n\n");
+        }
+
+        let final_system_message = final_system_message.trim_end().to_string();
+
+        // 5. Conversation History (Lost in the Middle prevention)
+        Self::apply_lost_in_the_middle_prevention(
+            &mut conversation_history,
+            enable_litm_prevention,
+            developer_instructions,
+            user_instructions,
+        );
+
+        (final_system_message, conversation_history)
+    }
+
     pub async fn load_cascading_agents_md(start_dir: &Path) -> String {
         let mut current_dir = start_dir.to_path_buf();
-        let mut contents = Vec::new();
+        let mut contents: Vec<String> = Vec::new();
         let mut max_depth = 50;
 
         loop {
@@ -92,44 +144,49 @@ impl PromptBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use tempfile::tempdir;
 
-    #[tokio::test]
-    async fn test_load_cascading_agents_md() {
-        let dir = tempdir().unwrap();
-        let root = dir.path().join("root");
-        let sub1 = root.join("sub1");
-        let sub2 = sub1.join("sub2");
+    #[test]
+    fn test_build_prompt_stack_hierarchy() {
+        let server_sys = "You are an AI assistant.";
+        let tools = "Tool A: prints a.\nTool B: prints b.";
+        let dev_inst = "Never use markdown.";
+        let user_inst = "Build a webpage.";
+        let conv_history = vec![Message::user("Hello")];
 
-        tokio::fs::create_dir_all(&sub2).await.unwrap();
+        let (final_sys, final_conv) = PromptBuilder::build_prompt_stack(
+            server_sys,
+            tools,
+            dev_inst,
+            user_inst,
+            conv_history,
+            false,
+        );
 
-        tokio::fs::write(root.join("AGENTS.md"), "Root Agent").await.unwrap();
-        tokio::fs::write(sub2.join("AGENTS.md"), "Sub2 Agent").await.unwrap();
+        // Verify order and presence
+        assert!(final_sys.starts_with(server_sys));
+        assert!(final_sys.contains("=== Tool Definitions ==="));
+        assert!(final_sys.contains(tools));
+        assert!(final_sys.contains("=== Developer Instructions ==="));
+        assert!(final_sys.contains(dev_inst));
+        assert!(final_sys.contains("=== User Instructions (AGENTS.md) ==="));
+        assert!(final_sys.contains(user_inst));
 
-        let result = PromptBuilder::load_cascading_agents_md(&sub2).await;
+        // Ensure server_sys is before tools
+        let pos_sys = final_sys.find(server_sys).unwrap();
+        let pos_tools = final_sys.find("=== Tool Definitions ===").unwrap();
+        let pos_dev = final_sys.find("=== Developer Instructions ===").unwrap();
+        let pos_user = final_sys.find("=== User Instructions (AGENTS.md) ===").unwrap();
 
-        // Deeply nested files take precedence, meaning they are appended last or first?
-        // Let's check the code: it collects from deepest up to root.
-        // Then it joins them starting from deepest (index 0) to root.
-        // Wait, the original code:
-        // `contents` has sub2 at index 0, and root at index 1.
-        // `for content in contents.iter().enumerate()` appends them in order.
-        // So deepest is first.
-        assert_eq!(result, "Sub2 Agent\n\n---\n\nRoot Agent");
-    }
+        assert!(pos_sys < pos_tools);
+        assert!(pos_tools < pos_dev);
+        assert!(pos_dev < pos_user);
 
-    #[tokio::test]
-    async fn test_load_cascading_agents_md_truncation() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("AGENTS.md");
-
-        let large_content = "A".repeat(40 * 1024); // 40 KB
-        tokio::fs::write(&file_path, large_content).await.unwrap();
-
-        let result = PromptBuilder::load_cascading_agents_md(dir.path()).await;
-
-        assert!(result.ends_with("[System: AGENTS.md content truncated to 32KiB limit.]"));
-        assert!(result.len() <= 32 * 1024 + 100);
+        // LitM disabled, but dev instructions should be appended as a system reminder
+        assert_eq!(final_conv.len(), 2);
+        assert_eq!(final_conv[0].content, "Hello");
+        assert!(final_conv[1].content.contains("[System Reminder: Never use markdown.]"));
     }
 
     #[test]

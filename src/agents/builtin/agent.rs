@@ -245,7 +245,7 @@ impl AgentProgress {
 // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
 // 5. Conversation History (happens at run loop)
 
-pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> String {
+async fn _unused_load_cascading_agents_md(start_dir: &std::path::Path) -> String {
     let mut current_dir = start_dir.to_path_buf();
     let mut contents = Vec::new();
     let mut max_depth = 50;
@@ -407,7 +407,29 @@ impl HierarchicalPromptBuilder {
 }
 
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
-    HierarchicalPromptBuilder::new(cfg, tools).build()
+    let tool_definitions = if !tools.is_empty() {
+        let mut tool_defs = String::new();
+        for t in tools {
+            tool_defs.push_str(&format!("Tool: {}
+Description: {}
+Parameters: {}
+
+", t.name, t.description, t.parameters));
+        }
+        tool_defs
+    } else {
+        String::new()
+    };
+
+    let (sys_msg, _) = crate::prompt_construction::PromptBuilder::build_prompt_stack(
+        &cfg.server_system_message,
+        &tool_definitions,
+        &cfg.developer_instructions,
+        &cfg.user_instructions,
+        vec![],
+        cfg.enable_lost_in_the_middle_prevention,
+    );
+    sys_msg
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -1909,7 +1931,7 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md = load_cascading_agents_md(start_dir).await;
+            let cascading_md = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(start_dir).await;
             if !cascading_md.is_empty() {
                 if !final_cfg.user_instructions.is_empty() {
                     final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
@@ -2125,32 +2147,12 @@ impl Agent {
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
-            // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
-                }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = final_cfg.user_instructions.len();
-                    }
-                    let summary = &final_cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
-            }
+            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                final_cfg.enable_lost_in_the_middle_prevention,
+                &final_cfg.developer_instructions,
+                &final_cfg.user_instructions,
+            );
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
