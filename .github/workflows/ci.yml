@@ -356,16 +356,9 @@ jobs:
             test --test_output=errors
             test --test_summary=detailed
 
-      - name: Docker Hub Login
-        uses: docker/login-action@v3
-        continue-on-error: true
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull ghcr.io/tensorchord/pgvector-citus:16
           docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright E2E suite
