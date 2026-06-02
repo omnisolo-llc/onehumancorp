@@ -167,6 +167,82 @@ impl TeammateMesh for SleepingMockMesh {
 
 #[cfg(test)]
 mod chaos_tests {
+    #[tokio::test]
+    async fn test_timeout_storm() {
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
+
+        let mut successful_sends = 0;
+        let mut timeouts = 0;
+
+        for _ in 0..10 {
+            let result = mesh.ping().await;
+            if result.is_err() {
+                timeouts += 1;
+            } else {
+                successful_sends += 1;
+            }
+        }
+
+        assert!(timeouts >= 10, "System should timeout internally on all calls when agent is non-responsive");
+        assert_eq!(successful_sends, 0, "System should not have successful sends during a timeout storm");
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_high_message_loss_degradation() {
+        let transport = Arc::new(DroppingMockTransport::new(90));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_clone = received.clone();
+
+        let _ = mesh.subscribe("mesh:test:severe_loss", Box::new(move |_msg| {
+            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        })).await.unwrap();
+
+        let _ = mesh.start_health_responder().await;
+
+        let mut successful_sends = 0;
+        let mut failed_sends = 0;
+
+        for _ in 0..20 {
+             if mesh.ping().await.is_ok() {
+                 successful_sends += 1;
+             } else {
+                 failed_sends += 1;
+             }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        assert!(failed_sends > 0, "System should report failed sends under severe degradation");
+        assert_eq!(successful_sends + failed_sends, 20, "All messages should be accounted for (success or safe failure)");
+    }
+
+    #[tokio::test]
+    async fn test_partition_tolerance() {
+        let transport = Arc::new(DroppingMockTransport::new(100));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+        let _ = mesh.subscribe("mesh:test:partition", Box::new(move |_msg| {
+        })).await.unwrap();
+
+        let _ = mesh.start_health_responder().await;
+
+        let mut successful_sends = 0;
+        let mut failures = 0;
+
+        for _ in 0..10 {
+            let result = mesh.ping().await;
+            if result.is_err() {
+                failures += 1;
+            } else {
+                successful_sends += 1;
+            }
+        }
+
+        assert_eq!(failures, 10, "System should handle partition by failing all requests gracefully");
+        assert_eq!(successful_sends, 0, "System should not have successful sends during a network partition");
+    }
+
     use super::*;
 
     #[tokio::test]
