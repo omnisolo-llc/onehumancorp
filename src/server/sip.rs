@@ -61,7 +61,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = async {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
@@ -91,11 +91,11 @@ impl SipDB {
 
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
-            }.await;
+            }).await;
             
             match res {
-                Ok(_) => return Ok(()),
-                Err(err) => {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
                     let mut retry = false;
                     if let Some(db_err) = err.as_database_error() {
                         let code = db_err.code();
@@ -120,6 +120,14 @@ impl SipDB {
                     } else {
                         return Err(err);
                     }
+                }
+                Err(timeout_err) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
                 }
             }
         }
