@@ -1,9 +1,9 @@
 #[cfg(test)]
-mod test_066_agent_missions_cloud_mission_id {
+mod test_067_agent_missions_cloud_mission_id {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
-    async fn test_migration_066_agent_missions_cloud_mission_id() {
+    async fn test_migration_067_agent_missions_cloud_mission_id() {
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
