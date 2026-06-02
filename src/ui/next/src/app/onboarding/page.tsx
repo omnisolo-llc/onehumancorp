@@ -261,7 +261,7 @@ export default function OnboardingWizard() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container sm:rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
@@ -379,9 +379,12 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            if (whatYouSell.trim()) {
-                              setChatStep(3);
+                            if (!whatYouSell.trim()) {
+                              setValidationError('Please tell us what you sell.');
+                              return;
                             }
+                            setValidationError('');
+                            setChatStep(3);
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
@@ -390,9 +393,17 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      onClick={() => {
+                        if (!whatYouSell.trim()) {
+                          setValidationError('Please tell us what you sell.');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(3);
+                      }}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -430,10 +441,16 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                          if (e.key === 'Enter') {
                             e.preventDefault();
-                            setValidationError('');
-                            handleIntake();
+                            if (!location.trim()) {
+                              setValidationError('Please tell us your location.');
+                              return;
+                            }
+                            if (!isLoading) {
+                              setValidationError('');
+                              handleIntake();
+                            }
                           }
                         }}
                         placeholder="e.g. Portland, OR"
@@ -442,9 +459,14 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
+                        if (!location.trim()) {
+                          setValidationError('Please tell us your location.');
+                          return;
+                        }
                         setValidationError('');
                         handleIntake();
                       }}
