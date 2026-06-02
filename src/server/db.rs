@@ -924,7 +924,7 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, organization_id as tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -943,7 +943,7 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let shared_rows = sqlx::query("SELECT id, organization_id as tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -1215,7 +1215,7 @@ mod autodream_db_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1225,7 +1225,7 @@ mod autodream_db_tests {
                 })
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         let db = DB {
@@ -1245,7 +1245,7 @@ mod autodream_db_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1255,7 +1255,7 @@ mod autodream_db_tests {
                 })
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         let db = DB {
@@ -1296,7 +1296,7 @@ mod autodream_db_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1306,7 +1306,7 @@ mod autodream_db_tests {
                 })
             })
             .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
         // Just checking configuration parses ok for multitenancy logic
         let _ = pool;
@@ -1481,7 +1481,7 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1498,7 +1498,7 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
@@ -1517,7 +1517,7 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         // This verifies tenant access doesn't bleed across pools
@@ -1531,7 +1531,7 @@ mod e2e_tenant_isolation_tests {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
 
         // Create a basic pool using our implementation logic
         let pool_opts = sqlx::postgres::PgPoolOptions::new()
@@ -1550,7 +1550,7 @@ mod e2e_tenant_isolation_tests {
                 })
             });
 
-        let pool = pool_opts.connect(database_url).await.unwrap();
+        let pool = pool_opts.connect(&database_url).await.unwrap();
 
         // Check if the tenant was reset
         let mut conn = pool.acquire().await.unwrap();
@@ -1576,7 +1576,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             return;
         }
 
-        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1593,7 +1593,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
@@ -1612,7 +1612,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect_lazy(&database_url)
             .unwrap();
 
         // 1) Clear out swarm_tasks
@@ -1642,5 +1642,82 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .await
             .unwrap();
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
+    }
+}
+
+#[cfg(test)]
+mod e2e_cleanup_stagnant_missions_tests {
+    use super::*;
+    use sqlx::Row;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_postgres() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let db = DB {
+            store: DbStore::Postgres,
+            pool: pool.clone(),
+
+        };
+
+        let mut tx = pool.begin().await.unwrap();
+
+        // Use a unique tenant for this test to avoid conflicting with other tests
+        let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());
+
+        // 1. Stuck mission (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.unwrap();
+
+        // 2. Pending mission but updated recently (should NOT be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.unwrap();
+
+        // 3. Pending mission updated 2 hours ago (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', CURRENT_TIMESTAMP - INTERVAL '2 hours', $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.unwrap();
+
+        tx.commit().await.unwrap();
+
+        // Clean up missions older than 3600 seconds
+        let _affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_3, "FAILED");
+
+        // Clean up the table for the unique tenant
+        sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
+            .bind(&test_tenant)
+            .execute(&pool).await.unwrap();
     }
 }

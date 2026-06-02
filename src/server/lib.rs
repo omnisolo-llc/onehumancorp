@@ -1,6 +1,7 @@
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
+pub mod agents;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -33,7 +34,7 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
-static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+pub static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -517,46 +518,37 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let db1 = db.clone();
-    let tenant_id1 = tenant_id.clone();
-    let db2 = db.clone();
-    let tenant_id2 = tenant_id.clone();
-    let db3 = db.clone();
-    let tenant_id3 = tenant_id.clone();
-    let db4 = db.clone();
-    let tenant_id4 = tenant_id.clone();
-
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
-        tokio::spawn(async move {
-            match &db1.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id1).fetch_one(&db1.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id1).fetch_one(pool).await,
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
             }
-        }),
-        tokio::spawn(async move {
-            match &db2.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id2).fetch_one(&db2.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id2).fetch_one(pool).await,
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
             }
-        }),
-        tokio::spawn(async move {
-            match &db3.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id3).fetch_one(&db3.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id3).fetch_one(pool).await,
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
             }
-        }),
-        tokio::spawn(async move {
-            match &db4.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id4).fetch_one(&db4.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id4).fetch_one(pool).await,
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
             }
-        })
+        }
     );
 
-    let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Ok(0.0)).unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     (
         StatusCode::OK,
@@ -901,14 +893,40 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    let cache_key = format!("advisory:org:{}", tenant_id);
+    let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cached_org = cache.get(&cache_key).await;
+
+    let org_data = if let Some(org) = cached_org {
+        Ok::<_, sqlx::Error>(org)
+    } else {
+        let result = match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&db.pool)
+                .await
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(pool)
+                .await
+            }
+        };
+        if let Ok(Some(ref org)) = result {
+            cache.set(&cache_key, Some(org.clone()), std::time::Duration::from_secs(3600)).await;
+        }
+        result
+    };
+
+    let (business_name, industry) = org_data
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
@@ -1118,13 +1136,13 @@ impl HubService for MyHubService {
                 let rev = auditor.get_total_revenue();
                 (llm, rev)
             }),
-            tokio::spawn(async move {
+            async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
-            })
+            }
         );
 
         let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
-        let storage_bytes = storage_bytes_res.unwrap_or(Ok(0)).unwrap_or(0);
+        let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
@@ -2837,7 +2855,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
-        .route("/api/v1/sync/offline", axum::routing::post(api::offline_sync::offline_sync_handler))
+        .route("/api/v1/sync/offline", axum::routing::post(|headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(headers, payload).await }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
@@ -4793,14 +4811,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Jitsi Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4956,7 +4974,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="my-plan-screen" class="screen glass">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -4977,7 +4995,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="cost-dashboard-screen" class="screen glass">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">

@@ -157,8 +157,7 @@ export function HelpWidget() {
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
 
   useEffect(() => {
-    const url = searchQuery ? `/api/help/search?q=${encodeURIComponent(searchQuery)}` : "/api/help";
-    fetch(url)
+    fetch("/api/help")
       .then(res => {
         if (!res.ok) throw new Error("Failed to load help articles");
         return res.json();
@@ -167,9 +166,12 @@ export function HelpWidget() {
         setHelpArticles(normalizeArticles(data));
       })
       .catch(() => {});
-  }, [searchQuery]);
+  }, []);
 
-  const filteredArticles = helpArticles;
+  const filteredArticles = helpArticles.filter(a =>
+    a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   const [videos, setVideos] = useState<HelpVideo[]>([]);
   const [activeVideo, setActiveVideo] = useState<HelpVideo | null>(null);
 
