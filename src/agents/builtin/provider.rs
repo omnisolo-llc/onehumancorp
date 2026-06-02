@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
 #[async_trait]
+#[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
 }
@@ -99,6 +100,7 @@ impl RedisIsolationTransport {
 }
 
 #[async_trait]
+#[async_trait::async_trait]
 impl Transport for RedisIsolationTransport {
     async fn send(&self, message: &[u8]) -> Result<(), String> {
         use redis::AsyncCommands;
