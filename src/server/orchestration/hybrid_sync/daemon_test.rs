@@ -23,7 +23,11 @@ mod tests {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pg_pool = match tokio::time::timeout(
+<<<<<<< HEAD
+            Duration::from_millis(50),
+=======
             Duration::from_millis(500),
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             PgPoolOptions::new().connect(&database_url),
         )
         .await
@@ -200,7 +204,11 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
+<<<<<<< HEAD
+        Duration::from_millis(50),
+=======
         Duration::from_millis(500),
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
         sqlx::postgres::PgPoolOptions::new().connect(&database_url),
     )
     .await

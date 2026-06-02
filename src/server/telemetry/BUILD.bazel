@@ -18,6 +18,10 @@ rust_library(
         "@crates//:tracing",
         "@crates//:opentelemetry",
         "@crates//:tokio",
+<<<<<<< HEAD
+        "@crates//:regex",
+=======
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
     ],
 )
 

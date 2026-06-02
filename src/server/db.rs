@@ -211,9 +211,13 @@ impl DB {
             };
 
             if key.trim().is_empty() {
+<<<<<<< HEAD
+                return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
+=======
                 panic!(
                     "CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode."
                 );
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             }
 
             let pragma_key = format!("'{}'", key.replace('\'', "''"));

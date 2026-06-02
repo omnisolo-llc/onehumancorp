@@ -120,7 +120,11 @@ impl HybridSyncDaemon {
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
+<<<<<<< HEAD
+        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
+=======
         let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -254,7 +258,11 @@ impl HybridSyncDaemon {
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // Find tasks requiring cloud escalation
+<<<<<<< HEAD
+        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))")
+=======
         let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             .fetch_all(&self.sqlite_pool)
             .await?;
 

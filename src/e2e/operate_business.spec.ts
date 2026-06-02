@@ -9,7 +9,11 @@ test('Maya operates her custom cake business', async ({ page }) => {
     localStorage.removeItem('ohc_wizard_state');
   }, id);
 
+<<<<<<< HEAD
+  await page.goto('/website-builder');
+=======
   await page.goto('/onboarding');
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
 
   await page.getByRole('button', { name: /Start My Business Next/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();

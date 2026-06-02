@@ -47,6 +47,10 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
     "//src/server/api:offline_sync.rs",
+<<<<<<< HEAD
+    "//src/server/api:staff_mesh.rs",
+=======
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
     "//src/server/api:telemetry.rs",
     "//src/server/api:catalog.rs",
     "//src/server/api/agents:approvals.rs",

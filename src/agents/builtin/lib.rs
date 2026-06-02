@@ -40,6 +40,10 @@ pub mod ralph_loop;
 pub mod ruflo;
 pub mod openhands;
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
 pub mod proto;
@@ -213,15 +217,26 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             Ok(resp) => {
                 let inner = resp.into_inner();
                 if !inner.error.is_empty() {
+<<<<<<< HEAD
+                    tracing::error!("{}", inner.error);
+                    std::process::exit(1);
+                } else {
+                    tracing::info!("{}", inner.result);
+=======
                     eprintln!("{}", inner.error);
                     std::process::exit(1);
                 } else {
                     println!("{}", inner.result);
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
                     return Ok(());
                 }
             }
             Err(e) => {
+<<<<<<< HEAD
+                tracing::error!("Subagent dispatch error: {}", e);
+=======
                 eprintln!("Subagent dispatch error: {}", e);
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
                 std::process::exit(1);
             }
         }

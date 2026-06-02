@@ -16,6 +16,10 @@ exports_files(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
+<<<<<<< HEAD
+        "staff_mesh.rs",
+=======
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
         "telemetry.rs",
         "catalog.rs",
     ],
@@ -40,6 +44,10 @@ rust_library(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
+<<<<<<< HEAD
+        "staff_mesh.rs",
+=======
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
         "telemetry.rs",
         "catalog.rs",
         "//src/server/api/agents:approvals.rs",

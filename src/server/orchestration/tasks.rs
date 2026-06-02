@@ -1526,7 +1526,11 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+<<<<<<< HEAD
+            .acquire_timeout(std::time::Duration::from_millis(500))
+=======
             .acquire_timeout(std::time::Duration::from_millis(5000))
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             .connect(database_url)
             .await
             .unwrap();
@@ -1615,7 +1619,11 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+<<<<<<< HEAD
+            .acquire_timeout(std::time::Duration::from_millis(500))
+=======
             .acquire_timeout(std::time::Duration::from_millis(5000))
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
             .connect(database_url)
             .await
             .unwrap();

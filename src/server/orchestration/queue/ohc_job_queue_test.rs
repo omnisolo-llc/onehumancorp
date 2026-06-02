@@ -157,7 +157,11 @@ async fn test_worker_pool_and_ledger() {
     queue.enqueue(tenant_id, "test_worker_job", &serde_json::json!({})).await.unwrap();
 
     // Give the worker pool time to process
+<<<<<<< HEAD
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+=======
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+>>>>>>> 8ae292f8 (docs: ohc market dynamics and deep-dive competitor analysis (#22647))
 
     worker_pool.shutdown().await;
 
