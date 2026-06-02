@@ -39,10 +39,18 @@ impl BaseFSProvider {
     fn resolve_path(&self, path_str: &str) -> io::Result<PathBuf> {
         let path = Path::new(path_str);
         // Prevent absolute path bypassing
-        let path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap_or(path)
+        let path_obj = Path::new(path_str);
+        let path = if path_obj.is_absolute() {
+            // Check for Windows drive prefix or root dir
+            if let Ok(stripped) = path_obj.strip_prefix("/") {
+                 stripped
+            } else if let Ok(stripped) = path_obj.strip_prefix(std::path::Component::RootDir) {
+                 stripped
+            } else {
+                 path_obj
+            }
         } else {
-            path
+            path_obj
         };
 
         let full_path = self.root_dir.join(path);
@@ -84,21 +92,15 @@ impl FileSystemProvider for BaseFSProvider {
             }
         }
 
-        #[cfg(unix)]
         {
             use tokio::io::AsyncWriteExt;
             let mut file = tokio::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .truncate(true)
-                .mode(0o600)
                 .open(resolved)
                 .await?;
             file.write_all(content).await?;
-        }
-        #[cfg(not(unix))]
-        {
-            tokio::fs::write(resolved, content).await?;
         }
 
         Ok(())
