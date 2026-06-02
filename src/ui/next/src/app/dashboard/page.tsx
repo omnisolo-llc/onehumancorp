@@ -6,6 +6,7 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { OneTapReferral } from "../components/OneTapReferral";
 
+import { CashflowCard } from '../components/CashflowCard';
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -493,6 +494,10 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+        <div className="mb-6">
+          <CashflowCard />
+        </div>
+
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
