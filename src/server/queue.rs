@@ -205,7 +205,7 @@ impl TaskQueue for PostgresTaskQueue {
             current_depths.insert(tenant_id, count);
         }
 
-        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) ");
+        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, agent_role) ");
 
         let mut prepared_jobs = Vec::new();
         for job in &jobs {
@@ -236,16 +236,17 @@ impl TaskQueue for PostgresTaskQueue {
             }
             *current_depths.get_mut(&org_id).unwrap() += 1;
 
-            prepared_jobs.push((job.id.clone(), org_id, job.parent_task_id.clone(), new_payload, run_after));
+            prepared_jobs.push((job.id.clone(), org_id, job.parent_task_id.clone(), new_payload, run_after, job.job_type.clone()));
         }
 
-        builder.push_values(prepared_jobs.into_iter(), |mut b, (id, org_id, parent_task_id, new_payload, run_after)| {
+        builder.push_values(prepared_jobs.into_iter(), |mut b, (id, org_id, parent_task_id, new_payload, run_after, agent_role)| {
             b.push_bind(id)
              .push_bind(org_id)
              .push_bind(parent_task_id)
              .push_bind(new_payload)
              .push_bind("PENDING")
-             .push_bind(run_after);
+             .push_bind(run_after)
+             .push_bind(agent_role);
         });
 
         builder.build().execute(&mut *tx).await.map_err(|e| e.to_string())?;
@@ -286,13 +287,14 @@ impl TaskQueue for PostgresTaskQueue {
             run_after = run_after + chrono::Duration::seconds(delay_seconds);
         }
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, agent_role) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(job.id)
             .bind(org_id)
             .bind(job.parent_task_id)
             .bind(new_payload)
             .bind("PENDING")
             .bind(run_after)
+            .bind(job.job_type)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -304,7 +306,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND agent_role = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -567,10 +569,11 @@ impl QueueManager {
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
+        let agent_role = job.payload.get("agent_role").and_then(|v| v.as_str()).unwrap_or("").to_string();
         
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, &job.tenant_id).await?;
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, created_at, updated_at, agent_role) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
             .bind(job.id)
             .bind(job.tenant_id)
             .bind(job.parent_task_id)
@@ -578,6 +581,7 @@ impl QueueManager {
             .bind("QUEUED")
             .bind(job.created_at)
             .bind(job.updated_at)
+            .bind(agent_role)
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
@@ -1347,7 +1351,7 @@ mod tests {
             let org_id = "tenant-a".to_string();
 
             // Ignore table creation errors if it already exists
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id VARCHAR PRIMARY KEY, tenant_id VARCHAR NOT NULL, parent_task_id VARCHAR, payload TEXT, status VARCHAR, worker_id VARCHAR, scheduled_at TIMESTAMP, completed_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP)")
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id VARCHAR PRIMARY KEY, tenant_id VARCHAR NOT NULL, parent_task_id VARCHAR, payload TEXT, status VARCHAR, worker_id VARCHAR, scheduled_at TIMESTAMP, completed_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP, agent_role VARCHAR)")
                 .execute(&pool)
                 .await;
 

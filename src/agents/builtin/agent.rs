@@ -406,6 +406,7 @@ impl HierarchicalPromptBuilder {
     }
 }
 
+
 pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
     HierarchicalPromptBuilder::new(cfg, tools).build()
 }
