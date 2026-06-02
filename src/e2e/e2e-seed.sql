@@ -157,4 +157,26 @@ ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
+
+ALTER TABLE IF EXISTS referrals DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix)
+VALUES
+  ('e2e-ref-1', 'e2e-tenant', 'e2e-admin-user', 'ref-code-e2e', 5, 2, 0)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS referrals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS referrals FORCE ROW LEVEL SECURITY;
+
+
+ALTER TABLE IF EXISTS team_invites DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at)
+VALUES
+  ('e2e-inv-1', 'e2e-tenant', 'e2e-admin-user', 'user-abc', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS team_invites FORCE ROW LEVEL SECURITY;
+
 COMMIT;
