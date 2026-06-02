@@ -11,6 +11,7 @@ exports_files(
         "power_sync_test.rs",
         "service.rs",
         "telemetry_sync.rs",
+        "offline_pos.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -28,6 +29,7 @@ rust_library(
         "power_sync_test.rs",
         "service.rs",
         "telemetry_sync.rs",
+        "offline_pos.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

@@ -2,6 +2,7 @@ pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
+pub mod offline_pos_sync;
 
 pub mod billing_webhook;
 pub mod billing_api;

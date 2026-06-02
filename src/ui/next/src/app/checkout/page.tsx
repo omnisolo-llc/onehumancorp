@@ -81,7 +81,7 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  alert(`Payment Saved Offline. Payment of ${amount} will process when reconnected.`);
                   router.push('/dashboard');
                 }
               }}

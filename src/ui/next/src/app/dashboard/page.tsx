@@ -173,7 +173,7 @@ export default function Dashboard() {
       try {
         const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
         if (queue.length > 0) {
-          const res = await fetch("/api/v1/sync/offline", {
+          const res = await fetch("/api/v1/sync/offline-pos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mutations: queue })

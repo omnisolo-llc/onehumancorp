@@ -73,8 +73,8 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await context.setOffline(false);
 
     // Trigger online event
-    await page.route('/api/v1/sync/offline', async route => {
-        await route.fulfill({ status: 200, json: { success: true } });
+    await page.route('/api/v1/sync/offline-pos', async route => {
+        await route.fulfill({ status: 200, json: { success: true, processed: 1 } });
     });
     await page.evaluate(() => {
         // Mock fetch call since we don't have a real backend in some test environments
