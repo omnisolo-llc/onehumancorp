@@ -4664,20 +4664,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
                         </div>
 
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
-                            <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Closer')">The Closer - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Promoter')">The Promoter - Marketing - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Salesperson')">The Salesperson - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Accountant')">The Accountant - Finance</button>
-                            <button onclick="openLegacyDepartment('The Protector')">The Protector - Security</button>
-                            <button onclick="openLegacyDepartment('The Advisor')">The Advisor - Strategy</button>
-                            <button onclick="openLegacyDepartment('The Scout')">The Scout - Research</button>
-                            <div>
-                                <span>Advanced</span>
-                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'">Show settings</button>
-                                <p id="legacy-agent-settings" style="display: none;">Auto-approve: $0</p>
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
+                            <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>✨ The Ambassador (Omnichannel Inbox)</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Manager')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Manager - Operations</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Closer')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Closer - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Promoter')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Promoter - Marketing</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Salesperson')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Salesperson - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Accountant')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Accountant - Finance</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Protector')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Protector - Security</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Advisor')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Advisor - Strategy</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Scout')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Scout - Research</span>
+                            </button>
+                            <div style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;">
+                                <span style="font-size: 0.9em; opacity: 0.8;">Advanced Settings</span>
+                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 8px; margin-left: 10px; font-size: 0.8em;">Show settings</button>
+                                <p id="legacy-agent-settings" style="display: none; font-size: 0.8em; margin-top: 5px; opacity: 0.7;">Auto-approve: $0</p>
                             </div>
                         </div>
 
