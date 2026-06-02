@@ -335,4 +335,53 @@ describe('OnboardingWizard', () => {
       method: 'POST'
     }));
   });
+  it('Step 2: Displays validation error when what you sell is too short', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 1,
+        chatStep: 2,
+        businessName: 'Maya Bakery',
+        whatYouSell: 'A',
+        location: '',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const nextButton = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextButton);
+
+    expect(await screen.findByText('Product description must be at least 3 characters.')).toBeInTheDocument();
+  });
+
+  it('Step 3: Displays validation error when location is too short', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 1,
+        chatStep: 3,
+        businessName: 'Maya Bakery',
+        whatYouSell: 'Cakes',
+        location: 'A',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    await user.click(button);
+
+    expect(await screen.findByText('Location must be at least 2 characters.')).toBeInTheDocument();
+  });
 });
