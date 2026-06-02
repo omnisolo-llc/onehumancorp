@@ -2620,8 +2620,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 }
             )
         ))
-        .route("/healthz", axum::routing::get(|| async { "ok" }))
-        .route("/readyz", axum::routing::get(|| async { "ok" }))
+        .route("/healthz", axum::routing::get(|| async { axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::from("200 OK")).unwrap() }))
+        .route("/readyz", axum::routing::get(|| async { axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::from("200 OK")).unwrap() }))
         .route(
             "/api/dev/seed",
             axum::routing::post({

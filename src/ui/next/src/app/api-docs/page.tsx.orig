@@ -156,32 +156,6 @@ const swaggerSpec = {
           }
         }
       }
-    },
-    "/healthz": {
-      get: {
-        summary: "Liveness probe",
-        description: "Returns 200 OK when the server is running.",
-        tags: ["Health"],
-        responses: {
-          "200": {
-            description: "Success",
-            content: { "text/plain": { schema: { type: "string", example: "200 OK" } } }
-          }
-        }
-      }
-    },
-    "/readyz": {
-      get: {
-        summary: "Readiness probe",
-        description: "Returns 200 OK when the server is ready to serve traffic.",
-        tags: ["Health"],
-        responses: {
-          "200": {
-            description: "Success",
-            content: { "text/plain": { schema: { type: "string", example: "200 OK" } } }
-          }
-        }
-      }
     }
   }
 };
