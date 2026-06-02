@@ -53,6 +53,7 @@ rust_library(
         "autogen.rs",
         "checkpointer.rs",
         "codex_runner.rs",
+        "crewai.rs",
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",
@@ -322,4 +323,16 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+rust_test(
+    name = "crewai_unit_test",
+    size = "small",
+    args = ["crewai"],
+    crate = ":ohc_builtin_agent_lib",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

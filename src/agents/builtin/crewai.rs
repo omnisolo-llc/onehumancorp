@@ -68,40 +68,76 @@ impl Flow {
         let mut results = Vec::new();
         let mut previous_output = String::new();
 
-        for (i, task) in self.crew.tasks.iter().enumerate() {
-            let system_prompt = format!(
-                "You are {}.\nGoal: {}\nBackstory: {}\n\nTask:\n{}\n\nExpected Output Schema/Format:\n{}",
-                task.role.name, task.role.goal, task.role.backstory, task.description, task.expected_output
-            );
+        // State machine state
+        let mut current_task_index = 0;
+        let max_retries = 3;
 
-            let mut run_cfg = self.crew.config.clone();
-            run_cfg.server_system_message = system_prompt;
+        while current_task_index < self.crew.tasks.len() {
+            let task = &self.crew.tasks[current_task_index];
+            let mut attempts = 0;
+            let mut task_success = false;
+            let mut result = String::new();
 
-            // Build the prompt containing context from the previous task, if any.
-            let user_prompt = if previous_output.is_empty() {
-                format!("Execute the task. Ensure the output matches the expected format.")
-            } else {
-                format!("Execute the task using the following context from the previous step:\n{}\n\nEnsure the output matches the expected format.", previous_output)
-            };
+            while attempts < max_retries && !task_success {
+                let system_prompt = format!(
+                    "You are {}.\nGoal: {}\nBackstory: {}\n\nTask:\n{}\n\nExpected Output Schema/Format:\n{}",
+                    task.role.name, task.role.goal, task.role.backstory, task.description, task.expected_output
+                );
 
-            let mut on_event = |_| {};
+                let mut run_cfg = self.crew.config.clone();
+                run_cfg.server_system_message = system_prompt;
 
-            let result = self.crew.agent.run(&run_cfg, &user_prompt, &mut on_event).await
-                .map_err(|e| format!("Task {} failed: {}", i, e))?;
+                // Build the prompt containing context from the previous task, if any.
+                let user_prompt = if previous_output.is_empty() {
+                    format!("Execute the task. Ensure the output matches the expected format.")
+                } else {
+                    format!("Execute the task using the following context from the previous step:\n{}\n\nEnsure the output matches the expected format.", previous_output)
+                };
 
-            // Simple deterministic validation: ensure it's not empty, and if expected_output hints at JSON, check JSON parseability.
-            if task.expected_output.to_lowercase().contains("json") {
-                if let Err(_) = serde_json::from_str::<Value>(&result) {
-                    return Err(format!("Task {} failed validation: expected JSON output", i));
+                let mut on_event = |_| {};
+
+                match self.crew.agent.run(&run_cfg, &user_prompt, &mut on_event).await {
+                    Ok(res) => {
+                        // Validation Gate 1: Non-empty output
+                        if res.trim().is_empty() {
+                            attempts += 1;
+                            continue;
+                        }
+
+                        // Validation Gate 2: JSON format if requested
+                        if task.expected_output.to_lowercase().contains("json") {
+                            if let Err(_) = serde_json::from_str::<Value>(&res) {
+                                attempts += 1;
+                                continue;
+                            }
+                        }
+
+                        result = res;
+                        task_success = true;
+                    },
+                    Err(e) => {
+                        // For actual agent errors, we might want to fail fast or retry.
+                        // For deterministic flow with retry state machine, we increment attempts.
+                        attempts += 1;
+                        if attempts >= max_retries {
+                            return Err(format!("Task {} failed: {}", current_task_index, e));
+                        }
+                    }
                 }
             }
 
-            if result.trim().is_empty() {
-                return Err(format!("Task {} failed validation: output is empty", i));
+            if !task_success {
+                let error_msg = if task.expected_output.to_lowercase().contains("json") {
+                    "expected JSON output"
+                } else {
+                    "output is empty"
+                };
+                return Err(format!("Task {} failed validation: {}", current_task_index, error_msg));
             }
 
             previous_output = result.clone();
             results.push(result);
+            current_task_index += 1; // Explicit state transition
         }
 
         Ok(results)
@@ -112,7 +148,7 @@ impl Flow {
 mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
-    use crate::llm::client::LlmClient;
+    use crate::llm::LlmClient;
     use tokio::sync::Mutex;
 
     struct MockLlmClientCrew {
@@ -126,7 +162,7 @@ mod tests {
             let content = if !resps.is_empty() {
                 resps.remove(0)
             } else {
-                "default".to_string()
+                "".to_string()
             };
 
             Ok(ChatResponse {
@@ -232,7 +268,34 @@ mod tests {
 
         let result = flow.execute().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Task 0 failed"));
-        assert!(result.unwrap_err().contains("LLM completely failed"));
+        let err = result.unwrap_err();
+        assert!(err.contains("Task 0 failed"));
+        assert!(err.contains("LLM completely failed"));
+    }
+
+    #[tokio::test]
+    async fn test_crewai_flow_retry_success() {
+        let client = Arc::new(MockLlmClientCrew {
+            responses: Mutex::new(vec![
+                "   ".to_string(), // Attempt 1: Empty output
+                "invalid json".to_string(), // Attempt 2: Invalid JSON
+                "{\"report\": \"JSON data\"}".to_string(), // Attempt 3: Success
+            ]),
+        });
+
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let cfg = AgentRunConfig::default();
+
+        let role = Role::new("Writer", "Write report", "You write JSON reports.");
+        let task = Task::new("Write JSON report", "JSON", role);
+
+        let crew = Crew::new(vec![task], agent, cfg);
+        let flow = Flow::new(crew);
+
+        let results = flow.execute().await;
+        assert!(results.is_ok());
+        let outputs = results.unwrap();
+        assert_eq!(outputs.len(), 1);
+        assert_eq!(outputs[0], "{\"report\": \"JSON data\"}");
     }
 }
