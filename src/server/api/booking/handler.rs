@@ -20,7 +20,6 @@ pub async fn get_availability(
     State(hub): State<Arc<Hub>>,
     Query(query): Query<AvailabilityQuery>,
 ) -> impl IntoResponse {
-    // We would normally connect to the gRPC service, but here we can just use NativeBookingService
     let svc = crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() };
 
     let req = tonic::Request::new(CheckAvailabilityRequest {
