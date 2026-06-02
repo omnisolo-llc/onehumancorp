@@ -93,6 +93,26 @@ export default function InboxPage() {
     setShowScheduler(false);
   };
 
+  const simulateIncomingMessage = () => {
+    const incomingMsgId = Date.now();
+    setMessages(prev => [...prev, {
+      id: incomingMsgId,
+      sender: 'Customer',
+      source: 'SMS',
+      icon: '📱',
+      content: 'Are you open today?',
+      date: 'Just now'
+    }]);
+
+    setTimeout(() => {
+      setMessages(prev => prev.map(m =>
+        m.id === incomingMsgId
+          ? { ...m, draft: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?' }
+          : m
+      ));
+    }, 500);
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -107,6 +127,13 @@ export default function InboxPage() {
             title="Channel Settings"
           >
             ⚙️
+          </button>
+          <button
+            onClick={simulateIncomingMessage}
+            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
+            title="Simulate Incoming Message"
+          >
+            🤖 Simulate Incoming Message
           </button>
           <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
             Audit Dashboard
@@ -228,7 +255,7 @@ export default function InboxPage() {
                <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
                   <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Draft
+                     AI Replied
                   </div>
 
                   {editingId === msg.id ? (
