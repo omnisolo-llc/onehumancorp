@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// AutoGPT Unique Harness Innovations: Block-based visual workflow
 /// No-code agent assembly via block-connect UI.
+/// SOTA Harness Patterns (2025-2026): 3. Visual/low-code orchestration -> democratizing agent construction
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
