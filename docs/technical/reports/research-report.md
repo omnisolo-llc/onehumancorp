@@ -67,6 +67,6 @@ To adhere to the **Aesthetic Excellence Mandate**, the above visualization and t
 
 ## Validation & Feasibility
 
-Technical feasibility has been successfully verified and implemented. Modifying the `DelegateMission` method in `src/server/orchestration/sip.go` to append file contents, coupled with the new `agent_missions` schema (`id, status, payload, created_at`), is natively supported within the current Bazel ecosystem. The architecture is hermetic, scalable, and fully test-driven.
+Technical feasibility has been successfully verified and implemented. Modifying the `DelegateMission` method in `src/server/sip.rs` to append file contents, coupled with the new `agent_missions` schema (`id, status, payload, created_at`), is natively supported within the current Bazel ecosystem. The architecture is hermetic, scalable, and fully test-driven.
 
 This artifact serves as the final insight document closing the loop on the Market Audit mission.

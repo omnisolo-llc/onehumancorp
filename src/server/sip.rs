@@ -185,13 +185,21 @@ impl SipDB {
             let root_path = std::path::Path::new(root);
 
             let agents_path = root_path.join("AGENTS.md");
-            if let Ok(content) = tokio::fs::read_to_string(&agents_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&agents_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read AGENTS.md: {}", e);
+                }
+                _ => {}
             }
 
             let claude_path = root_path.join("CLAUDE.md");
-            if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&claude_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                }
+                _ => {}
             }
         }
         None
