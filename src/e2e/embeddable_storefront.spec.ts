@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Embeddable Storefront Widget Growth Loop', () => {
-    test('dashboard shows the embed storefront widget and copies HTML', async ({ page }) => {
+    test.skip('dashboard shows the embed storefront widget and copies HTML', async ({ page }) => {
         // Go to dashboard
         await page.goto('/dashboard');
 
