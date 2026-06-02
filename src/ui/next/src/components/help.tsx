@@ -291,8 +291,8 @@ export function HelpWidget() {
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
-                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
+                        ? "bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-tl-none shadow-sm"
+                        : "bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/50 text-gray-800 rounded-tr-none shadow-sm ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
@@ -314,9 +314,9 @@ export function HelpWidget() {
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 p-3 bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Send message">
+                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white p-3 rounded-xl hover:bg-blue-700/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
