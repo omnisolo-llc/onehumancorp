@@ -23,7 +23,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let mut current_depths = std::collections::HashMap::new();
 
-        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
+        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, tenant_id) VALUES ");
         let mut values = Vec::new();
 
         for _ in 0..jobs.len() {
@@ -40,7 +40,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         if !unique_tenants.is_empty() {
             let placeholders: Vec<_> = unique_tenants.iter().map(|_| "?").collect();
-            let count_query = format!("SELECT organization_id, COUNT(*) FROM sub_agent_jobs WHERE organization_id IN ({}) AND status = 'QUEUED' GROUP BY organization_id", placeholders.join(","));
+            let count_query = format!("SELECT tenant_id, COUNT(*) FROM sub_agent_jobs WHERE tenant_id IN ({}) AND status = 'QUEUED' GROUP BY tenant_id", placeholders.join(","));
 
             let mut q = sqlx::query(&count_query);
             for tenant in &unique_tenants {
@@ -83,7 +83,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = ? AND status = 'QUEUED'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE tenant_id = ? AND status = 'QUEUED'")
             .bind(&job.tenant_id)
             .fetch_one(&*self.pool)
             .await
@@ -97,7 +97,7 @@ impl TaskQueue for SQLiteTaskQueue {
         }
 
         sqlx::query(
-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
+            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, tenant_id)
              VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)"
         )
         .bind(&job.id)
@@ -132,7 +132,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id
+            "SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, tenant_id
              FROM sub_agent_jobs
              WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
              ORDER BY run_after ASC, created_at ASC
@@ -170,7 +170,7 @@ impl TaskQueue for SQLiteTaskQueue {
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at,
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
-                tenant_id: row.try_get("organization_id").unwrap_or_default(),
+                tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
             sqlx::query("UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
