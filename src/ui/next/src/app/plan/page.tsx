@@ -120,7 +120,7 @@ export default function MyPlanPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
-                            className="bg-blue-600 h-2.5 rounded-full"
+                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000 ease-out"
                             style={{
                                 width: planData?.ai_actions_limit ?
                                     `${Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100)}%`
@@ -146,7 +146,7 @@ export default function MyPlanPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
-                            className="bg-green-500 h-2.5 rounded-full"
+                            className="bg-green-500 h-2.5 rounded-full transition-all duration-1000 ease-out"
                             style={{
                                 width: planData?.storage_limit_bytes ?
                                     `${Math.min(((planData.storage_used_bytes || 0) / planData.storage_limit_bytes) * 100, 100)}%`

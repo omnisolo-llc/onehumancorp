@@ -94,6 +94,7 @@ pub async fn my_plan_handler(
     })
 }
 
+#[tracing::instrument(skip(hub, request, _headers))]
 pub async fn cost_dashboard_handler(
     _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
