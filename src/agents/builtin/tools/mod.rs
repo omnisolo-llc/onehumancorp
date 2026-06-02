@@ -96,6 +96,7 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
+    native_env: Option<Arc<RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
@@ -149,6 +150,10 @@ pub fn all_tools(
         restic::restic_tool(runner.clone()),
     ];
 
+    if let Some(env) = native_env {
+        tools.push(native_state::native_memory_stash_tool(env));
+    }
+
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
@@ -157,3 +162,4 @@ pub fn all_tools(
     tools
 }
 pub mod aider_repo_map;
+pub mod native_state;
