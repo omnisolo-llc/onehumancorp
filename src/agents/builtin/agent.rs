@@ -1474,7 +1474,7 @@ impl Agent {
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break Ok(format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg));
+                        break Ok(serde_json::to_string(&crate::types::ToolResult { tool_call_id: current_tc.id.clone(), content: String::new(), error: format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}\nPay close attention to the requested schema types.", msg) }).unwrap_or_default());
                         }
                         Err(e) => {
                             break Err(e);
@@ -1554,7 +1554,7 @@ impl Agent {
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg);
+                        break serde_json::to_string(&crate::types::ToolResult { tool_call_id: current_tc.id.clone(), content: String::new(), error: format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}\nPay close attention to the requested schema types.", msg) }).unwrap_or_default();
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
