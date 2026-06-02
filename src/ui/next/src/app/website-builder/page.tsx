@@ -38,6 +38,7 @@ export default function WebsiteBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
     // Load from backend for cross-device resume
@@ -417,7 +418,10 @@ export default function WebsiteBuilderPage() {
                       style={{ borderRadius: '8px' }}
                       placeholder="What is your business called?"
                       value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      onChange={(e) => {
+                        setBusinessName(e.target.value);
+                        setValidationError("");
+                      }}
                     />
                     <input
                       type="text"
@@ -427,10 +431,22 @@ export default function WebsiteBuilderPage() {
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                     />
+                    {validationError && (
+                      <div className="text-[#FF3B30] text-sm font-semibold mb-2">
+                        {validationError}
+                      </div>
+                    )}
                     <button
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => setWizardStep(3)}
+                      onClick={() => {
+                        if (businessName.trim().length < 3) {
+                          setValidationError("Business Name must be at least 3 characters.");
+                          return;
+                        }
+                        setValidationError("");
+                        setWizardStep(3);
+                      }}
                     >
                       Next
                     </button>
@@ -472,7 +488,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 4 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Add your first product (optional)</h1>
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
@@ -480,22 +496,53 @@ export default function WebsiteBuilderPage() {
                       style={{ borderRadius: '8px' }}
                       placeholder="What is the name of this product?"
                       value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
+                      onChange={(e) => {
+                        setProductName(e.target.value);
+                        setValidationError("");
+                      }}
                     />
-                    <input
-                      type="text"
-                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="0.00"
-                      value={productPrice}
-                      onChange={(e) => setProductPrice(e.target.value)}
-                    />
+                    <div className="relative">
+                      <span className="absolute left-4 top-4 text-gray-500">$</span>
+                      <input
+                        type="text"
+                        className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 pl-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                        style={{ borderRadius: '8px' }}
+                        placeholder="0.00"
+                        value={productPrice}
+                        onChange={(e) => {
+                          setProductPrice(e.target.value);
+                          setValidationError("");
+                        }}
+                      />
+                    </div>
+                    {validationError && (
+                      <div className="text-[#FF3B30] text-sm font-semibold mb-2">
+                        {validationError}
+                      </div>
+                    )}
                     <button
-                      disabled={!productName.trim() || !productPrice.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => setWizardStep(5)}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      onClick={() => {
+                        if (productName.trim() || productPrice.trim()) {
+                          if (isNaN(Number(productPrice)) || productPrice.trim() === '') {
+                            setValidationError("Invalid price. Please enter a valid number.");
+                            return;
+                          }
+                        }
+                        setValidationError("");
+                        setWizardStep(5);
+                      }}
                     >
                       Next
+                    </button>
+                    <button
+                      className="w-full bg-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-4 font-bold transition-all"
+                      onClick={() => {
+                        setValidationError("");
+                        setWizardStep(5);
+                      }}
+                    >
+                      Skip for now
                     </button>
                   </div>
                 </>

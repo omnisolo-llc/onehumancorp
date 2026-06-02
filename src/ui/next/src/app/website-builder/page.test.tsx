@@ -75,6 +75,43 @@ describe('WebsiteBuilderPage', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.any(Object));
   });
 
+  it('displays validation error when business name is too short', async () => {
+    render(<WebsiteBuilderPage />);
+
+    // Step 0 -> Step 1 -> Step 2
+    fireEvent.click(screen.getByText('Start My Business'));
+    fireEvent.click(screen.getByText('Online Store'));
+
+    const nameInput = screen.getByPlaceholderText('What is your business called?');
+    fireEvent.change(nameInput, { target: { value: 'A' } });
+
+    const nextBtn = screen.getByText('Next');
+    expect(nextBtn).not.toBeDisabled(); // Button enabled because it's not totally empty
+    fireEvent.click(nextBtn);
+
+    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+  });
+
+  it('displays validation error when product price is invalid', async () => {
+    render(<WebsiteBuilderPage />);
+
+    // Skip to Step 4
+    fireEvent.click(screen.getByText('Start My Business'));
+    fireEvent.click(screen.getByText('Online Store'));
+    fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
+    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByLabelText('Physical Products'));
+    fireEvent.click(screen.getByText('Next'));
+
+    // Step 4
+    fireEvent.change(screen.getByPlaceholderText('What is the name of this product?'), { target: { value: 'T-Shirt' } });
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: 'abc' } });
+
+    fireEvent.click(screen.getByText('Next'));
+
+    expect(await screen.findByText('Invalid price. Please enter a valid number.')).toBeInTheDocument();
+  });
+
   it('can follow the standard wizard flow', async () => {
     const user = userEvent.setup({ delay: null });
     render(<WebsiteBuilderPage />);
