@@ -256,3 +256,6 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 ### Slint and Flutter UI (Removed)
 
 The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
+
+### E2E Testing with Docker and Bazel
+When running e2e tests (`bazelisk test //src/e2e/...`), you might encounter errors related to Docker registry rate limiting (e.g., `pgvector/pgvector`). If you hit these unauthenticated pull rate limits, bypass Bazel for local testing of isolated specs by running the Playwright commands directly using Node (e.g., `npx playwright test src/e2e/walkthrough_cuj.spec.ts`). Mock the database behavior in the testing environments when testing UI interactions to avoid reliance on the pgvector container.
