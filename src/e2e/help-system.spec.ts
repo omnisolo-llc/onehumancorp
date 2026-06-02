@@ -68,12 +68,9 @@ test.describe('Help Center & Documentation System', () => {
         await page.goto('/dashboard');
 
         // Find help widget button via aria-label
-        const helpWidgetBtn = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '?' }).first();
-        const fallbackBtn = page.locator('button[aria-label="Help"]');
-        const theBtn = (await helpWidgetBtn.isVisible()) ? helpWidgetBtn : fallbackBtn;
-
-        await expect(theBtn).toBeVisible();
-        await theBtn.click();
+        const helpWidgetBtn = page.locator('button[aria-label="Help"]');
+        await expect(helpWidgetBtn).toBeVisible();
+        await helpWidgetBtn.click();
 
         const videosBtn = page.locator('button:has-text("Videos")');
         await expect(videosBtn).toBeVisible();
@@ -105,25 +102,11 @@ test.describe('Help Center & Documentation System', () => {
            window.localStorage.setItem('tenant_id', 'test-store');
         });
 
-        await page.goto('/builder?walkthrough=true');
+        // Go to the builder step 2 directly with bio content using store state bypassing
+        // Not possible via url, so we will use the standard KAIROS route
+        await page.goto('/kairos?walkthrough=true');
 
-        // The store is mocked, so let's try the direct interactive Walkthrough component that is present on standard pages if we click the widget button
-        await page.goto('/dashboard');
-
-        const helpWidgetBtn = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '?' }).first();
-        const fallbackBtn = page.locator('button[aria-label="Help"]');
-        const theBtn = (await helpWidgetBtn.isVisible()) ? helpWidgetBtn : fallbackBtn;
-
-        await expect(theBtn).toBeVisible();
-        await theBtn.click();
-
-        const storeTourBtn = page.locator('span:has-text("Tour: Virtual Meeting Room & UltraPlan")');
-        await expect(storeTourBtn).toBeVisible();
-        await storeTourBtn.click();
-
-        // Walkthrough bubble should show up
-        await expect(page.locator('h3').filter({ hasText: /^Tour:/ })).toBeVisible({ timeout: 5000 }).catch(() => {
-            // It might fail if the targetId (help-widget-container) is hidden or obscured by the modal itself, but the modal click is the core test
-        });
+        // Look for the speech bubble tooltip
+        await expect(page.locator('text="The Shared Task List is the \'Brain\' of your business, where KAIROS manages and prioritizes all agent activities."')).toBeVisible({ timeout: 5000 });
     });
 });
