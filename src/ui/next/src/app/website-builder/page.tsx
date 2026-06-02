@@ -286,14 +286,6 @@ export default function WebsiteBuilderPage() {
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
-                    <input
-                      type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya's Cakes"
-                      value={bio}
-                      onChange={(e) => updateBio(e.target.value)}
-                    />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(3)}
@@ -446,7 +438,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '7.5' && (
                 <>
-                  <div id="step-8" className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(8)}
@@ -479,7 +471,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '8.5' && (
                 <>
-                  <div id="step-9" className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(9)}
@@ -568,20 +560,12 @@ export default function WebsiteBuilderPage() {
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <button
-              className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-              onClick={() => window.location.href = '/dashboard'}
-            >
-              Launch My Business
-            </button>
-            <button
-              className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
-              style={{ borderRadius: '8px' }}
-            >
-              View Welcome Checklist
-            </button>
-          </div>
+          <button
+            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
+            style={{ borderRadius: '8px' }}
+          >
+            View Welcome Checklist
+          </button>
         </div>
       </div>
     );
