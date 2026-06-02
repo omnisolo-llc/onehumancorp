@@ -36,6 +36,9 @@ export default function FulfillmentHub() {
     fetchOrders();
   }, []);
 
+  const [trackingLinks, setTrackingLinks] = useState<Record<string, string>>({});
+  const [dispatchingOrder, setDispatchingOrder] = useState<string | null>(null);
+
   const handleAction = async (id: string, action: string) => {
     try {
       const res = await fetch(`/api/fulfillment/execute/${id}`, {
@@ -48,6 +51,27 @@ export default function FulfillmentHub() {
       }
     } catch (e) {
       console.error('Failed to execute action', e);
+    }
+  };
+
+  const handleRequestDriver = async (id: string) => {
+    setDispatchingOrder(id);
+    try {
+      const res = await fetch(`/api/v1/delivery/doordash-dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTrackingLinks(prev => ({ ...prev, [id]: data.trackingUrl }));
+        // Also advance the order status in the mock so it moves to awaiting pickup
+        await handleAction(id, 'mark_ready');
+      }
+    } catch (e) {
+      console.error('Failed to dispatch driver', e);
+    } finally {
+      setDispatchingOrder(null);
     }
   };
 
@@ -96,6 +120,14 @@ export default function FulfillmentHub() {
                             >
                               Print Label
                             </button>
+                          ) : order.fulfillment_mode === 'LocalDelivery' ? (
+                            <button
+                              onClick={() => handleRequestDriver(order.id)}
+                              disabled={dispatchingOrder === order.id}
+                              className={`w-full py-2.5 font-medium rounded-lg text-sm transition-colors shadow-sm ${dispatchingOrder === order.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                            >
+                              {dispatchingOrder === order.id ? 'Dispatching Dasher...' : 'Request Driver (DoorDash)'}
+                            </button>
                           ) : (
                             <button
                               onClick={() => handleAction(order.id, 'mark_ready')}
@@ -132,9 +164,16 @@ export default function FulfillmentHub() {
                             <p className="text-sm text-gray-600">{order.items.join(', ')}</p>
                           </div>
                           {order.fulfillment_mode === 'LocalDelivery' && (
-                            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              ETA: 5 mins
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                ETA: 5 mins
+                              </span>
+                              {trackingLinks[order.id] && (
+                                <a href={trackingLinks[order.id]} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">
+                                  Track Dasher
+                                </a>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="mt-4">

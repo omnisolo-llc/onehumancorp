@@ -10,6 +10,45 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [address, setAddress] = useState("");
+  const [isLocalDelivery, setIsLocalDelivery] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<number | null>(null);
+  const [quoting, setQuoting] = useState(false);
+
+  const handleAddressChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAddress(val);
+    if (isLocalDelivery && val.length > 5) {
+      setQuoting(true);
+      try {
+        const res = await fetch("/api/v1/delivery/doordash-quote");
+        const data = await res.json();
+        setDeliveryQuote(data.fee);
+      } catch (e) {
+        setDeliveryQuote(7.50); // Fallback mock fee
+      }
+      setQuoting(false);
+    } else {
+      setDeliveryQuote(null);
+    }
+  };
+
+  const handleToggleDelivery = async (checked: boolean) => {
+    setIsLocalDelivery(checked);
+    if (checked && address.length > 5) {
+      setQuoting(true);
+      try {
+        const res = await fetch("/api/v1/delivery/doordash-quote");
+        const data = await res.json();
+        setDeliveryQuote(data.fee);
+      } catch (e) {
+        setDeliveryQuote(7.50);
+      }
+      setQuoting(false);
+    } else {
+      setDeliveryQuote(null);
+    }
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -43,6 +82,39 @@ export default function CheckoutPage() {
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
+        <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <h2 className="text-lg font-semibold font-outfit text-gray-900">Delivery Information</h2>
+          <label className="flex items-center justify-between p-3 border rounded-lg bg-white/50 cursor-pointer">
+            <div>
+              <p className="font-medium text-gray-900">Local Delivery</p>
+              <p className="text-xs text-gray-500">Powered by DoorDash</p>
+            </div>
+            <input
+              type="checkbox"
+              className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+              checked={isLocalDelivery}
+              onChange={(e) => handleToggleDelivery(e.target.checked)}
+            />
+          </label>
+
+          <input
+            type="text"
+            placeholder="Enter your address"
+            value={address}
+            onChange={handleAddressChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+
+          {isLocalDelivery && (
+            <div className="bg-indigo-50 text-indigo-800 p-3 rounded-lg text-sm flex justify-between items-center border border-indigo-100">
+              <span>Delivery Fee (Estimate)</span>
+              <span className="font-bold">
+                {quoting ? 'Calculating...' : deliveryQuote ? `$${deliveryQuote.toFixed(2)}` : 'Enter address to quote'}
+              </span>
+            </div>
+          )}
+        </div>
+
         <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
