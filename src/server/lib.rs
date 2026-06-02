@@ -256,6 +256,9 @@ pub use ::server_auth as auth;
 pub mod hub;
 pub mod minimax;
 pub mod billing;
+pub mod billing_subscription;
+#[cfg(test)]
+mod billing_subscription_test;
 pub mod ultraplan;
 pub mod autodream;
 pub mod autodream_pipeline;
