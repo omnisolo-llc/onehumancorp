@@ -208,7 +208,7 @@ bazelisk run //src/server:server
 | `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
 | `OHC_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
 | `OHC_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
-| `OHC_STANDALONE_MODE` | Set `true` to force standalone mode and SQLite enforcement |
+| `OHC_STANDALONE` | Set `true` to force standalone mode and SQLite enforcement |
 | `OHC_SQLITE_KEY` | Required when using standalone SQLite-backed state |
 | `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
 | `OHC_HEADLESS` | Set `true` for API-only/headless integration behavior |

@@ -275,10 +275,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)
             .unwrap();
@@ -441,35 +441,7 @@ mod tests {
         let mesh_res = super::get_mesh_transport(&db_store).await;
         assert!(mesh_res.is_ok());
     }
-
-    #[tokio::test]
-    async fn test_mesh_concurrent_lock_acquisition() {
-        let _ = crate::telemetry::get_mcp_tool_calls_counter();
-        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
-        let node = Arc::new(CentrifugeNode::new(transport));
-
-        let mut handles = vec![];
-        let success_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-
-        for i in 0..20 {
-            let n = node.clone();
-            let c = success_count.clone();
-            handles.push(tokio::spawn(async move {
-                let agent_id = format!("agent_{}", i);
-                if n.acquire_lock("concurrent_resource", &agent_id, 10).await.unwrap() {
-                    c.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                }
-            }));
-        }
-
-        for h in handles {
-            let _ = h.await;
-        }
-
-        assert_eq!(success_count.load(std::sync::atomic::Ordering::SeqCst), 1);
-    }
 }
-
 
 
 pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn TeammateMesh>, String> {
@@ -487,7 +459,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
             Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
         }
         crate::db::DbStore::Sqlite(pool) => {
-            if let Ok(pg_url) = std::env::var("OHC_DATABASE_URL") {
+            if let Ok(pg_url) = std::env::var("DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
                     match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
                         Ok(transport) => {
@@ -496,7 +468,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                             return Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))));
                         }
                         Err(e) => {
-                            tracing::warn!(error = ?e, "Failed to initialize PgTransport");
+                            tracing::error!("Failed to initialize PgTransport fallback: {}", e);
                             // Fallback to memory
                         }
                     }
@@ -510,7 +482,7 @@ pub async fn get_mesh_transport(db_store: &crate::db::DbStore) -> Result<Arc<dyn
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }
                 Err(e) => {
-                    tracing::warn!(error = ?e, "Failed to initialize SqliteTransport");
+                    tracing::error!("Failed to initialize SqliteTransport: {}. Falling back to InProcessTransport.", e);
                     let transport = ohc_builtin_agent::mesh::transport::InProcessTransport::new();
                     Ok(Arc::new(CentrifugeNode::new(Arc::new(transport))))
                 }

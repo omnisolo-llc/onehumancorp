@@ -18,41 +18,6 @@ index 06d27a1..fbad45d 100644
      "x86_64-apple-ios-macabi": _support(std = True, host_tools = False),
      "x86_64-linux-android": _support(std = True, host_tools = False),
      "x86_64-unknown-freebsd": _support(std = True, host_tools = True),
-@@ -368,3 +370,9 @@ def abi_to_constraints(abi, *, arch = None, system = None):
-     # TODO(bazelbuild/platforms#38): Implement when C++ toolchain is more mature and we
-     # figure out how they're doing this
-+    if system == "windows":
-+        if abi == "gnullvm":
-+            all_abi_constraints.append("@rules_rust//rust/platform:windows_gnullvm")
-+        if abi == "msvc":
-+            all_abi_constraints.append("@rules_rust//rust/platform:windows_msvc")
-+
-     return all_abi_constraints
-diff --git a/rust/platform/platform.bzl b/rust/platform/platform.bzl
-index 9f2a9b1..f4a3f0e 100644
---- a/rust/platform/platform.bzl
-+++ b/rust/platform/platform.bzl
-@@ -34,6 +34,20 @@ _SUPPORTED_SYSTEMS = [
- # buildifier: disable=unnamed-macro
- def declare_config_settings():
-     """Helper function for declaring `config_setting`s"""
-+    native.constraint_setting(
-+        name = "windows_abi",
-+        default_constraint_value = ":windows_msvc",
-+    )
-+
-+    native.constraint_value(
-+        name = "windows_gnullvm",
-+        constraint_setting = ":windows_abi",
-+    )
-+    native.constraint_value(
-+        name = "windows_msvc",
-+        constraint_setting = ":windows_abi",
-+    )
-+
-     for cpu_arch in _SUPPORTED_CPU_ARCH:
-         native.config_setting(
-             name = cpu_arch,
 diff --git a/cargo/settings/settings.bzl b/cargo/settings/settings.bzl
 index 5cd0b45..6119613 100644
 --- a/cargo/settings/settings.bzl

@@ -128,9 +128,6 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -161,9 +158,6 @@ impl OperationsWorker {
                                     .bind(&tenant_id)
                                     .execute(pool)
                                     .await;
-
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
@@ -910,53 +904,7 @@ impl PromoterWorker {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let brand_context = match &db_social.store {
-                                crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar::<_, serde_json::Value>(
-                                        r#"
-                                        SELECT toolbox
-                                        FROM builder_brand_toolboxes
-                                        WHERE tenant_id::text = $1
-                                        ORDER BY updated_at DESC, created_at DESC
-                                        LIMIT 1
-                                        "#
-                                    )
-                                    .bind(org_id)
-                                    .fetch_optional(&db_social.pool)
-                                    .await
-                                    .ok()
-                                    .flatten()
-                                },
-                                crate::db::DbStore::Sqlite(pool) => {
-                                    sqlx::query_scalar::<_, String>(
-                                        "SELECT toolbox FROM builder_brand_toolboxes WHERE tenant_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1"
-                                    )
-                                    .bind(org_id)
-                                    .fetch_optional(pool)
-                                    .await
-                                    .ok()
-                                    .flatten()
-                                    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
-                                }
-                            }
-                            .and_then(|toolbox| {
-                                let dna = toolbox.get("brand_dna")?;
-                                Some(format!(
-                                    "Brand DNA: name={}, type={}, positioning={}, tone={}, colors={}",
-                                    dna.get("name").and_then(|v| v.as_str()).unwrap_or(""),
-                                    dna.get("business_type").and_then(|v| v.as_str()).unwrap_or(""),
-                                    dna.get("positioning").and_then(|v| v.as_str()).unwrap_or(""),
-                                    dna.get("tone_of_voice").map(|v| v.to_string()).unwrap_or_default(),
-                                    dna.get("colors").map(|v| v.to_string()).unwrap_or_default(),
-                                ))
-                            })
-                            .unwrap_or_else(|| "No saved Brand DNA yet; infer a simple clear brand voice from the product.".to_string());
-
-                            let prompt = format!(
-                                "Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Use this saved brand context: {}. Include captions, visual directions, and calls to action. Be professional, specific, and on-brand.",
-                                product_name,
-                                brand_context
-                            );
+                            let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
@@ -1050,83 +998,6 @@ impl PromoterWorker {
                         }
                     }
                 }
-            }
-        });
-    }
-}
-
-pub struct AdvisorWorker {
-    pub db: Arc<DB>,
-}
-
-impl AdvisorWorker {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
-    }
-
-    pub fn start(&self) {
-        let db = self.db.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
-            loop {
-                interval.tick().await;
-                let mut transaction = match db.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(_) => continue,
-                };
-                // Grab pending reports with SKIP LOCKED
-                let reports: Vec<(String, String)> = match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED")
-                            .fetch_all(&mut *transaction)
-                            .await
-                            .unwrap_or_default()
-                    },
-                    crate::db::DbStore::Sqlite(_) => {
-                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING'")
-                            .fetch_all(&mut *transaction)
-                            .await
-                            .unwrap_or_default()
-                    }
-                };
-
-                for (report_id, _tenant_id) in reports {
-                    let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
-                    let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();
-
-                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                            prompt,
-                            from_agent_id: "The Advisor".into(),
-                        };
-                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                            drafted_msg = res.into_inner().content;
-                        }
-                    }
-
-                    let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
-                        "summary": drafted_msg,
-                        "actionable_suggestion": "Consider adding a new vegan option."
-                    }));
-
-                    match &db.store {
-                        crate::db::DbStore::Postgres => {
-                            let _ = sqlx::query("UPDATE advisory_reports SET status = 'COMPLETED', payload = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
-                                .bind(parsed)
-                                .bind(&report_id)
-                                .execute(&mut *transaction)
-                                .await;
-                        },
-                        crate::db::DbStore::Sqlite(_) => {
-                             let _ = sqlx::query("UPDATE advisory_reports SET status = 'COMPLETED', payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                                .bind(parsed.to_string())
-                                .bind(&report_id)
-                                .execute(&mut *transaction)
-                                .await;
-                        }
-                    }
-                }
-                let _ = transaction.commit().await;
             }
         });
     }

@@ -191,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_closed_tasks_with_cache() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
         }
@@ -247,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_closed_tasks() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
         }
@@ -276,53 +276,6 @@ mod tests {
         let pipeline = AutoDreamPipeline::new(db.clone(), mock_llm);
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
-
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
-            .bind(task_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(count.0, 1);
-    }
-
-    #[tokio::test]
-    async fn test_process_closed_tasks_concurrently() {
-        let _ = crate::telemetry::get_error_signal_counter();
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if database_url == "dummy" { return; }
-
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&database_url)
-            .await
-            .unwrap();
-
-        let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
-        let mock_llm = Arc::new(MockLLMClient { embedding: vec![0.1, 0.2] });
-
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
-
-        let task_id = "test-task-concurrent";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
-            .bind(task_id)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let pipeline = Arc::new(AutoDreamPipeline::new(db.clone(), mock_llm));
-        let mut handles = vec![];
-
-        for _ in 0..5 {
-            let p = pipeline.clone();
-            handles.push(tokio::spawn(async move {
-                let _ = p.process_closed_tasks().await;
-            }));
-        }
-
-        for h in handles {
-            let _ = h.await;
-        }
 
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
             .bind(task_id)

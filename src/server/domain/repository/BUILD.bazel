@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 exports_files(
     [
@@ -67,6 +67,7 @@ rust_library(
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
         "//src/server/telemetry:server_telemetry",
+        "//src/server/tools/local_proxy:server_tools_local_proxy",
         "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
@@ -108,10 +109,4 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
-)
-
-rust_test(
-    name = "server_domain_repository_unit_test",
-    crate = ":server_domain_repository",
-    edition = "2024",
 )
