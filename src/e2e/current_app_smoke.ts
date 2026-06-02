@@ -7,8 +7,9 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByText('Business Snapshot').first()).toBeVisible();
 
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
+    await page.goto('/team');
+    await expect(page.getByRole('heading', { name: 'Your Team' }).first()).toBeVisible();
+    await expect(page.locator('#voice-ai-config').first()).toBeVisible();
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible();
