@@ -5,3 +5,4 @@ pub mod webhook;
 pub mod settings;
 pub mod chat;
 pub mod aiaas;
+pub mod aiaas;

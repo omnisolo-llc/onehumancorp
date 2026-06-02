@@ -118,6 +118,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:chaos_test.rs",
     "//src/server/orchestration:dynamic_workflows.rs",
     "//src/server/orchestration:aiaas.rs",
+    "//src/server/orchestration:aiaas.rs",
     "//src/server/orchestration:handoff.rs",
     "//src/server/orchestration:health.rs",
     "//src/server/orchestration:hierarchical.rs",
