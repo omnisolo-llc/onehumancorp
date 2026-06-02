@@ -7,6 +7,17 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./setupTests.ts'],
-    exclude: ['**/node_modules/**', '**/e2e/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/e2e/**',
+      'src/ui/next/**',
+      'bazel-app/**',
+      'bazel-bin/**',
+      'bazel-out/**',
+      'bazel-testlogs/**',
+      'bazel-mono/**',
+      'bazel-**/**',
+      'verification_tests/**'
+    ],
   }
 })
