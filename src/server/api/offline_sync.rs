@@ -7,6 +7,8 @@ pub struct OfflineMutation {
     pub transaction_id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
+    pub currency: Option<String>,
+    pub amount: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -38,6 +40,8 @@ pub async fn offline_sync_handler(
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    let universal_ledger = crate::orchestration::queue::ohc_universal_ledger::OHCUniversalLedger::new(db.clone().into());
 
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
@@ -72,6 +76,10 @@ pub async fn offline_sync_handler(
                     }).to_string().into_bytes(),
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
+
+                if let (Some(currency), Some(amount)) = (&mutation.currency, mutation.amount) {
+                    let _ = universal_ledger.append_multi_currency_entry(&tenant_id, "Finance", &mutation.transaction_id, &mutation.product_id, mutation.quantity_deducted, currency, *amount).await;
+                }
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
@@ -133,6 +141,8 @@ mod tests {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
+                    currency: Some("USD".to_string()),
+                    amount: Some(15.0),
                 },
             ],
         };
@@ -154,6 +164,8 @@ mod tests {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
+                    currency: Some("USD".to_string()),
+                    amount: Some(50.0),
                 },
             ],
         };

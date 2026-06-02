@@ -1,8 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+
+
+const LOCALES: Record<string, { label: string, payNow: string, cancel: string, processing: string, success: string }> = {
+  en: { label: "English", payNow: "Pay Now", cancel: "Cancel", processing: "Processing...", success: "Payment Successful!" },
+  ar: { label: "العربية", payNow: "ادفع الآن", cancel: "إلغاء", processing: "جاري المعالجة...", success: "تم الدفع بنجاح!" },
+  es: { label: "Español", payNow: "Pagar Ahora", cancel: "Cancelar", processing: "Procesando...", success: "¡Pago Exitoso!" },
+};
+
+const CURRENCIES = ["USD", "EUR", "GBP", "AED", "BRL"];
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -10,6 +19,27 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [locale, setLocale] = useState('en');
+  const [currency, setCurrency] = useState('USD');
+
+  useEffect(() => {
+    try {
+       const cachedLocale = localStorage.getItem('ohc_offline_locale');
+       if (cachedLocale && LOCALES[cachedLocale]) setLocale(cachedLocale);
+       const cachedCurrency = localStorage.getItem('ohc_offline_currency');
+       if (cachedCurrency && CURRENCIES.includes(cachedCurrency)) setCurrency(cachedCurrency);
+    } catch(e) {}
+  }, []);
+
+  const handleLocaleChange = (newLocale: string) => {
+    setLocale(newLocale);
+    try { localStorage.setItem('ohc_offline_locale', newLocale); } catch(e) {}
+  };
+
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency);
+    try { localStorage.setItem('ohc_offline_currency', newCurrency); } catch(e) {}
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -40,6 +70,18 @@ export default function CheckoutPage() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <div className="flex gap-2">
+          <select value={locale} onChange={e => handleLocaleChange(e.target.value)} className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none">
+            {Object.keys(LOCALES).map(key => (
+              <option key={key} value={key}>{LOCALES[key].label}</option>
+            ))}
+          </select>
+          <select value={currency} onChange={e => handleCurrencyChange(e.target.value)} className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none">
+            {CURRENCIES.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
@@ -54,7 +96,7 @@ export default function CheckoutPage() {
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
+              {isProcessing ? LOCALES[locale].processing : LOCALES[locale].payNow}
             </button>
           </WithTooltip>
 
@@ -78,6 +120,7 @@ export default function CheckoutPage() {
                     amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
+                    currency: currency,
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
@@ -108,7 +151,7 @@ export default function CheckoutPage() {
               onClick={() => router.push('/pricing')}
               className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              Cancel
+              {LOCALES[locale].cancel}
             </button>
           </WithTooltip>
         </div>

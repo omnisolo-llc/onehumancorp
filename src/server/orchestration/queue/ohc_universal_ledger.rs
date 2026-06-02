@@ -45,6 +45,17 @@ impl OHCUniversalLedger {
         Ok(entry_id)
     }
 
+    pub async fn append_multi_currency_entry(&self, tenant_id: &str, department: &str, transaction_id: &str, product_id: &str, quantity: i32, currency: &str, amount: f64) -> Result<String, String> {
+        let payload = serde_json::json!({
+            "product_id": product_id,
+            "transaction_id": transaction_id,
+            "quantity_deducted": quantity,
+            "currency": currency,
+            "amount": amount
+        });
+        self.append_entry(tenant_id, "OfflineSync", department, &payload).await
+    }
+
     pub async fn get_entries(&self, tenant_id: &str, limit: i64) -> Result<Vec<OHCLedgerEntry>, String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
