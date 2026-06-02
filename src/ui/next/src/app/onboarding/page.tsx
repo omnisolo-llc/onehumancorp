@@ -111,7 +111,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && chatStep === 1 && !businessName) return;
+    // Removed condition to ensure all state changes save
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -252,12 +252,12 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex items-center justify-center flex-col px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
       {/* Background Glows for Premium Aesthetic */}
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[24px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto rounded-[24px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative bg-white/40 dark:bg-black/40 backdrop-blur-[20px] saturate-200 border border-white/50 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
