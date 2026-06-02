@@ -74,6 +74,15 @@ impl PlanTier {
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
+
+    pub fn base_price(&self) -> f64 {
+        match self {
+            PlanTier::Free => 0.0,
+            PlanTier::Starter => 29.0,
+            PlanTier::Pro => 79.0,
+            PlanTier::Business => 299.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +108,7 @@ impl RedisRateLimiter {
         self
     }
 
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?;
@@ -390,11 +399,16 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+
+        assert_eq!(PlanTier::Free.base_price(), 0.0);
+        assert_eq!(PlanTier::Starter.base_price(), 29.0);
+        assert_eq!(PlanTier::Pro.base_price(), 79.0);
+        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[tokio::test]
     async fn test_check_product_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-no-mutation";
@@ -432,7 +446,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_storage_quota() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-quota";
@@ -463,7 +477,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_agent_quota() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-agent-quota";
@@ -489,7 +503,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_action_monthly_reset() {
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-monthly-reset";

@@ -1,3 +1,10 @@
+
+
+
+use std::sync::OnceLock;
+use crate::utils::cache::HybridCache;
+
+pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -81,7 +88,6 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
-        .route("/campaign/generate-seasonal-promo", post(handle_generate_seasonal_promo))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -136,17 +142,6 @@ pub struct GenerateCartRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
     pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateSeasonalPromoRequest {
-    pub occasion: String,
-    pub discount: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateSeasonalPromoResponse {
-    pub html_content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -216,42 +211,6 @@ async fn handle_generate_review(
 
     Json(GenerateReviewResponse {
         message: generated,
-    })
-}
-
-async fn handle_generate_seasonal_promo(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateSeasonalPromoRequest>,
-) -> impl IntoResponse {
-    // Basic sanitization
-    let occasion = req.occasion.replace("<", "&lt;").replace(">", "&gt;");
-    let discount = req.discount.replace("<", "&lt;").replace(">", "&gt;");
-
-    let code_occasion: String = occasion
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
-        .collect::<String>()
-        .to_uppercase()
-        .chars()
-        .take(8)
-        .collect();
-
-    let code_discount: String = discount
-        .chars()
-        .filter(|c| c.is_ascii_digit())
-        .collect();
-
-    let code = format!("{}{}", code_occasion, code_discount);
-
-    let hashtag_occasion = occasion.replace(" ", "");
-
-    let html_content = format!(
-        "🎉 <b>{} Special!</b><br><br>Get ready for our amazing {} deals! For a limited time, enjoy <b>{}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>{}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #{}",
-        occasion, occasion, discount, code, hashtag_occasion
-    );
-
-    Json(GenerateSeasonalPromoResponse {
-        html_content,
     })
 }
 
@@ -409,6 +368,22 @@ async fn handle_og_card(
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&safe_name));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -422,10 +397,11 @@ async fn handle_og_card(
   <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_check_milestones(
@@ -435,13 +411,20 @@ async fn handle_check_milestones(
     use sqlx::Row;
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
-    let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-        .bind(tenant_id)
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default();
-
-    let reached_types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+    let cache_key = format!("growth:milestones:{}", tenant_id);
+    let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
+    let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
+        cached_types
+    } else {
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
+        types
+    };
 
     let milestones = vec![
         Milestone {
@@ -470,6 +453,7 @@ async fn handle_check_milestones(
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
+    pub mobile: Option<bool>,
 }
 
 async fn handle_get_milestone_card(
@@ -509,6 +493,22 @@ async fn handle_get_milestone_card(
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&title));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -528,10 +528,11 @@ async fn handle_get_milestone_card(
   <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_get_team_invites(
@@ -770,7 +771,7 @@ mod tests {
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -838,7 +839,7 @@ mod tests {
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -888,7 +889,7 @@ mod tests {
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -929,7 +930,7 @@ mod tests {
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -990,32 +991,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_generate_seasonal_promo() {
-        let pool = setup_db().await;
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        let req = GenerateSeasonalPromoRequest {
-            occasion: "Summer Sale".to_string(),
-            discount: "20".to_string(),
-        };
-        let res = handle_generate_seasonal_promo(Extension(state.clone()), Json(req)).await;
-
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
-        let res_json: GenerateSeasonalPromoResponse = serde_json::from_slice(&body_bytes).unwrap();
-
-        assert!(res_json.html_content.contains("Summer Sale"));
-        assert!(res_json.html_content.contains("20% OFF"));
-        assert!(res_json.html_content.contains("SUMMERSA20"));
-        assert!(res_json.html_content.contains("#SummerSale"));
-    }
-
-    #[tokio::test]
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -1050,7 +1029,7 @@ mod tests {
     async fn test_onboarding_metrics() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 

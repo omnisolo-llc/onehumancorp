@@ -72,7 +72,7 @@ graph TD
 
 ### 4.1 Lifecycle Management
 The Slint desktop shell acts as the supervisor for the embedded Rust backend.
-1.  **Boot**: App starts -> Checks for `OHC_STANDALONE_MODE=true` -> Spawns `ohc-server` child process -> Waits for `/healthz`.
+1.  **Boot**: App starts -> Checks for `OHC_STANDALONE=true` -> Spawns `ohc-server` child process -> Waits for `/healthz`.
 2.  **State**: App points internal HTTP clients to `http://localhost:<dynamic_port>`.
 3.  **Teardown**: App closed -> Sends graceful shutdown signal (SIGTERM) to Rust process.
 

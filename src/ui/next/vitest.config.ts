@@ -1,12 +1,30 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
   test: {
-    globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    exclude: ['**/node_modules/**', '**/e2e/**', '**/*.spec.ts'],
-  }
+    globals: true,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+      '**/.next/**',
+      '**/coverage/**',
+      '**/api/**', // API routes require Next.js specific testing utilities or E2E tests
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+    },
+  },
+  resolve: {
+    preserveSymlinks: true,
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 })

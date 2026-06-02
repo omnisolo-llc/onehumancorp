@@ -74,6 +74,9 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 
         // Env vars with OHC_ prefix
         .add_source(::config::Environment::with_prefix("OHC"))
+
+        // Env vars without prefix (for standard ones like DATABASE_URL)
+        .add_source(::config::Environment::default())
         .build()?;
 
     let mut cfg: AppConfig = s.try_deserialize()?;
@@ -127,7 +130,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
             if db_url.starts_with("sqlite://") {
-                db_url.split('?').next().unwrap().to_string()
+                db_url.split('?').next().unwrap_or(db_url).to_string()
             } else {
                 tracing::info!("standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
                 default_sqlite_url
@@ -138,20 +141,20 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         if let Some(redis_url) = &cfg.redis_url {
             if !redis_url.is_empty() {
-                tracing::info!("standalone: OHC_REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
+                tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
             }
         }
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, key)
+                base_sqlite_url.clone()
             } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+                base_sqlite_url.clone()
             } else {
                 base_sqlite_url
             }
         } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
+            base_sqlite_url.clone()
         } else {
             base_sqlite_url
         };

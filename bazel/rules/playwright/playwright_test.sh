@@ -1,8 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ -z "${TEST_SRCDIR:-}" || -z "${TEST_TMPDIR:-}" ]]; then
+  echo "[playwright] Error: Playwright tests must run under Bazel with TEST_SRCDIR and TEST_TMPDIR set." >&2
+  exit 1
+fi
+
 RUNFILES_ROOT="${RUNFILES_ROOT:-}"
-if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
+if [[ -z "$RUNFILES_ROOT" ]]; then
   if [[ -n "${TEST_WORKSPACE:-}" && -d "$TEST_SRCDIR/$TEST_WORKSPACE" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR/$TEST_WORKSPACE"
   elif [[ -d "$TEST_SRCDIR/_main" ]]; then
@@ -11,24 +16,13 @@ if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR"
   fi
 fi
-if [[ -z "$RUNFILES_ROOT" ]]; then
-  RUNFILES_ROOT="$(pwd)"
-fi
 
-# Traverse up to find the real repository/workspace root containing node_modules
-workspace_root=""
-current_dir="$(pwd)"
-while [[ "$current_dir" != "/" ]]; do
-  if [[ -d "$current_dir/node_modules" && -f "$current_dir/package.json" ]]; then
-    workspace_root="$current_dir"
-    break
-  fi
-  current_dir="$(dirname "$current_dir")"
-done
-
-if [[ -z "$workspace_root" ]]; then
-  workspace_root="$(pwd)"
+workspace_root="$RUNFILES_ROOT"
+if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules" ]]; then
+  echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
+  exit 1
 fi
+cd "$workspace_root"
 
 # Resolve spec files to absolute paths if passed as arguments.
 ABS_SPEC_FILES=()
@@ -82,19 +76,19 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
 fi
 
 # Resolve server binary path
-server_bin=""
+SERVER_BIN=""
 for candidate in "src/server/server" "../_main/src/server/server"; do
   if [[ -x "$candidate" ]]; then
-    server_bin="$(realpath "$candidate")"
+    SERVER_BIN="$(realpath "$candidate")"
     break
   fi
 done
 
-export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
+export HOME="${HOME:-$TEST_TMPDIR/home}"
 mkdir -p "$HOME"
 
 # Run Playwright from a writable project-shaped directory.
-WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
+WORK_DIR="$TEST_TMPDIR/playwright-workspace"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/src/server"
 cp "$workspace_root/package.json" "$WORK_DIR/package.json"
@@ -160,29 +154,15 @@ RAND_ID=$(head /dev/urandom | tr -dc a-z0-9 | head -c 6)
 CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RAND_ID}"
 POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
-PORT_LOCK_ROOT="${TMPDIR:-/tmp}/ohc-e2e-port-locks"
-PORT_LOCKS=()
-mkdir -p "$PORT_LOCK_ROOT"
 
 pick_free_port() {
-  local port
-  local lock_dir
-  while true; do
-    port="$(python3 - <<'PY'
+  python3 - <<'PY'
 import socket
 
 with socket.socket() as sock:
-    sock.bind(("0.0.0.0", 0))
+    sock.bind(("127.0.0.1", 0))
     print(sock.getsockname()[1])
 PY
-)"
-    lock_dir="$PORT_LOCK_ROOT/${port}.lock"
-    if mkdir "$lock_dir" 2>/dev/null; then
-      PORT_LOCKS+=("$lock_dir")
-      echo "$port"
-      return 0
-    fi
-  done
 }
 
 cleanup() {
@@ -192,9 +172,6 @@ cleanup() {
     wait "$SERVER_PID" >/dev/null 2>&1 || true
   fi
   docker rm -f "$POSTGRES_NAME" "$VALKEY_NAME" >/dev/null 2>&1 || true
-  if (( ${#PORT_LOCKS[@]} > 0 )); then
-    rm -rf "${PORT_LOCKS[@]}" >/dev/null 2>&1 || true
-  fi
   exit "$exit_code"
 }
 trap cleanup EXIT
@@ -248,10 +225,10 @@ echo "[playwright] Initializing database roles..."
 postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
 postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
 
-if [[ -z "$server_bin" ]]; then
+if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
     if [[ -x "$candidate" ]]; then
-      server_bin="$candidate"
+      SERVER_BIN="$candidate"
       break
     fi
   done
@@ -263,19 +240,19 @@ OHC_GRPC_SERVER_PORT="$(pick_free_port)"
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
-export OHC_E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
-export OHC_BASE_URL="http://localhost:$OHC_SERVER_PORT"
+export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
+export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
-if [[ -n "${server_bin:-}" && -x "${server_bin:-}" ]]; then
-  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $server_bin..."
-  OHC_DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  OHC_REDIS_URL="redis://127.0.0.1:$VK_PORT" \
-  OHC_JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
+if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
+  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
+  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$server_bin" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+    "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
@@ -286,12 +263,12 @@ if [[ -n "${server_bin:-}" && -x "${server_bin:-}" ]]; then
     fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died."
-      tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -20 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     if (( i == 120 )); then
       echo "[playwright] Error: Server failed to become healthy after 120 seconds."
-      tail -50 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -50 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     sleep 1
@@ -328,7 +305,7 @@ fi
 # Run Playwright
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"
+  LIST_LOG="$TEST_TMPDIR/playwright-list.log"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
     if grep -q "No tests found" "$LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."

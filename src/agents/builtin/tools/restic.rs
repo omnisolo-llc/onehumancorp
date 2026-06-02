@@ -16,8 +16,8 @@ impl ToolExecutor for ResticExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("restic: action is required (snapshot, restore, status)".to_string()))?;
 
-        let repo = std::env::var("OHC_RESTIC_REPOSITORY").unwrap_or_else(|_| "/tmp/restic-repo".to_string());
-        let password = std::env::var("OHC_RESTIC_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
+        let repo = std::env::var("RESTIC_REPOSITORY").unwrap_or_else(|_| "/tmp/restic-repo".to_string());
+        let password = std::env::var("RESTIC_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
 
         let timeout = Duration::from_secs(300);
 

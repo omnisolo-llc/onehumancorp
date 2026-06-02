@@ -98,15 +98,16 @@ async fn handle_webhook(
     let risk = ActionRisk::DraftForReview;
 
     // Generate a draft reply
-    let api_key = std::env::var("OHC_MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let draft_reply = if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(
             "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
             business_context, payload.message
         );
+        let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
         let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+        client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
     };
