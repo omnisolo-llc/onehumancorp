@@ -67,6 +67,7 @@ pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;
+pub mod plan_and_execute;
 
 pub mod tool_executor_engine;
 pub mod ruflo_plugins;
