@@ -83,7 +83,7 @@ export default function AutoCatalogPage() {
       )}
 
       {productData && !loading && (
-        <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
+        <div id="auto-catalog-form" className="flex-1 flex flex-col gap-6 animate-fade-in-up">
            <div className="w-full aspect-square bg-gray-200 rounded-2xl overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center">
                  <div className="text-6xl">🧁</div>
