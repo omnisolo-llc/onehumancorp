@@ -89,7 +89,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left + (targetRect.width / 2),
           transform: 'translateX(-50%)'
         };
-        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white border-x-transparent border-t-0 border-8";
+        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
         break;
       case 'top':
         bubbleStyle = {
@@ -97,7 +97,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left + (targetRect.width / 2),
           transform: 'translate(-50%, -100%)'
         };
-        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white border-x-transparent border-b-0 border-8";
+        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
         break;
       case 'right':
          bubbleStyle = {
@@ -105,7 +105,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.right + margin,
           transform: 'translateY(-50%)'
         };
-        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white border-y-transparent border-l-0 border-8";
+        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white/90 border-y-transparent border-l-0 border-8";
         break;
       case 'left':
          bubbleStyle = {
@@ -113,7 +113,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left - margin,
           transform: 'translate(-100%, -50%)'
         };
-        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white border-y-transparent border-r-0 border-8";
+        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8";
         break;
     }
   }
@@ -135,29 +135,29 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       {/* Speech Bubble */}
       <div
-        className="fixed z-[1000] bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/50 rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white', 'white/80')}`}></div>
+           <div className={`absolute w-0 h-0 border-solid ${arrowClass}`}></div>
         )}
 
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-bold font-outfit text-gray-900 text-lg">{currentStep.title}</h3>
-          <button onClick={handleSkip} className="text-gray-500 hover:text-gray-900 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h3>
+          <button onClick={handleSkip} className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <p className="text-sm text-gray-700 mb-4 leading-relaxed">{currentStep.content}</p>
+        <p className="text-sm text-gray-700 mb-5 leading-relaxed">{currentStep.content}</p>
 
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-500">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-100/80">
+          <span className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
             Step {currentStepIndex + 1} of {steps.length}
           </span>
           <button
             onClick={handleNext}
-            className="bg-blue-600/90 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-transform"
+            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>
