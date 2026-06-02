@@ -71,7 +71,8 @@ async fn handle_chat(
         None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
     };
 
-    let (dept, description, payload_json) = determine_routing(&payload.message);
+    let compressed_message = ::server_pricing::compression::reduce_tokens(&payload.message);
+    let (dept, description, payload_json) = determine_routing(&compressed_message);
 
     match orchestrator.execute_action(
         dept.clone(),
