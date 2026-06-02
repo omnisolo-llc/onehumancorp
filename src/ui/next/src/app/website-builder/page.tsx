@@ -207,7 +207,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Review and add any extra details to help our AI generate the perfect store.
+                    Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
                   </p>
 
                   <div className="flex flex-col gap-4">
@@ -243,6 +243,12 @@ export default function WebsiteBuilderPage() {
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
+                    </button>
+                    <button
+                      className="w-full bg-gray-100 text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-200 transition-all mt-4"
+                      onClick={() => setWizardStep(0)}
+                    >
+                      Back
                     </button>
                   </div>
                 </>

@@ -454,6 +454,14 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+         <section className="mb-2 animate-fade-in flex gap-4">
+             <Link href="/agents" className="px-4 py-2 bg-white border border-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center">
+                 Manage AI Assistants
+             </Link>
+             <Link href="/settings" className="px-4 py-2 bg-white border border-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center">
+                 Settings
+             </Link>
+         </section>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">

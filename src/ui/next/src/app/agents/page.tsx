@@ -122,7 +122,7 @@ export default function AgentsPage() {
   const departments = [
     { id: 'operations', name: 'The Manager', role: 'Operations', icon: '⚙️', description: 'Handles inventory, orders, and fulfillment.' },
     { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', icon: '🤝', description: 'Responds to customer inquiries and builds loyalty.' },
-    { id: 'marketing', name: 'The Promoter', role: 'Marketing', icon: '📣', description: 'Creates social posts and promotional campaigns.' },
+    { id: 'marketing', name: 'Marketing Pro', role: 'Marketing', icon: '📣', description: 'Creates social posts and promotional campaigns.' },
     { id: 'sales', name: 'The Closer', role: 'Sales', icon: '💼', description: 'Generates quotes and follows up on leads.' },
     { id: 'finance', name: 'The Accountant', role: 'Finance', icon: '💰', description: 'Tracks expenses and generates invoices.' },
     { id: 'legal', name: 'The Counsel', role: 'Legal', icon: '⚖️', description: 'Drafts contracts and handles compliance.' },
@@ -150,7 +150,7 @@ export default function AgentsPage() {
               </button>
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">AI Departments</h1>
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900">Agents</h1>
           <p className="text-sm text-gray-500 mt-1">Your autonomous business team.</p>
         </header>
 
