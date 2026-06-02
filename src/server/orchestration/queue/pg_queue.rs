@@ -22,7 +22,7 @@ impl TaskQueue for PgTaskQueue {
 
         let mut current_depths = std::collections::HashMap::new();
 
-        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
+        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, tenant_id) VALUES ");
         let mut values = Vec::new();
 
         for i in 0..jobs.len() {
@@ -40,7 +40,7 @@ impl TaskQueue for PgTaskQueue {
 
         let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
         if !tenants_vec.is_empty() {
-            if let Ok(rows) = sqlx::query("SELECT organization_id, COUNT(*) FROM sub_agent_jobs WHERE organization_id = ANY($1) AND status = 'QUEUED' GROUP BY organization_id")
+            if let Ok(rows) = sqlx::query("SELECT tenant_id, COUNT(*) FROM sub_agent_jobs WHERE tenant_id = ANY($1) AND status = 'QUEUED' GROUP BY tenant_id")
                 .bind(&tenants_vec)
                 .fetch_all(&mut *tx)
                 .await
@@ -83,7 +83,7 @@ impl TaskQueue for PgTaskQueue {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE tenant_id = $1 AND status = 'QUEUED'")
             .bind(&job.tenant_id)
             .fetch_one(&*self.pool)
             .await
@@ -97,7 +97,7 @@ impl TaskQueue for PgTaskQueue {
         }
 
         sqlx::query(
-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
+            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, tenant_id)
              VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
         )
         .bind(&job.id)
@@ -129,7 +129,7 @@ impl TaskQueue for PgTaskQueue {
                  ORDER BY run_after ASC, created_at ASC
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED
-             ) RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id",
+             ) RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, tenant_id",
             role_placeholders
         );
 
@@ -166,7 +166,7 @@ impl TaskQueue for PgTaskQueue {
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at,
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
-                tenant_id: row.try_get("organization_id").unwrap_or_default(),
+                tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
             tx.commit().await.map_err(|e| e.to_string())?;
