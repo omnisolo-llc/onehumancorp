@@ -124,7 +124,7 @@ export default function CostDashboardPage() {
                         <span id="cost-dashboard-llm" className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
-                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
+                    <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">

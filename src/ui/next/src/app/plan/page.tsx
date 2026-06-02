@@ -89,7 +89,7 @@ export default function MyPlanPage() {
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Current Plan:</h2>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
