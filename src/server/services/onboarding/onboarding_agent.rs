@@ -131,137 +131,46 @@ impl OnboardingAgent {
         let start_time = std::time::Instant::now();
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
-        let business_type = req.business_type.clone();
-        let company_name = req.company_name.clone();
-
-        // Use organization id as tenant id if not provided
-        let _tenant_id = org_id.clone();
+        let business_type = if req.business_type.trim().is_empty() { "Online Store".to_string() } else { req.business_type.clone() };
+        let company_name = if req.company_name.trim().is_empty() { "My Business".to_string() } else { req.company_name.clone() };
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
-        let email = req.admin_email.clone();
-        let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
-        let password = req.admin_password.clone();
-        let location = req.location.clone();
+        let email = if req.admin_email.trim().is_empty() { "admin@ohc.app".to_string() } else { req.admin_email.clone() };
+        let username = if req.admin_name.trim().is_empty() { email.clone() } else { req.admin_name.clone() };
+        let password = if req.admin_password.trim().is_empty() { "password123".to_string() } else { req.admin_password.clone() };
+        let location = if req.location.trim().is_empty() { "Global".to_string() } else { req.location.clone() };
+        let website_template = if req.website_template.trim().is_empty() { "Modern".to_string() } else { req.website_template.clone() };
 
-        let req_first_product_name = req.first_product_name.clone();
-        let req_first_product_price = req.first_product_price.clone();
-        let req_price_type = req.price_type.clone();
-        let org_id_clone1 = org_id.clone();
-        let org_id_clone2 = org_id.clone();
-        let business_type_clone = business_type.clone();
+        let req_first_product_name = if req.first_product_name.trim().is_empty() { "First Product".to_string() } else { req.first_product_name.clone() };
+        let req_first_product_price = if req.first_product_price.trim().is_empty() { "10.00".to_string() } else { req.first_product_price.clone() };
+        let req_price_type = if req.price_type.trim().is_empty() { "fixed".to_string() } else { req.price_type.clone() };
 
-        let agent_clone_product = self.clone();
-        let product_future = tokio::task::spawn(async move {
-            if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
-            } else {
-                // If it's a "born live" conversational intake, we might have multiple products
-                // but for now we follow the legacy pattern or seed based on type
-                agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
-            }
-        });
+        if !email.contains("@") {
+            return Err("Invalid email address".to_string());
+        }
 
-        let agent_clone_seed = self.clone();
-        let seed_future = tokio::task::spawn(async move {
-            agent_clone_seed.seed_default_agents(&org_id_clone2).await
-        });
+        // Start a database transaction
+        let mut tx = self.db.pool.begin().await.map_err(|e| format!("Failed to start transaction: {}", e))?;
 
-        let org_id_clone3 = org_id.clone();
-        let pool = self.db.pool.clone();
-        let hub_clone = self.hub.clone();
-        let company_name_clone = company_name.clone();
-        let business_type_clone_2 = business_type.clone();
+        // 1. Create Tenant
+        sqlx::query(
+            "INSERT INTO tenants (tenant_id, business_name, tier) VALUES ($1, $2, $3) ON CONFLICT (tenant_id) DO UPDATE SET business_name = EXCLUDED.business_name"
+        )
+        .bind(&org_id)
+        .bind(&company_name)
+        .bind("starter")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to create tenant: {}", e))?;
 
-        let publish_events_future = tokio::task::spawn(async move {
-            // Subscribe default AI Agents to specific tenant events dynamically
-            let event_topics = vec![
-                ("The Manager", "tenant.booking.created"),
-                ("The Manager", "tenant.order.placed"),
-                ("The Promoter", "tenant.product.created"),
-                ("The Salesperson", "tenant.lead.created"),
-                ("The Ambassador", "tenant.message.received"),
-                ("The Accountant", "tenant.payment.success"),
-                ("The Protector", "tenant.contract.signed"),
-                ("The Advisor", "tenant.report.generated"),
-                ("The Scout", "tenant.seo.optimized"),
-            ];
-
-            for (agent_role, topic) in event_topics {
-                let _ = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
-                    .bind(&org_id_clone3)
-                    .bind(agent_role)
-                    .bind(topic)
-                    .execute(&pool)
-                    .await;
-            }
-
-            // Trigger KAIROS Orchestration for initial artifacts
-            let storefront_event = ::server_ohc::orchestration::TeammateMeshEvent {
-                agent_id: "system".to_string(),
-                action: "GenerateStorefront".to_string(),
-                status: "pending".to_string(),
-                payload: serde_json::to_vec(&json!({
-                    "organization_id": org_id_clone3,
-                    "company_name": company_name_clone,
-                    "business_type": business_type_clone_2,
-                })).unwrap_or_default(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
-            let _ = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event);
-
-            let policy_event = ::server_ohc::orchestration::TeammateMeshEvent {
-                agent_id: "system".to_string(),
-                action: "GeneratePolicies".to_string(),
-                status: "pending".to_string(),
-                payload: serde_json::to_vec(&json!({
-                    "organization_id": org_id_clone3,
-                    "company_name": company_name_clone,
-                })).unwrap_or_default(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            };
-            let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
-
-
-            // Schedule the weekly health report via the internal task queue for The Advisor
-            let scheduled_at = chrono::Utc::now() + chrono::Duration::days(7);
-            let payload = serde_json::json!({
-                "agent_role": "The Advisor",
-                "task": "weekly_health_report",
-                "tenant_id": org_id_clone3.clone()
-            });
-            if let Err(e) = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                .bind(uuid::Uuid::new_v4().to_string())
-                .bind(&org_id_clone3)
-                .bind(serde_json::to_string(&payload).unwrap_or_default())
-                .bind(scheduled_at.naive_utc())
-                .execute(&pool)
-                .await
-            {
-                tracing::error!("Failed to schedule weekly health report: {}", e);
-            }
-
-            Ok::<(), String>(())
-        });
-
-        let hash_future = tokio::task::spawn(async move {
-            if !password.is_empty() {
-                tokio::task::spawn_blocking(move || {
-                    bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
-                }).await.map_err(|e| e.to_string())?
-            } else {
-                Ok("".to_string())
-            }
-        });
-
-        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
-
-        let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
-
-        product_res?;
-        seed_res?;
-        let password_hash = hash_res?;
+        // 2. Hash Password and Create User
+        let password_hash = if !password.is_empty() {
+            tokio::task::spawn_blocking(move || {
+                bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
+            }).await.map_err(|e| e.to_string())??
+        } else {
+            "".to_string()
+        };
 
         let roles_json = serde_json::to_string(&vec!["admin"]).unwrap_or_default();
         let now = chrono::Utc::now();
@@ -283,11 +192,146 @@ impl OnboardingAgent {
         .bind(&oidc_subject)
         .bind(now)
         .bind(now)
-        .execute(&self.db.pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to create user: {}", e))?;
 
-        // Extract feature flags logic
+        // 3. Products
+        let mut accumulated_events = vec![];
+
+        let products_to_create = if !req_first_product_name.is_empty() {
+            let price_cents = (req_first_product_price.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+            let strategy = match business_type.as_str() {
+                "Service Business" => "booking",
+                _ => "physical",
+            };
+            vec![(req_first_product_name.clone(), "Added during onboarding".to_string(), price_cents, strategy.to_string(), json!({"price_type": req_price_type}))]
+        } else {
+            let initial_products = self.get_initial_products(&business_type);
+            initial_products.into_iter().map(|(n, d, p, s)| {
+                (n.to_string(), d.to_string(), p, s.to_string(), json!({}))
+            }).collect()
+        };
+
+        for (p_name, p_desc, p_price, p_strategy, p_metadata) in products_to_create {
+            let id = format!("prod-{}", uuid::Uuid::new_v4());
+            sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                .bind(&id)
+                .bind(&org_id)
+                .bind(&p_name)
+                .bind(&p_desc)
+                .bind(p_price)
+                .bind(&p_strategy)
+                .bind(&p_metadata)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| format!("Failed to create product: {}", e))?;
+
+            accumulated_events.push(::server_ohc::orchestration::TeammateMeshEvent {
+                agent_id: "system".to_string(),
+                action: "ProductCreated".to_string(),
+                status: "success".to_string(),
+                payload: serde_json::to_vec(&json!({
+                    "product_id": id,
+                    "name": p_name,
+                    "organization_id": org_id,
+                })).unwrap_or_default(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            });
+        }
+
+        // 4. Seed Default Agents
+        let default_agents = vec![
+            ("Operations", "The Manager", "Operations"),
+            ("Marketing & Advertising", "The Promoter", "Marketing"),
+            ("Sales & Acquisition", "The Salesperson", "Sales"),
+            ("Customer Success", "The Ambassador", "CustomerSuccess"),
+            ("Finance & Payments", "The Accountant", "Finance"),
+            ("Legal & Compliance", "The Protector", "Legal"),
+            ("Business Advisory", "The Advisor", "Advisory"),
+            ("Discovery & SEO", "The Scout", "Discovery"),
+        ];
+
+        for (a_name, a_role, a_role_id) in default_agents {
+            let id = format!("{}-{}", org_id, a_role_id.to_lowercase());
+            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+                .bind(id)
+                .bind(a_name)
+                .bind(a_role)
+                .bind(&org_id)
+                .bind("IDLE")
+                .bind("builtin")
+                .bind(true)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| format!("Failed to seed agent {}: {}", a_name, e))?;
+        }
+
+        // 5. Publish Events / Subscriptions
+        let event_topics = vec![
+            ("The Manager", "tenant.booking.created"),
+            ("The Manager", "tenant.order.placed"),
+            ("The Promoter", "tenant.product.created"),
+            ("The Salesperson", "tenant.lead.created"),
+            ("The Ambassador", "tenant.message.received"),
+            ("The Accountant", "tenant.payment.success"),
+            ("The Protector", "tenant.contract.signed"),
+            ("The Advisor", "tenant.report.generated"),
+            ("The Scout", "tenant.seo.optimized"),
+        ];
+
+        for (agent_role, topic) in event_topics {
+            sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(&org_id)
+                .bind(agent_role)
+                .bind(topic)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| format!("Failed to add subscription: {}", e))?;
+        }
+
+        // Storefront Event
+        accumulated_events.push(::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "GenerateStorefront".to_string(),
+            status: "pending".to_string(),
+            payload: serde_json::to_vec(&json!({
+                "organization_id": org_id,
+                "company_name": company_name,
+                "business_type": business_type,
+            })).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        });
+
+        // Policies Event
+        accumulated_events.push(::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "GeneratePolicies".to_string(),
+            status: "pending".to_string(),
+            payload: serde_json::to_vec(&json!({
+                "organization_id": org_id,
+                "company_name": company_name,
+            })).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        });
+
+        // Schedule weekly health report
+        let scheduled_at = chrono::Utc::now() + chrono::Duration::days(7);
+        let payload = serde_json::json!({
+            "agent_role": "The Advisor",
+            "task": "weekly_health_report",
+            "tenant_id": org_id.clone()
+        });
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&org_id)
+            .bind(serde_json::to_string(&payload).unwrap_or_default())
+            .bind(scheduled_at.naive_utc())
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Failed to schedule weekly report: {}", e))?;
+
+        // 6. Onboarding State Feature Flags
         let mut flags = serde_json::Map::new();
         if business_type == "Service Business" || business_type == "Service" || req.selling_categories.contains(&"services".to_string()) {
             flags.insert("enable_booking".to_string(), serde_json::json!(true));
@@ -303,7 +347,6 @@ impl OnboardingAgent {
             flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
         }
 
-        // Add initial artifact placeholders to state
         flags.insert("storefront_status".to_string(), json!("generating"));
         flags.insert("policies_status".to_string(), json!("generating"));
         flags.insert("location".to_string(), json!(location));
@@ -311,7 +354,7 @@ impl OnboardingAgent {
             "storefront": {
                 "title": company_name,
                 "description": format!("Welcome to {}!", company_name),
-                "theme": req.website_template,
+                "theme": website_template,
             },
             "policies": [
                 {"title": "Terms of Service", "content": "Generating..."},
@@ -328,11 +371,26 @@ impl OnboardingAgent {
         .bind(&user_id)
         .bind(1)
         .bind(flags_json)
-        .execute(&self.db.pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to create onboarding state: {}", e))?;
+
+        // COMMIT TRANSACTION
+        tx.commit().await.map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
+        // PUBLISH EVENTS POST-COMMIT
+        for ev in accumulated_events {
+            let topic = match ev.action.as_str() {
+                "ProductCreated" => "products_inbox",
+                "GenerateStorefront" => "promoter_inbox",
+                "GeneratePolicies" => "protector_inbox",
+                _ => continue,
+            };
+            let _ = self.hub.publish_teammate_event(topic.to_string(), ev);
+        }
 
         crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
+
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
@@ -340,47 +398,8 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str) -> Result<(), String> {
-        let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
-        let strategy = match business_type {
-            "Service Business" => "booking",
-            _ => "physical",
-        };
-
-        let id = format!("prod-{}", uuid::Uuid::new_v4());
-        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-            .bind(&id)
-            .bind(org_id)
-            .bind(name)
-            .bind("Added during onboarding")
-            .bind(price_cents)
-            .bind(strategy)
-            .bind(json!({"price_type": price_type}))
-            .execute(&self.db.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let event_payload = json!({
-            "product_id": id,
-            "name": name,
-            "organization_id": org_id,
-        });
-
-        let event = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: "ProductCreated".to_string(),
-            status: "success".to_string(),
-            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-
-        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
-
-        Ok(())
-    }
-
-    async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
-        let products = match business_type {
+    fn get_initial_products(&self, business_type: &str) -> Vec<(&'static str, &'static str, i64, &'static str)> {
+let products = match business_type {
             "Online Store" => vec![
                 ("Standard Product", "A great product for your store", 1999, "physical"),
                 ("Premium Product", "A premium offering", 4999, "physical"),
@@ -2372,83 +2391,10 @@ impl OnboardingAgent {
             ],
         };
 
-        let mut futures = vec![];
-        for (name, desc, price, strategy) in products {
-            let id = format!("prod-{}", uuid::Uuid::new_v4());
-            let org_id = org_id.to_string();
-            let name = name.to_string();
-            let desc = desc.to_string();
-            let strategy = strategy.to_string();
-            let pool = self.db.pool.clone();
-
-            let hub = self.hub.clone();
-            futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
-                    .bind(&id)
-                    .bind(&org_id)
-                    .bind(&name)
-                    .bind(&desc)
-                    .bind(price)
-                    .bind(&strategy)
-                    .bind(json!({}))
-                    .execute(&pool)
-                    .await?;
-
-                let event_payload = json!({
-                    "product_id": id,
-                    "name": name,
-                    "organization_id": org_id,
-                });
-
-                let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    agent_id: "system".to_string(),
-                    action: "ProductCreated".to_string(),
-                    status: "success".to_string(),
-                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                };
-
-                let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
-                Ok::<_, sqlx::Error>(())
-            }));
-        }
-
-        for f in futures {
-            f.await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
+                products
     }
+}
 
-    async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
-        let default_agents = vec![
-            ("Operations", "The Manager", "Operations"),
-            ("Marketing & Advertising", "The Promoter", "Marketing"),
-            ("Sales & Acquisition", "The Salesperson", "Sales"),
-            ("Customer Success", "The Ambassador", "CustomerSuccess"),
-            ("Finance & Payments", "The Accountant", "Finance"),
-            ("Legal & Compliance", "The Protector", "Legal"),
-            ("Business Advisory", "The Advisor", "Advisory"),
-            ("Discovery & SEO", "The Scout", "Discovery"),
-        ];
-
-        for (name, role, role_id) in default_agents {
-            let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
-                .bind(id)
-                .bind(name)
-                .bind(role)
-                .bind(org_id)
-                .bind("IDLE")
-                .bind("builtin")
-                .bind(true)
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
