@@ -80,6 +80,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
 
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
+        .route("/edge/{tenant_id}/catalog", get(super::edge::handle_edge_catalog))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 

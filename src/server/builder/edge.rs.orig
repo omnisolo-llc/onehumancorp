@@ -139,7 +139,7 @@ async fn regenerate_catalog_cache(
     let rows = sqlx::query(
         "SELECT id, name, description, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1 OR organization_id = $1"
     )
-    .bind(tenant_id)
+    .bind(tenant_id.to_string())
     .fetch_all(&pool)
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
