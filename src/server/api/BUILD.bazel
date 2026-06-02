@@ -46,6 +46,7 @@ rust_library(
         "catalog.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
+        "//src/server/api/agents:aiaas.rs",
         "//src/server/api/agents:hire.rs",
         "//src/server/api/agents:mission/handoff.rs",
         "//src/server/api/agents:mission/mod.rs",

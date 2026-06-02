@@ -23,6 +23,7 @@ pub mod sandbox;
 pub mod sandbox_ask;
 pub mod local_sandbox;
 pub mod dynamic_workflows;
+pub mod aiaas;
 pub mod state_machine;
 pub mod tasks_db;
 #[cfg(test)]
