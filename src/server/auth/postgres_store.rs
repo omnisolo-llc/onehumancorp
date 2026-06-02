@@ -52,7 +52,7 @@ impl UserRepository for PgUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
         .bind(user.active)
-        .bind(&user.organization_id)
+        .bind(org_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -223,7 +223,7 @@ impl UserRepository for PgUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
-            .bind(&user.organization_id)
+            .bind(org_id)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
             .fetch_optional(&mut *tx)
