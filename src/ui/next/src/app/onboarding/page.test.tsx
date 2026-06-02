@@ -192,15 +192,15 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it('Step 1: Displays validation error when location is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
         chatStep: 3,
-        businessName: 'A',
-        location: 'NY',
+        businessName: 'Bakery',
+        location: 'A',
         businessType: 'Bakery',
         categories: ['food'],
         firstProductName: 'Cake',
@@ -214,7 +214,7 @@ describe('OnboardingWizard', () => {
 
     await user.click(generateButton);
 
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Location must be at least 2 characters.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
@@ -238,27 +238,18 @@ describe('OnboardingWizard', () => {
 
     await user.click(continueButton);
 
-    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Location must be at least 2 characters.')).not.toBeInTheDocument();
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
     });
 
     render(<OnboardingWizard />);
-
-    // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
-    const customOption = screen.getByText('Custom Domain');
-    expect(subdomainOption).toBeInTheDocument();
-    expect(customOption).toBeInTheDocument();
-
-    // Select Custom Domain
-    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -278,7 +269,6 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
-      expect(state.domainChoice).toBe('custom');
     });
   });
 
