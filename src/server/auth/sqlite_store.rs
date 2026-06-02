@@ -23,7 +23,7 @@ impl UserRepository for SqliteUserRepository {
         // We still store the org_id to conform to the interface.
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -45,7 +45,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND (organization_id = $2 OR $2 = '')";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND (tenant_id = $2 OR $2 = '')";
         let row = sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -58,7 +58,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -66,7 +66,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND (organization_id = $2 OR $2 = '')";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND (tenant_id = $2 OR $2 = '')";
         let row = sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -79,7 +79,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -87,7 +87,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND (organization_id = $2 OR $2 = '')";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND (tenant_id = $2 OR $2 = '')";
         let row = sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -100,7 +100,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -108,7 +108,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND (organization_id = $2 OR $2 = '')";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND (tenant_id = $2 OR $2 = '')";
         let row = sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -121,7 +121,7 @@ impl UserRepository for SqliteUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -129,7 +129,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE (organization_id = $1 OR $1 = '') ORDER BY created_at";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE (tenant_id = $1 OR $1 = '') ORDER BY created_at";
         let rows = sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
@@ -144,7 +144,7 @@ impl UserRepository for SqliteUserRepository {
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
-                organization_id: row.get("organization_id"),
+                organization_id: row.get("tenant_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 oidc_subject: row.get("oidc_subject"),
@@ -157,8 +157,8 @@ impl UserRepository for SqliteUserRepository {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 AND (organization_id = $10 OR $10 = '') RETURNING id
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 AND (tenant_id = $10 OR $10 = '') RETURNING id
             "#;
 
         let res = sqlx::query(query)
@@ -168,7 +168,7 @@ impl UserRepository for SqliteUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
-            .bind(&user.organization_id)
+            .bind(org_id)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
             .bind(org_id)
@@ -183,7 +183,7 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = "DELETE FROM users WHERE id = $1 AND (organization_id = $2 OR $2 = '') RETURNING id";
+        let query = "DELETE FROM users WHERE id = $1 AND (tenant_id = $2 OR $2 = '') RETURNING id";
         let res = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         if res.is_none() {
@@ -224,5 +224,63 @@ impl UserRepository for SqliteUserRepository {
 
         let count: i32 = row.get(0);
         Ok(count > 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_sqlite_create_user_organization_id_parity() {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE users (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL,
+                password_hash TEXT,
+                roles TEXT,
+                active BOOLEAN,
+                tenant_id TEXT,
+                oidc_subject TEXT,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = SqliteUserRepository::new(pool.clone());
+        let user = User {
+            id: "test-id".to_string(),
+            username: "test-user".to_string(),
+            email: "test@example.com".to_string(),
+            password_hash: "".to_string(),
+            roles: vec!["admin".to_string()],
+            active: true,
+            organization_id: Some("user-org-id".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+
+        // Pass a different org_id argument to verify the model binds `org_id` argument instead
+        repo.create_user(user, "function-arg-org-id").await.unwrap();
+
+        let row = sqlx::query("SELECT tenant_id FROM users WHERE id = 'test-id'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let fetched_org_id: String = sqlx::Row::get(&row, "tenant_id");
+        assert_eq!(fetched_org_id, "function-arg-org-id");
     }
 }

@@ -13,14 +13,13 @@ backend:
     minReplicas: 3
     maxReplicas: 50
     targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
-      cpu: "1000m"
-      memory: "2Gi"
+      cpu: "2000m"
+      memory: "1Gi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -58,13 +57,12 @@ ohcCore:
     minReplicas: 3
     maxReplicas: 50
     targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
-      cpu: "500m"
+      cpu: "2000m"
       memory: "1Gi"
 
 # Valkey - Redis-compatible cache and pub/sub service
@@ -85,11 +83,11 @@ valkey:
       - ReadWriteOnce
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "500m"
+      memory: "1Gi"
     limits:
-      cpu: "250m"
-      memory: "512Mi"
+      cpu: "2000m"
+      memory: "4Gi"
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
@@ -127,19 +125,18 @@ chatwoot:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: false
+    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "50m"
-      memory: "128Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
-      cpu: "500m"
+      cpu: "2000m"
       memory: "1Gi"
   # Admin credentials used by OHC backend to auto-configure the inbox.
   adminEmail: admin@ohc.local
@@ -170,19 +167,18 @@ powersync:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: false
+    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 10
     targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 90
   resources:
     requests:
-      cpu: "50m"
-      memory: "128Mi"
+      cpu: "250m"
+      memory: "256Mi"
     limits:
-      cpu: "500m"
+      cpu: "2000m"
       memory: "1Gi"
 
 # Kube-Prometheus-Stack for Cloud Observability
@@ -212,8 +208,8 @@ fluentBit:
   logLevel: info
   resources:
     requests:
-      cpu: "50m"
-      memory: "64Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "200m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"

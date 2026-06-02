@@ -6,7 +6,6 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
-        "compaction.rs",
         "acon_context.rs",
         "auth.rs",
         "budget.rs",
@@ -45,7 +44,6 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
-        "compaction.rs",
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
@@ -56,7 +54,7 @@ rust_library(
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",
-        "guardrails.rs",
+
         "harness.rs",
         "hibernation.rs",
         "json_rpc_server.rs",
@@ -81,6 +79,8 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "openhands.rs",
+        "guardrails/mod.rs",
+        "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",
         "scalable_multi_agent.rs",
         "service.rs",
@@ -91,7 +91,6 @@ rust_library(
         "tool_executor_engine.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
-        "visual_orchestration.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",

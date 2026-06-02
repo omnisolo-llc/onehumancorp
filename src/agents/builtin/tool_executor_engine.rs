@@ -7,7 +7,7 @@ use tracing::warn;
 pub struct ToolExecutionEngine;
 
 impl ToolExecutionEngine {
-    /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic.
+    /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
     pub async fn execute_tool_with_langgraph_mechanics(
         tool: &Tool,
         tc: &ToolCall,
@@ -34,7 +34,7 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(format!("{}\nPlease correct your arguments and try again. Pay close attention to the requested schema types.", msg)));
+                    return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.

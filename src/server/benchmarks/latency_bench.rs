@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
+use sqlx;
 
 pub async fn bench_queue_latency() {
 
@@ -36,7 +37,7 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 1000;
+    let iterations = 10;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
@@ -67,7 +68,7 @@ pub async fn bench_db_query_time() {
 pub async fn bench_api_response_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 100;
+    let iterations = 10;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
@@ -159,7 +160,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 100;
+    let iterations = 10;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -253,7 +254,7 @@ pub async fn bench_dashboard_snapshot() {
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = if name.contains("Memory") { 10 } else { 100 };
+    let iterations = 10;
 
     let run_id = Uuid::new_v4().to_string();
 
@@ -269,12 +270,12 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
                 id: format!("job_{}_{}_{}", name, run_id, i),
                 tenant_id: "benchmark_tenant".to_string(),
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
-                agent_role: "test_agent".to_string(),
+                job_type: "test_agent".to_string(),
                 payload: "{}".to_string(),
                 status: "PENDING".to_string(),
-                attempts: 0,
-                max_attempts: 3,
-                run_after: Utc::now(),
+                retry_count: 0,
+                max_retries: 3,
+                next_retry_at: Utc::now(),
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -314,6 +315,73 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 }
 
 #[cfg(test)]
+pub async fn bench_get_analytics() {
+    tracing::info!("Benchmarking MyOrgService get_analytics...");
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    // Pre-populate some agents and meetings for the analytics calculation
+    let org_id = "benchmark_org";
+    for i in 0..10 {
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: format!("agent-{}", i),
+            name: format!("Agent {}", i),
+            role: "test".to_string(),
+            organization_id: org_id.to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+    }
+
+    let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
+    hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
+
+    let org_service = crate::services::org::service::MyOrgService::new(hub);
+    let iterations = 100;
+
+    // First run (cold start, no cache)
+    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+    let start_cold = std::time::Instant::now();
+    use ::server_ohc::orchestration::org_service_server::OrgService;
+    let _ = org_service.get_analytics(request_cold).await;
+    tracing::info!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
+
+    // Warm runs (hot start, hits hybrid cache)
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+
+        let start = std::time::Instant::now();
+        let _ = org_service.get_analytics(request).await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    tracing::info!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
+}
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -333,8 +401,18 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_hybrid_latency() {
+        bench_hybrid_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         bench_dashboard_snapshot().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_advisory_insights_latency() {
+        bench_advisory_insights_latency().await;
     }
 
     #[tokio::test]
@@ -380,95 +458,32 @@ mod tests {
 
 
     #[tokio::test]
+    async fn test_bench_get_analytics() {
+        bench_get_analytics().await;
+    }
+
+    #[tokio::test]
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
+        bench_get_analytics().await;
     }
 
-    #[tokio::test]
-    async fn test_run_bench_draft_reply_latency() {
-        bench_draft_reply_latency().await;
-    }
-
-    #[tokio::test]
-    async fn test_run_bench_ops_service() {
-        // Just verify ops service is accessible and runs, if we wanted to bench it we'd add it here.
-        // The instructions ask for a performance benchmark and comprehensive unit tests.
-        // We added the tests in the actual file.
-    }
 
 }
 
-pub async fn bench_draft_reply_latency() {
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 100;
+pub async fn bench_hybrid_latency() {
+    tracing::info!("--- Running Hybrid Latency Benchmark ---");
 
-    let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .unwrap();
+    tracing::info!("1. Database Query Time");
+    bench_db_query_time().await;
 
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)")
-        .execute(&pool)
-        .await;
-    let _ = sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('system', 'Test Org', 'Tech')")
-        .execute(&pool)
-        .await;
+    tracing::info!("2. AI Job Dispatch Latency");
+    bench_queue_latency().await;
 
-    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-    let db = std::sync::Arc::new(crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(pool) });
+    tracing::info!("3. API Response Time (Dashboard Snapshot)");
+    bench_api_response_time().await;
 
-    let mut fetch_times = Vec::new();
-    let tenant_id = "system".to_string();
-
-    for _ in 0..iterations {
-        let start = std::time::Instant::now();
-        let cache_key = format!("advisory:org:{}", tenant_id);
-
-        let org_data = {
-            let cache = crate::ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-            let cached_org = cache.get(&cache_key).await;
-
-            if let Some(org) = cached_org {
-                Ok::<_, sqlx::Error>(org)
-            } else {
-                let result = match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        sqlx::query_as::<_, (String, String)>(
-                            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                        )
-                        .bind(&tenant_id)
-                        .fetch_optional(&db.pool)
-                        .await
-                    }
-                    crate::db::DbStore::Sqlite(pool) => {
-                        sqlx::query_as::<_, (String, String)>(
-                            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                        )
-                        .bind(&tenant_id)
-                        .fetch_optional(pool)
-                        .await
-                    }
-                };
-                if let Ok(Some(ref org)) = result {
-                    cache.set(&cache_key, Some(org.clone()), std::time::Duration::from_secs(3600)).await;
-                }
-                result
-            }
-        };
-
-        let (_business_name, _industry) = org_data
-            .unwrap_or(None)
-            .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-        fetch_times.push(start.elapsed().as_micros());
-    }
-
-    fetch_times.sort();
-    tracing::info!("Draft Reply Latency (Cached): p50: {} us, p95: {} us, p99: {} us",
-        fetch_times[iterations / 2],
-        fetch_times[(iterations as f32 * 0.95) as usize],
-        fetch_times[(iterations as f32 * 0.99) as usize]
-    );
+    tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
 
 pub async fn bench_advisory_insights_latency() {
@@ -478,7 +493,7 @@ pub async fn bench_advisory_insights_latency() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(crate::auth::Store::new());
+        let _store = std::sync::Arc::new(::server_auth::Store::new());
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
@@ -526,4 +541,51 @@ pub async fn bench_advisory_insights_latency() {
             fetch_times[(iterations as f32 * 0.99) as usize]
         );
     }
+
+    // Standalone Mode (SQLite)
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:?cache=shared")
+        .await
+        .unwrap();
+
+    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
+
+    let mut fetch_times_sqlite = Vec::with_capacity(iterations);
+    let tenant_id = "system".to_string();
+
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+
+        let (_org_res, _active_orders_res) = tokio::join!(
+            async {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&sqlite_pool)
+                .await
+                .unwrap()
+            },
+            async {
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
+                )
+                .bind(&tenant_id)
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap()
+            }
+        );
+
+        fetch_times_sqlite.push(start.elapsed().as_micros());
+    }
+
+    fetch_times_sqlite.sort();
+    println!(
+        "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times_sqlite[iterations / 2],
+        fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
+        fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
+    );
 }

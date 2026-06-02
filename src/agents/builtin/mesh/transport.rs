@@ -5,23 +5,36 @@ use tokio::sync::broadcast;
 use dashmap::DashMap;
 
 pub use crate::proto::hub::TeammateMeshEvent as Message;
-
+/// MeshTransport is the core interface for the Teammate Mesh APIs.
+/// It provides real-time bidirectional communication, distributed locking, and presence tracking.
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
+    /// Adds a known peer to this transport instance (used primarily for overlay/hybrid setups).
     fn add_peer(&self, _peer: Peer) {}
+
+    /// Publishes a TeammateMeshEvent to the specified topic/channel.
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
+
+    /// Subscribes to a topic/channel, returning a cancellation function.
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    /// Acquires a distributed lock on a resource for a specified duration.
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+
+    /// Releases a previously acquired distributed lock.
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
+    /// Registers the agent's presence status in the mesh.
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+
+    /// Returns a list of all active agents and their statuses.
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
 pub struct InProcessTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
-    presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
+    presence: DashMap<String, (String, std::time::Instant)>,
+    locks: DashMap<String, (String, i64)>,
 }
 
 impl InProcessTransport {
@@ -29,6 +42,7 @@ impl InProcessTransport {
         InProcessTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
+            locks: DashMap::new(),
         }
     }
 }
@@ -64,56 +78,28 @@ impl MeshTransport for InProcessTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
         let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
-        let payload = format!("{}:{}", owner, expires_at);
 
-        match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-            Ok(mut f) => {
-                use std::io::Write;
-                let _ = f.write_all(payload.as_bytes());
+        use dashmap::mapref::entry::Entry;
+        match self.locks.entry(resource.to_string()) {
+            Entry::Vacant(v) => {
+                v.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-                    let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-                    if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
-                        if let Ok(exp) = stored_exp.parse::<i64>() {
-                            if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
-                                let _ = std::fs::remove_file(&lock_path);
-                                if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                                    use std::io::Write;
-                                    let _ = f.write_all(payload.as_bytes());
-                                    return Ok(true);
-                                }
-                            }
-                        }
-                    } else {
-                        // Malformed, overwrite
-                        let _ = std::fs::remove_file(&lock_path);
-                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                            use std::io::Write;
-                            let _ = f.write_all(payload.as_bytes());
-                            return Ok(true);
-                        }
-                    }
+            Entry::Occupied(mut o) => {
+                let (stored_owner, stored_exp) = o.get();
+                if stored_owner == owner || *stored_exp <= chrono::Utc::now().timestamp_millis() {
+                    o.insert((owner.to_string(), expires_at));
+                    Ok(true)
+                } else {
+                    Ok(false)
                 }
-                Ok(false)
             }
-            Err(e) => Err(e.to_string()),
         }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
-        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-            if let Some((stored_owner, _)) = current_data.split_once(':') {
-                if stored_owner == owner {
-                    let _ = std::fs::remove_file(lock_path);
-                }
-            }
-        }
+        self.locks.remove_if(&resource.to_string(), |_, (stored_owner, _)| stored_owner == owner);
         Ok(())
     }
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
