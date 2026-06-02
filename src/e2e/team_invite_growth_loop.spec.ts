@@ -1,8 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 
-// Use basic playwright test instead of the custom currentAppSmoke to avoid fixtures issues
 test('Verify standalone to cloud team invite growth loop', async ({ page }) => {
-  // Navigate to team page directly (avoid auth logic and network intercept restrictions)
   await page.goto('/team');
 
   // Find and click the invite button
@@ -18,9 +16,8 @@ test('Verify standalone to cloud team invite growth loop', async ({ page }) => {
   const copyBtn = page.locator('button', { hasText: 'Copy Link' });
   await expect(copyBtn).toBeVisible();
 
-  // playwright's context has write access so clip board works in browser tests
+  // Playwright test environment can mock clipboard if needed, but UI updates
+  // correctly regardless so we just ensure text changes.
   await copyBtn.click();
-
-  // Verify button changes text
   await expect(copyBtn).toHaveText('Copied!');
 });
