@@ -128,7 +128,9 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Error Handling (LLM-Recoverable): Execution failed for tool dummy. Reason: parse error. Please analyze this error"));
+            },
             _ => panic!("Expected LlmRecoverable error"),
         }
     }

@@ -34,7 +34,8 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(msg));
+                    let structured_error = format!("Error Handling (LLM-Recoverable): Execution failed for tool {}. Reason: {}. Please analyze this error, correct your arguments or approach based on the tools schema, and try again.", tc.name, msg);
+                    return Err(ToolError::LlmRecoverable(structured_error));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
