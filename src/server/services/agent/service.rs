@@ -67,9 +67,9 @@ impl MyAgentManagerService {
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
-            meetings: meetings.to_vec(),
+            meetings: Arc::unwrap_or_clone(meetings),
             costs: Some(costs),
-            agents: agents.to_vec(),
+            agents: Arc::unwrap_or_clone(agents),
             statuses,
             task_queue: vec![],
             queue_length: 0,
