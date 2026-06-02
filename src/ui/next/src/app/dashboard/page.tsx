@@ -1633,7 +1633,7 @@ export default function Dashboard() {
                       readOnly
                       rows={4}
                       value={promoMessage}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none"
+                      className="w-full backdrop-blur-[20px] saturate-[200%] bg-white/80 border border-white/60 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none shadow-sm"
                     />
                   </div>
 

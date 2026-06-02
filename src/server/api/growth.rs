@@ -81,6 +81,8 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/generate-promotion", post(handle_generate_promotion))
+
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -136,6 +138,17 @@ pub struct GenerateCartRequest {
 pub struct GenerateCartResponse {
     pub message: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionRequest {
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionResponse {
+    pub message: String,
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
@@ -235,6 +248,28 @@ async fn handle_generate_cart(
         message: generated,
     })
 }
+
+async fn handle_generate_promotion(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromotionRequest>,
+) -> impl IntoResponse {
+    let tenant_name = req.tenant.unwrap_or_else(|| "my-store".to_string());
+
+    let promotions = vec![
+        format!("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/{}", tenant_name),
+        format!("🚀 Just dropped! Check out our latest arrivals and get a special 15% discount on your first order. Use code NEW15 at checkout! https://ohc.store/shop/{}", tenant_name),
+        format!("✨ Special offer just for you! Buy one, get one 50% off on all accessories this week. Don't miss out! Shop now: https://ohc.store/shop/{}", tenant_name),
+        format!("🔥 Limited time offer: Free shipping on all orders over $50! Stock up on your essentials today. https://ohc.store/shop/{}", tenant_name),
+        format!("🎁 Treat yourself! Use code TREAT20 for 20% off your entire purchase today. Shop the collection: https://ohc.store/shop/{}", tenant_name),
+    ];
+
+    let generated = promotions[0].clone();
+
+    Json(GeneratePromotionResponse {
+        message: generated,
+    })
+}
+
 
 async fn handle_send_campaign(
     Extension(state): Extension<GrowthState>,
@@ -940,6 +975,24 @@ mod tests {
         assert!(res_json.message.contains("Hi Bob"));
         assert!(res_json.message.contains("totaling $100.00"));
     }
+
+    #[tokio::test]
+    async fn test_generate_promotion() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GeneratePromotionRequest { tenant: Some("test-store".to_string()) };
+        let res = handle_generate_promotion(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GeneratePromotionResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(res_json.message.contains("test-store"));
+        assert!(res_json.message.contains("flash sale"));
+    }
+
 
     #[tokio::test]
     async fn test_team_invite_accept() {
