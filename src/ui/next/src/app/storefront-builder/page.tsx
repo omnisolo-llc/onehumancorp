@@ -266,6 +266,19 @@ export default function StorefrontBuilderPage() {
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
+          <div className="w-full bg-white/70 dark:bg-white/10 backdrop-blur-md p-4 rounded-xl border border-gray-200 dark:border-gray-800 mb-6 flex items-center justify-between shadow-sm mac-glass-container">
+            <div className="flex flex-col text-left">
+              <span className="text-xs text-gray-500 dark:text-[#a1a1a6] font-semibold uppercase tracking-wider mb-1">Store Performance</span>
+              <span className="text-sm text-gray-900 dark:text-[#f5f5f7] font-medium">Edge Cached</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-1.5 text-green-600 font-bold font-outfit">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                &lt; 50ms
+              </div>
+            </div>
+          </div>
+
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
             style={{ borderRadius: '8px' }}

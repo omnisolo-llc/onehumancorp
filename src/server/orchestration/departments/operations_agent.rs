@@ -22,10 +22,20 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.product.created".to_string(),
+            "tenant.product.updated".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        // Handle cache invalidation for dynamic storefronts
+        if event.event_type.starts_with("tenant.product") || event.event_type.starts_with("tenant.inventory") {
+            crate::builder::edge::get_edge_cache()
+                .invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id))
+                .await;
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
