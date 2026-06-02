@@ -1,0 +1,37 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files([
+    "mod.rs",
+    "webhook.rs",
+], visibility = ["//visibility:public"])
+
+rust_library(
+    name = "server_api_agents_voice",
+    srcs = [
+        "mod.rs",
+        "webhook.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/common:server_common",
+        "//src/server/voice:voice",
+        "@crates//:axum",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_api_agents_voice_test",
+    crate = ":server_api_agents_voice",
+    deps = [
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:tower",
+    ],
+)

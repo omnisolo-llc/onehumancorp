@@ -75,6 +75,42 @@ export default function Dashboard() {
   const [cartCampaignSent, setCartCampaignSent] = useState<boolean>(false);
 
   // Growth Loop: VIP Customer Referral Campaign State
+  // Voice Agent State
+  const [voiceConfig, setVoiceConfig] = useState<any>(null);
+  const [isSavingVoice, setIsSavingVoice] = useState(false);
+  const [voiceSaveMessage, setVoiceSaveMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/agents/voice/config")
+      .then(res => res.json())
+      .then(data => setVoiceConfig(data))
+      .catch(console.error);
+  }, []);
+
+  const handleVoiceConfigSave = async () => {
+    setIsSavingVoice(true);
+    setVoiceSaveMessage(null);
+    try {
+      const response = await fetch("/api/agents/voice/config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(voiceConfig)
+      });
+      if (response.ok) {
+        setVoiceSaveMessage("Voice settings updated successfully!");
+        setTimeout(() => setVoiceSaveMessage(null), 3000);
+      } else {
+        setVoiceSaveMessage("Failed to save voice settings.");
+      }
+    } catch (e) {
+      setVoiceSaveMessage("Error saving voice settings.");
+    } finally {
+      setIsSavingVoice(false);
+    }
+  };
+
   const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
@@ -1055,6 +1091,81 @@ export default function Dashboard() {
             </div>
             <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
+                {/* Voice Agent Settings Card */}
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm border border-white/40 mb-6" data-testid="voice-agent-card">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-xl shadow-inner">
+                        🎤
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold font-outfit text-gray-900">Voice Agent</h2>
+                        <p className="text-sm text-gray-500">Configure your autonomous AI receptionist.</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={voiceConfig?.is_enabled || false}
+                        onChange={(e) => setVoiceConfig({ ...voiceConfig, is_enabled: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                      <input
+                        type="text"
+                        className="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm bg-white/50 focus:bg-white transition-colors"
+                        value={voiceConfig?.phone_number || ""}
+                        onChange={(e) => setVoiceConfig({ ...voiceConfig, phone_number: e.target.value })}
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Primary Language</label>
+                      <select
+                        className="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm bg-white/50 focus:bg-white transition-colors"
+                        value={voiceConfig?.primary_language || "en"}
+                        onChange={(e) => setVoiceConfig({ ...voiceConfig, primary_language: e.target.value })}
+                      >
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="ar">Arabic</option>
+                        <option value="fr">French</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Custom Instructions</label>
+                      <textarea
+                        className="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm bg-white/50 focus:bg-white transition-colors"
+                        rows={3}
+                        value={voiceConfig?.custom_instructions || ""}
+                        onChange={(e) => setVoiceConfig({ ...voiceConfig, custom_instructions: e.target.value })}
+                        placeholder="e.g. Tell callers to park in the back."
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleVoiceConfigSave}
+                      disabled={isSavingVoice}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {isSavingVoice ? "Saving..." : "Save Voice Settings"}
+                    </button>
+                    {voiceSaveMessage && (
+                      <p className={`text-sm text-center ${voiceSaveMessage.includes("success") ? "text-green-600" : "text-red-600"}`}>
+                        {voiceSaveMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
                     <button
