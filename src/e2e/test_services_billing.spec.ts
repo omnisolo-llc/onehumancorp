@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('test_services_billing');
+=======
 import { test, expect } from './fixtures';
 
 test.describe('CUJ: Services Billing My Plan', () => {
@@ -39,3 +44,4 @@ test.describe('CUJ: Services Billing My Plan', () => {
     await expect(page.getByRole('button', { name: 'Cancel Subscription' })).toBeVisible();
   });
 });
+>>>>>>> a9cd1f9d (test: add playwright e2e tests for billing cujs)

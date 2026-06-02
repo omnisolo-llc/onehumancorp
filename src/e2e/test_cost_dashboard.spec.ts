@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('test_cost_dashboard');
+=======
 import { test, expect } from './fixtures';
 
 test.describe('CUJ: Cost Dashboard Navigation and Content', () => {
@@ -46,3 +51,4 @@ test.describe('CUJ: Cost Dashboard Navigation and Content', () => {
     await expect(page.locator('#my-plan-screen')).toBeVisible();
   });
 });
+>>>>>>> a9cd1f9d (test: add playwright e2e tests for billing cujs)

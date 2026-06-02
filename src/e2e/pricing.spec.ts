@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('pricing');
+=======
 import { test, expect } from './fixtures';
 
 test.describe('CUJ: Pricing and Plan Upgrade', () => {
@@ -45,3 +50,4 @@ test.describe('CUJ: Pricing and Plan Upgrade', () => {
     await expect(page).toHaveURL(/.*\/checkout\?tier=Starter/);
   });
 });
+>>>>>>> a9cd1f9d (test: add playwright e2e tests for billing cujs)
