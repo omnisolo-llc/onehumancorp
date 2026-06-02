@@ -4696,7 +4696,7 @@ mod tests {
                 name: "transient_tool".to_string(),
             }),
         };
-        let mut agent_ro = Agent::new(client_transient, vec![tool_ro]);
+        let agent_ro = Agent::new(client_transient, vec![tool_ro]);
         let mut events_ro = Vec::new();
         let mut on_event_ro = |e: AgentEvent| events_ro.push(e);
         let res_ro = agent_ro.run(&cfg, "Run transient RO", &mut on_event_ro).await;
