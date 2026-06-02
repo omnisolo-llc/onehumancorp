@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('🛡️ Sentry: Stress & Load', () => {
-    test('Assert P95 latency for critical dashboard operations under load', async ({ page }) => {
+    test('Assert P95 latency for critical dashboard operations under load', async ({ page, context }) => {
         // Persona: Multiple Owners
         // Scenario: Simulating concurrent dashboard access to verify P95 latency.
 
@@ -25,7 +25,7 @@ test.describe('🛡️ Sentry: Stress & Load', () => {
         expect(p95).toBeLessThan(5000);
     });
 
-    test('Verify system stability during concurrent API bursts', async ({ page }) => {
+    test('Verify system stability during concurrent API bursts', async ({ page, context }) => {
         await page.goto('/dashboard/analytics');
 
         // Trigger multiple concurrent API calls

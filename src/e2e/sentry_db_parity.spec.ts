@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('🛡️ Sentry: Database Parity', () => {
-    test('Verify consistent data display for complex objects (JSON/JSONB parity)', async ({ page }) => {
+    test('Verify consistent data display for complex objects (JSON/JSONB parity)', async ({ page, context }) => {
         await page.goto('/dashboard/products');
         await page.getByRole('button', { name: 'Add Product' }).click();
         await page.getByLabel('Product Name').fill('Rainbow Cake');
