@@ -338,6 +338,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_advisory_insights_latency() {
+        bench_advisory_insights_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_stress_verification_cloud_standalone() {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
