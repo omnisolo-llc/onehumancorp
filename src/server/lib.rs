@@ -5470,7 +5470,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (state) {
                                 if (state.step) currentStep = state.step;
                                 inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
                                             input.checked = state[key];
