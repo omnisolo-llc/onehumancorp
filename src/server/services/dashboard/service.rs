@@ -332,7 +332,7 @@ impl DashboardService for MyDashboardService {
             .collect();
 
         let final_agents_payload = _filtered_agents
-            .into_iter()
+            .iter()
             .map(|a| {
                 let status_val = match a.status.to_uppercase().as_str() {
                     "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
@@ -355,11 +355,11 @@ impl DashboardService for MyDashboardService {
                 };
 
                 ::server_ohc::agent::Agent {
-                    id: a.id,
+                    id: a.id.clone(),
                     name,
                     role: role_val,
                     status: status_val,
-                    organization_id: a.organization_id,
+                    organization_id: a.organization_id.clone(),
                 }
             })
             .collect::<Vec<_>>();
@@ -378,15 +378,7 @@ impl DashboardService for MyDashboardService {
             let mut original_prompts_len = 0;
             let mut compressed_prompts_len = 0;
 
-            let org_agents: Vec<_> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .collect();
-
-            for agent in org_agents {
+            for agent in &_filtered_agents {
                 let prompt = &agent.name;
                 let orig_len = prompt.len();
                 if orig_len > 0 {

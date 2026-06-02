@@ -220,7 +220,8 @@ export default function OnboardingWizard() {
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
-          price_type: 'fixed'
+          price_type: 'fixed',
+          location: location || ''
         })
       });
 
@@ -296,7 +297,7 @@ export default function OnboardingWizard() {
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
-                      onClick={handleSaveDraft}
+                      onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -360,7 +361,7 @@ export default function OnboardingWizard() {
                       Tell us a bit about your products or services.
                     </p>
                     <button
-                      onClick={handleSaveDraft}
+                      onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -412,7 +413,7 @@ export default function OnboardingWizard() {
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
-                      onClick={handleSaveDraft}
+                      onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -477,7 +478,7 @@ export default function OnboardingWizard() {
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
-                  onClick={handleSaveDraft}
+                  onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
@@ -595,7 +596,7 @@ export default function OnboardingWizard() {
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
-                  onClick={handleSaveDraft}
+                  onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
