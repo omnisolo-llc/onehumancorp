@@ -50,4 +50,31 @@ test.describe('In-App Video Tutorials', () => {
         // Verify the modal player closes
         await expect(modalContainer).not.toBeVisible();
     });
+
+    test('opens a video and verifies internal UI elements of the modal player', async ({ page }) => {
+        // E2E Test 3: Video player UI elements
+        await page.goto('/dashboard');
+
+        const helpButton = page.locator('#help-widget-container button').first();
+        await helpButton.click();
+
+        const videosTabButton = page.locator('button', { hasText: 'Videos' });
+        await videosTabButton.click();
+
+        const firstVideoTitle = page.locator('p', { hasText: 'How to set up your first store easily' });
+        await expect(firstVideoTitle).toBeVisible();
+
+        const videoContainer = firstVideoTitle.locator('..').locator('..');
+        await videoContainer.click();
+
+        const modalContainer = page.locator('div.fixed.z-\\[100\\]');
+        await expect(modalContainer).toBeVisible();
+
+        // Let's use a looser text match for the time indicator just in case
+        await expect(modalContainer.locator('div.text-\\[10px\\]', { hasText: '0:00 / ' })).toBeVisible();
+
+        // Verify fake play/pause button
+        const playButton = modalContainer.locator('button.w-16.h-16');
+        await expect(playButton).toBeVisible();
+    });
 });

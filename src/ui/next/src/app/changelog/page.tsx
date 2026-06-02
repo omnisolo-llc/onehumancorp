@@ -21,6 +21,9 @@ export default function ChangelogPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[20px] saturate-200">
       <div className="max-w-3xl mx-auto">
+        <Link href="/dashboard" className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2 inline-block">
+          <button type="button" className="px-4 py-2 bg-white/50 backdrop-blur-md rounded-lg shadow-sm border border-gray-200">&larr; Back</button>
+        </Link>
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">Release Notes & Changelog</h1>
         <div className="space-y-8">
           {sections.map((section, idx) => (

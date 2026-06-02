@@ -17,4 +17,21 @@ test.describe('API Documentation', () => {
     // Check if at least one of our API paths is rendered
     await expect(page.getByText('/api/orgs/register')).toBeVisible();
   });
+
+  test('should allow interacting with Swagger UI elements', async ({ page }) => {
+    // E2E Test 4: API docs interaction
+    await page.goto('/api-docs');
+
+    await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
+
+    // Verify a second endpoint is visible
+    await expect(page.getByText('/api/agents/status')).toBeVisible();
+
+    // Click on the first endpoint block to expand it
+    const registerEndpoint = page.locator('.opblock-summary-path', { hasText: '/api/orgs/register' }).first();
+    await registerEndpoint.click();
+
+    // Check that the expanded section shows parameters/try it out
+    await expect(page.locator('.opblock-body').getByText('Parameters', { exact: true })).toBeVisible();
+  });
 });
