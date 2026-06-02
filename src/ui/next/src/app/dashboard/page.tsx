@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [storePerformance, setStorePerformance] = useState<string>("...");
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [activeReferrals, setActiveReferrals] = useState<number>(0);
@@ -280,6 +281,9 @@ export default function Dashboard() {
                 setTodaysSales(metricsData.total_sales);
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
+                if (metricsData.store_performance) {
+                    setStorePerformance(metricsData.store_performance);
+                }
             }
 
             if (invitesRes.ok) {
@@ -754,7 +758,7 @@ export default function Dashboard() {
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -770,6 +774,14 @@ export default function Dashboard() {
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                </div>
+
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between border-green-500 border-opacity-50">
+                    <div className="text-sm font-medium mb-1 flex items-center gap-2" style={{ color: '#86868B' }}>
+                        Store Performance
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    </div>
+                    <div className="text-2xl font-bold font-outfit text-green-700">{storePerformance}</div>
                 </div>
 
             </div>

@@ -357,3 +357,77 @@ async fn test_builder_generate_and_publish_draft() {
         .await;
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
+
+#[tokio::test]
+async fn test_edge_cache_invalidation_on_product_create() {
+    let (pool, tenant_id) = match setup_db().await {
+        Some(v) => v,
+        None => return,
+    };
+
+    let cache = crate::builder::edge::get_edge_cache();
+    let cache_key = format!("edge_site_{}_test", tenant_id);
+    let tags = vec![format!("tenant-id:{}", tenant_id)];
+
+    // Set a mock cache value
+    cache.set_with_tags(&cache_key, "cached_html".to_string(), tags, std::time::Duration::from_secs(3600)).await;
+
+    // Verify it exists
+    assert_eq!(cache.get(&cache_key).await, Some("cached_html".to_string()));
+
+    // Create a product using the catalog router (or simulate it directly via function)
+    let (tx, _) = tokio::sync::mpsc::channel(100);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+    let app = crate::api::catalog::router(hub.clone());
+
+    use ::server_auth::common::Claims;
+    let claims = Claims {
+        sub: "user123".to_string(),
+        username: "user".to_string(),
+        email: "user@test.com".to_string(),
+        roles: vec!["user".to_string()],
+        session_id: None,
+        iat: 0,
+        jti: "test".to_string(),
+        organization_id: Some(tenant_id.to_string()),
+        exp: 0,
+    };
+
+    let app_with_auth = axum::Router::new()
+        .nest("/catalog", app)
+        .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
+            let claims = claims.clone();
+            async move {
+                let mut req = req;
+                req.extensions_mut().insert(claims);
+                next.run(req).await
+            }
+        }));
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    tokio::spawn(async move {
+        axum::serve(listener, app_with_auth.into_make_service()).await.unwrap();
+    });
+
+    let client = reqwest::Client::new();
+    let base_url = format!("http://127.0.0.1:{}", port);
+
+    // Call create product endpoint
+    let payload = serde_json::json!({
+        "name": "Test Cake",
+        "price": "29.99",
+        "description": "A test cake",
+        "item_type": "product"
+    });
+
+    let res = client.post(&format!("{}/catalog/product", base_url))
+        .json(&payload)
+        .send().await.unwrap();
+
+    assert_eq!(res.status(), 200);
+
+    // The cache should be invalidated now
+    assert_eq!(cache.get(&cache_key).await, None);
+}

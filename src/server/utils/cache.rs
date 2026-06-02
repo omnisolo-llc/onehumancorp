@@ -176,6 +176,23 @@ where
         }
     }
 
+    pub async fn has_tag(&self, tag: &str) -> bool {
+        if let Ok(tag_guard) = self.get_local_tags().read() {
+            if tag_guard.contains_key(tag) {
+                return true;
+            }
+        }
+        if let Some(mut conn) = self.get_redis_conn().await {
+            use redis::AsyncCommands;
+            let tag_key = format!("tag:{}", tag);
+            let count: Result<i64, _> = conn.scard(&tag_key).await;
+            if let Ok(c) = count {
+                return c > 0;
+            }
+        }
+        false
+    }
+
     pub async fn invalidate_by_tag(&self, tag: &str) {
         let mut keys_to_delete = Vec::new();
         if let Ok(mut tag_guard) = self.get_local_tags().write() {
