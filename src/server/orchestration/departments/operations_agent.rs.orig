@@ -22,21 +22,10 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
-            "tenant.product.created".to_string(),
-            "tenant.product.updated".to_string(),
-            "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let is_inventory_update = event.event_type == "tenant.product.created" || event.event_type == "tenant.order.created" || event.event_type == "tenant.product.updated" || event.event_type == "tenant.inventory.updated";
-
-        if is_inventory_update {
-            // invalidates cache
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-        }
-
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
@@ -110,8 +99,6 @@ mod tests {
     use crate::db::DB;
     use sqlx::sqlite::SqlitePool;
     use std::sync::Arc;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
-    use crate::orchestration::mesh::CentrifugeNode;
 
     #[tokio::test]
     async fn test_operations_agent_cache_invalidation() {
@@ -125,14 +112,17 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         // Avoid requiring external databases by using SQLite entirely for testing. We use the store to bypass postgres calls.
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy:dummy@127.0.0.1:5432/dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: crate::db::DbStore::Sqlite(pool),
         });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(10);
-        let transport = Arc::new(InProcessTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+        let config = OrchestratorConfig {
+            auto_approve: true,
+        };
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, hub, config));
 
         let agent = OperationsAgent::new(orchestrator);
 
