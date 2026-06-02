@@ -3815,10 +3815,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                             <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
+                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none'; document.getElementById('subscription-fields').style.display='none';"> 📦 Product
                             </label>
                             <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
+                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block'; document.getElementById('subscription-fields').style.display='none';"> 📅 Service
+                            </label>
+                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
+                                <input type="radio" name="item_type" value="subscription" onclick="document.getElementById('service-fields').style.display='none'; document.getElementById('subscription-fields').style.display='block';"> 🔁 Subscription Box
                             </label>
                         </div>
 
@@ -3827,6 +3830,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="service-fields" style="display: none; margin-bottom: 16px;">
                             <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
+                        </div>
+                        <div id="subscription-fields" style="display: none; margin-bottom: 16px;">
+                            <select id="item-frequency" style="width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly" selected>Monthly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                            <input type="number" id="item-cutoff" placeholder="Shipping Day of Month (e.g. 5)" style="border-radius: 8px;" />
                         </div>
 
                         <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
@@ -3839,6 +3850,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const name = document.getElementById('item-name').value;
                                 const price = document.getElementById('item-price').value;
                                 const duration = document.getElementById('item-duration').value;
+                                const frequency = document.getElementById('item-frequency') ? document.getElementById('item-frequency').value : 'monthly';
+                                const cutoff = document.getElementById('item-cutoff') ? document.getElementById('item-cutoff').value : null;
                                 const description = document.getElementById('item-desc').value;
                                 const item_type = document.querySelector('input[name="item_type"]:checked').value;
 
@@ -3851,7 +3864,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const response = await fetch('/api/v1/catalog/product', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
+                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type, frequency, cutoff: cutoff ? parseInt(cutoff) : null })
                                     });
 
                                     if (response.status === 402) {
@@ -4019,11 +4032,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
                             <button onclick="receive5StarReview()">Simulate 5-Star Review</button>
+                            <button onclick="simulateFailedPayment()">Simulate Failed Payment (CS Agent)</button>
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
                                 <button onclick="dismissMilestone()">Dismiss</button>
                                 <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 8px; text-align: center;">Share to WhatsApp</a>
+                            </div>
+                        </div>
+                        <div class="card glass" id="subscriptions-dashboard-card" onclick="showScreen('subscription-manager-screen')" style="cursor: pointer; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,240,255,0.9) 100%);">
+                            <h3>🔁 Subscription Boxes & Memberships</h3>
+                            <div style="display: flex; justify-content: space-between; margin-top: 12px;">
+                                <div>
+                                    <p style="margin:0; font-size: 13px; color: #666;">Active Subscribers</p>
+                                    <h2 id="active-subscribers-count" style="margin:4px 0 0 0; color: var(--primary);">0</h2>
+                                </div>
+                                <div>
+                                    <p style="margin:0; font-size: 13px; color: #666;">Upcoming Fulfillment</p>
+                                    <h2 id="upcoming-fulfillment-count" style="margin:4px 0 0 0; color: #28a745;">0 boxes</h2>
+                                </div>
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
@@ -7580,6 +7607,94 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
+                    <!-- Subscription Manager Screen -->
+                    <div id="subscription-manager-screen" class="screen glass" style="display: none;">
+                        <h1>Subscription Management</h1>
+                        <p style="color: #666; margin-bottom: 24px;">Manage your active subscribers and batch fulfillments.</p>
+
+                        <div class="card glass">
+                            <h3>Active Subscribers</h3>
+                            <div id="subscribers-list">Loading subscribers...</div>
+                        </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3>Fulfillment Batches</h3>
+                            <div id="batches-list">Loading batches...</div>
+                        </div>
+
+                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="width: 100%; margin-top: 16px;">Back to Dashboard</button>
+                    </div>
+
+                    <script>
+                        async function loadSubscriptionData() {
+                            try {
+                                const subRes = await fetch('/api/v1/subscriptions/subscribers');
+                                if (subRes.ok) {
+                                    const subscribers = await subRes.json();
+                                    document.getElementById('active-subscribers-count').textContent = subscribers.length;
+
+                                    const subList = document.getElementById('subscribers-list');
+                                    if (subscribers.length === 0) {
+                                        subList.innerHTML = '<p>No active subscribers.</p>';
+                                    } else {
+                                        subList.innerHTML = subscribers.map(s => `<div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                                            <span>Subscriber #${s.customer_id.substring(0,6)}</span>
+                                            <span style="color: green; font-weight: bold;">${s.status}</span>
+                                        </div>`).join('');
+                                    }
+                                }
+
+                                const batchRes = await fetch('/api/v1/subscriptions/batches');
+                                if (batchRes.ok) {
+                                    const batches = await batchRes.json();
+                                    const pendingBatches = batches.filter(b => b.status === 'PENDING');
+                                    const toShip = pendingBatches.reduce((acc, b) => acc + b.subscriber_count, 0);
+                                    document.getElementById('upcoming-fulfillment-count').textContent = `${toShip} boxes`;
+
+                                    const batchList = document.getElementById('batches-list');
+                                    if (batches.length === 0) {
+                                        batchList.innerHTML = '<p>No upcoming batches.</p>';
+                                    } else {
+                                        batchList.innerHTML = batches.map(b => `<div style="padding: 16px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; background: rgba(255,255,255,0.5);">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                                <strong>Batch for ${new Date(b.target_date).toLocaleDateString()}</strong>
+                                                <span style="background: #eef2ff; color: var(--primary); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">${b.status}</span>
+                                            </div>
+                                            <p style="margin-bottom: 12px; font-size: 14px; color: #555;">${b.subscriber_count} labels ready for Operations Agent to process.</p>
+                                            ${b.status === 'PENDING' ? `<button onclick="printBatchLabels('${b.id}')" style="width: 100%;">Print ${b.subscriber_count} Labels</button>` : `<a href="${b.label_url}" target="_blank" style="display: block; text-align: center; background: #28a745; color: white; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold;">Download Labels PDF</a>`}
+                                        </div>`).join('');
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to load subscription data', e);
+                            }
+                        }
+
+                        async function printBatchLabels(batchId) {
+                            try {
+                                const res = await fetch(`/api/v1/subscriptions/batches/${batchId}/print`, { method: 'POST' });
+                                if (res.ok) {
+                                    alert('Operations Agent has processed the batch. Labels are ready.');
+                                    loadSubscriptionData();
+                                } else {
+                                    alert('Failed to print labels.');
+                                }
+                            } catch (e) {
+                                console.error('Error printing batch', e);
+                            }
+                        }
+
+                        // Hook into screen changes
+                        const originalShowScreen = window.showScreen;
+                        window.showScreen = function(id) {
+                            if (typeof originalShowScreen === 'function') {
+                                originalShowScreen(id);
+                            }
+                            if (id === 'dashboard-screen' || id === 'subscription-manager-screen') {
+                                loadSubscriptionData();
+                            }
+                        };
+                    </script>
                     <!-- Help Center Screen -->
                     <div id="help-screen" class="screen">
                         <div id="help-widget-container">

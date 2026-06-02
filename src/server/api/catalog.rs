@@ -16,6 +16,8 @@ pub struct CreateProductRequest {
     pub duration: Option<i32>,
     pub description: String,
     pub item_type: String,
+    pub frequency: Option<String>,
+    pub cutoff: Option<i32>,
 }
 
 #[derive(Serialize)]

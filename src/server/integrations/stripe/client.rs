@@ -31,6 +31,12 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        // If price_id implies a subscription (e.g. starts with "price_recurring_"), Stripe billing is used
+        let is_recurring = _price_id.starts_with("price_recurring_");
+        if is_recurring {
+            tracing::info!("Creating recurring Stripe Checkout Session for subscription box plan");
+        }
+
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
