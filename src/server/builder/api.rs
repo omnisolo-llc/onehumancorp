@@ -79,7 +79,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
@@ -379,6 +379,10 @@ async fn create_block(
     )
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let cache = crate::builder::edge::get_edge_cache();
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -409,6 +413,10 @@ async fn update_block(
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let cache = crate::builder::edge::get_edge_cache();
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
