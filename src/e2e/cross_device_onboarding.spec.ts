@@ -7,9 +7,9 @@ test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
     // 1. Owner starts from the home page
     await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
+    await page.locator('button:has-text("Login")').click();
 
     await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
     await page.getByRole('link', { name: /Start Onboarding/i }).click();

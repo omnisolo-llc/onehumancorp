@@ -6,7 +6,7 @@ test.describe('CUJ: Inventory and Supply Chain Management', () => {
     await page.goto('/inventory');
 
     // Check page title
-    await expect(page.locator('h1')).toContainText('Inventory');
+    await expect(page.locator('h1').filter({ hasText: 'Inventory' }).first()).toBeVisible();
 
     // Check low stock alert is present
     await expect(page.locator('h2')).toContainText('Low Stock Alerts');
