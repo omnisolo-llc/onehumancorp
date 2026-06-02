@@ -2315,6 +2315,15 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // OpenAI Guardrail: Check Output Guardrail registry
+                if let Some(guardrails) = &final_cfg.guardrails {
+                    if let Err(e) = guardrails.check_output(&resp.message.content) {
+                        let err_msg = format!("Output Guardrail tripped: {}", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
+                    }
+                }
+
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
