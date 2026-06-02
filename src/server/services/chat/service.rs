@@ -32,8 +32,24 @@ impl ChatService for MyChatService {
         &self,
         request: Request<::server_ohc::orchestration::GetChatMessagesRequest>,
     ) -> Result<Response<::server_ohc::orchestration::GetChatMessagesResponse>, Status> {
+        let mobile_optimized = request.metadata().get("x-mobile-optimized").map(|v| v == "true").unwrap_or(false);
         let req = request.into_inner();
-        let messages = self.registry.chat_messages(&req.integration_id);
+        let integration_id = req.integration_id.clone();
+
+        // Wrap registry call in tokio::join! for parallel fetch capability
+        let (mut messages, _) = tokio::join!(
+            async { self.registry.chat_messages(&integration_id) },
+            async { /* parallel fetch e.g., metadata */ }
+        );
+
+        if mobile_optimized {
+            for msg in &mut messages {
+                msg.channel = String::new();
+                msg.thread_id = String::new();
+                msg.content = ::server_pricing::compression::truncate_by_word_count(&msg.content, 50);
+            }
+        }
+
         Ok(Response::new(::server_ohc::orchestration::GetChatMessagesResponse { messages }))
     }
 
@@ -86,5 +102,14 @@ mod tests {
         let resp = service.get_chat_messages(req).await.unwrap();
         assert_eq!(resp.get_ref().messages.len(), 1);
         assert_eq!(resp.get_ref().messages[0].content, "hello");
+
+        let mut req_mobile = Request::new(::server_ohc::orchestration::GetChatMessagesRequest {
+            integration_id: "test-int".to_string(),
+        });
+        req_mobile.metadata_mut().insert("x-mobile-optimized", tonic::metadata::MetadataValue::from_static("true"));
+        let resp_mobile = service.get_chat_messages(req_mobile).await.unwrap();
+        assert_eq!(resp_mobile.get_ref().messages.len(), 1);
+        assert_eq!(resp_mobile.get_ref().messages[0].channel, "");
+        assert_eq!(resp_mobile.get_ref().messages[0].thread_id, "");
     }
 }

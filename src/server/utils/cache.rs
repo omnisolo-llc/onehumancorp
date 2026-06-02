@@ -228,4 +228,60 @@ mod tests {
         assert_eq!(cache.get("k1").await, None);
         assert_eq!(cache.get("k2").await, None);
     }
+
+    #[tokio::test]
+    async fn test_hybrid_cache_swr() {
+        let cache = HybridCache::<String>::new(None);
+        // TTL is 1 second
+        cache.set("k_swr", "v_swr".to_string(), Duration::from_secs(1)).await;
+
+        let val1 = cache.get_with_swr("k_swr").await;
+        assert_eq!(val1, Some(("v_swr".to_string(), false))); // Fresh
+
+        // Wait 2 seconds so it's expired
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let val2 = cache.get_with_swr("k_swr").await;
+        assert_eq!(val2, Some(("v_swr".to_string(), true))); // Stale
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_cache_eviction_time() {
+        // Create cache with capacity of 2
+        let cache = HybridCache::<String>::with_capacity(None, 2);
+
+        cache.set("k1", "v1".to_string(), Duration::from_millis(10)).await;
+        cache.set("k2", "v2".to_string(), Duration::from_millis(10)).await;
+
+        let len1 = cache.get_local().read().unwrap().len();
+        assert_eq!(len1, 2);
+
+        // Wait for them to expire
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Setting a new item should trigger eviction of the expired ones
+        cache.set("k3", "v3".to_string(), Duration::from_secs(1)).await;
+
+        let len2 = cache.get_local().read().unwrap().len();
+        // Since k1 and k2 expired, they should have been evicted when k3 was inserted
+        assert_eq!(len2, 1);
+        assert_eq!(cache.get("k3").await, Some("v3".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_cache_invalidate_by_tag_edge() {
+        let cache = HybridCache::<String>::with_capacity(None, 10);
+        cache.set_with_tags("k1", "v1".to_string(), vec!["tag1".to_string()], Duration::from_secs(60)).await;
+        cache.set_with_tags("k2", "v2".to_string(), vec!["tag2".to_string()], Duration::from_secs(60)).await;
+
+        // Invalidate tag that does not exist
+        cache.invalidate_by_tag("tag_none").await;
+        assert_eq!(cache.get("k1").await, Some("v1".to_string()));
+        assert_eq!(cache.get("k2").await, Some("v2".to_string()));
+
+        // Invalidate tag1
+        cache.invalidate_by_tag("tag1").await;
+        assert_eq!(cache.get("k1").await, None);
+        assert_eq!(cache.get("k2").await, Some("v2".to_string()));
+    }
 }

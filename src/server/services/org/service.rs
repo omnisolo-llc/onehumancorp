@@ -36,20 +36,30 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
-        let cache_key = "org_domains".to_string();
+        let mobile_optimized = _request.metadata().get("x-mobile-optimized").map(|v| v == "true").unwrap_or(false);
+        let cache_key = format!("org_domains_{}", mobile_optimized);
         let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
         if let Some(domains) = cache.get(&cache_key).await {
             return Ok(Response::new(DomainsResponse { domains }));
         }
 
-        let domains = vec![
+        let mut domains = vec![
             DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
             DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
             DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
 
-        cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
+        if mobile_optimized {
+            let cached_domains = domains.clone();
+            cache.set(&format!("org_domains_false"), cached_domains, std::time::Duration::from_secs(3600)).await;
+            for d in &mut domains {
+                d.description = String::new();
+            }
+            cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
+        } else {
+            cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
+        }
 
         Ok(Response::new(DomainsResponse { domains }))
     }
@@ -77,18 +87,30 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
-        let cache_key = "org_marketplace_items".to_string();
+        let mobile_optimized = _request.metadata().get("x-mobile-optimized").map(|v| v == "true").unwrap_or(false);
+        let cache_key = format!("org_marketplace_items_{}", mobile_optimized);
         let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
         if let Some(items) = cache.get(&cache_key).await {
             return Ok(Response::new(MarketplaceItemsResponse { items }));
         }
 
-        let items = vec![
+        let mut items = vec![
             MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
         ];
 
-        cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+        if mobile_optimized {
+            let cached_items = items.clone();
+            cache.set(&format!("org_marketplace_items_false"), cached_items, std::time::Duration::from_secs(3600)).await;
+            for item in &mut items {
+                item.description = String::new();
+                item.author = String::new();
+                item.tags.clear();
+            }
+            cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+        } else {
+            cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+        }
 
         Ok(Response::new(MarketplaceItemsResponse { items }))
     }
@@ -158,7 +180,8 @@ impl OrgService for MyOrgService {
             user_message: None,
         });
 
-        let response = AnalyticsSummaryResponse {
+        let mobile_optimized = _request.metadata().get("x-mobile-optimized").map(|v| v == "true").unwrap_or(false);
+        let mut response = AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
             total_humans,
@@ -171,6 +194,10 @@ impl OrgService for MyOrgService {
             upgrade_message: status.user_message.unwrap_or_default(),
             is_allowed: status.is_allowed,
         };
+
+        if mobile_optimized {
+            response.upgrade_message = String::new();
+        }
 
         self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
