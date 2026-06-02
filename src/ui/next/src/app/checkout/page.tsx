@@ -11,6 +11,10 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Local Delivery state
+  const [isLocalDelivery, setIsLocalDelivery] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+
   const handlePayment = async () => {
     setIsProcessing(true);
 
@@ -44,6 +48,46 @@ export default function CheckoutPage() {
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
         <p className="text-gray-700">Please enter your payment details below.</p>
+
+        {/* Order Summary & Local Delivery */}
+        <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <div className="flex justify-between items-center mb-2">
+             <span className="font-semibold text-gray-800">Subtotal</span>
+             <span className="text-gray-800">$45.00</span>
+          </div>
+
+          <div className="flex items-center gap-3 py-3 border-y border-gray-200/50">
+            <input
+              type="checkbox"
+              id="local-delivery"
+              checked={isLocalDelivery}
+              onChange={(e) => setIsLocalDelivery(e.target.checked)}
+              className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+            />
+            <label htmlFor="local-delivery" className="flex flex-col cursor-pointer">
+              <span className="font-medium text-gray-900">Local Delivery (DoorDash)</span>
+              <span className="text-xs text-gray-500">Fast local delivery by a Dasher (+$7.00)</span>
+            </label>
+          </div>
+
+          {isLocalDelivery && (
+             <div className="animate-fade-in space-y-2 mt-2">
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Delivery Address</label>
+                <input
+                  type="text"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="e.g. 123 Main St, Apt 4B"
+                  className="w-full bg-white/50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                />
+             </div>
+          )}
+
+          <div className="flex justify-between items-center mt-2">
+             <span className="font-bold text-lg text-gray-900">Total</span>
+             <span className="font-bold text-lg text-gray-900">${isLocalDelivery ? "52.00" : "45.00"}</span>
+          </div>
+        </div>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
