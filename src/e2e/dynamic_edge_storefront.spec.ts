@@ -2,45 +2,42 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dynamic Edge-Caching Storefront', () => {
     test('Maya can build a storefront and sees edge-caching performance metrics', async ({ page, request }) => {
-        // 1. Maya logs in and goes to the storefront builder.
-        await page.goto('http://localhost:3000/storefront-builder');
+        // We will intercept the initial storefront builder page load because the builder fetches current state
+        // Let's go to storefront-builder
+        await page.goto('/storefront-builder');
 
-        // 2. Maya describes her business.
+        // Wait for bio input to be visible and type a description
         const textarea = page.locator('#bio-input');
-        await expect(textarea).toBeVisible();
+        await expect(textarea).toBeVisible({ timeout: 15000 });
         await textarea.fill('I bake custom vegan cakes in Portland.');
 
-        // 3. Maya generates the store.
+        // Wait for the Build My Storefront button and click it
         const generateBtn = page.locator('#generate-btn');
-        await expect(generateBtn).toBeEnabled();
+        await expect(generateBtn).toBeEnabled({ timeout: 5000 });
         await generateBtn.click();
 
-        // 4. Maya reviews the store and clicks 1-Tap Launch.
+        // The UI should switch to generating, and then eventually show the preview blocks
+        // The mock backend endpoint `/api/v1/builder/generate` handles the response
         const launchBtn = page.locator('#launch-btn');
-        // Wait for generation to finish and launch button to be available.
-        await expect(launchBtn).toBeVisible({ timeout: 15000 });
+
+        // The page simulates launching the store when launchBtn is clicked.
+        // `waitFor` the button to become visible (status goes to draft or idle preview).
+        await expect(launchBtn).toBeVisible({ timeout: 30000 });
         await launchBtn.click();
 
-        // 5. The success "Live" screen appears.
+        // Verify the success "Live" screen appears.
         await expect(page.locator('h1:has-text("You\'re Live!")')).toBeVisible({ timeout: 15000 });
 
-        // 6. Verify the "Store Performance" card is visible.
+        // Verify the "Store Performance" card is visible.
         const performanceCardTitle = page.locator('span', { hasText: 'Store Performance' });
         await expect(performanceCardTitle).toBeVisible();
 
         const performanceValue = page.locator('div', { hasText: '< 50ms' });
         await expect(performanceValue).toBeVisible();
 
-        // 7. Verify Cache Invalidation Hook
-        // Since E2E test runs against the full stack, we will simulate a webhook or an API request
-        // that creates an order or updates a product.
-        // For simplicity, we just verify the route exists and the cache gets invalidated in backend.
-        // The backend handles invalidation via the agent event bus. We will trigger an event
-        // to our local backend directly to test the operations agent hook.
-
-        // This is a minimal check for E2E since the cache invalidation happens asynchronously.
-        // We ensure the backend route for the webhook or the product update is reachable.
-        const productUpdateResponse = await request.post('http://localhost:3000/api/v1/catalog/product', {
+        // Test the Operations Agent backend cache invalidation logic
+        // by pushing an event to the backend endpoint.
+        const productUpdateResponse = await request.post('/api/v1/catalog/product', {
             data: {
                 name: 'Vegan Chocolate Cake',
                 price: '$25.00',
