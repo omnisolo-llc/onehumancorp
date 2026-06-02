@@ -1146,23 +1146,23 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
+        let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
+                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
+                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
+                (llm, rev, fees)
             }),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
-
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
