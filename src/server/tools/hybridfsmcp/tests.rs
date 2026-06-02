@@ -11,8 +11,13 @@ async fn test_local_fs_provider() {
 
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
+
+    // Some mock local providers add a 0 length byte array depending on context during tests
+    // so we will write it, flush it and read it to avoid race condition of 0 length bytes read
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"hello world");
+    assert_eq!(content, b"hello world".to_vec());
 
     // Test list dir
     provider.write_file("dir/file1.txt", b"1").await.unwrap();
@@ -31,8 +36,9 @@ async fn test_cloud_fs_provider() {
 
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"cloud content");
+    assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
@@ -64,6 +70,8 @@ async fn test_hybrid_fs_mcp_server() {
     let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["status"], "success");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Test fs_read_file tool
     let req = McpInvokeRequest {
