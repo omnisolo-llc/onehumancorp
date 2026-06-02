@@ -906,19 +906,6 @@ impl PromoterWorker {
         let db_social = db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated" || event.action == "ProductUpdated" {
-                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
-                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
-                            if let Some(product_id) = payload_json.get("product_id").and_then(|p| p.as_str()) {
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
-                            }
-                        }
-                    }
-                }
-
                 if event.action == "ProductCreated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
