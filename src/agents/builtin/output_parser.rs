@@ -29,7 +29,7 @@ impl<T> StructuredOutputParser<T> {
 
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        let _completion = msg.content.clone();
+        let completion = msg.content.clone();
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {

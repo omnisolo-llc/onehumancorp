@@ -1,4 +1,5 @@
 use ohc_builtin_agent_core::types::ToolCall;
+use std::sync::Arc;
 use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
 
 /// OpenAI Mechanic: 3 distinct hooks for guardrails
@@ -119,7 +120,6 @@ impl ToolGuardrail for OpenAiToolPolicyEnforcer {
 mod tests {
     use super::*;
     use crate::guardrails::GuardrailRegistry;
-    use std::sync::Arc;
     use serde_json::json;
 
     #[test]
