@@ -22,6 +22,14 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await page.getByRole('button', { name: 'Copy Link' }).click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
+    // Verify Storefront Embed widget code
+    await expect(page.getByRole('heading', { name: 'Embed Storefront Widget' })).toBeVisible();
+    await expect(page.locator('textarea')).toContainText('<iframe src="https://ohc.app/api/v1/growth/storefront/embed');
+
+    // Test Copy Code button
+    await page.getByRole('button', { name: 'Copy Code' }).click();
+    await expect(page.getByRole('button', { name: 'Copied!', exact: true }).nth(1)).toBeVisible();
+
     // Close the modal
     await page.getByRole('button', { name: 'Close Cloud Bridge Invite' }).click();
     await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).not.toBeVisible();

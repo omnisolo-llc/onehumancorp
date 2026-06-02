@@ -31,6 +31,8 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [tenantId, setTenantId] = useState('my-store');
 
   const fetchApprovals = async () => {
     try {
@@ -48,6 +50,12 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchApprovals();
+    if (typeof localStorage !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant');
+      if (storedTenant) {
+        setTenantId(storedTenant);
+      }
+    }
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -193,6 +201,29 @@ export default function TeamPage() {
               >
                 {linkCopied ? 'Copied!' : 'Copy Link'}
               </button>
+
+              <div className="mt-6 border-t border-gray-100 pt-6">
+                <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Embed Storefront Widget</h2>
+                <p className="text-sm text-gray-600 mb-4">Share your store with partners to embed on their site. This widget allows customers to buy directly from you anywhere.</p>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col gap-2 mb-4">
+                  <textarea
+                    readOnly
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    className="w-full bg-transparent text-xs text-gray-700 outline-none font-mono resize-none"
+                    rows={4}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      setEmbedCopied(true);
+                      setTimeout(() => setEmbedCopied(false), 2000);
+                    }}
+                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${embedCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                  >
+                    {embedCopied ? 'Copied!' : 'Copy Code'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
