@@ -2,6 +2,12 @@ import { test, expect } from './fixtures';
 
 test.describe('Team Approvals', () => {
   test('should display and approve automated_review_request', async ({ page }) => {
+    // Add local storage seed so it fetches approvals from 'e2e-tenant'
+    await page.addInitScript(() => {
+      localStorage.setItem('tenant_id', 'e2e-tenant');
+      localStorage.setItem('tenant', 'e2e-tenant');
+    });
+
     // Navigate to Team page
     await page.goto('/team');
 
