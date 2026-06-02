@@ -54,7 +54,6 @@ rust_library(
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",
-        "plan_and_execute.rs",
 
         "harness.rs",
         "hibernation.rs",
