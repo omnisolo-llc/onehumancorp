@@ -157,7 +157,7 @@ async fn test_worker_pool_and_ledger() {
     queue.enqueue(tenant_id, "test_worker_job", &serde_json::json!({})).await.unwrap();
 
     // Give the worker pool time to process
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     worker_pool.shutdown().await;
 

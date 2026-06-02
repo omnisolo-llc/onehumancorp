@@ -6,7 +6,6 @@ export async function POST(req: Request) {
 
     // In a real application, we would call the ManyChat API to send a message.
     // For now, we simulate a successful API response.
-    console.log(`Sending message to subscriber ${subscriber_id}: ${message}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
