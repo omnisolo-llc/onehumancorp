@@ -258,6 +258,41 @@ describe('OnboardingWizard', () => {
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
 
+  it('Step 2: Displays validation error when product price is invalid', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Bakery',
+        categories: ['food'],
+        domainChoice: 'subdomain',
+        firstProductName: 'Cake',
+        firstProductPrice: 'abc' // Invalid price
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
+
+    const priceInput = screen.getByDisplayValue('abc');
+    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
+
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      // The general error message should trigger
+      expect(screen.getByText('Please fix the errors before continuing.')).toBeInTheDocument();
+      expect(screen.getByText('Invalid price.')).toBeInTheDocument();
+    });
+
+    // Check that we're still on step 2
+    expect(useOnboardingStore.getState().step).toBe(2);
+  });
+
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
     const user = userEvent.setup({ delay: null });
 
