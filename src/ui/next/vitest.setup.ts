@@ -50,10 +50,56 @@ vi.mock('next/server', () => {
   }
 })
 
+
+
+
+
 // Add fetch mock if needed
-if (typeof global.fetch === 'undefined') {
-  global.fetch = vi.fn() as any
-}
+const originalFetch = global.fetch;
+global.fetch = vi.fn().mockImplementation((url, options) => {
+  if (typeof url === 'string') {
+    if (url.includes('/api/v1/dashboard/metrics')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          total_sales: 1200,
+          active_customers: 450,
+          pending_orders: 12
+        }),
+        text: () => Promise.resolve('')
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([]),
+      text: () => Promise.resolve('')
+    });
+  }
+  if (url instanceof URL || url instanceof Request) {
+     if (url.toString().includes('/api/v1/dashboard/metrics')) {
+       return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          total_sales: 1200,
+          active_customers: 450,
+          pending_orders: 12
+        }),
+        text: () => Promise.resolve('')
+       });
+     }
+     return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([]),
+      text: () => Promise.resolve('')
+    });
+  }
+  return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([]),
+      text: () => Promise.resolve('')
+  });
+});
+
 
 // Add standard window mocks
 Object.defineProperty(window, 'matchMedia', {

@@ -5,7 +5,7 @@ import React from "react";
  * @jest-environment jsdom
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AgentMarketplacePage from './page';
 
@@ -32,13 +32,13 @@ describe('Agent Marketplace Page', () => {
   });
 
   it('renders the marketplace header', async () => {
-    render(<AgentMarketplacePage />);
+    await act(async () => { render(<AgentMarketplacePage />); });
     expect(screen.getByText('Agent Marketplace')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search for agents...')).toBeInTheDocument();
   });
 
   it('fetches and displays agents on load', async () => {
-    render(<AgentMarketplacePage />);
+    await act(async () => { render(<AgentMarketplacePage />); });
 
     await waitFor(() => {
       expect(screen.getByText('Data Analyst')).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('Agent Marketplace Page', () => {
       json: async () => [],
     });
 
-    render(<AgentMarketplacePage />);
+    await act(async () => { render(<AgentMarketplacePage />); });
 
     await waitFor(() => {
       expect(screen.getByText(/No agents found matching/)).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('Agent Marketplace Page', () => {
   });
 
   it('updates the search query when typing', async () => {
-    render(<AgentMarketplacePage />);
+    await act(async () => { render(<AgentMarketplacePage />); });
 
     const searchInput = screen.getByPlaceholderText('Search for agents...');
     fireEvent.change(searchInput, { target: { value: 'SEO' } });
@@ -79,7 +79,7 @@ describe('Agent Marketplace Page', () => {
       ok: false,
     });
 
-    render(<AgentMarketplacePage />);
+    await act(async () => { render(<AgentMarketplacePage />); });
 
     await waitFor(() => {
       expect(screen.getByText('Failed to fetch agents')).toBeInTheDocument();
