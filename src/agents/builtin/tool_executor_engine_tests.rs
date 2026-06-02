@@ -161,8 +161,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "current_thread")]
     async fn test_user_fixable() {
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
@@ -180,11 +181,37 @@ mod tests {
         };
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
+            ToolError::UserFixable(msg) => assert_eq!(msg, "User aborted. Original error: ask user"),
             _ => panic!("Expected UserFixable error"),
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_user_fixable_resolve() {
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::UserFixable("ask user".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "User provided input to resolve the issue: here is the fix");
     }
 
     #[tokio::test]
