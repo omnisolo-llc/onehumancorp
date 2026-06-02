@@ -17,7 +17,7 @@ impl SqliteUserRepository {
 
 #[async_trait]
 impl UserRepository for SqliteUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, user: User, _org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         // For SQLite in Standalone mode, there's no multi-tenant isolation via connection parameters.
         // We still store the org_id to conform to the interface.
@@ -33,7 +33,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(org_id)
+        .bind(&user.organization_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -224,5 +224,63 @@ impl UserRepository for SqliteUserRepository {
 
         let count: i32 = row.get(0);
         Ok(count > 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_sqlite_create_user_organization_id_parity() {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE users (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL,
+                password_hash TEXT,
+                roles TEXT,
+                active BOOLEAN,
+                organization_id TEXT,
+                oidc_subject TEXT,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = SqliteUserRepository::new(pool.clone());
+        let user = User {
+            id: "test-id".to_string(),
+            username: "test-user".to_string(),
+            email: "test@example.com".to_string(),
+            password_hash: "".to_string(),
+            roles: vec!["admin".to_string()],
+            active: true,
+            organization_id: Some("user-org-id".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+
+        // Pass a different org_id argument to verify the model binds `user.organization_id` instead
+        repo.create_user(user, "function-arg-org-id").await.unwrap();
+
+        let row = sqlx::query("SELECT organization_id FROM users WHERE id = 'test-id'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let fetched_org_id: String = sqlx::Row::get(&row, "organization_id");
+        assert_eq!(fetched_org_id, "user-org-id");
     }
 }
