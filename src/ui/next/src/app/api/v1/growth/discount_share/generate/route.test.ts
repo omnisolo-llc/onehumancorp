@@ -1,6 +1,4 @@
-/**
- * @jest-environment node
- */
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
 describe('POST /api/v1/growth/discount_share/generate', () => {
@@ -8,19 +6,19 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
 
     beforeEach(() => {
         process.env = { ...originalEnv };
-        global.fetch = jest.fn();
+        global.fetch = vi.fn();
     });
 
     afterEach(() => {
         process.env = originalEnv;
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('should successfully proxy the request to the backend and return data', async () => {
         process.env.OHC_BACKEND_URL = 'http://mock-backend';
         const mockResponseData = { share_url: 'https://ohc.store/discount/mocked?tenant=test' };
 
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
+        (global.fetch as any).mockResolvedValueOnce({
             ok: true,
             json: async () => mockResponseData,
         });
@@ -48,7 +46,7 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
     it('should return error when backend responds with an error', async () => {
         process.env.OHC_BACKEND_URL = 'http://mock-backend';
 
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
+        (global.fetch as any).mockResolvedValueOnce({
             ok: false,
             status: 401
         });
@@ -65,7 +63,7 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
     });
 
     it('should handle fetch errors gracefully', async () => {
-        (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+        (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
         const req = new Request('http://localhost/api/v1/growth/discount_share/generate', {
             method: 'POST',

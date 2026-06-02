@@ -25,6 +25,12 @@ export default defineConfig({
     preserveSymlinks: true,
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'next/server': path.resolve(__dirname, '__mocks__/next/server.ts'),
+      'next/navigation': path.resolve(__dirname, '__mocks__/next/navigation.ts'),
+      'next/link': path.resolve(__dirname, '__mocks__/next/link.ts'),
+      'dompurify': path.resolve(__dirname, '__mocks__/dompurify.ts'),
+      'swagger-ui-react/swagger-ui.css': path.resolve(__dirname, '__mocks__/swagger-ui-react.css.ts'),
+      'swagger-ui-react': path.resolve(__dirname, '__mocks__/swagger-ui-react.ts')
     },
   },
 })

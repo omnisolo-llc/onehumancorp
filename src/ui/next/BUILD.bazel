@@ -10,6 +10,7 @@ sh_test(
     data = glob([
         "src/**/*.ts",
         "src/**/*.tsx",
+        "__mocks__/**/*.ts",
     ]) + [
         "next-env.d.ts",
         "package.json",

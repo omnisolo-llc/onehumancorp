@@ -20,7 +20,7 @@ if [[ ! -f "$node_modules/vitest/vitest.mjs" ]]; then
   exit 1
 fi
 
-node_bin="$(find "$TEST_SRCDIR" -path '*/bin/node' | head -n 1)"
+node_bin="$(find "$TEST_SRCDIR" -path "*/bin/node" | head -n 1)"
 if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
   echo "missing Bazel-provided Node.js binary" >&2
   exit 1
@@ -33,6 +33,9 @@ rm -rf "$work_dir"
 mkdir -p "$work_dir"
 
 cp -RL src "$work_dir/src"
+if [[ -d "__mocks__" ]]; then
+  cp -RL __mocks__ "$work_dir/__mocks__"
+fi
 
 for file in next-env.d.ts package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.ts; do
   if [[ -f "$file" ]]; then

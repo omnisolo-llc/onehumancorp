@@ -1,3 +1,5 @@
 import '@testing-library/jest-dom/vitest';
 
-window.HTMLElement.prototype.scrollIntoView = function () {};
+if (typeof window !== 'undefined') {
+  window.HTMLElement.prototype.scrollIntoView = function () {};
+}
