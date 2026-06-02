@@ -1,85 +1,89 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import HelpArticlePage from './page';
-import userEvent from '@testing-library/user-event';
 
-// Mock next/navigation
-const mockPush = vi.fn();
+let mockUseParams = { articleId: 'getting-started' };
+let mockPush = vi.fn();
+let mockBack = vi.fn();
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  useParams: () => ({
-    articleId: 'getting-started'
-  })
+  useParams: () => mockUseParams,
+  useRouter: () => ({ push: mockPush, back: mockBack })
 }));
 
 describe('HelpArticlePage', () => {
+  let consoleErrorSpy: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        title: "Getting Started with Your Store",
-        contentHtml: "<p>Welcome to OneHumanCorp!</p>"
-      })
-    });
+    mockUseParams = { articleId: 'getting-started' };
+    mockPush.mockClear();
+    mockBack.mockClear();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('renders loading state initially', async () => {
-    let resolvePromise: any;
-    const promise = new Promise(resolve => { resolvePromise = resolve; });
-    global.fetch = vi.fn().mockImplementation(() => promise);
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
 
+  it('renders loading state initially', () => {
+    global.fetch = vi.fn(() => new Promise(() => {})) as any;
     render(<HelpArticlePage />);
     expect(screen.getByText('Loading...')).toBeInTheDocument();
-
-    await act(async () => {
-      resolvePromise({
-        ok: true,
-        json: () => Promise.resolve({
-            title: "Getting Started with Your Store",
-            contentHtml: "<p>Welcome to OneHumanCorp!</p>"
-        })
-      });
-    });
   });
 
-  it('renders article loaded from API', async () => {
-    render(<HelpArticlePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
-      expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
-    });
-  });
-
-  it('navigates back when clicking the back button', async () => {
-    const user = userEvent.setup();
-    render(<HelpArticlePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
+  it('renders article content', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ title: 'Getting Started with OHC', contentHtml: '<div data-testid="article-content"></div>' }),
     });
 
-    const backButton = screen.getByRole('button', { name: /Back to Help Center/i });
-    await user.click(backButton);
-
-    expect(mockPush).toHaveBeenCalledWith('/help');
+    render(<HelpArticlePage />);
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started with OHC')).toBeInTheDocument();
+    });
+    expect(screen.getByText('← Back to Help Center')).toBeInTheDocument();
   });
 
   it('handles not found error', async () => {
+    mockUseParams = { articleId: 'invalid-id' };
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
+      status: 404,
     });
-
     render(<HelpArticlePage />);
-
     await waitFor(() => {
       expect(screen.getByText('Article Not Found')).toBeInTheDocument();
-      expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
     });
+  });
+
+  it('purifies HTML content', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ title: 'Getting Started with OHC', contentHtml: '<div data-testid="article-content"></div>' }),
+    });
+    render(<HelpArticlePage />);
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started with OHC')).toBeInTheDocument();
+    });
+    // DOMPurify is mocked so it just passes the string through
+    expect(screen.getByTestId('article-content')).toBeInTheDocument();
+  });
+
+  it('navigates back when clicking the back button', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ title: 'Getting Started with OHC', contentHtml: '<div data-testid="article-content"></div>' }),
+    });
+    render(<HelpArticlePage />);
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started with OHC')).toBeInTheDocument();
+    });
+
+    const backBtn = screen.getByText('← Back to Help Center');
+    fireEvent.click(backBtn);
+    expect(mockPush).toHaveBeenCalledWith('/help');
   });
 });

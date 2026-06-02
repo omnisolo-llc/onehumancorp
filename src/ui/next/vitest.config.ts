@@ -23,8 +23,18 @@ export default defineConfig({
   },
   resolve: {
     preserveSymlinks: true,
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      { find: /^@\/(.*)/, replacement: path.resolve(__dirname, './src/$1') },
+      { find: 'next/navigation', replacement: path.resolve(__dirname, './src/__mocks__/next/navigation.ts') },
+      { find: 'next/link', replacement: path.resolve(__dirname, './src/__mocks__/next/link.ts') },
+      { find: 'dompurify', replacement: path.resolve(__dirname, './src/__mocks__/dompurify.ts') },
+      { find: 'swagger-ui-react/swagger-ui.css', replacement: path.resolve(__dirname, './src/__mocks__/swagger-ui-react.css') },
+      { find: 'swagger-ui-react', replacement: path.resolve(__dirname, './src/__mocks__/swagger-ui-react.ts') },
+    ]
   },
+  css: {
+    postcss: {
+      plugins: [], // Disable PostCSS for tests to avoid tailwindcss dependency error on mock css
+    }
+  }
 })

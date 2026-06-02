@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import SwaggerUI from "swagger-ui-react";
-import "swagger-ui-react/swagger-ui.css";
+// Conditional import to prevent failure in vitest environment without breaking dev
+if (process.env.NODE_ENV !== 'test') {
+  require("swagger-ui-react/swagger-ui.css");
+}
 
 // OpenAPI spec for OHC backend
 const swaggerSpec = {
