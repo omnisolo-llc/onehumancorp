@@ -401,6 +401,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_hybrid_latency() {
+        bench_hybrid_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         bench_dashboard_snapshot().await;
     }
@@ -458,6 +463,21 @@ mod tests {
     }
 
 
+}
+
+pub async fn bench_hybrid_latency() {
+    tracing::info!("--- Running Hybrid Latency Benchmark ---");
+
+    tracing::info!("1. Database Query Time");
+    bench_db_query_time().await;
+
+    tracing::info!("2. AI Job Dispatch Latency");
+    bench_queue_latency().await;
+
+    tracing::info!("3. API Response Time (Dashboard Snapshot)");
+    bench_api_response_time().await;
+
+    tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
 
 pub async fn bench_advisory_insights_latency() {
