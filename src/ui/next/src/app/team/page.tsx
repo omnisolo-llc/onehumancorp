@@ -126,16 +126,48 @@ export default function TeamPage() {
 
           <div className="mb-6 p-5 rounded-[16px] border flex flex-col gap-3 shadow-sm relative overflow-hidden group" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative z-10">
-              <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
-              <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
+            <div className="relative z-10 flex justify-between items-center mb-3">
+              <div>
+                <h2 className="text-xl font-semibold font-outfit text-gray-900">Human Staff</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage POS and offline access.</p>
+              </div>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
+                className="w-10 h-10 bg-gray-900 hover:bg-black text-white rounded-full flex items-center justify-center shadow-md active:scale-[0.98] transition-all"
+                aria-label="Add Staff Member"
               >
-                Invite to Cloud Team
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               </button>
             </div>
+
+            <div className="flex flex-col gap-2">
+               {/* Mock Staff Members */}
+               <div className="p-3 bg-white/50 rounded-xl border border-gray-100 flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">S</div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">Sarah (Cashier)</p>
+                      <p className="text-xs text-gray-500">🟢 Clocked In (2h 15m)</p>
+                    </div>
+                 </div>
+               </div>
+               <div className="p-3 bg-white/50 rounded-xl border border-gray-100 flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 font-bold">M</div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">Mark (Driver)</p>
+                      <p className="text-xs text-gray-500">⚪ Offline</p>
+                    </div>
+                 </div>
+               </div>
+            </div>
+
+            <button
+                onClick={() => setShowInviteModal(true)}
+                className="w-full mt-3 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
+            >
+                Invite to Cloud Team
+            </button>
           </div>
 
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">AI Departments</h2>

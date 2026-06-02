@@ -2488,7 +2488,32 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             dynamic_workflow_state_dir,
         ),
     );
+    let terminal_router = crate::api::terminal::staff::router(hub.clone())
+        .layer(axum::middleware::from_fn({
+            let store = db.clone();
+            move |req: axum::extract::Request, next: axum::middleware::Next| {
+                let store = store.clone();
+                async move {
+                    use axum::response::IntoResponse;
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let auth_store = std::sync::Arc::new(crate::auth::Store::new());
+                    let claims = match auth_store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            }
+        }));
+
     let app = axum::Router::new()
+        .nest("/api/terminal", terminal_router)
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
