@@ -159,7 +159,7 @@ test.describe('Onboarding Wizard Flow', () => {
     // Mock intake API to return 500 error
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 500,
-      body: JSON.stringify({ error: 'Internal Server Error' })
+      body: JSON.stringify({ error: 'Failed to process business details' })
     }));
 
     await page.goto('http://localhost:3000/onboarding');
