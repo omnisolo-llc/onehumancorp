@@ -43,7 +43,7 @@ rust_library(
         "offline_sync.rs",
         "telemetry.rs",
         "catalog.rs",
-
+        "staff_api.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",

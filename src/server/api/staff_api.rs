@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use sqlx::Row;
 use crate::db::DB;
 
 #[derive(Clone)]
