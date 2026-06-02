@@ -43,8 +43,13 @@ pub fn reduce_tokens(data: &str) -> String {
         .filter(|word| {
             !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
         })
-        .collect::<Vec<&str>>()
-        .join(" ")
+        .fold(String::with_capacity(data.len()), |mut acc, w| {
+            if !acc.is_empty() {
+                acc.push(' ');
+            }
+            acc.push_str(w);
+            acc
+        })
 }
 
 
