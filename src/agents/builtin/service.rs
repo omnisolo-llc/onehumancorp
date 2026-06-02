@@ -655,6 +655,7 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = ohc_builtin_agent_tools::all_tools(
+            None,
             todos,
             task_store,
             mailbox,
