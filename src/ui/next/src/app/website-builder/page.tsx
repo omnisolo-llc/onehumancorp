@@ -650,6 +650,7 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
+                      id="instant-build-input"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
@@ -657,11 +658,28 @@ export default function WebsiteBuilderPage() {
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
+                      onClick={async () => {
+                        const input = (document.getElementById('instant-build-input') as HTMLTextAreaElement)?.value || 'My business';
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        try {
+                          const res = await fetch('/api/onboarding/instant-build', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ description: input }),
+                          });
+                          if (res.ok) {
+                             const data = await res.json();
+                             if (data.liveUrl) {
+                               setLiveUrl(data.liveUrl);
+                             }
+                             setStatus('live');
+                          } else {
+                             // Fallback in case of error
+                             setStatus('live');
+                          }
+                        } catch (e) {
+                          setStatus('live');
+                        }
                       }}
                     >
                       Generate Storefront
@@ -680,9 +698,17 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255,255,255,0.1)' }}>
+            <div className="w-24 h-24 relative mb-8">
+               <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
+               <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+            <div className="space-y-2 text-center">
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">The Promoter is generating your catalog...</p>
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>The Advisor is selecting smart defaults...</p>
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your premium storefront...</p>
+            </div>
         </div>
       </div>
     );

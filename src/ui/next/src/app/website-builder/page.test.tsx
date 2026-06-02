@@ -123,7 +123,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Publish my business'));
 
     // Verify generating screen
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Building Your Business...')).toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(2000);
@@ -143,13 +143,12 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
     fireEvent.click(screen.getByText('Generate Storefront'));
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Building Your Business...')).toBeInTheDocument();
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    // The fetch call handles resolving to 'live' status
+    await waitFor(() => {
+      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -246,17 +245,22 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles sync back to server state on change', async () => {
+    // Setup initial state so it renders in builder mode
+    const initialBlocks = [
+      { type: 'Hero', props: { title: '1' } },
+      { type: 'Catalog', props: { title: '2' } }
+    ];
+    localStorage.setItem('ohc_builder_blocks', JSON.stringify(initialBlocks));
+    localStorage.setItem('ohc_builder_status', 'draft');
+
     render(<WebsiteBuilderPage />);
 
-    // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
-    fireEvent.click(screen.getByText('Instant Build'));
-    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+    // Ensure we are in builder mode by checking for a block. The mock component renders JSON.stringify(props)
+    expect(screen.getByText('{"title":"1"}')).toBeInTheDocument();
 
-    // Status changes to 'generating', wait for it
-    await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-    });
+    // Trigger something that changes status (e.g. changing block selection)
+    // Click a block to select it, which triggers a save draft sync
+    fireEvent.click(screen.getByText('{"title":"1"}'));
 
     act(() => {
       vi.advanceTimersByTime(2500); // Wait for debounce and status change to live
@@ -265,7 +269,7 @@ describe('WebsiteBuilderPage', () => {
     // Should have called fetch to sync
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('status":"generating"')
+      body: expect.stringContaining('blocks')
     }));
   });
 });
