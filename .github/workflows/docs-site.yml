@@ -1,13 +1,8 @@
 name: docs-site
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - docs/**
-      - mkdocs.yml
-      - .github/workflows/docs-site.yml
+  schedule:
+    - cron: "41 11 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -64,7 +59,7 @@ jobs:
           path: site
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
