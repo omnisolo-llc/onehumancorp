@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function ChangelogPage() {
   const sections = [
@@ -18,7 +19,7 @@ export default function ChangelogPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[20px] saturate-200">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center">Release Notes & Changelog</h1>
         <div className="space-y-8">
@@ -43,9 +44,11 @@ export default function ChangelogPage() {
           ))}
 
           <div className="mt-8 text-center">
-            <a href="https://onehumancorp.com/changelog" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline bg-blue-50/80 backdrop-blur-md px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm">
-              Read the full technical changelog on our website →
-            </a>
+            <WithTooltip id="full-changelog-link-tooltip" defaultText="Open the detailed technical release notes">
+              <a href="https://onehumancorp.com/changelog" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline bg-blue-50/80 backdrop-blur-md px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm">
+                Read the full technical changelog on our website →
+              </a>
+            </WithTooltip>
           </div>
         </div>
       </div>

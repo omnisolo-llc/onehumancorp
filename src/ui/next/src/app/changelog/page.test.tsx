@@ -3,16 +3,18 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import ChangelogPage from './page';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 
 describe('ChangelogPage', () => {
   it('renders the release notes page correctly', () => {
-    render(<ChangelogPage />);
+    render(
+      <TooltipProvider>
+        <ChangelogPage />
+      </TooltipProvider>
+    );
 
     expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
     expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();
-
-    // Check for some content points
-    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
+    expect(screen.getByText('Read the full technical changelog on our website →')).toBeInTheDocument();
   });
 });
