@@ -17,7 +17,7 @@ export default function HelpArticlePage() {
         .then(res => {
           if (!res.ok) {
             setError(true);
-            throw new Error('Not found');
+            return null;
           }
           return res.json();
         })

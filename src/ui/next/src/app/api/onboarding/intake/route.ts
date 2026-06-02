@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         return NextResponse.json(data);
     }
 
-    return NextResponse.json({ error: 'Failed to process intake' }, { status: res.status });
+    const errData = await res.json().catch(() => ({})); return NextResponse.json({ error: errData.error || errData.message || 'Failed to process intake' }, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }

@@ -179,7 +179,7 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.locator('button:has-text("Generate My Business")').click();
 
     // Error should be shown on the same step
-    await expect(page.locator('text="Failed to process business details"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Internal Server Error"')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text="Where are you located?"')).toBeVisible();
   });
 
