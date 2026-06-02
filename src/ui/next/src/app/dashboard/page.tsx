@@ -547,6 +547,44 @@ export default function Dashboard() {
            </div>
          </section>
 
+         {/* Trending Stores Insights Soft Paywall */}
+         <section className="mb-6 animate-fade-in">
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+               <div className="flex items-center gap-4">
+                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Trending Stores Insights</h2>
+               </div>
+           </div>
+
+           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+               <div className="filter blur-sm select-none opacity-50">
+                   <div className="flex justify-between items-center mb-4">
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                   </div>
+                   <div className="h-20 bg-gray-100 rounded-lg w-full mb-3"></div>
+                   <div className="h-20 bg-gray-100 rounded-lg w-full mb-3"></div>
+                   <div className="h-20 bg-gray-100 rounded-lg w-full"></div>
+               </div>
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
+                       Unlock trending market data to see what other successful businesses are selling.
+                   </p>
+                   <button
+                       onClick={() => {
+                           if (confirm('Upgrade to Pro to access Trending Stores Insights?')) {
+                               window.location.href = '/pricing';
+                           }
+                       }}
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                       Upgrade to Pro
+                   </button>
+               </div>
+           </div>
+         </section>
+
+
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">
