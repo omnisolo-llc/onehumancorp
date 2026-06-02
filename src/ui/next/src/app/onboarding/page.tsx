@@ -180,7 +180,18 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
+      const cats = intakeData.categories || ['physical'];
+      setCategories(cats);
+
+      // Auto-select AI Agents based on categories
+      const defaultAgents = ['Marketing Agent'];
+      if (cats.includes('food') || cats.includes('services')) {
+        defaultAgents.push('Support Agent');
+      }
+      if (cats.includes('physical') || cats.includes('digital')) {
+        defaultAgents.push('Sales Agent');
+      }
+      setAiAgents([...new Set(defaultAgents)]);
 
       setStep(2); // Go to review step
     } catch (err: any) {
@@ -278,7 +289,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center animate-slide-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -290,7 +301,7 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-slide-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
@@ -351,7 +362,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-slide-in">
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -403,7 +414,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-slide-in">
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -468,7 +479,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-slide-up">
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -487,81 +498,75 @@ export default function OnboardingWizard() {
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={businessName}
-                    onChange={(e) => {
-                      setBusinessName(e.target.value);
-                      if (e.target.value.trim().length < 3) {
-                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => {
-                      setBusinessType(e.target.value);
-                      if (e.target.value.trim().length === 0) {
-                        setValidationErrors(prev => ({ ...prev, businessType: 'Required field.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="p-4 rounded-[12px] bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/5 shadow-sm">
+                  <label className="block text-[10px] font-bold text-[#0066FF] uppercase tracking-widest mb-2">Identity</label>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Business Name</label>
                       <input
                         type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={firstProductPrice}
+                        autoFocus
+                        value={businessName}
                         onChange={(e) => {
-                           setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length === 0) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
-                           } else if (isNaN(Number(e.target.value))) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Must be a number.' }));
-                           } else {
-                              setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
-                           }
+                          setBusinessName(e.target.value);
+                          if (e.target.value.trim().length < 3) {
+                            setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                          } else {
+                            setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                          }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-2 rounded-[6px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm`}
                       />
-                      {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
-                   </div>
+                      {validationErrors.businessName && <p className="text-red-500 text-[10px] mt-1">{validationErrors.businessName}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Type</label>
+                      <input
+                        type="text"
+                        value={businessType}
+                        onChange={(e) => setBusinessType(e.target.value)}
+                        className="w-full p-2 rounded-[6px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-[12px] bg-white/40 dark:bg-black/20 border border-white/40 dark:border-white/5 shadow-sm">
+                  <label className="block text-[10px] font-bold text-[#34C759] uppercase tracking-widest mb-2">Offering</label>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                       <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Featured Item</label>
+                          <input
+                            type="text"
+                            value={firstProductName}
+                            onChange={(e) => setFirstProductName(e.target.value)}
+                            className="w-full p-2 rounded-[6px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm"
+                          />
+                       </div>
+                       <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Price ($)</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={firstProductPrice}
+                            onChange={(e) => setFirstProductPrice(e.target.value)}
+                            className="w-full p-2 rounded-[6px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/50 dark:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm"
+                          />
+                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">Categories</label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {categories.map(cat => (
+                          <span key={cat} className="px-2 py-0.5 bg-[#0066FF]/10 text-[#0066FF] rounded-full text-[10px] font-bold uppercase tracking-tight">
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -586,7 +591,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-slide-up">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -609,13 +614,19 @@ export default function OnboardingWizard() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
                   <div className="grid grid-cols-2 gap-3">
-                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
+                    {[
+                      { name: 'Modern', desc: 'Clean & professional' },
+                      { name: 'Minimal', desc: 'Focus on your content' },
+                      { name: 'Bold', desc: 'High impact visuals' },
+                      { name: 'Classic', desc: 'Timeless & elegant' }
+                    ].map(template => (
                       <div
-                        key={template}
-                        onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        key={template.name}
+                        onClick={() => setWebsiteTemplate(template.name)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col ${websiteTemplate === template.name ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
-                        <div className="font-semibold text-sm">{template}</div>
+                        <div className="font-bold text-sm">{template.name}</div>
+                        <div className="text-[10px] opacity-60 leading-tight">{template.desc}</div>
                       </div>
                     ))}
                   </div>
@@ -705,23 +716,37 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-slide-up">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your {businessType}...</h2>
                <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+                 {businessType.toLowerCase().includes('bakery') || categories.includes('food') ? (
+                   <>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Curating your delicious menu...</p>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Setting up kitchen operations...</p>
+                   </>
+                 ) : businessType.toLowerCase().includes('handyman') || categories.includes('services') ? (
+                   <>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Organizing your service catalog...</p>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring your booking calendar...</p>
+                   </>
+                 ) : (
+                   <>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog...</p>
+                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings...</p>
+                   </>
+                 )}
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your {websiteTemplate.toLowerCase()} storefront...</p>
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your {aiAgents.length} AI agents...</p>
                </div>
              </div>
           )}
 
           {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center items-center text-center animate-slide-up">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
