@@ -404,7 +404,7 @@ mod chaos_tests {
         let mut join_handles = vec![];
         let resource_name = "ohc:lock:test_race_lock";
 
-        let num_tasks = 8;
+        let num_tasks = 25; // Simulating extreme contention
         let barrier = Arc::new(tokio::sync::Barrier::new(num_tasks));
 
         // Spawn concurrent tasks trying to acquire the same lock exactly at the same time
@@ -426,7 +426,7 @@ mod chaos_tests {
         }
 
         // Ensure exactly ONE agent wins the race condition under massive load
-        assert_eq!(winners, 1, "There should be exactly one winner in a lock race");
+        assert_eq!(winners, 1, "There should be exactly one winner in a lock race even under high contention");
     }
 
 
