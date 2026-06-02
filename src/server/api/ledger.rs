@@ -13,6 +13,7 @@ use chrono::Utc;
 use crate::db::DB;
 use crate::domain::repository::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry};
 use crate::domain::repository::ledger_repo::LedgerRepository;
+use crate::db::DbStore;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -54,6 +55,12 @@ pub struct GetInvoiceQuery {
     pub tenant_id: String,
 }
 
+#[derive(Serialize)]
+pub struct CashflowForecastResponse {
+    pub projected_inflow: f64,
+    pub cash_gap_alert: bool,
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/api/ledger/invoice/:id", get(get_invoice))
@@ -61,6 +68,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/ledger/invoice/:id/update", put(update_invoice_status))
         .route("/api/ledger/invoice/:id/pay", post(apply_payment))
         .route("/api/ledger/entries/:tenant_id", get(get_ledger_entries))
+        .route("/api/ledger/cashflow-forecast/:tenant_id", get(get_cashflow_forecast))
 }
 
 async fn get_invoice(
@@ -162,4 +170,34 @@ async fn get_ledger_entries(
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
+}
+
+async fn get_cashflow_forecast(
+    State(state): State<AppState>,
+    Path(tenant_id): Path<String>,
+) -> impl IntoResponse {
+    // Get projected inflow from invoices that are 'Sent' and due within 30 days
+    let mut projected_inflow = 0.0;
+
+    match &state.db.store {
+        DbStore::Postgres => {
+            if let Ok(amount) = sqlx::query_scalar::<_, Option<f64>>(
+                "SELECT SUM(total_amount) FROM invoices WHERE tenant_id = $1 AND status = 'Sent' AND due_date <= NOW() + INTERVAL '30 days'"
+            ).bind(&tenant_id).fetch_one(&state.db.pool).await {
+                projected_inflow = amount.unwrap_or(0.0);
+            }
+        }
+        DbStore::Sqlite(pool) => {
+            if let Ok(amount) = sqlx::query_scalar::<_, Option<f64>>(
+                "SELECT SUM(total_amount) FROM invoices WHERE tenant_id = ? AND status = 'Sent' AND due_date <= date('now', '+30 days')"
+            ).bind(&tenant_id).fetch_one(pool).await {
+                projected_inflow = amount.unwrap_or(0.0);
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(CashflowForecastResponse {
+        projected_inflow,
+        cash_gap_alert: projected_inflow < 500.0, // Alert if projected inflow is low
+    })).into_response()
 }
