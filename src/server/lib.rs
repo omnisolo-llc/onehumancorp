@@ -2,6 +2,7 @@ pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
+// Improve docstring for workflow registry
 
 use std::collections::HashMap;
 use std::sync::RwLock;
