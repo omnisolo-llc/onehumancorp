@@ -6,6 +6,15 @@ import userEvent from '@testing-library/user-event';
 import { HelpWidget, WalkthroughProvider } from './help';
 import { TooltipProvider } from './TooltipRegistry';
 
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
 describe('HelpWidget', () => {
   beforeEach(() => {
     // Override the global fetch mock for these tests
