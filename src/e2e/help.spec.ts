@@ -7,7 +7,7 @@ test.describe('Help Center', () => {
 
   test('should display and interact with help widget', async ({ page }) => {
     // Open help widget
-    const helpBtn = page.getByRole('button', { name: 'Help' });
+    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
     await expect(helpBtn).toBeVisible();
     await helpBtn.click();
 
