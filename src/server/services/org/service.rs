@@ -4,6 +4,12 @@ use ::server_ohc::orchestration::org_service_server::OrgService;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+
+static DOMAINS_CACHE: OnceLock<HybridCache<Vec<DomainInfoProto>>> = OnceLock::new();
+static MARKETPLACE_ITEMS_CACHE: OnceLock<HybridCache<Vec<MarketplaceItemProto>>> = OnceLock::new();
+
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
@@ -30,11 +36,21 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
+        let cache_key = "org_domains".to_string();
+        let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(domains) = cache.get(&cache_key).await {
+            return Ok(Response::new(DomainsResponse { domains }));
+        }
+
         let domains = vec![
             DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
             DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
             DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
+
+        cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(Response::new(DomainsResponse { domains }))
     }
 
@@ -61,9 +77,19 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
+        let cache_key = "org_marketplace_items".to_string();
+        let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(items) = cache.get(&cache_key).await {
+            return Ok(Response::new(MarketplaceItemsResponse { items }));
+        }
+
         let items = vec![
             MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
         ];
+
+        cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(Response::new(MarketplaceItemsResponse { items }))
     }
 
