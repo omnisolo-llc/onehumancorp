@@ -5,6 +5,38 @@ test.describe('Help Center', () => {
     await page.goto('/');
   });
 
+  test('should display and interact with help widget', async ({ page }) => {
+    // Open help widget
+    const helpBtn = page.getByRole('button', { name: 'Help' });
+    await expect(helpBtn).toBeVisible();
+    await helpBtn.click();
+
+    // Verify Help Center tab is visible by default
+    await expect(page.getByText('Help Center', { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder('Search for help...')).toBeVisible();
+
+    // Click Ask AI tab and test chat
+    await page.getByText('Ask AI').click();
+    await expect(page.getByPlaceholder('Ask anything...')).toBeVisible();
+
+    // The chat uses API mock in testing, but E2E might use real API if not mocked.
+    // For now we just verify the UI reacts.
+    const chatInput = page.getByPlaceholder('Ask anything...');
+    await chatInput.fill('How do I add a product?');
+    await page.getByRole('button', { name: 'Send message' }).click();
+
+    // Expect the user message to be shown
+    await expect(page.getByText('How do I add a product?')).toBeVisible();
+
+    // Click Videos tab
+    await page.getByText('Videos').click();
+    await expect(page.getByText('Tutorials')).toBeVisible();
+
+    // Click What's New tab
+    await page.getByText('New').click();
+    await expect(page.getByText("What's New")).toBeVisible();
+  });
+
   test('should display dashboard with nav', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('nav')).toBeVisible();
