@@ -14,10 +14,38 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
+        .route("/zero_touch", post(zero_touch_handler))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+
+async fn zero_touch_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<crate::services::onboarding::onboarding_agent::ZeroTouchRequest>,
+) -> Result<Json<crate::services::onboarding::onboarding_agent::StoreProfile>, axum::http::StatusCode> {
+    match agent.generate_store_profile(&payload.description).await {
+        Ok(data) => Ok(Json(data)),
+        Err(error) => {
+            tracing::warn!("onboarding zero_touch fallback used after agent error: {}", error);
+            Ok(Json(crate::services::onboarding::onboarding_agent::StoreProfile {
+                business_name: payload.description.trim().to_string(),
+                business_type: "Local Business".to_string(),
+                selling_categories: vec!["services".to_string()],
+                theme: "Modern".to_string(),
+                sample_products: vec![
+                    crate::services::onboarding::onboarding_agent::IntakeProduct {
+                        name: "Consultation".to_string(),
+                        price: "100.00".to_string(),
+                    }
+                ],
+                default_location: "Remote".to_string(),
+                price_type: "fixed".to_string(),
+            }))
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]

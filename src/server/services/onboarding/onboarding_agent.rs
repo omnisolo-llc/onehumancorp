@@ -12,6 +12,22 @@ pub struct IntakeData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ZeroTouchRequest {
+    pub description: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StoreProfile {
+    pub business_name: String,
+    pub business_type: String,
+    pub selling_categories: Vec<String>,
+    pub theme: String,
+    pub sample_products: Vec<IntakeProduct>,
+    pub default_location: String,
+    pub price_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct IntakeProduct {
     pub name: String,
     pub price: String,
@@ -31,6 +47,58 @@ impl OnboardingAgent {
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
         OnboardingAgent { db, hub, minimax }
     }
+
+
+    pub async fn generate_store_profile(&self, input: &str) -> Result<StoreProfile, String> {
+        let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
+
+        let prompt = format!(
+            "You are the OHC Onboarding Expert. A user wants to set up a small business storefront with zero-touch configuration.
+            Generate a complete StoreProfile based on their description.
+            If the description is minimal or an image URL, infer realistic details for a small business.
+
+            Return ONLY a valid JSON object with fields:
+            - business_name (string)
+            - business_type (string, e.g., 'Home Bakery', 'Handyman')
+            - selling_categories (array of strings, valid options: 'physical', 'digital', 'services', 'food', 'subscriptions')
+            - theme (string, e.g., 'Modern', 'Minimal', 'Classic')
+            - sample_products (array of objects with 'name' and 'price' as string, e.g. price '45.00')
+            - default_location (string, guess based on context or use 'Remote')
+            - price_type (string, e.g., 'fixed', 'variable')
+
+            Description: \"{}\"
+
+            Example JSON:
+            {{
+              \"business_name\": \"Maya's Cakes\",
+              \"business_type\": \"Home Bakery\",
+              \"selling_categories\": [\"food\", \"physical\"],
+              \"theme\": \"Modern\",
+              \"sample_products\": [
+                {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\"}},
+                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\"}},
+                {{\"name\": \"Wedding Cake Deposit\", \"price\": \"100.00\"}}
+              ],
+              \"default_location\": \"Seattle, WA\",
+              \"price_type\": \"fixed\"
+            }}",
+            input
+        );
+
+        let response = minimax.reason(&prompt).await?;
+
+        // Clean up markdown code blocks if present
+        let clean_json = response.trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+
+        let data: StoreProfile = serde_json::from_str(clean_json)
+            .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
+
+        Ok(data)
+    }
+
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
