@@ -27,6 +27,24 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
+  const [messages, setMessages] = useState<{role: 'user' | 'agent', text: string}[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isAnalyzing]);
+
+  useEffect(() => {
+    if (step === 1 && messages.length === 0 && isLoaded) {
+      setMessages([{ role: 'agent', text: 'Hi! I am AutoDream, your AI business builder. Tell me about the business you want to start, or paste your Instagram link. For example, "I bake custom vegan cakes for weddings and parties in Austin."' }]);
+    }
+  }, [step, messages.length, isLoaded]);
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -78,15 +96,15 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
     fetch('/api/onboarding/state', {
       headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
     })
-    .then(res => res.json())
-    .then(data => {
+    .then(res => res.ok ? res.json() : {})
+    .catch(() => ({}))
+    .then((data: any) => {
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
@@ -103,7 +121,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => setIsLoaded(true));
   }, []);
 
   // Sync state to backend
@@ -147,15 +166,33 @@ export default function OnboardingWizard() {
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
-  const handleIntake = async () => {
-    setIsLoading(true);
+  const handleIntake = async (descriptionInput: string) => {
+    setIsAnalyzing(true);
     setError('');
+
+    // Simulate streaming agent reasoning
+    const reasoningSteps = [
+      "Analyzing business model...",
+      "Drafting product catalog...",
+      "Configuring local delivery zones...",
+      "Setting up standard checkout profile..."
+    ];
+
+    for (let i = 0; i < reasoningSteps.length; i++) {
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === 'agent' && lastMsg.text.includes("...")) {
+          return [...prev.slice(0, prev.length - 1), { role: 'agent', text: reasoningSteps[i] }];
+        } else {
+          return [...prev, { role: 'agent', text: reasoningSteps[i] }];
+        }
+      });
+      await new Promise(resolve => setTimeout(resolve, 800)); // Delay to simulate thinking
+    }
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -164,7 +201,7 @@ export default function OnboardingWizard() {
           'X-Tenant-ID': tenantId,
           'X-User-ID': userId,
         },
-        body: JSON.stringify({ description: combinedDescription })
+        body: JSON.stringify({ description: descriptionInput })
       });
 
       const intakeData = await intakeRes.json();
@@ -242,12 +279,22 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    if (step === 1) return (chatStep / 3) * 33;
+    if (step === 1) return 33;
     if (step === 2) return 50;
     if (step === 3) return 75;
     if (step === 4) return 90;
     if (step === 5) return 100;
     return 0;
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isAnalyzing) return;
+
+    const userMessage = inputValue.trim();
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setInputValue('');
+    handleIntake(userMessage);
   };
 
   return (
@@ -265,174 +312,80 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col overflow-hidden custom-scrollbar">
           {error && (
-            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[12px] text-sm animate-shake">
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[12px] text-sm animate-shake m-6 z-30 relative">
               {error}
             </div>
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            <div className="flex-1 flex flex-col animate-fade-in relative z-10 h-full overflow-hidden">
+              {/* Chat History Header */}
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-white/50 dark:bg-[#1D1D1F]/50 backdrop-blur-md flex justify-between items-center z-20">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0066FF] to-[#3b82f6] flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                    AI
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">AutoDream Pipeline</h2>
+                    <span className="text-[10px] text-green-500 font-semibold uppercase tracking-wider">Online</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSaveDraft}
+                  className="text-xs font-semibold text-gray-500 hover:text-[#0066FF] transition-colors"
+                >
+                  Save Draft
+                </button>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
 
-              {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Our AI will instantly generate your storefront, products, and back-office agents.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 pb-24 scroll-smooth">
+                {messages.map((msg, idx) => (
+                  <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
+                    <div className={`max-w-[85%] rounded-[18px] px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-[#0066FF] text-white shadow-md rounded-br-[4px]'
+                        : 'bg-white dark:bg-[#2d2d32] border border-gray-100 dark:border-white/5 text-gray-800 dark:text-gray-200 shadow-sm rounded-bl-[4px]'
+                    }`}>
+                      {msg.role === 'agent' && msg.text.includes("...") ? (
+                        <div className="flex items-center gap-2">
+                           <svg className="animate-spin h-4 w-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                           </svg>
+                           <span className="text-[#0066FF] font-medium">{msg.text}</span>
+                        </div>
+                      ) : (
+                        msg.text
+                      )}
                     </div>
                   </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
 
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(2);
-                      }}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              {/* Chat Input Area */}
+              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-[#F5F5F7] dark:from-[#16161a] via-[#F5F5F7]/90 dark:via-[#16161a]/90 to-transparent z-20">
+                <form onSubmit={handleChatSubmit} className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    disabled={isAnalyzing}
+                    placeholder="Describe your business..."
+                    className="w-full py-3.5 pl-4 pr-12 rounded-[20px] border border-white/50 dark:border-white/10 bg-white dark:bg-[#1D1D1F] text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:outline-none focus:border-[#0066FF] shadow-sm disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputValue.trim() || isAnalyzing}
+                    className="absolute right-2 w-9 h-9 flex items-center justify-center bg-[#0066FF] text-white rounded-full disabled:opacity-50 disabled:bg-gray-300 hover:bg-[#0052cc] transition-colors"
+                  >
+                    <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <textarea
-                        autoFocus
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={handleSaveDraft}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      Save Draft
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        setValidationError('');
-                        handleIntake();
-                      }}
-                      disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Analyzing...
-                        </span>
-                      ) : 'Generate My Business'}
-                    </button>
-                  </div>
-                </div>
-              )}
+                </form>
+              </div>
             </div>
           )}
 
