@@ -128,42 +128,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     init_otel();
 
     let args: Vec<String> = std::env::args().collect();
-    let mut task = None;
-    let mut parent_context_file = None;
-    let mut worktree = None;
-    let mut mailbox = None;
-
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--task" => {
-                if i + 1 < args.len() {
-                    task = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--parent-context-file" => {
-                if i + 1 < args.len() {
-                    parent_context_file = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--worktree" => {
-                if i + 1 < args.len() {
-                    worktree = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--mailbox" => {
-                if i + 1 < args.len() {
-                    mailbox = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
+    let (task, parent_context_file, worktree, mailbox, scalable_agents) = parse_cli_args(&args);
 
     let address = get_env("OHC_AGENT_ADDRESS", service::DEFAULT_ADDRESS);
     let agent_id = get_env(
@@ -194,36 +159,75 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     svc_impl.init_memory().await;
 
     if let Some(t) = task {
-        // Run as a subagent (Fork, Worktree, Teammate)
-        let working_dir = worktree.or(mailbox).unwrap_or_default();
+        if let Some(count) = scalable_agents {
+            use crate::scalable_multi_agent::{CloudOrchestrator, DeploymentMode, TaskChunk, AgentNode};
+            use std::sync::Arc;
 
-        let parent_context_json = if let Some(path) = parent_context_file {
-            std::fs::read_to_string(&path).unwrap_or_default()
-        } else {
-            String::new()
-        };
+            let mode = if count > 10 {
+                DeploymentMode::CloudDistributed
+            } else {
+                DeploymentMode::LocalCli
+            };
 
-        let req = proto::agent_service::SubAgentRequest {
-            task: t,
-            working_dir,
-            parent_context_json,
-            ..Default::default()
-        };
+            let svc_arc = Arc::new(svc_impl);
+            let mut nodes: Vec<Arc<dyn AgentNode>> = Vec::new();
+            for _ in 0..count {
+                nodes.push(Arc::new(AgentNodeAdapter { svc: svc_arc.clone() }));
+            }
 
-        match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
-            Ok(resp) => {
-                let inner = resp.into_inner();
-                if !inner.error.is_empty() {
-                    eprintln!("{}", inner.error);
-                    std::process::exit(1);
-                } else {
-                    println!("{}", inner.result);
+            let orchestrator = CloudOrchestrator::new(mode, nodes);
+            let mut tasks = Vec::new();
+            for i in 0..count {
+                tasks.push(TaskChunk {
+                    id: format!("chunk_{}", i),
+                    payload: format!("{} (chunk {})", t, i),
+                });
+            }
+
+            match orchestrator.distribute_and_execute(tasks).await {
+                Ok(results) => {
+                    for r in results {
+                        println!("Result for {}: {}", r.chunk_id, r.output);
+                    }
                     return Ok(());
                 }
+                Err(e) => {
+                    eprintln!("Scalable multi-agent dispatch error: {}", e);
+                    std::process::exit(1);
+                }
             }
-            Err(e) => {
-                eprintln!("Subagent dispatch error: {}", e);
-                std::process::exit(1);
+        } else {
+            // Run as a subagent (Fork, Worktree, Teammate)
+            let working_dir = worktree.or(mailbox).unwrap_or_default();
+
+            let parent_context_json = if let Some(path) = parent_context_file {
+                std::fs::read_to_string(&path).unwrap_or_default()
+            } else {
+                String::new()
+            };
+
+            let req = proto::agent_service::SubAgentRequest {
+                task: t,
+                working_dir,
+                parent_context_json,
+                ..Default::default()
+            };
+
+            match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                Ok(resp) => {
+                    let inner = resp.into_inner();
+                    if !inner.error.is_empty() {
+                        eprintln!("{}", inner.error);
+                        std::process::exit(1);
+                    } else {
+                        println!("{}", inner.result);
+                        return Ok(());
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Subagent dispatch error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
     }
@@ -264,6 +268,146 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scalable_multi_agent::{TaskChunk, AgentNode};
+    use crate::proto::agent_service::SubAgentRequest;
+    use std::sync::Arc;
+
+    // We cannot easily test the whole run_agent() end-to-end because of env vars and network setup,
+    // but we can test the adapter logic we added.
+
+    #[tokio::test]
+    async fn test_agent_node_adapter() {
+        let auth = crate::auth::AuthMode::Disabled;
+        let cfg = crate::service::AgentConfig {
+            llm_provider: "".to_string(),
+            model: "".to_string(),
+            llm_endpoint: "".to_string(),
+            system_prompt: "".to_string(),
+            max_tokens: 10,
+            temperature: 0.0,
+            max_iterations: 1,
+            max_context_messages: 10,
+        };
+        let svc = Arc::new(crate::service::AgentServiceImpl::new("test-id".to_string(), cfg, auth));
+
+        let adapter = AgentNodeAdapter { svc };
+        let result = adapter.execute(TaskChunk {
+            id: "chunk-1".to_string(),
+            payload: "hello".to_string(),
+        }).await;
+
+        match result {
+            Ok(res) => {
+                assert_eq!(res.chunk_id, "chunk-1");
+            },
+            Err(e) => {
+                assert!(!e.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_cli_args_scalable() {
+        let args = vec![
+            "binary_name".to_string(),
+            "--task".to_string(),
+            "my scalable task".to_string(),
+            "--scalable-agents".to_string(),
+            "1000".to_string(),
+            "--worktree".to_string(),
+            "my_tree".to_string(),
+        ];
+
+        let (task, _, worktree, _, scalable_agents) = parse_cli_args(&args);
+        assert_eq!(task.unwrap(), "my scalable task");
+        assert_eq!(worktree.unwrap(), "my_tree");
+        assert_eq!(scalable_agents.unwrap(), 1000);
+    }
+}
+
+use std::sync::Arc;
+use crate::scalable_multi_agent::{TaskChunk, TaskResult, AgentNode};
+use crate::proto::agent_service::agent_service_server::AgentService;
+
+pub struct AgentNodeAdapter {
+    pub svc: Arc<service::AgentServiceImpl>,
+}
+
+#[async_trait::async_trait]
+impl AgentNode for AgentNodeAdapter {
+    async fn execute(&self, chunk: TaskChunk) -> Result<TaskResult, String> {
+        let req = proto::agent_service::SubAgentRequest {
+            task: chunk.payload,
+            ..Default::default()
+        };
+        match self.svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+            Ok(resp) => {
+                let inner = resp.into_inner();
+                if !inner.error.is_empty() {
+                    Err(inner.error)
+                } else {
+                    Ok(TaskResult {
+                        chunk_id: chunk.id,
+                        output: inner.result,
+                    })
+                }
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+pub fn parse_cli_args(args: &[String]) -> (Option<String>, Option<String>, Option<String>, Option<String>, Option<usize>) {
+    let mut task = None;
+    let mut parent_context_file = None;
+    let mut worktree = None;
+    let mut mailbox = None;
+    let mut scalable_agents = None;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--task" => {
+                if i + 1 < args.len() {
+                    task = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--parent-context-file" => {
+                if i + 1 < args.len() {
+                    parent_context_file = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--worktree" => {
+                if i + 1 < args.len() {
+                    worktree = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--mailbox" => {
+                if i + 1 < args.len() {
+                    mailbox = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--scalable-agents" => {
+                if i + 1 < args.len() {
+                    scalable_agents = args[i + 1].parse::<usize>().ok();
+                    i += 1;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    (task, parent_context_file, worktree, mailbox, scalable_agents)
 }
 
 pub mod compaction;
