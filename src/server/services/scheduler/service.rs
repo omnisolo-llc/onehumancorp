@@ -5,6 +5,10 @@ use std::sync::Arc;
 use crate::hub::Hub;
 use crate::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
 use chrono::{Utc, TimeZone};
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+
+static SCHEDULED_TASKS_CACHE: OnceLock<HybridCache<Vec<ProtoTask>>> = OnceLock::new();
 
 pub struct MySchedulerService {
     hub: Arc<Hub>,
@@ -26,9 +30,18 @@ impl SchedulerService for MySchedulerService {
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
 
+        let cache_key = format!("scheduled_tasks_{}", org_id);
+        let cache = SCHEDULED_TASKS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(tasks) = cache.get(&cache_key).await {
+            return Ok(Response::new(ScheduledTasksResponse { tasks }));
+        }
 
         let tasks = self.hub.scheduler().list_for_org(&org_id);
-        let proto_tasks = tasks.into_iter().map(|t| convert_to_proto(t)).collect();
+        let proto_tasks: Vec<ProtoTask> = tasks.into_iter().map(|t| convert_to_proto(t)).collect();
+
+        cache.set(&cache_key, proto_tasks.clone(), std::time::Duration::from_secs(60)).await;
+
         Ok(Response::new(ScheduledTasksResponse { tasks: proto_tasks }))
     }
 
@@ -46,7 +59,7 @@ impl SchedulerService for MySchedulerService {
         
         let task = Task {
             id: format!("task-{}", Utc::now().timestamp()),
-            organization_id: org_id,
+            organization_id: org_id.clone(),
             agent_id: req.agent_id,
             name: req.name,
             schedule: convert_from_proto_schedule(schedule),
@@ -59,6 +72,9 @@ impl SchedulerService for MySchedulerService {
 
         self.hub.scheduler().create(task.clone())
             .map_err(|e| Status::internal(e))?;
+
+        let cache = SCHEDULED_TASKS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate(&format!("scheduled_tasks_{}", org_id)).await;
 
         Ok(Response::new(convert_to_proto(task)))
     }
@@ -76,6 +92,9 @@ impl SchedulerService for MySchedulerService {
         self.hub.scheduler().cancel(&org_id, &req.id)
             .map_err(|e| Status::not_found(e))?;
             
+        let cache = SCHEDULED_TASKS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate(&format!("scheduled_tasks_{}", org_id)).await;
+
         Ok(Response::new(EmptyResponse {}))
     }
 }

@@ -589,3 +589,62 @@ pub async fn bench_advisory_insights_latency() {
         fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
     );
 }
+
+pub async fn bench_scheduler_tasks() {
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap();
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url).await.unwrap();
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    let scheduler_service = crate::services::scheduler::service::MySchedulerService::new(hub);
+
+    let iterations = 100;
+
+    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+    request_cold.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/benchmark_org/test".parse().unwrap());
+
+    let start_cold = std::time::Instant::now();
+    use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
+    let _ = scheduler_service.get_scheduled_tasks(request_cold).await;
+    println!("get_scheduled_tasks Cold Start: {} us", start_cold.elapsed().as_micros());
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/benchmark_org/test".parse().unwrap());
+
+        let start = std::time::Instant::now();
+        let _ = scheduler_service.get_scheduled_tasks(request).await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    println!("get_scheduled_tasks Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
+}
+
+#[cfg(test)]
+mod test_scheduler_bench {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_bench_scheduler_tasks() {
+        bench_scheduler_tasks().await;
+    }
+}
