@@ -21,6 +21,54 @@ export default function OrderDetailsPage() {
   const [purchasing, setPurchasing] = useState(false);
   const [labelUrl, setLabelUrl] = useState<string | null>(null);
 
+  // DoorDash state
+  const [orderData, setOrderData] = useState<any>(null);
+  const [dispatchingDriver, setDispatchingDriver] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('ohc_orders');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const found = parsed.find((o: any) => o.id === orderId);
+          if (found) {
+            setOrderData(found);
+            setStatus(found.status || 'unfulfilled');
+            if (found.trackingNumber) setTrackingNumber(found.trackingNumber);
+          }
+        } catch (e) {}
+      }
+    }
+  }, [orderId]);
+
+  const requestDoorDashDriver = async () => {
+    setDispatchingDriver(true);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call to DoorDash
+    const mockTracking = 'DD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    setTrackingNumber(mockTracking);
+    setStatus('shipped');
+
+    // Update local storage
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('ohc_orders');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          const index = parsed.findIndex((o: any) => o.id === orderId);
+          if (index !== -1) {
+            parsed[index].status = 'shipped';
+            parsed[index].trackingNumber = mockTracking;
+            localStorage.setItem('ohc_orders', JSON.stringify(parsed));
+          }
+        } catch (e) {}
+      }
+    }
+
+    setDispatchingDriver(false);
+  };
+
   const fetchRates = async () => {
     setLoadingRates(true);
     try {
@@ -105,13 +153,54 @@ export default function OrderDetailsPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
-              <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                Powered by Shippo
-              </div>
+              {orderData?.deliveryMethod === 'doordash' ? (
+                <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-red-100">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                  Powered by DoorDash Drive
+                </div>
+              ) : (
+                <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Powered by Shippo
+                </div>
+              )}
             </div>
 
-            {status === 'shipped' ? (
+            {orderData?.deliveryMethod === 'doordash' ? (
+              status === 'shipped' ? (
+                <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                  <h3 className="font-semibold text-green-800 mb-1">Driver Dispatched</h3>
+                  <p className="text-sm text-green-700 mb-3">A DoorDash driver is on the way to pick up this order.</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium text-gray-600">Tracking:</span>
+                    <code className="bg-white px-2 py-1 rounded text-sm border border-green-200 font-mono text-gray-800">{trackingNumber}</code>
+                  </div>
+                  <a
+                    href={`https://track.doordash.com/${trackingNumber}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 bg-white border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                  >
+                    View Live Tracking
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-700">This order requested local delivery. Click below to request a driver from DoorDash.</p>
+                  <button
+                    onClick={requestDoorDashDriver}
+                    disabled={dispatchingDriver}
+                    className={`w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
+                      dispatchingDriver
+                        ? 'bg-red-400 text-white cursor-not-allowed'
+                        : 'bg-[#FF3008] text-white hover:bg-red-700'
+                    }`}
+                  >
+                    {dispatchingDriver ? 'Dispatching...' : 'Request DoorDash Driver'}
+                  </button>
+                </div>
+              )
+            ) : status === 'shipped' ? (
               <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -241,12 +330,18 @@ export default function OrderDetailsPage() {
             <p className="font-medium text-gray-900 mb-1">Alice Johnson</p>
             <p className="text-sm text-blue-600 hover:underline cursor-pointer mb-4">alice.j@example.com</p>
 
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mt-4 mb-2">Shipping Address</h3>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mt-4 mb-2">Delivery Address</h3>
             <p className="text-sm text-gray-700">
-              123 Main St<br/>
-              Apt 4B<br/>
-              San Francisco, CA 94105<br/>
-              United States
+              {orderData?.address ? (
+                  <span>{orderData.address}</span>
+              ) : (
+                <>
+                  123 Main St<br/>
+                  Apt 4B<br/>
+                  San Francisco, CA 94105<br/>
+                  United States
+                </>
+              )}
             </p>
           </div>
         </div>

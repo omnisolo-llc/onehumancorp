@@ -11,8 +11,54 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Local Delivery / Address state
+  const [address, setAddress] = useState("");
+  const [doordashEnabled, setDoordashEnabled] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<number | null>(null);
+  const [isCheckingQuote, setIsCheckingQuote] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('ohc_settings_preferences');
+      if (stored) {
+        try {
+          const prefs = JSON.parse(stored);
+          setDoordashEnabled(!!prefs.doordash_enabled);
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  const handleCheckQuote = async () => {
+    if (!address) return;
+    setIsCheckingQuote(true);
+    // Simulate DoorDash API call to check if address is within radius and get a flat fee quote
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setDeliveryQuote(7.50); // Flat fee
+    setIsCheckingQuote(false);
+  };
+
   const handlePayment = async () => {
     setIsProcessing(true);
+
+    // Save order with doordash fulfillment type
+    if (typeof localStorage !== 'undefined' && deliveryQuote !== null) {
+        try {
+            const orders = JSON.parse(localStorage.getItem('ohc_orders') || '[]');
+            orders.push({
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                customerName: 'Guest User',
+                items: '1x Custom Order',
+                total: '$' + (45.00 + deliveryQuote).toFixed(2),
+                status: 'unfulfilled',
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                deliveryMethod: 'doordash',
+                address: address
+            });
+            localStorage.setItem('ohc_orders', JSON.stringify(orders));
+        } catch(e) {}
+    }
+
 
     // Fetch dynamic referral link
     try {
@@ -43,6 +89,55 @@ export default function CheckoutPage() {
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+          <h2 className="text-lg font-bold font-outfit text-gray-900">Delivery Information</h2>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-700">Delivery Address</label>
+            <input
+              type="text"
+              placeholder="e.g. 123 Main St, San Francisco, CA"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          {doordashEnabled && address && (
+            <div className="pt-2">
+              <button
+                onClick={handleCheckQuote}
+                disabled={isCheckingQuote}
+                className="text-sm bg-indigo-50 text-indigo-700 font-medium px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
+              >
+                {isCheckingQuote ? 'Checking availability...' : 'Check Local Delivery Quote'}
+              </button>
+            </div>
+          )}
+          {deliveryQuote !== null && (
+            <div className="bg-green-50 text-green-800 text-sm p-3 rounded-lg border border-green-100 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+              Address is within delivery radius. DoorDash delivery fee: ${deliveryQuote.toFixed(2)}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+          <h2 className="text-lg font-bold font-outfit text-gray-900">Order Summary</h2>
+          <div className="flex justify-between text-gray-700">
+            <span>Subtotal</span>
+            <span>$45.00</span>
+          </div>
+          {deliveryQuote !== null && (
+            <div className="flex justify-between text-gray-700">
+              <span>Local Delivery (DoorDash)</span>
+              <span>${deliveryQuote.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-bold text-gray-900 pt-4 border-t">
+            <span>Total</span>
+            <span>${(45.00 + (deliveryQuote || 0)).toFixed(2)}</span>
+          </div>
+        </div>
+
         <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>

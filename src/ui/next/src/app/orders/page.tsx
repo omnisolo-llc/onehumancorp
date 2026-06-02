@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function OrdersPage() {
   const router = useRouter();
 
   // Mock orders
-  const [orders] = useState([
+  const [orders, setOrders] = useState([
     {
       id: 'ORD-7829',
       customerName: 'Alice Johnson',
@@ -25,6 +25,22 @@ export default function OrdersPage() {
       date: 'Oct 11, 2023',
     }
   ]);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('ohc_orders');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.length > 0) {
+            // Check for duplicates by ID before prepending
+            const newOrders = parsed.filter((p: any) => !orders.find((o: any) => o.id === p.id));
+            setOrders([...newOrders, ...orders]);
+          }
+        } catch (e) {}
+      }
+    }
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>

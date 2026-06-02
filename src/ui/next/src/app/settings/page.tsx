@@ -10,11 +10,25 @@ export default function SettingsPage() {
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<any>({
     urgent_booking: false,
     failed_payment: false,
-    new_order: false
+    new_order: false,
+    doordash_enabled: false,
+    doordash_radius: '5',
+    doordash_prep_time: '30'
   });
+
+  React.useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('ohc_settings_preferences');
+      if (stored) {
+        try {
+          setPreferences({ ...preferences, ...JSON.parse(stored) });
+        } catch (e) {}
+      }
+    }
+  }, []);
 
   const handleVerify = async () => {
     setIsVerifying(true);
@@ -53,10 +67,15 @@ export default function SettingsPage() {
     }
   };
 
-  const handlePreferenceChange = async (key: string, checked: boolean) => {
-    const newPrefs = { ...preferences, [key]: checked };
+  const handlePreferenceChange = async (key: string, value: any) => {
+    const newPrefs = { ...preferences, [key]: value };
     setPreferences(newPrefs);
-    if (isVerified) {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('ohc_settings_preferences', JSON.stringify(newPrefs));
+    }
+
+    // Only call SMS preferences API for sms-related keys
+    if (isVerified && ['urgent_booking', 'failed_payment', 'new_order'].includes(key)) {
       try {
         await fetch('/api/settings/sms-preferences', {
           method: 'POST',
@@ -70,6 +89,10 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
+    // Ensure all preferences are saved to local storage when hitting save
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('ohc_settings_preferences', JSON.stringify(preferences));
+    }
     // Return to dashboard on save
     router.push('/dashboard');
   };
@@ -197,6 +220,54 @@ export default function SettingsPage() {
                 New Orders
               </label>
             </div>
+          </div>
+        </section>
+
+        {/* Local Delivery (DoorDash Drive) */}
+        <section className="mb-8 border-b pb-8">
+          <h2 className="text-xl font-semibold mb-2 text-gray-800">Local Delivery (DoorDash Drive)</h2>
+          <p className="text-sm text-gray-500 mb-4">Offer local delivery directly to your customers. Powered by DoorDash Drive (flat fee).</p>
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-gray-700">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={preferences.doordash_enabled || false}
+                onChange={(e) => handlePreferenceChange('doordash_enabled', e.target.checked)}
+              />
+              Enable Local Delivery
+            </label>
+
+            {preferences.doordash_enabled && (
+              <div className="space-y-4 max-w-sm ml-6 border-l-2 border-gray-100 pl-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Radius (miles)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    placeholder="e.g., 5"
+                    value={preferences.doordash_radius || '5'}
+                    onChange={(e) => handlePreferenceChange('doordash_radius', e.target.value)}
+                    className="border rounded px-3 py-2 w-full text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Preparation Time (minutes)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    placeholder="e.g., 30"
+                    value={preferences.doordash_prep_time || '30'}
+                    onChange={(e) => handlePreferenceChange('doordash_prep_time', e.target.value)}
+                    className="border rounded px-3 py-2 w-full text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Time needed before a driver should arrive.</p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
