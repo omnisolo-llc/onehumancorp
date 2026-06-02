@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { memberPage } from './fixtures';
 
 test.describe('Pricing & Billing Portal', () => {
