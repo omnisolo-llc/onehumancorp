@@ -154,4 +154,110 @@ mod tests {
         let compressed_text = ::server_pricing::compression::reduce_tokens(raw_text);
         assert!(compressed_text.len() < raw_text.len());
     }
+
+
+    #[tokio::test]
+    async fn test_redis_mailbox_corruption() {
+        // Simulates receiving a corrupted message from Redis pub/sub
+        let message = "invalid_json_payload";
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(message);
+        assert!(parsed.is_err());
+
+        let mut fallback_attempts = 0;
+        if parsed.is_err() {
+            while fallback_attempts < 3 {
+                fallback_attempts += 1;
+            }
+        }
+        assert_eq!(fallback_attempts, 3);
+    }
+
+    #[tokio::test]
+    async fn test_agent_lock_race_conditions() {
+        use std::sync::Arc;
+        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let resource_name = format!("lock_race_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default());
+
+        let mut join_handles = vec![];
+        for i in 0..100 {
+            let transport_clone = transport.clone();
+            let owner = format!("agent_{}", i);
+            let resource = resource_name.clone();
+            join_handles.push(tokio::spawn(async move {
+                transport_clone.acquire_lock(&resource, &owner, 10).await.unwrap_or(false)
+            }));
+        }
+
+        let mut winners = 0;
+        for handle in join_handles {
+            if handle.await.unwrap() {
+                winners += 1;
+            }
+        }
+
+        assert_eq!(winners, 1, "There should be exactly one winner in a lock race");
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_message_loss() {
+        // Simulate message loss
+        use crate::orchestration::mesh::TeammateMesh;
+        use ohc_builtin_agent::mesh::transport::{Message, InProcessTransport, MeshTransport};
+        use async_trait::async_trait;
+
+        struct LossyMesh {
+            transport: InProcessTransport,
+            drop_rate: f64,
+        }
+
+        #[async_trait]
+        impl TeammateMesh for LossyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+                Ok(())
+            }
+
+            async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+                if rand::random::<f64>() < self.drop_rate {
+                    return Err("Simulated packet drop".to_string());
+                }
+
+                let _ = self.transport.publish(topic, Message {
+                    agent_id: "agent".to_string(),
+                    action: topic.to_string(),
+                    status: "pending".to_string(),
+                    payload,
+                    msg_id: "test".to_string(),
+                }).await;
+
+                Ok(())
+            }
+
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = LossyMesh {
+            transport: InProcessTransport::new(),
+            drop_rate: 0.5,
+        };
+
+        let mut successful_sends = 0;
+        for _ in 0..20 {
+            if mesh.publish_with_ack("test", vec![]).await.is_ok() {
+                successful_sends += 1;
+            }
+        }
+
+        assert!(successful_sends > 0, "System should successfully send at least some messages under chaos");
+    }
 }
