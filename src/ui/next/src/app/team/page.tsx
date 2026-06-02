@@ -32,6 +32,12 @@ export default function TeamPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const [staffList, setStaffList] = useState<any[]>([
+    { id: 'temp-maya', name: 'Maya', role: 'Manager', status: 'Offline' }
+  ]);
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState('cashier');
+
   const fetchApprovals = async () => {
     try {
       const response = await fetch('/api/agents/approvals');
@@ -46,8 +52,21 @@ export default function TeamPage() {
     }
   };
 
+  const fetchStaff = async () => {
+     try {
+       const res = await fetch('/api/staff');
+       if (res.ok) {
+         const data = await res.json();
+         setStaffList(data.staff);
+       }
+     } catch(e) {
+       console.error(e);
+     }
+  };
+
   useEffect(() => {
     fetchApprovals();
+    fetchStaff();
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -77,6 +96,26 @@ export default function TeamPage() {
     } catch (error) {
       console.error("Failed to reject", error);
       fetchApprovals();
+    }
+  };
+
+  const handleInviteStaff = async () => {
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', role: newStaffRole, pin: '1234' })
+      });
+      if (res.ok) {
+        setLinkCopied(true);
+        setTimeout(() => {
+          setLinkCopied(false);
+          setShowInviteModal(false);
+          fetchStaff();
+        }, 1500);
+      }
+    } catch(e) {
+      console.error(e);
     }
   };
 
@@ -118,18 +157,24 @@ export default function TeamPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
 
-          <div className="mb-6 p-5 rounded-[16px] border flex flex-col gap-3 shadow-sm relative overflow-hidden group" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative z-10">
-              <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
-              <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
-              >
-                Invite to Cloud Team
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold font-outfit text-gray-900 px-1 mb-3">Current Staff</h2>
+            {staffList.map((staff, i) => (
+            <div key={staff.id || i} className="bg-white/65 backdrop-blur-[30px] border border-white/40 rounded-2xl p-4 shadow-sm flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold font-outfit ${staff.role === 'Manager' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                   {staff.name ? staff.name.charAt(0).toUpperCase() : 'S'}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">{staff.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{staff.role} • {staff.status || 'Offline'}</p>
+                </div>
+              </div>
+              <button className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
               </button>
             </div>
+            ))}
           </div>
 
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">AI Departments</h2>
@@ -153,45 +198,64 @@ export default function TeamPage() {
           )}
         </div>
 
-        {/* Cloud Bridge Invite Modal */}
+        {/* Floating Action Button */}
+        <button
+          onClick={() => setShowInviteModal(true)}
+          className="absolute bottom-6 right-6 w-14 h-14 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-black transition-transform hover:scale-105 active:scale-95 z-20"
+          aria-label="Add Staff"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
+        {/* Hire Staff Modal */}
         {showInviteModal && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
               className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
               style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
-              <div className="flex justify-between items-start mb-2">
-                <h2 className="text-xl font-bold font-outfit text-gray-900">Cloud Bridge Invite</h2>
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold font-outfit text-gray-900">Who are you hiring?</h2>
                 <button
                   onClick={() => setShowInviteModal(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                  aria-label="Close Cloud Bridge Invite"
+                  aria-label="Close Hire Modal"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
-              <p className="text-sm text-gray-600 mb-4">Share this link to provision a temporary multi-tenant context for your collaborator, while you maintain local sovereignty.</p>
-
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center gap-2 mb-4">
-                <input
-                  id="cloud-bridge-invite-link"
-                  type="text"
-                  readOnly
-                  value="https://ohc.app/invite/team-default"
-                  className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
-                />
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="(555) 000-0000"
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select
+                    value={newStaffRole}
+                    onChange={(e) => setNewStaffRole(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all appearance-none bg-white">
+                    <option value="cashier">Cashier</option>
+                    <option value="manager">Manager</option>
+                    <option value="driver">Delivery Driver</option>
+                  </select>
+                </div>
               </div>
 
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText("https://ohc.app/invite/team-default");
-                  setLinkCopied(true);
-                  setTimeout(() => setLinkCopied(false), 2000);
-                }}
-                className={`w-full py-3 rounded-xl text-sm font-bold shadow-md transition-all active:scale-[0.98] ${linkCopied ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                onClick={handleInviteStaff}
+                className={`w-full py-3.5 rounded-xl text-base font-bold shadow-md transition-all active:scale-[0.98] ${linkCopied ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
               >
-                {linkCopied ? 'Copied!' : 'Copy Link'}
+                {linkCopied ? 'Invite Sent!' : 'Send SMS Invite'}
               </button>
             </div>
           </div>

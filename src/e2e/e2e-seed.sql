@@ -158,3 +158,8 @@ ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Staff members seed
+INSERT INTO staff_members (id, tenant_id, name, phone_number, role, pin_hash) VALUES
+('staff-1', 'tenant-1', 'Sarah', '555-0199', 'Cashier', '1234')
+ON CONFLICT DO NOTHING;
