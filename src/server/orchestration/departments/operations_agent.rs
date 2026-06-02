@@ -91,3 +91,52 @@ impl BaseAgent for OperationsAgent {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, OrchestratorConfig};
+    use crate::db::DB;
+    use sqlx::sqlite::SqlitePool;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_operations_agent_cache_invalidation() {
+        // We'll set a cache value manually
+        let cache = crate::builder::edge::get_edge_cache();
+        cache.set_with_tags("ohc:cache:test_tenant_1:storefront:testhash", "old html".to_string(), vec!["tenant-id:test_tenant_1".to_string()], std::time::Duration::from_secs(60)).await;
+
+        let val = cache.get("ohc:cache:test_tenant_1:storefront:testhash").await;
+        assert_eq!(val, Some("old html".to_string()));
+
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+        let config = OrchestratorConfig {
+            auto_approve: true,
+        };
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, hub, config));
+
+        let agent = OperationsAgent::new(orchestrator);
+
+        let event = DepartmentEvent {
+            id: "evt1".to_string(),
+            tenant_id: "test_tenant_1".to_string(),
+            event_type: "tenant.inventory.updated".to_string(),
+            payload: serde_json::json!({}),
+        };
+
+        let res = agent.handle_event(&event).await;
+        assert!(res.is_ok());
+
+        // Cache should be invalidated
+        let val_after = cache.get("ohc:cache:test_tenant_1:storefront:testhash").await;
+        assert_eq!(val_after, None);
+    }
+}
