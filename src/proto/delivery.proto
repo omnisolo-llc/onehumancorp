@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package ohc.delivery;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/delivery;deliverypb";
+
+message DeliveryZone {
+  string id = 1;
+  string tenant_id = 2;
+  string polygon = 3;
+  double flat_fee = 4;
+  int32 min_order_value = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message DeliveryTask {
+  string id = 1;
+  string tenant_id = 2;
+  string order_id = 3;
+  string driver_id = 4;
+  string status = 5;
+  int64 estimated_arrival_unix = 6;
+  string delivery_location = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message RoutePlan {
+  string id = 1;
+  string tenant_id = 2;
+  string delivery_date = 3;
+  string waypoint_sequence = 4; // JSON string
+  int64 created_at_unix = 5;
+  int64 updated_at_unix = 6;
+}
+
+message ConfigureDeliveryZoneRequest {
+  string tenant_id = 1;
+  string polygon = 2;
+  double flat_fee = 3;
+  int32 min_order_value = 4;
+}
+
+message ConfigureDeliveryZoneResponse {
+  DeliveryZone zone = 1;
+}
+
+message FetchDailyItineraryRequest {
+  string tenant_id = 1;
+  string delivery_date = 2;
+}
+
+message FetchDailyItineraryResponse {
+  RoutePlan route_plan = 1;
+  repeated DeliveryTask tasks = 2;
+}
+
+message UpdateDeliveryTaskStatusRequest {
+  string tenant_id = 1;
+  string task_id = 2;
+  string status = 3;
+}
+
+message UpdateDeliveryTaskStatusResponse {
+  DeliveryTask task = 1;
+}
+
+service DeliveryService {
+  rpc ConfigureDeliveryZone(ConfigureDeliveryZoneRequest) returns (ConfigureDeliveryZoneResponse);
+  rpc FetchDailyItinerary(FetchDailyItineraryRequest) returns (FetchDailyItineraryResponse);
+  rpc UpdateDeliveryTaskStatus(UpdateDeliveryTaskStatusRequest) returns (UpdateDeliveryTaskStatusResponse);
+}

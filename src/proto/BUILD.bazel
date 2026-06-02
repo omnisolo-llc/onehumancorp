@@ -8,6 +8,7 @@ exports_files([
     "app.proto",
     "billing.proto",
     "common.proto",
+    "delivery.proto",
     "docs.proto",
     "hub.proto",
     "model.proto",
@@ -212,6 +213,21 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Delivery ───────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "delivery_proto",
+    srcs = ["delivery.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "delivery",
+    proto = ":delivery_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

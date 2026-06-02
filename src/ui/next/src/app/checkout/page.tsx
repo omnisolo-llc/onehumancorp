@@ -10,6 +10,8 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isLocalDelivery, setIsLocalDelivery] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -46,6 +48,32 @@ export default function CheckoutPage() {
         <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+
+          {/* Local Delivery Option */}
+          <div className="flex flex-col gap-2 p-4 bg-white/50 rounded-lg border border-gray-200">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isLocalDelivery}
+                onChange={(e) => setIsLocalDelivery(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span className="text-gray-800 font-medium">Local Delivery</span>
+            </label>
+            {isLocalDelivery && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Enter your delivery address"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Delivery fee will be calculated based on your zone.</p>
+              </div>
+            )}
+          </div>
+
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
