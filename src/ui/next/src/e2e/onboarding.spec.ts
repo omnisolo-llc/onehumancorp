@@ -1,4 +1,3 @@
-import { test, expect } from '@playwright/test';
 // NOTE: We rely on the seeded test environment, doing our best to perform an unmocked E2E operation
 
 test.describe('Onboarding Wizard CUJ', () => {
@@ -151,5 +150,3 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     // Verify success message appears
     await expect(page.getByText('Draft Saved!')).toBeVisible();
-  });
-});
