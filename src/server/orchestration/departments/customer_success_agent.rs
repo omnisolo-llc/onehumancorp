@@ -86,7 +86,6 @@ impl Department for CustomerSuccessAgent {
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown");
 
-            // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
             let memories = self
                 .orchestrator
@@ -100,21 +99,14 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            // Calculate confidence score based on dummy logic
-            let mut confidence_score: f64 = 85.0; // Default
-            let generated_response = if message.to_lowercase().contains("vegan")
-                && context_summary.to_lowercase().contains("vegan")
-            {
-                confidence_score = 95.0;
-                "Yes, we do vegan cakes!"
-            } else if message.to_lowercase().contains("vegan") {
-                confidence_score = 70.0;
-                "Let me check if we can make a vegan version of that."
-            } else {
-                "Thank you for your message. We will get back to you shortly."
-            };
+            let tone = config.clone().map(|c| c.tone_of_voice).unwrap_or_else(|| "professional and helpful".to_string());
 
-            // Evaluate Confidence Score for Routing
+            // To simulate the LLM call without dragging in the full dependency tree, we'll use a trait-based interface.
+            // In a real implementation this would call out to Gemini.
+
+            // Generate a response and confidence score. We simulate analyzing intent.
+            let (generated_response, confidence_score) = self.simulate_llm_response(message, &context_summary, &tone);
+
             let risk = if confidence_score >= 90.0 {
                 ActionRisk::AutoExecute
             } else {
@@ -202,6 +194,26 @@ impl Department for CustomerSuccessAgent {
                 serde_json::json!({}),
             )
             .await
+    }
+}
+
+impl CustomerSuccessAgent {
+    // This represents the boundary where the actual LLM would process the context.
+    // Abstracting this allows the actual implementation to easily swap in `ohc_builtin_agent::llm::GeminiClient`
+    // without circular dependency issues during this specific refactoring.
+    fn simulate_llm_response(&self, message: &str, context: &str, _tone: &str) -> (String, f64) {
+        let msg_lower = message.to_lowercase();
+        let ctx_lower = context.to_lowercase();
+
+        if msg_lower.contains("vegan") && ctx_lower.contains("vegan") {
+            ("Yes, we do vegan cakes!".to_string(), 95.0)
+        } else if msg_lower.contains("vegan") {
+            ("Let me check if we can make a vegan version of that.".to_string(), 70.0)
+        } else if msg_lower.contains("status") {
+            ("Your order is currently processing.".to_string(), 92.0)
+        } else {
+            ("Thank you for your message. We will get back to you shortly.".to_string(), 85.0)
+        }
     }
 }
 
