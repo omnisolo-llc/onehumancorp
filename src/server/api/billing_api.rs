@@ -48,23 +48,15 @@ pub async fn my_plan_handler(
     };
 
     let tracker = hub.tracker();
-    let tenant_id_1 = tenant_id.clone();
-    let tracker_1 = tracker.clone();
-    let tier_future = tokio::spawn(async move { tracker_1.get_tenant_tier(&tenant_id_1).await });
-
-    let tenant_id_2 = tenant_id.clone();
-    let tracker_2 = tracker.clone();
-    let ai_used_future = tokio::spawn(async move { tracker_2.get_tenant_actions_used(&tenant_id_2).await });
-
-    let tenant_id_3 = tenant_id.clone();
-    let tracker_3 = tracker.clone();
-    let storage_used_bytes_future = tokio::spawn(async move { tracker_3.get_tenant_storage_used(&tenant_id_3).await });
+    let tier_future = tracker.get_tenant_tier(&tenant_id);
+    let ai_used_future = tracker.get_tenant_actions_used(&tenant_id);
+    let storage_used_bytes_future = tracker.get_tenant_storage_used(&tenant_id);
 
     let (tier_res, ai_used_res, storage_used_bytes_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
 
-    let tier = tier_res.unwrap_or(Ok(::server_pricing::rate_limit::PlanTier::Free)).unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-    let ai_used = ai_used_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let storage_used_bytes = storage_used_bytes_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let ai_used = ai_used_res.unwrap_or(0);
+    let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
