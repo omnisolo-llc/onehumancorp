@@ -1,3 +1,14 @@
+import { NextResponse } from 'next/server';
+
+export async function GET(request: Request) {
+  // To handle CORS for scripts loading content:
+  const headers = {
+      'Content-Type': 'application/javascript',
+      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      'Access-Control-Allow-Origin': '*'
+  };
+
+  const jsContent = `
 (function() {
   const container = document.getElementById('ohc-wall-of-love');
   if (!container) return;
@@ -21,7 +32,7 @@
   header.style.fontWeight = '700';
   header.style.color = '#111827';
   header.style.textAlign = 'center';
-  header.textContent = `What people say about ${storeName}`;
+  header.textContent = \`What people say about \${storeName}\`;
   container.appendChild(header);
 
   // Create loading state
@@ -34,7 +45,7 @@
   container.appendChild(loading);
 
   // Fetch data
-  const scriptTag = document.currentScript || document.querySelector('script[src*="wall-of-love.js"]');
+  const scriptTag = document.currentScript || document.querySelector('script[src*="wall-of-love"]');
   let baseUrl = 'https://ohc.app';
   if (scriptTag && scriptTag.src) {
     try {
@@ -45,12 +56,12 @@
     }
   }
 
-  // Override for tests or local dev
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      baseUrl = window.location.origin;
+  // To properly support e2e tests
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'about:') {
+      baseUrl = window.location.origin === 'null' ? 'http://localhost:3000' : window.location.origin;
   }
 
-  const fetchUrl = `${baseUrl}/api/v1/growth/wall_of_love/data?store=${encodeURIComponent(storeName)}`;
+  const fetchUrl = \`\${baseUrl}/api/v1/growth/wall_of_love/data?store=\${encodeURIComponent(storeName)}\`;
 
   fetch(fetchUrl)
     .then(res => res.json())
@@ -88,7 +99,7 @@
         content.style.fontSize = '0.9375rem';
         content.style.lineHeight = '1.5';
         content.style.color = '#374151';
-        content.textContent = `"${review.content}"`;
+        content.textContent = \`"\${review.content}"\`;
 
         const footer = document.createElement('div');
         footer.style.display = 'flex';
@@ -154,3 +165,9 @@
       console.error('Wall of Love Widget Error:', err);
     });
 })();
+  `;
+
+  return new NextResponse(jsContent, {
+    headers
+  });
+}
