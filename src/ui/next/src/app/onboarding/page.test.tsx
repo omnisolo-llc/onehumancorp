@@ -198,21 +198,21 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 3,
+        chatStep: 1,
         businessName: 'A',
-        location: 'NY',
-        businessType: 'Bakery',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        location: '',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
       });
     });
 
     render(<OnboardingWizard />);
 
-    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
+    const nextButton = screen.getByRole('button', { name: /Next/i });
 
-    await user.click(generateButton);
+    await user.click(nextButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
