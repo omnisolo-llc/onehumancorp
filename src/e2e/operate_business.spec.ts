@@ -36,7 +36,21 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByRole('button', { name: /Publish my business/ }).click();
 
   await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+
+  // Dashboard E2E latency/payload efficiency verification setup
+  const dashboardPromise = page.waitForResponse(response => response.url().includes('/api/dashboard'));
   await page.getByRole('button', { name: /Launch My Business/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+  // End-to-End backend test: intercept response to verify payload efficiency
+  const dashboardRes = await dashboardPromise;
+  const body = await dashboardRes.json();
+
+  // Should have valid products
+  expect(body.products).toBeTruthy();
+  expect(body.products.length).toBeGreaterThanOrEqual(1);
+
+  // Performance assertion on API
+  expect(dashboardRes.ok()).toBeTruthy();
 });

@@ -324,7 +324,7 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        let mut final_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
@@ -340,28 +340,29 @@ impl DashboardService for MyDashboardService {
                     });
                 }
             }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+            final_meetings.push(::server_ohc::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-            .iter()
+        let filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+            .into_iter()
             .filter(|a| {
                 a.organization_id == req.organization_id
                     || a.id.starts_with(&format!("{}-", req.organization_id))
             })
-            .cloned()
             .collect();
 
-        let final_agents_payload = _filtered_agents
-            .into_iter()
+        let mut original_prompts_len = 0;
+        let mut compressed_prompts_len = 0;
+
+        let final_agents_payload = filtered_agents
+            .iter()
             .map(|a| {
                 let status_val = match a.status.to_uppercase().as_str() {
                     "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
@@ -384,18 +385,18 @@ impl DashboardService for MyDashboardService {
                 };
 
                 ::server_ohc::agent::Agent {
-                    id: a.id,
+                    id: a.id.clone(),
                     name,
                     role: role_val,
                     status: status_val,
-                    organization_id: a.organization_id,
+                    organization_id: a.organization_id.clone(),
                 }
             })
             .collect::<Vec<_>>();
 
         if !req.mobile_optimized {
             let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
+            for a in filtered_agents.iter() {
                 *status_map.entry(a.status.clone()).or_insert(0) += 1;
             }
             final_statuses = status_map
@@ -404,18 +405,7 @@ impl DashboardService for MyDashboardService {
                 .collect();
 
             // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-            let mut original_prompts_len = 0;
-            let mut compressed_prompts_len = 0;
-
-            let org_agents: Vec<_> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .collect();
-
-            for agent in org_agents {
+            for agent in filtered_agents.iter() {
                 let prompt = &agent.name;
                 let orig_len = prompt.len();
                 if orig_len > 0 {
