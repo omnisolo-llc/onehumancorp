@@ -81,9 +81,17 @@ impl RalphLoop {
                 .unwrap_or_else(|| "No git history available".to_string());
 
             // Execute the agent run for this specific feature
+            let mut pending_features = Vec::new();
+            for (i, f) in progress.features.iter().enumerate() {
+                if f.status == "pending" {
+                    pending_features.push(format!("{}. {}", i + 1, f.name));
+                }
+            }
+            let pending_features_list = pending_features.join("\n");
+
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
+                "You are executing Phase 2 of a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nRemaining Features:\n{}\nFeature to implement now (Highest Priority): {}\nExecute steps to complete this feature, verify it, and then stop.",
+                progress.task_description, git_log_output, pending_features_list, feature_name
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
@@ -274,6 +282,29 @@ mod tests {
 
         let git_dir = dir.path().join(".git");
         assert!(git_dir.exists());
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_updates_progress() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+        let progress_file_str = progress_file.to_str().unwrap();
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file_str);
+
+        let result = ralph.run("Build a small feature").await;
+        assert!(result.is_ok());
+
+        assert!(progress_file.exists());
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        // "Feat1" is returned by the mock as the first feature.
+        assert!(saved_progress.notes.iter().any(|note| note.contains("Completed feature Feat1: Feature implemented")));
     }
 
     #[tokio::test]
