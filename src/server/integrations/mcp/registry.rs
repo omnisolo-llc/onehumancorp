@@ -134,6 +134,10 @@ impl SqliteToolRegistry {
 #[async_trait]
 impl ToolRegistry for SqliteToolRegistry {
     async fn register_tool(&self, tenant_id: &str, name: &str, description: Option<&str>, config: Value) -> Result<McpTool, sqlx::Error> {
+        if is_internal_ip(tenant_id) {
+            return Err(sqlx::Error::Protocol("Invalid tenant_id: Cannot use internal IPs".to_string()));
+        }
+
         let id = uuid::Uuid::new_v4().to_string();
 
         let query = "
@@ -273,11 +277,19 @@ mod tests {
         // Cross-tenant access should fail
         let result = registry.get_tool("tenant_B", &tool_a1_id).await;
         assert!(result.is_err());
+
+        // Internal IP rejection
+        let internal_ip_res = registry.register_tool("10.0.0.5", "tool_internal", None, serde_json::json!({})).await;
+        assert!(internal_ip_res.is_err());
+        match internal_ip_res {
+            Err(sqlx::Error::Protocol(ref msg)) if msg.contains("Cannot use internal IPs") => {}
+            _ => panic!("Expected Protocol error with 'Cannot use internal IPs'"),
+        }
     }
 
     #[tokio::test]
     async fn test_pg_tool_registry_isolation() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 

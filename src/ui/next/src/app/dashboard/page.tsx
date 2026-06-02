@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { OneTapReferral } from "../components/OneTapReferral";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -25,6 +29,9 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [activeReferrals, setActiveReferrals] = useState<number>(0);
+  const [revenueFromReferrals, setRevenueFromReferrals] = useState<number>(0);
+  const [pendingRewards, setPendingRewards] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -77,6 +84,8 @@ export default function Dashboard() {
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -150,6 +159,56 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
+
+    const updateOfflineStatus = () => {
+      setIsOffline(!navigator.onLine);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        setOfflineQueueCount(queue.length);
+      } catch(e) {}
+    };
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      try {
+        const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+        if (queue.length > 0) {
+          const res = await fetch("/api/v1/sync/offline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mutations: queue })
+          });
+          if (res.ok) {
+            localStorage.setItem("ohc_offline_queue", "[]");
+            setOfflineQueueCount(0);
+          }
+        }
+      } catch (e) { console.error("Sync failed", e); }
+    };
+
+    const handleStorage = (e: any) => {
+      if (e.key === "ohc_offline_queue") {
+        try {
+          const queue = JSON.parse(e.newValue || "[]");
+          setOfflineQueueCount(queue.length);
+        } catch(e) {}
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("storage", handleStorage);
+    updateOfflineStatus();
+
+    // Setup interval to check queue dynamically (useful for offline writes in same tab)
+    const queueCheckInterval = setInterval(() => {
+      if (!navigator.onLine) {
+         try {
+           const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+           if (queue.length !== offlineQueueCount) setOfflineQueueCount(queue.length);
+         } catch(e) {}
+      }
+    }, 1000);
 
     const connectSwarmMesh = () => {
         try {
@@ -225,7 +284,10 @@ export default function Dashboard() {
 
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
-                setTeamInvitesSent(invitesData.total_invites);
+                setTeamInvitesSent(invitesData.total_invites !== undefined ? invitesData.total_invites : (invitesData?.metrics?.team_invites_sent || 0));
+                setActiveReferrals(invitesData?.metrics?.active_referrals || 0);
+                setRevenueFromReferrals(invitesData?.metrics?.revenue || 0);
+                setPendingRewards(invitesData?.metrics?.pending_rewards || 0);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -233,6 +295,11 @@ export default function Dashboard() {
     };
 
     fetchMetrics();
+
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", updateOfflineStatus);
+        window.removeEventListener("storage", handleStorage);
+        clearInterval(queueCheckInterval);
 
     return () => {
         if (ws) ws.close();
@@ -346,22 +413,47 @@ export default function Dashboard() {
     }
   };
 
+  const walkthroughSteps = [
+    {
+      targetId: "sales-card-target",
+      title: "Track Your Revenue",
+      content: "This card shows the total amount of money your store has made today. Keep an eye on it to see your business grow!",
+      position: "bottom" as const
+    },
+    {
+      targetId: "visitors-card-target",
+      title: "Monitor Your Traffic",
+      content: "Here you can see how many people have visited your store today. More visitors means more chances to make a sale.",
+      position: "bottom" as const
+    }
+  ];
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-
+      <InteractiveWalkthrough
+        steps={walkthroughSteps}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
+            <button onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors shadow-sm">
+              Start Tour
+            </button>
+          </div>
+          <div className="flex items-center">
+            <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
+              {offlineQueueCount} Payments Pending Sync
+            </div>
+            <div id="network-status-indicator" className={`${isOffline ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(255, 193, 7, 0.2)", color: "#B28200", border: "1px solid rgba(255, 193, 7, 0.3)" }}>
+              Offline - Changes saved locally
+            </div>
           </div>
         </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
-        </div>
+
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -379,16 +471,20 @@ export default function Dashboard() {
                Seasonal Promos ✨
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-               <span>🤖</span> AI Departments
-             </Link>
+             <WithTooltip id="agents-tab-tooltip" defaultText="Hire and manage your AI assistants here.">
+               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+                 <span>🤖</span> AI Departments
+               </Link>
+             </WithTooltip>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
-             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-               My Plan
+             <Link href="/plan" passHref legacyBehavior>
+               <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
+                 Billing
+               </button>
              </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
@@ -406,14 +502,18 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+               <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
+                   </WithTooltip>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
-               </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+               </WalkthroughTarget>
+               <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Visitors</h3>
+                   </WithTooltip>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
-               </div>
+               </WalkthroughTarget>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
@@ -676,6 +776,50 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+         {/* Storefront Branding Soft Paywall */}
+         <section className="mb-6">
+            <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 165, 0, 0.3)' }}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                        Storefront Branding
+                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255, 165, 0, 0.1)', color: '#d97706' }}>
+                            Premium Feature
+                        </span>
+                    </h3>
+                </div>
+
+                <p className="text-gray-600 font-inter text-sm mb-4 leading-relaxed">
+                    Remove the "Powered by OHC" watermark from your storefront and embed widgets.
+                </p>
+
+                <div className="flex justify-between items-center bg-black/5 p-4 rounded-xl mb-4">
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900">Remove "Powered by OHC" Badge</span>
+                        <span className="text-sm text-gray-600">Show only your own brand on your storefront.</span>
+                    </div>
+                    <div className="relative">
+                        {/* Toggle Switch (Locked) */}
+                        <label className="relative inline-block w-12 h-7 opacity-50 cursor-not-allowed">
+                            <input type="checkbox" disabled className="opacity-0 w-0 h-0" />
+                            <span className="absolute cursor-not-allowed top-0 left-0 right-0 bottom-0 bg-gray-300 transition-all duration-300 rounded-full"></span>
+                            <span className="absolute h-5 w-5 left-1 bottom-1 bg-white transition-all duration-300 rounded-full"></span>
+                        </label>
+                        <div className="absolute -top-2.5 -right-2.5 text-base">🔒</div>
+                    </div>
+                </div>
+
+                <div className="text-center mt-4">
+                    <button
+                        onClick={() => { setShowSoftPaywall(true); }}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 shadow-md"
+                        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)' }}
+                    >
+                        Upgrade to Premium to Unlock
+                    </button>
+                </div>
             </div>
          </section>
 
@@ -1081,7 +1225,7 @@ export default function Dashboard() {
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
                         onClick={() => setShowSaleCelebration(false)}
                     >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -1297,17 +1441,17 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${revenueFromReferrals.toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${pendingRewards.toFixed(2)}</div>
                 </div>
             </div>
          </section>
@@ -1404,7 +1548,7 @@ export default function Dashboard() {
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                  Share to X
+                  Share on X
                 </a>
               </div>
               <div className="flex justify-center pt-2">
@@ -2014,8 +2158,7 @@ export default function Dashboard() {
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-              style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free
@@ -2027,7 +2170,7 @@ export default function Dashboard() {
       {/* Embed Modal */}
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
@@ -2075,9 +2218,13 @@ export default function Dashboard() {
       )}
 
       {/* Referral Modal */}
+      <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
+        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
+      </div>
+
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 

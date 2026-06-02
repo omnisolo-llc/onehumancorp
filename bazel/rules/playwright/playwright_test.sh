@@ -1,8 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ -z "${TEST_SRCDIR:-}" || -z "${TEST_TMPDIR:-}" ]]; then
+  echo "[playwright] Error: Playwright tests must run under Bazel with TEST_SRCDIR and TEST_TMPDIR set." >&2
+  exit 1
+fi
+
 RUNFILES_ROOT="${RUNFILES_ROOT:-}"
-if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
+if [[ -z "$RUNFILES_ROOT" ]]; then
   if [[ -n "${TEST_WORKSPACE:-}" && -d "$TEST_SRCDIR/$TEST_WORKSPACE" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR/$TEST_WORKSPACE"
   elif [[ -d "$TEST_SRCDIR/_main" ]]; then
@@ -11,24 +16,13 @@ if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR"
   fi
 fi
-if [[ -z "$RUNFILES_ROOT" ]]; then
-  RUNFILES_ROOT="$(pwd)"
-fi
 
-# Traverse up to find the real repository/workspace root containing node_modules
-workspace_root=""
-current_dir="$(pwd)"
-while [[ "$current_dir" != "/" ]]; do
-  if [[ -d "$current_dir/node_modules" && -f "$current_dir/package.json" ]]; then
-    workspace_root="$current_dir"
-    break
-  fi
-  current_dir="$(dirname "$current_dir")"
-done
-
-if [[ -z "$workspace_root" ]]; then
-  workspace_root="$(pwd)"
+workspace_root="$RUNFILES_ROOT"
+if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules" ]]; then
+  echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
+  exit 1
 fi
+cd "$workspace_root"
 
 # Resolve spec files to absolute paths if passed as arguments.
 ABS_SPEC_FILES=()
@@ -36,33 +30,48 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
-# Resolve browsers path to absolute
+# Resolve the Bazel-provided Playwright browser repository to an absolute path.
+# Every shard gets the same runfiles-backed browser directory instead of a
+# per-shard install under the temporary Playwright workspace.
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-  
-  # Resolve relative to runfiles root if it starts with ../
-  if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
-      if [[ -L bazel-out ]]; then
-          output_base="$(dirname "$(dirname "$(dirname "$(readlink bazel-out)")")")"
-          repo_path="${PLAYWRIGHT_BROWSERS_PATH#../}"
-          repo_path="${repo_path%/..}"
-          potential_path="$output_base/external/$repo_path"
-          if [[ -d "$potential_path" ]]; then
-              export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$potential_path")"
-          fi
-      fi
+
+  BROWSER_PATH_CANDIDATES=(
+    "$PLAYWRIGHT_BROWSERS_PATH"
+    "$RUNFILES_ROOT/$PLAYWRIGHT_BROWSERS_PATH"
+  )
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$PLAYWRIGHT_BROWSERS_PATH"
+    )
   fi
-  
+  if [[ -n "${TEST_WORKSPACE:-}" && -n "${TEST_SRCDIR:-}" ]]; then
+    BROWSER_PATH_CANDIDATES+=(
+      "$TEST_SRCDIR/$TEST_WORKSPACE/$PLAYWRIGHT_BROWSERS_PATH"
+    )
+  fi
+
+  for candidate in "${BROWSER_PATH_CANDIDATES[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$candidate")"
+      break
+    fi
+  done
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
+      ACTUAL_SHELL=$(find "$RUNFILES_ROOT" \( -name "chrome-headless-shell" -o -name "headless_shell" \) -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
           ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
       fi
   fi
-  
+
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
+  else
+      echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
+      exit 1
   fi
 fi
 
@@ -75,11 +84,11 @@ for candidate in "src/server/server" "../_main/src/server/server"; do
   fi
 done
 
-export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
+export HOME="${HOME:-$TEST_TMPDIR/home}"
 mkdir -p "$HOME"
 
 # Run Playwright from a writable project-shaped directory.
-WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
+WORK_DIR="$TEST_TMPDIR/playwright-workspace"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/src/server"
 cp "$workspace_root/package.json" "$WORK_DIR/package.json"
@@ -135,20 +144,9 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   exit 1
 fi
 
-# Check if Docker is available. If not, skip E2E tests gracefully.
-if [[ "${E2E_SKIP_DOCKER:-}" == "true" ]]; then
-  echo "Skip E2E tests gracefully per E2E_SKIP_DOCKER env var"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "${TEST_SHARD_STATUS_FILE}"
-  fi
-  exit 0
-fi
 if ! docker info >/dev/null 2>&1; then
-  echo "Skip E2E tests due to docker failure in sandbox"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
-  exit 0
+  echo "[playwright] Error: Docker is required for Bazel Playwright E2E tests."
+  exit 1
 fi
 
 # Unique container names for parallel isolation
@@ -179,14 +177,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
-if true; then
-  echo "Skip E2E tests due to docker failure in sandbox"
-  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
-    touch "$TEST_SHARD_STATUS_FILE"
-  fi
-  exit 0
-fi
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc public.ecr.aws/docker/library/postgres:16
+docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
 PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
@@ -211,9 +202,28 @@ for i in $(seq 1 120); do
   sleep 1
 done
 
+postgres_exec() {
+  local sql="$1"
+  local label="$2"
+  for i in $(seq 1 30); do
+    if docker exec "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc -c "$sql"; then
+      return 0
+    fi
+    if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+      echo "[playwright] Postgres container exited while running: $label"
+      docker logs "$POSTGRES_NAME" || true
+      return 1
+    fi
+    sleep 1
+  done
+  echo "[playwright] Error: failed to run Postgres setup SQL: $label"
+  docker logs "$POSTGRES_NAME" || true
+  return 1
+}
+
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
+postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -242,7 +252,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+    "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
@@ -253,12 +263,12 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died."
-      tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -20 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     if (( i == 120 )); then
       echo "[playwright] Error: Server failed to become healthy after 120 seconds."
-      tail -50 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -50 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     sleep 1
@@ -295,7 +305,7 @@ fi
 # Run Playwright
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"
+  LIST_LOG="$TEST_TMPDIR/playwright-list.log"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
     if grep -q "No tests found" "$LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."

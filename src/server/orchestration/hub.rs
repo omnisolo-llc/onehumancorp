@@ -5,6 +5,8 @@ use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
 use std::time::Instant;
 
+/// RedisMeshTransport uses Redis Pub/Sub for Teammate Mesh APIs.
+/// It wraps RedisPubSubTransport to add OpenTelemetry tracking metrics.
 pub struct RedisMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
     publish_counter: Counter<u64>,
@@ -67,6 +69,9 @@ impl MeshTransport for RedisMeshTransport {
     }
 }
 
+/// MemoryMeshTransport uses in-process DashMap broadcasting for Teammate Mesh APIs.
+/// This is primarily utilized when the application runs in Standalone (offline) mode.
+/// It wraps InProcessTransport to add OpenTelemetry tracking metrics.
 pub struct MemoryMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
     publish_counter: Counter<u64>,
@@ -291,6 +296,91 @@ mod tests {
         assert_eq!(agents.len(), 2);
         assert_eq!(agents[0], ("agent_redis_1".to_string(), "online".to_string()));
         assert_eq!(agents[1], ("agent_redis_2".to_string(), "busy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_memory_mesh_transport_concurrent_subscribers() {
+        let transport = MemoryMeshTransport::new();
+
+        let mut cancels = Vec::new();
+        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+        for _ in 0..5 {
+            let rc = received_count.clone();
+            let handler = Box::new(move |msg: Message| {
+                if msg.msg_id == "concurrent_msg_1" {
+                    rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            });
+            let cancel = transport.subscribe("concurrent_topic", handler).await.unwrap();
+            cancels.push(cancel);
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_concurrent".to_string(),
+            action: "broadcast".to_string(),
+            status: "ok".to_string(),
+            payload: b"data".to_vec(),
+            msg_id: "concurrent_msg_1".to_string(),
+        };
+
+        transport.publish("concurrent_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert_eq!(received_count.load(std::sync::atomic::Ordering::SeqCst), 5);
+
+        for cancel in cancels {
+            cancel();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_redis_mesh_transport_concurrent_subscribers() {
+        if std::env::var("OHC_REDIS_URL").is_err() {
+            return;
+        }
+        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
+        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
+
+        let mut cancels = Vec::new();
+        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+        for _ in 0..5 {
+            let rc = received_count.clone();
+            let handler = Box::new(move |msg: Message| {
+                if msg.msg_id == "concurrent_msg_redis_1" {
+                    rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            });
+            let cancel = transport.subscribe("concurrent_topic_redis", handler).await.unwrap();
+            cancels.push(cancel);
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_concurrent_redis".to_string(),
+            action: "broadcast".to_string(),
+            status: "ok".to_string(),
+            payload: b"data".to_vec(),
+            msg_id: "concurrent_msg_redis_1".to_string(),
+        };
+
+        transport.publish("concurrent_topic_redis", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        // At least some subscribers should receive the message.
+        // Redis pub/sub can be slightly non-deterministic with many rapid local connections
+        // but we expect exactly 5 here in a stable test.
+        assert_eq!(received_count.load(std::sync::atomic::Ordering::SeqCst), 5);
+
+        for cancel in cancels {
+            cancel();
+        }
     }
 
     #[tokio::test]

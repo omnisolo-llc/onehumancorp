@@ -209,7 +209,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
+                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
                     WHERE id = $3
                     "#,
                 )
@@ -225,7 +225,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'EXECUTING', $3, $4)
+                    VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
                     "#
                 )
                 .bind(trans_id)
@@ -283,7 +283,7 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
+                    SET status = 'IN_PROGRESS', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
                         WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
@@ -318,7 +318,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'EXECUTING', ?, ?)
+                    VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
                     "#
                 )
                 .bind(trans_id)
@@ -1174,11 +1174,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_dag_dependencies_postgres() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return; // Skip if no PG DB available for test
         }
 
-        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
         if !database_url.contains("test") {
             return;
         }
@@ -1526,7 +1526,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(database_url)
             .await
             .unwrap();
@@ -1615,7 +1615,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(5000))
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(database_url)
             .await
             .unwrap();

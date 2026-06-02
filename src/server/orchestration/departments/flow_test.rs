@@ -14,7 +14,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_department_flow() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -36,13 +36,13 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
@@ -85,7 +85,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -101,13 +101,13 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
@@ -189,7 +189,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_department_service_msgbus_integration() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -209,13 +209,13 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
@@ -252,7 +252,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_marketing_job_completed_case_study() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -270,13 +270,13 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;

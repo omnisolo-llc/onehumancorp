@@ -178,7 +178,7 @@ impl AgentServiceImpl {
             }
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
@@ -606,6 +606,7 @@ impl AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+            enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
         }
     }
 
@@ -664,7 +665,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
+        tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -915,7 +916,7 @@ impl AgentService for AgentServiceImpl {
                     }
                     Err(_) => {
                         let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
                              continue;
@@ -1028,6 +1029,7 @@ impl AgentService for AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+            enable_tao_orchestration_loop: sub_req.enable_tao_orchestration_loop,
             };
 
             let observation_store = Arc::new(dashmap::DashMap::new());
@@ -1320,6 +1322,8 @@ pub async fn start_builtin_agent(
                     runtime_config: None,
                     toolset_config: None,
                     department,
+                    enable_tools_gating: false,
+                    enable_tao_orchestration_loop: false,
                 };
 
                 let svc = svc.clone();
