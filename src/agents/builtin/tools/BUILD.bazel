@@ -24,6 +24,7 @@ rust_library(
         "marketplace_tool.rs",
         "pydantic.rs",
         "repo_map.rs",
+        "aider_repo_map.rs",
         "ollama.rs",
         "read.rs",
         "recall.rs",
