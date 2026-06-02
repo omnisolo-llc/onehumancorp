@@ -48,7 +48,19 @@ fn escape_html(s: &str) -> String {
      .replace("'", "&#x27;")
 }
 
-pub async fn handle_edge_request(
+pub struct StorefrontRouter;
+
+impl StorefrontRouter {
+    pub async fn handle_edge_request(
+        Extension(state): Extension<Arc<EdgeWorkerState>>,
+        Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+        headers: axum::http::HeaderMap,
+    ) -> Result<Response<Body>, axum::http::StatusCode> {
+        handle_edge_request_impl(Extension(state), Path((tenant_id_str, site_id_str)), headers).await
+    }
+}
+
+pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
     headers: axum::http::HeaderMap,
