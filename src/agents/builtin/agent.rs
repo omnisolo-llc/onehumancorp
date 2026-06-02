@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
-use std::fmt::Write;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -305,44 +304,22 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
-                let _ = write!(tool_defs, "Description: {}\n", tool.description);
-                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
+                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
+                tool_defs.push_str(&format!("Description: {}\n", tool.description));
+                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
             }
             tool_defs.pop(); // Remove trailing newline
         }
 
-        let mut source_name = "User Instructions";
-        let mut user_instr = if cfg.user_instructions.is_empty() {
-            let mut combined_agents_md = String::new();
-            let mut current_dir = std::env::current_dir().ok();
-            while let Some(dir) = current_dir {
-                let agents_file = dir.join("AGENTS.md");
-                if let Ok(content) = std::fs::read_to_string(&agents_file) {
-                    if !combined_agents_md.is_empty() {
-                        combined_agents_md.insert_str(0, "\n\n");
-                    }
-                    combined_agents_md.insert_str(0, &content);
-                }
-                current_dir = dir.parent().map(|p| p.to_path_buf());
-            }
-            if !combined_agents_md.is_empty() {
-                source_name = "AGENTS.md";
-            }
-            combined_agents_md
-        } else {
-            source_name = "User Instructions";
-            cfg.user_instructions.clone()
-        };
-
         let mut end_idx = 32768;
-        if user_instr.len() > 32768 {
-            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
+        if cfg.user_instructions.len() > 32768 {
+            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
                 end_idx -= 1;
             }
-            let truncated = &user_instr[..end_idx];
-            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
+        } else {
+            end_idx = cfg.user_instructions.len();
         }
+        let user_instr = cfg.user_instructions[..end_idx].to_string();
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
@@ -5096,8 +5073,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768 + notice.len());
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
     }
 
     #[test]
@@ -5113,8 +5089,7 @@ mod tests {
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
-        assert_eq!(user_part.len(), 32766 + notice.len());
+        assert_eq!(user_part.len(), 32766);
     }
 
     #[tokio::test]

@@ -40,7 +40,6 @@ pub mod ralph_loop;
 pub mod ruflo;
 pub mod openhands;
 
-
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
 pub mod proto;
@@ -214,15 +213,15 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             Ok(resp) => {
                 let inner = resp.into_inner();
                 if !inner.error.is_empty() {
-                    tracing::error!("{}", inner.error);
+                    eprintln!("{}", inner.error);
                     std::process::exit(1);
                 } else {
-                    tracing::info!("{}", inner.result);
+                    println!("{}", inner.result);
                     return Ok(());
                 }
             }
             Err(e) => {
-                tracing::error!("Subagent dispatch error: {}", e);
+                eprintln!("Subagent dispatch error: {}", e);
                 std::process::exit(1);
             }
         }
