@@ -575,13 +575,13 @@ impl Agent {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", msg),
+                            result: format!("Error (LLM Recoverable): {}", msg),
                             iteration: i as i32,
                         });
                         tool_results[idx] = crate::types::ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: format!("Error (LLM Recoverable): {}", msg),
                         };
                     }
                     Err(e) => {
@@ -632,13 +632,13 @@ impl Agent {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", msg),
+                            result: format!("Error (LLM Recoverable): {}", msg),
                             iteration: i as i32,
                         });
                         tool_results[idx] = crate::types::ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: format!("Error (LLM Recoverable): {}", msg),
                         };
                     }
                     Err(e) => {
@@ -1064,7 +1064,7 @@ impl Agent {
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": "",
-                                "error": msg
+                                "error": format!("Error (LLM Recoverable): {}", msg)
                             });
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -1112,7 +1112,7 @@ impl Agent {
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
-                                    "error": msg
+                                    "error": format!("Error (LLM Recoverable): {}", msg)
                                 });
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
@@ -1168,7 +1168,7 @@ impl Agent {
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
-                                    "error": msg
+                                    "error": format!("Error (LLM Recoverable): {}", msg)
                                 });
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -2561,7 +2561,7 @@ impl Agent {
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: format!("Error (LLM Recoverable): {}", msg),
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
