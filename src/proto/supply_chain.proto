@@ -12,6 +12,8 @@ message RawMaterial {
   int32 reorder_threshold = 5;
   int64 created_at_unix = 6;
   int64 updated_at_unix = 7;
+  double velocity = 8;
+  double days_until_stockout = 9;
 }
 
 message BOMItem {

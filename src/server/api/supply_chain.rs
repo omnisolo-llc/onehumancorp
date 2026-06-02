@@ -23,14 +23,25 @@ impl SupplyChainService for SupplyChainApi {
 
         match repo.get_low_stock_materials(&req.tenant_id).await {
             Ok(materials) => {
-                let proto_materials = materials.into_iter().map(|m| RawMaterial {
-                    id: m.id,
-                    tenant_id: m.tenant_id,
-                    name: m.name,
-                    current_quantity: m.current_quantity.unwrap_or(0),
-                    reorder_threshold: m.reorder_threshold.unwrap_or(0),
-                    created_at_unix: m.created_at.map(|d| d.timestamp()).unwrap_or(0),
-                    updated_at_unix: m.updated_at.map(|d| d.timestamp()).unwrap_or(0),
+                let proto_materials = materials.into_iter().map(|m| {
+                    let current_qty = m.current_quantity.unwrap_or(0);
+                    let velocity = m.daily_velocity.unwrap_or(0.0);
+                    let days_until_stockout = if velocity > 0.0 {
+                        (current_qty as f64) / velocity
+                    } else {
+                        999.0
+                    };
+                    RawMaterial {
+                        id: m.id,
+                        tenant_id: m.tenant_id,
+                        name: m.name,
+                        current_quantity: current_qty,
+                        reorder_threshold: m.reorder_threshold.unwrap_or(0),
+                        created_at_unix: m.created_at.map(|d| d.timestamp()).unwrap_or(0),
+                        updated_at_unix: m.updated_at.map(|d| d.timestamp()).unwrap_or(0),
+                        velocity: velocity,
+                        days_until_stockout: days_until_stockout,
+                    }
                 }).collect();
                 Ok(Response::new(GetLowStockAlertsResponse {
                     low_stock_materials: proto_materials,

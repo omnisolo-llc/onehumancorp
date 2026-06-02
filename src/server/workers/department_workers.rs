@@ -127,7 +127,7 @@ impl OperationsWorker {
             if let Some(items) = items {
                 for item in items {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
-                        let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
+                        let (inventory_count, product_name, supplier_name, supplier_contact, lead_time_days) = match &db.store {
                             crate::db::DbStore::Postgres => {
                                 let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
                                 let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
@@ -141,7 +141,7 @@ impl OperationsWorker {
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact, lead_time_days FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(&db.pool)
@@ -153,8 +153,9 @@ impl OperationsWorker {
                                         r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
                                         r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
                                         r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
+                                        r.try_get::<Option<i32>, _>("lead_time_days").unwrap_or(Some(7)).unwrap_or(7)
                                     ),
-                                    None => (10, product_id.to_string(), None, None)
+                                    None => (10, product_id.to_string(), None, None, 7)
                                 }
                             },
                             crate::db::DbStore::Sqlite(pool) => {
@@ -171,7 +172,7 @@ impl OperationsWorker {
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact, lead_time_days FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .bind(&tenant_id)
@@ -184,8 +185,9 @@ impl OperationsWorker {
                                         r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
                                         r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
                                         r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
+                                        r.try_get::<Option<i32>, _>("lead_time_days").unwrap_or(Some(7)).unwrap_or(7)
                                     ),
-                                    None => (10, product_id.to_string(), None, None)
+                                    None => (10, product_id.to_string(), None, None, 7)
                                 }
                             }
                         };
@@ -224,7 +226,7 @@ impl OperationsWorker {
                             999.0
                         };
 
-                        if inventory_count < 5 || days_until_empty < 7.0 {
+                        if inventory_count < 5 || days_until_empty <= lead_time_days as f64 {
                             // Deduplicate: check if a PENDING restock task already exists for this product
                             let title = format!("Restock Item: {}", product_name);
                             let existing_task: i64 = match &db.store {
@@ -1166,7 +1168,7 @@ mod tests {
                 name TEXT,
                 inventory_count INT,
                 supplier_name TEXT,
-                supplier_contact TEXT
+                supplier_contact TEXT, lead_time_days INT DEFAULT 7
             );
             CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
