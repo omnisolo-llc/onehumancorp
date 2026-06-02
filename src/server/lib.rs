@@ -34,7 +34,7 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
-pub static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
+static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -893,40 +893,14 @@ async fn draft_reply_handler(
         }
     };
 
-    let cache_key = format!("advisory:org:{}", tenant_id);
-    let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    let cached_org = cache.get(&cache_key).await;
-
-    let org_data = if let Some(org) = cached_org {
-        Ok::<_, sqlx::Error>(org)
-    } else {
-        let result = match &db.store {
-            crate::db::DbStore::Postgres => {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&db.pool)
-                .await
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(pool)
-                .await
-            }
-        };
-        if let Ok(Some(ref org)) = result {
-            cache.set(&cache_key, Some(org.clone()), std::time::Duration::from_secs(3600)).await;
-        }
-        result
-    };
-
-    let (business_name, industry) = org_data
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let customer_message = payload
         .customer_message
