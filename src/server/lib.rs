@@ -292,6 +292,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -299,6 +300,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+
     pub use ::server_services_b2b as b2b;
     pub mod integration;
     pub mod ops;
@@ -1249,6 +1251,25 @@ impl HubService for MyHubService {
         }))
     }
 
+    async fn create_terminal_connection_token(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::CreateTerminalTokenRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::CreateTerminalTokenResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = auth_info.map(|i| i.org_id).ok_or_else(|| tonic::Status::unauthenticated("Missing authentication context"))?;
+
+        let stripe_key = std::env::var("STRIPE_API_KEY")
+            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
+        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+        let token = client.create_terminal_connection_token(&tenant_id).await
+            .map_err(|e| tonic::Status::internal(e))?;
+
+        Ok(tonic::Response::new(::server_ohc::orchestration::CreateTerminalTokenResponse {
+            success: true,
+            token,
+        }))
+    }
 
     async fn register_agent(
         &self,
@@ -3045,6 +3066,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
+
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
         let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
