@@ -5495,8 +5495,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
                             </div>
 
-                            <div class="builder-preview" id="builder-preview-container">
-                                <!-- Draft Blocks render here -->
+                            <div class="builder-preview" id="builder-preview-container" style="position: relative;">
+                                <!-- Store Performance Metric Card -->
+                                <div style="position: absolute; top: 16px; left: 16px; right: 16px; z-index: 40; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; transition: all 0.3s;" class="dark-theme-support">
+                                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span style="font-size: 14px; font-weight: 600; color: #1c1c1e; font-family: 'Outfit', sans-serif;" class="dark-text-white">Store Performance</span>
+                                    <span style="display: flex; height: 8px; width: 8px; position: relative;">
+                                      <span style="animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 9999px; background-color: #4ade80; opacity: 0.75;"></span>
+                                      <span style="position: relative; display: inline-flex; border-radius: 9999px; height: 8px; width: 8px; background-color: #22c55e;"></span>
+                                    </span>
+                                  </div>
+                                  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                                     <span style="font-size: 12px; color: #6b7280;" class="dark-text-gray">Edge Cache Status</span>
+                                     <span style="font-size: 14px; font-weight: 700; color: #111827; font-family: 'Inter', sans-serif;" class="dark-text-white">Active</span>
+                                  </div>
+                                  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                     <span style="font-size: 12px; color: #6b7280;" class="dark-text-gray">Global Load Time</span>
+                                     <span style="font-size: 14px; font-weight: 700; color: #16a34a; font-family: 'Inter', sans-serif;">&lt; 50ms</span>
+                                  </div>
+                                </div>
+                                <style>
+                                  @media (prefers-color-scheme: dark) {
+                                    .dark-theme-support { background: rgba(28, 28, 30, 0.7) !important; border-color: rgba(255, 255, 255, 0.1) !important; }
+                                    .dark-text-white { color: #ffffff !important; }
+                                    .dark-text-gray { color: #a1a1a6 !important; }
+                                  }
+                                  @keyframes ping {
+                                    75%, 100% { transform: scale(2); opacity: 0; }
+                                  }
+                                </style>
+                                <div style="padding-top: 110px;" id="builder-preview-blocks">
+                                  <!-- Draft Blocks render here -->
+                                </div>
                             </div>
 
                             <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
@@ -5929,7 +5959,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function renderStorefrontPreview() {
-                            const container = document.getElementById('builder-preview-container');
+                            const container = document.getElementById('builder-preview-blocks');
                             if (!container) return;
                             container.innerHTML = '';
 

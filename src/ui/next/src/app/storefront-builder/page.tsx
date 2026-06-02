@@ -286,7 +286,26 @@ export default function StorefrontBuilderPage() {
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
+        {/* Store Performance Metric Card - macOS Translucent Glass styling */}
+        <div className="absolute top-12 left-4 right-4 z-40 bg-white/70 dark:bg-[#1c1c1e]/70 backdrop-blur-[20px] saturate-[200%] border border-white/40 dark:border-white/10 shadow-lg rounded-xl p-3 flex flex-col gap-1 transition-all duration-300">
+          <div className="flex justify-between items-center w-full">
+            <span className="text-sm font-semibold text-gray-800 dark:text-white font-outfit">Store Performance</span>
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+          </div>
+          <div className="flex justify-between items-baseline mt-1">
+             <span className="text-xs text-gray-500 dark:text-[#a1a1a6]">Edge Cache Status</span>
+             <span className="text-sm font-bold text-gray-900 dark:text-white font-inter">Active</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+             <span className="text-xs text-gray-500 dark:text-[#a1a1a6]">Global Load Time</span>
+             <span className="text-sm font-bold text-green-600 dark:text-green-400 font-inter">&lt; 50ms</span>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pb-24 pt-36 hide-scrollbar">
           {blocks.map((b, i) => (
             <DraggableBlock
               key={b.type + i}

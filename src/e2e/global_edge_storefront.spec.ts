@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
+  test('displays store performance metric card in preview', async ({ page }) => {
+    // Visit the storefront builder page
+    await page.goto('/storefront-builder');
+
+    // Make sure the Store Performance metric card is visible with the new styles
+    await expect(page.locator('text=Store Performance')).toBeVisible();
+    await expect(page.locator('text=Edge Cache Status')).toBeVisible();
+    await expect(page.locator('text=Global Load Time')).toBeVisible();
+  });
+
   test('updates storefront and validates cache invalidation at the edge', async ({ page }) => {
     const tenantId = "test-tenant-uuid";
     const siteId = "test-site-uuid";
