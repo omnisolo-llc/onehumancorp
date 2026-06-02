@@ -1,9 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 type Message = {
-  id: number;
+  id: string;
   sender: string;
   source: string;
   icon: string;
@@ -13,37 +13,36 @@ type Message = {
 };
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'Facebook User',
-      source: 'Facebook',
-      icon: '📘',
-      content: 'Do you have vegan birthday cake options?',
-      date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
-    },
-    {
-      id: 2,
-      sender: 'Instagram User',
-      source: 'Instagram',
-      icon: '📸',
-      content: 'When will my order be shipped?',
-      date: 'Yesterday',
-      draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
-    },
-    {
-      id: 3,
-      sender: 'WhatsApp User',
-      source: 'WhatsApp',
-      icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch('/api/inbox/messages');
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = data.map((msg: any) => ({
+          id: msg.id,
+          sender: msg.source === 'SMS' ? 'SMS User' : `${msg.source} User`,
+          source: msg.source,
+          icon: msg.source === 'Instagram' ? '📸' : msg.source === 'Facebook' ? '📘' : msg.source === 'WhatsApp' ? '💬' : '📱',
+          content: msg.content,
+          date: msg.created_at,
+          draft: msg.draft_reply
+        }));
+        setMessages(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch messages", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, []);
   const [replyInput, setReplyInput] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [showScheduler, setShowScheduler] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
@@ -61,7 +60,7 @@ export default function InboxPage() {
     sms: true,
   });
 
-  const sendReply = (msgId?: number) => {
+  const sendReply = async (msgId?: string) => {
     let contentToSend = replyInput;
     if (msgId) {
        const msg = messages.find(m => m.id === msgId);
@@ -69,11 +68,34 @@ export default function InboxPage() {
     }
 
     if (!contentToSend) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' }]);
 
-    if (msgId) {
-      setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
+    // Simulate sending the reply to a backend API
+    try {
+      // In a real app, you would POST this to a send API.
+      // Since the mock backend only handles receiving, we'll locally update the state
+      // but if we were strictly polling, we would wait for the server.
+      // For this task, we will add it to the webhook so it persists.
+      await fetch('/api/agents/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tenant_id: 'e2e-tenant',
+          source: 'Me',
+          message: contentToSend
+        })
+      });
+      // Add optimistic update for instant feedback
+      setMessages([...messages, { id: Date.now().toString(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' }]);
+      if (msgId) {
+        setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
+      }
+      fetchMessages(); // Trigger refresh from backend
+    } catch (e) {
+      console.error("Failed to send message", e);
     }
+
     setReplyInput('');
     setEditingId(null);
   };
@@ -93,24 +115,24 @@ export default function InboxPage() {
     setShowScheduler(false);
   };
 
-  const simulateIncomingMessage = () => {
-    const incomingMsgId = Date.now();
-    setMessages(prev => [...prev, {
-      id: incomingMsgId,
-      sender: 'Customer',
-      source: 'SMS',
-      icon: '📱',
-      content: 'Are you open today?',
-      date: 'Just now'
-    }]);
-
-    setTimeout(() => {
-      setMessages(prev => prev.map(m =>
-        m.id === incomingMsgId
-          ? { ...m, draft: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?' }
-          : m
-      ));
-    }, 500);
+  const simulateIncomingMessage = async () => {
+    try {
+      await fetch('/api/agents/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tenant_id: 'e2e-tenant',
+          source: 'SMS',
+          message: 'Are you open today?'
+        })
+      });
+      // The polling will pick up the new message and draft shortly
+      fetchMessages(); // trigger an immediate fetch as well
+    } catch (e) {
+      console.error("Failed to simulate message", e);
+    }
   };
 
   return (
