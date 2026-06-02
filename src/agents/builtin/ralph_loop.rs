@@ -60,6 +60,16 @@ impl RalphLoop {
                 break;
             }
 
+            // Phase 2 (Coding Agent): picks the highest-priority incomplete feature
+            let mut next_feature_idx = progress.current_feature_index;
+            for (i, f) in progress.features.iter().enumerate().skip(progress.current_feature_index) {
+                if f.status != "completed" {
+                    next_feature_idx = i;
+                    break;
+                }
+            }
+            progress.current_feature_index = next_feature_idx;
+
             let feature_name = progress.features[progress.current_feature_index].name.clone();
             if progress.features[progress.current_feature_index].status == "completed" {
                 progress.current_feature_index += 1;
@@ -82,7 +92,7 @@ impl RalphLoop {
 
             // Execute the agent run for this specific feature
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
+                "You are executing Phase 2 of the Ralph Loop: The Coding Agent.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then update the summary.",
                 progress.task_description, git_log_output, feature_name
             );
 
@@ -274,6 +284,41 @@ mod tests {
 
         let git_dir = dir.path().join(".git");
         assert!(git_dir.exists());
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_with_skipped_features() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        // Simulate a scenario where Step 1 and 2 are completed but we want to skip to Step 3
+        let initial_progress = RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                Feature { name: "Step 1".to_string(), status: "completed".to_string() },
+                Feature { name: "Step 2".to_string(), status: "completed".to_string() },
+                Feature { name: "Step 3".to_string(), status: "pending".to_string() },
+            ],
+            current_feature_index: 0,
+            notes: vec!["Initialized task and broken down into features.".to_string()],
+            is_complete: false,
+        };
+        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+
+        let result = ralph.run("Build a web server").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        assert!(saved_progress.is_complete);
+        assert_eq!(saved_progress.current_feature_index, 3); // It processed Step 3 and incremented to 3
     }
 
     #[tokio::test]
