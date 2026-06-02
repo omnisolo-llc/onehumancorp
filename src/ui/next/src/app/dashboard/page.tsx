@@ -2028,7 +2028,7 @@ export default function Dashboard() {
                   <textarea
                     readOnly
                     className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-xl h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
-                    value={`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`}
+                    value={`<!-- Wall of Love Widget -->\n<iframe src="https://ohc.app/api/v1/growth/wall_of_love/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" width="100%" height="400" frameborder="0"></iframe>`}
                   />
                   <div className="absolute top-3 right-3 flex gap-2">
                     <button
@@ -2044,7 +2044,7 @@ export default function Dashboard() {
                     </button>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`);
+                        navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<iframe src="https://ohc.app/api/v1/growth/wall_of_love/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" width="100%" height="400" frameborder="0"></iframe>`);
                         setWallOfLoveCopied(true);
                         setTimeout(() => setWallOfLoveCopied(false), 2000);
                       }}
