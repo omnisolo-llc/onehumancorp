@@ -4,7 +4,7 @@ test.describe('Unified Social Inbox', () => {
   test('User can connect Meta and TikTok and see messages in inbox', async ({ page }) => {
     // 1. Navigate to Integrations page
     await page.goto('/integrations');
-    await expect(page.locator('h1')).toContainText('Tool Integrations');
+    await expect(page.locator('h1').filter({ hasText: 'Tool Integrations' }).first()).toBeVisible();
 
     // 2. Filter to Social and Connect Meta
     await page.getByRole('button', { name: 'Social' }).click();

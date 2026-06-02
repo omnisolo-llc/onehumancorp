@@ -39,12 +39,12 @@ impl TiktokClientWrapper for RealTiktokClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
-                        "unknown", // tenant context
-                        "tiktok_send_message",
-                        0.01 // nominal cost
-                    ).await;
+                    // let _ = ::server_telemetry::record_api_call_cost(
+                    //     &::server_lib::db::get_pool(),
+                    //     "unknown", // tenant context
+                    //     "tiktok_send_message",
+                    //     0.01 // nominal cost
+                    // ).await;
                     Ok(())
                 } else {
                     Err(format!("TikTok API error: {}", resp.status()))

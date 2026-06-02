@@ -26,7 +26,6 @@ rust_library(
     deps = [
         "//src/server/integrations/core:server_integrations_core",
         "//src/server/telemetry:server_telemetry",
-        "//src/server:server_lib",
         "@crates//:reqwest",
         "@crates//:serde_json",
         "@crates//:tokio",
