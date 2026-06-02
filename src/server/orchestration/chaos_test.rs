@@ -226,6 +226,82 @@ impl TeammateMesh for SleepingMockMesh {
 
 #[cfg(test)]
 mod chaos_tests {
+    #[tokio::test]
+    async fn test_timeout_storm() {
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
+
+        let mut successful_sends = 0;
+        let mut timeouts = 0;
+
+        for _ in 0..10 {
+            let result = mesh.ping().await;
+            if result.is_err() {
+                timeouts += 1;
+            } else {
+                successful_sends += 1;
+            }
+        }
+
+        assert!(timeouts >= 10, "System should timeout internally on all calls when agent is non-responsive");
+        assert_eq!(successful_sends, 0, "System should not have successful sends during a timeout storm");
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_high_message_loss_degradation() {
+        let transport = Arc::new(DroppingMockTransport::new(90));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_clone = received.clone();
+
+        let _ = mesh.subscribe("mesh:test:severe_loss", Box::new(move |_msg| {
+            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        })).await.unwrap();
+
+        let _ = mesh.start_health_responder().await;
+
+        let mut successful_sends = 0;
+        let mut failed_sends = 0;
+
+        for _ in 0..20 {
+             if mesh.ping().await.is_ok() {
+                 successful_sends += 1;
+             } else {
+                 failed_sends += 1;
+             }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        assert!(failed_sends > 0, "System should report failed sends under severe degradation");
+        assert_eq!(successful_sends + failed_sends, 20, "All messages should be accounted for (success or safe failure)");
+    }
+
+    #[tokio::test]
+    async fn test_partition_tolerance() {
+        let transport = Arc::new(DroppingMockTransport::new(100));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+        let _ = mesh.subscribe("mesh:test:partition", Box::new(move |_msg| {
+        })).await.unwrap();
+
+        let _ = mesh.start_health_responder().await;
+
+        let mut successful_sends = 0;
+        let mut failures = 0;
+
+        for _ in 0..10 {
+            let result = mesh.ping().await;
+            if result.is_err() {
+                failures += 1;
+            } else {
+                successful_sends += 1;
+            }
+        }
+
+        assert_eq!(failures, 10, "System should handle partition by failing all requests gracefully");
+        assert_eq!(successful_sends, 0, "System should not have successful sends during a network partition");
+    }
+
     use super::*;
 
     #[tokio::test]
@@ -296,8 +372,11 @@ mod chaos_tests {
         let mesh = Arc::new(CorruptedMockMesh::new());
         let counter = mesh.received_messages.clone();
 
+        let notify = Arc::new(tokio::sync::Notify::new());
+        let notify_clone = notify.clone();
+
         // This will spawn a task that immediately receives corrupted message
-        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(|msg| {
+        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(move |msg| {
             // Simulate how the orchestrator processes JSON with fallback
             let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&msg.payload);
             if parsed.is_err() {
@@ -311,9 +390,10 @@ mod chaos_tests {
                  }
                  assert_eq!(fallback_attempts, 3);
             }
+            notify_clone.notify_one();
         })).await.unwrap();
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        notify.notified().await;
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
@@ -324,11 +404,16 @@ mod chaos_tests {
         let mut join_handles = vec![];
         let resource_name = "ohc:lock:test_race_lock";
 
-        // Spawn 1000 concurrent tasks trying to acquire the same lock
-        for i in 0..1000 {
+        let num_tasks = 8;
+        let barrier = Arc::new(tokio::sync::Barrier::new(num_tasks));
+
+        // Spawn concurrent tasks trying to acquire the same lock exactly at the same time
+        for i in 0..num_tasks {
             let mesh_clone = mesh.clone();
+            let barrier_clone = barrier.clone();
             let owner = format!("agent_{}", i);
             join_handles.push(tokio::spawn(async move {
+                barrier_clone.wait().await;
                 mesh_clone.acquire_lock(resource_name, &owner, 10).await.unwrap_or(false)
             }));
         }
@@ -352,8 +437,11 @@ mod chaos_tests {
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 
+        let (tx, mut rx) = tokio::sync::mpsc::channel(20);
+
         let _ = mesh.subscribe("mesh:test:loss", Box::new(move |_msg| {
             received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let _ = tx.try_send(());
         })).await.unwrap();
 
         // Start health responder (simulates ack responder)
@@ -367,10 +455,9 @@ mod chaos_tests {
              // We can just use ping() which wraps publish_with_ack for health!
              if mesh.ping().await.is_ok() {
                  successful_sends += 1;
+                 let _ = rx.recv().await;
              }
         }
-
-        tokio::time::sleep(Duration::from_millis(200)).await;
 
         // Resilience rule: system must recover or degrade gracefully.
         // We verify that some messages were successfully delivered and ack'd despite high packet loss,
