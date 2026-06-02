@@ -10,6 +10,7 @@ type Message = {
   content: string;
   date: string;
   draft?: string;
+  aiReplied?: boolean;
 };
 
 export default function InboxPage() {
@@ -52,6 +53,55 @@ export default function InboxPage() {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
 
+  const simulateIncomingMessage = async () => {
+    const newMessageContent = 'Are you open today?';
+    const newMessage: Message = {
+      id: Date.now(),
+      sender: 'Web Chat',
+      source: 'Web',
+      icon: '💬',
+      content: newMessageContent,
+      date: 'Just now'
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    try {
+      const response = await fetch('/api/inbox/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: newMessageContent, tenantId: 'storefront' })
+      });
+      const data = await response.json();
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: `✨ ${data.agent || 'Ambassador'}`,
+          source: 'AI',
+          icon: '✨',
+          content: data.reply || 'Thanks for your message! Our AI agent will assist you shortly.',
+          date: 'Just now',
+          aiReplied: true
+        }
+      ]);
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: '✨ Ambassador',
+          source: 'AI',
+          icon: '✨',
+          content: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?',
+          date: 'Just now',
+          aiReplied: true
+        }
+      ]);
+    }
+  };
+
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
   const [twilioChannels, setTwilioChannels] = useState({
@@ -79,7 +129,6 @@ export default function InboxPage() {
   };
 
   const toggleChannel = (key: keyof typeof twilioChannels) => {
-
     setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -113,6 +162,13 @@ export default function InboxPage() {
           </Link>
         </div>
       </div>
+
+      <button
+        onClick={simulateIncomingMessage}
+        className="w-full bg-[#34C759] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#2ead4d] transition-colors mb-4"
+      >
+        🤖 Simulate Incoming Message
+      </button>
 
       <button
         onClick={() => setShowScheduler(true)}
@@ -218,13 +274,14 @@ export default function InboxPage() {
               {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
+              {msg.aiReplied && <span className="ml-2 text-[10px] font-bold bg-[#e9d8fd] text-[#553c9a] px-2 py-0.5 rounded-full uppercase">AI Replied</span>}
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
+            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'} ${msg.aiReplied ? 'bg-[#f9f5ff] border border-[#e9d8fd]' : ''}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
-            {msg.draft && msg.sender !== 'Me' && (
+            {msg.draft && msg.sender !== 'Me' && !msg.aiReplied && (
                <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
                   <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>

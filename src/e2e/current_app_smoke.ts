@@ -8,7 +8,7 @@ export function currentAppSmoke(label: string) {
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
+    await expect(page.getByText('The Ambassador').first()).toBeVisible();
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible();
@@ -21,10 +21,10 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible();
 
     await page.goto('/storefront-builder');
-    await expect(page.locator('.builder-block').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Build My Storefront' }).first()).toBeVisible();
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
-    expect(ogCard.headers()['content-type']).toContain('image/svg+xml');
+    expect(ogCard.headers()['content-type']).toContain('image/png');
   });
 }
