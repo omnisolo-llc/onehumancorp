@@ -18,7 +18,7 @@ test.describe('Autonomous Subscription Box Lifecycle', () => {
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('label:has-text("Take a photo or upload")');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles('e2e/fixtures/dummy.png');
+    await fileChooser.setFiles('e2e/fixtures/test_img.png');
 
     await page.waitForSelector('input[value="Vegan Cake"]', { state: 'visible', timeout: 10000 }).catch(() => {});
 
