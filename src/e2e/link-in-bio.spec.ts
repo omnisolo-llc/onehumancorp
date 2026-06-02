@@ -2,14 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Link-in-Bio Generator Growth Loop', () => {
     test('dashboard shows the link-in-bio section', async ({ page }) => {
-        // Setup localStorage to avoid hydration mismatch
-        await page.addInitScript(() => {
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem('tenant', 'e2e-store');
-                window.localStorage.setItem('has_pro', 'true');
-            }
-        });
-
         // Go to dashboard
         await page.goto('http://localhost:3000/dashboard');
 
@@ -22,14 +14,6 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
     });
 
     test('opens the link-in-bio modal when clicking the button', async ({ page }) => {
-        // Setup localStorage to avoid hydration mismatch
-        await page.addInitScript(() => {
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem('tenant', 'e2e-store');
-                window.localStorage.setItem('has_pro', 'true');
-            }
-        });
-
         await page.goto('http://localhost:3000/dashboard');
 
         // Click "Get Link-in-Bio" button
@@ -49,14 +33,6 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
     });
 
     test('copy button functions correctly in the modal', async ({ page }) => {
-        // Setup localStorage to avoid hydration mismatch
-        await page.addInitScript(() => {
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem('tenant', 'e2e-store');
-                window.localStorage.setItem('has_pro', 'true');
-            }
-        });
-
         await page.goto('http://localhost:3000/dashboard');
 
         await page.locator('button:has-text("Get Link-in-Bio")').click();
@@ -72,14 +48,6 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
     });
 
     test('preview link is present and correct in the modal', async ({ page }) => {
-        // Setup localStorage to avoid hydration mismatch
-        await page.addInitScript(() => {
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem('tenant', 'e2e-store');
-                window.localStorage.setItem('has_pro', 'true');
-            }
-        });
-
         await page.goto('http://localhost:3000/dashboard');
 
         await page.locator('button:has-text("Get Link-in-Bio")').click();
