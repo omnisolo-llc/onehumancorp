@@ -10,6 +10,7 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isLocalDelivery, setIsLocalDelivery] = useState(false);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -46,6 +47,19 @@ export default function CheckoutPage() {
         <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <div className="flex items-center gap-3 p-3 bg-white/50 rounded-lg border border-gray-200">
+            <input
+              type="checkbox"
+              id="localDeliveryCheckbox"
+              checked={isLocalDelivery}
+              onChange={(e) => setIsLocalDelivery(e.target.checked)}
+              className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+            />
+            <label htmlFor="localDeliveryCheckbox" className="text-gray-800 font-medium cursor-pointer">
+              Use Local Delivery (Requires approval based on address)
+            </label>
+          </div>
+
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
