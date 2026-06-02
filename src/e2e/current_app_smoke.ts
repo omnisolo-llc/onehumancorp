@@ -25,6 +25,6 @@ export function currentAppSmoke(label: string) {
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
-    expect(ogCard.headers()['content-type']).toContain('image/png');
+    expect(ogCard.headers()['content-type']).toContain('image/svg+xml');
   });
 }
