@@ -158,7 +158,7 @@ export default function HelpArticlePage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Back to Help Center
         </button>
-        <div className="bg-white/70 backdrop-blur-[20px] saturate-200 p-6 sm:p-10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/60 transition-all">
+        <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 sm:p-10 rounded-3xl shadow-xl border border-white/40 transition-all">
           <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 tracking-tight">{articleData.title}</h1>
           <div className="prose prose-blue prose-lg max-w-none text-gray-700 leading-relaxed marker:text-blue-500 prose-headings:font-outfit prose-headings:text-[#1D1D1F]">
             {articleData.content}

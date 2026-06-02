@@ -7,6 +7,9 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { OneTapReferral } from "../components/OneTapReferral";
 
 export default function Dashboard() {
+  const [googleReviews, setGoogleReviews] = useState<any[]>([]);
+  const [isGoogleSynced, setIsGoogleSynced] = useState(true);
+
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -145,12 +148,18 @@ export default function Dashboard() {
     checkMilestones();
 
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
-    async function fetchApprovals() {
+async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
         const data = await res.json();
         if (data && data.pending_approvals) {
           setApprovals(data.pending_approvals);
+
+          // Extract Google Review Replies
+          const googleReviewsData = data.pending_approvals.filter((a: any) =>
+            a.payload && a.payload.feature_type === 'google_review_reply'
+          );
+          setGoogleReviews(googleReviewsData);
         }
       } catch (e) {
         console.error("Failed to fetch approvals", e);
@@ -588,7 +597,81 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Agent Updates (Approvals) */}
+
+         {/* Local Visibility Card */}
+         <section className="mb-6">
+           <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Local Visibility</h2>
+           <div className="rounded-2xl p-6 relative overflow-hidden glass-card">
+              <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                     <span className="text-2xl">🌍</span>
+                     <h3 className="font-semibold text-lg font-outfit" style={{ color: '#1D1D1F' }}>Google Business Profile</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full ${isGoogleSynced ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      <span className="text-sm font-medium" style={{ color: '#86868B' }}>
+                          {isGoogleSynced ? 'Synced' : 'Not Synced'}
+                      </span>
+                  </div>
+              </div>
+
+              {googleReviews.length > 0 ? (
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-sm text-gray-900">Pending Reviews</h4>
+                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                              {googleReviews.length} New
+                          </span>
+                      </div>
+
+                      <div className="flex flex-col gap-3">
+                          {googleReviews.map((review) => (
+                              <div key={review.id} className="bg-white/50 rounded-xl p-4 shadow-sm border border-gray-100">
+                                  <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-1 text-yellow-400">
+                                          {'★'.repeat(parseInt(review.payload?.star_rating || '5'))}
+                                      </div>
+                                      <span className="text-xs font-medium text-gray-500">
+                                          {review.payload?.reviewer_name || 'Customer'}
+                                      </span>
+                                  </div>
+                                  <p className="text-sm text-gray-800 italic mb-3">"{review.payload?.original_message}"</p>
+
+                                  <div className="bg-blue-50/50 rounded-lg p-3 mb-3 border border-blue-100/50">
+                                      <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">AI DRAFT</span>
+                                      </div>
+                                      <p className="text-sm text-blue-900 font-medium">
+                                          {review.payload?.generated_response}
+                                      </p>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                      <button
+                                          onClick={() => handleApprove(review.id, true)}
+                                          className="flex-1 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm"
+                                      >
+                                          Approve & Reply
+                                      </button>
+                                      <button
+                                          onClick={() => handleApprove(review.id, false)}
+                                          className="min-h-[44px] px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+                                      >
+                                          Edit
+                                      </button>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              ) : (
+                  <p className="text-sm mt-2" style={{ color: '#86868B' }}>
+                      Menu, services, and hours are syncing automatically. No pending reviews to approve.
+                  </p>
+              )}
+           </div>
+         </section>
+{/* Agent Updates (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
