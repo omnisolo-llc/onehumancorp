@@ -106,6 +106,34 @@ impl RedisRateLimiter {
         Ok(conn.clone())
     }
 
+    pub async fn check_and_set_webhook_id(&self, webhook_id: &str) -> Result<bool, String> {
+        let mut conn = self.get_connection().await?;
+        let key = format!("webhook:{}", webhook_id);
+        // Set key with NX (only if not exists) and EX 86400 (24h TTL)
+        let result: bool = redis::cmd("SET")
+            .arg(&key)
+            .arg("1")
+            .arg("NX")
+            .arg("EX")
+            .arg(86400)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(result)
+    }
+
+    pub async fn delete_webhook_id(&self, webhook_id: &str) -> Result<(), String> {
+        let mut conn = self.get_connection().await?;
+        let key = format!("webhook:{}", webhook_id);
+        let _: () = redis::cmd("DEL")
+            .arg(&key)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         let mut conn = self.get_connection().await?;
         let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;

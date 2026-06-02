@@ -29,7 +29,128 @@ pub struct StripeEventData {
     pub object: Value,
 }
 
+use axum::middleware::Next;
+use axum::extract::Request;
+use hmac::{Hmac, Mac};
+use sha2::{Sha256, Digest};
+
+type HmacSha256 = Hmac<Sha256>;
+
+pub async fn webhook_security_middleware(
+    axum::extract::State(state): axum::extract::State<WebhookState>,
+    req: Request,
+    next: Next,
+) -> impl IntoResponse {
+    let headers = req.headers().clone();
+    let path = req.uri().path().to_string();
+    let provider = path.split('/').last().unwrap_or("unknown");
+
+    // Extract body bytes for signature check and replay protection hashing
+    let (parts, body) = req.into_parts();
+
+    let bytes = match axum::body::to_bytes(body, 5 * 1024 * 1024).await { // 5MB limit
+        Ok(b) => b,
+        Err(_) => return StatusCode::PAYLOAD_TOO_LARGE.into_response(),
+    };
+
+    // Verify Cryptographic Signature
+    let is_valid_signature = if provider == "stripe" {
+        let secret = match std::env::var("STRIPE_WEBHOOK_SECRET") {
+            Ok(s) => s,
+            Err(_) => {
+                tracing::error!("STRIPE_WEBHOOK_SECRET environment variable is missing.");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        if let Some(sig_header) = headers.get("Stripe-Signature") {
+            let sig_str = sig_header.to_str().unwrap_or("");
+
+            let t_val = sig_str.split(',').find_map(|p| p.strip_prefix("t=")).unwrap_or("");
+            let mut is_verified = false;
+
+            if !t_val.is_empty() {
+                if let Ok(timestamp) = t_val.parse::<i64>() {
+                    let now = chrono::Utc::now().timestamp();
+                    let drift = (now - timestamp).abs();
+                    if drift <= 300 {
+                        let signed_payload = [t_val.as_bytes(), b".", &bytes].concat();
+                        if let Ok(mac) = HmacSha256::new_from_slice(secret.as_bytes()) {
+                            for v1 in sig_str.split(',').filter_map(|p| p.strip_prefix("v1=")) {
+                                let mut mac_clone = mac.clone();
+                                mac_clone.update(&signed_payload);
+                                if let Ok(expected_sig) = hex::decode(v1) {
+                                    if mac_clone.verify_slice(&expected_sig).is_ok() {
+                                        is_verified = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            is_verified
+        } else {
+            false
+        }
+    } else {
+        // Generic HMAC SHA256 fallback for other providers that use X-Signature
+        let secret_key = format!("{}_WEBHOOK_SECRET", provider.to_uppercase());
+        let secret = match std::env::var(&secret_key) {
+            Ok(s) => s,
+            Err(_) => {
+                tracing::error!("{} environment variable is missing.", secret_key);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        if let Some(sig_header) = headers.get("X-Signature") {
+            let sig_str = sig_header.to_str().unwrap_or("");
+            if let Ok(mut mac) = HmacSha256::new_from_slice(secret.as_bytes()) {
+                mac.update(&bytes);
+                if let Ok(expected_sig) = hex::decode(sig_str) {
+                    mac.verify_slice(&expected_sig).is_ok()
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    };
+
+    if !is_valid_signature {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    // Hash the raw body bytes to generate deterministic ID
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let hash_result = hasher.finalize();
+    let event_id = format!("{}_{}", provider, hex::encode(hash_result));
+
+    // Check replay protection
+    match state.rate_limiter.check_and_set_webhook_id(&event_id).await {
+        Ok(true) => {} // Proceed
+        Ok(false) => return StatusCode::OK.into_response(), // Already processed
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+
+    // Reconstruct request
+    let req = Request::from_parts(parts, axum::body::Body::from(bytes));
+    let response = next.run(req).await;
+
+    // If the handler fails to process the request, delete the idempotency key to allow retries.
+    if response.status().is_server_error() || response.status().is_client_error() {
+        let _ = state.rate_limiter.delete_webhook_id(&event_id).await;
+    }
+
+    response
+}
+
 pub async fn stripe_webhook_handler(
+    _headers: axum::http::HeaderMap,
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
@@ -227,27 +348,11 @@ pub struct RazorpayEntity {
 }
 
 
-fn verify_webhook_signature(headers: &axum::http::HeaderMap, _secret: &str) -> bool {
-    // In a real implementation this would perform HMAC SHA256 or similar verification
-    // based on the specific provider's signature header (e.g., Stripe-Signature, X-Cal-Signature).
-    // The requirement states "VERIFY CRYPTOGRAPHIC SIGNATURES ON ALL WEBHOOKS" so we must include this logic structure.
-    let sig_header = headers.get("X-Signature").or_else(|| headers.get("Stripe-Signature"));
-    if let Some(_sig) = sig_header {
-        // Mock verification - always true if header exists for the sake of the test, but strictly required structurally
-        return true;
-    }
-    false
-}
-
-
 pub async fn razorpay_webhook_handler(
-    headers: axum::http::HeaderMap,
+    _headers: axum::http::HeaderMap,
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<RazorpayEvent>,
 ) -> impl IntoResponse {
-    if !verify_webhook_signature(&headers, "razorpay_secret") {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
     match payload.event.as_str() {
         "payment.captured" => {
             let order_id = &payload.payload.payment.entity.order_id;
