@@ -6,7 +6,7 @@ use super::{Tool, ToolExecutor};
 
 
 struct CreateSkillExecutor {
-    _memory_store: (),
+    memory_store: (),
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 

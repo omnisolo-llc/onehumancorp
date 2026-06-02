@@ -156,8 +156,6 @@ pub struct ReferralGenerateResponse {
     pub referral_link: String,
 }
 
-
-#[derive(Debug, Serialize, Deserialize)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralMetrics {
     pub team_invites_sent: i64,
