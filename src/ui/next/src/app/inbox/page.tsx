@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import AgentDraftCard from './AgentDraftCard';
 
 type Message = {
   id: number;
@@ -63,7 +64,7 @@ export default function InboxPage() {
 
   const sendReply = (msgId?: number) => {
     let contentToSend = replyInput;
-    if (msgId) {
+    if (msgId && editingId !== msgId) {
        const msg = messages.find(m => m.id === msgId);
        if (msg && msg.draft) contentToSend = msg.draft;
     }
@@ -225,42 +226,15 @@ export default function InboxPage() {
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Draft
-                  </div>
-
-                  {editingId === msg.id ? (
-                      <div className="mt-2">
-                        <textarea
-                          id="reply-input-edit"
-                          value={replyInput}
-                          onChange={e => setReplyInput(e.target.value)}
-                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
-                          rows={3}
-                        />
-                        <div className="flex justify-end mt-2 gap-2">
-                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
-                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
-                        </div>
-                      </div>
-                  ) : (
-                      <>
-                        <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
-                           </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                               Edit
-                           </button>
-                        </div>
-                      </>
-                  )}
-               </div>
+               <AgentDraftCard
+                  msgId={msg.id}
+                  draft={msg.draft}
+                  editingId={editingId}
+                  replyInput={replyInput}
+                  setReplyInput={setReplyInput}
+                  setEditingId={setEditingId}
+                  sendReply={sendReply}
+               />
             )}
           </div>
         ))}
