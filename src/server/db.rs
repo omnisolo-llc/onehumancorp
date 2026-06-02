@@ -780,14 +780,30 @@ impl DB {
                         mission_log TEXT
                     );
 
-                    CREATE TABLE IF NOT EXISTS inbox_messages (
+                    CREATE TABLE IF NOT EXISTS conversations (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        source TEXT,
-                        content TEXT,
-                        draft_reply TEXT,
-                        status TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        tenant_id TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        customer_id TEXT,
+                        customer_name TEXT,
+                        last_message TEXT,
+                        last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        ai_enabled BOOLEAN DEFAULT 1,
+                        status TEXT DEFAULT 'active',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS chat_messages (
+                        id TEXT PRIMARY KEY,
+                        conversation_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        sender_id TEXT,
+                        sender_role TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        is_draft BOOLEAN DEFAULT 0,
+                        occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                     );
 
                     CREATE TABLE IF NOT EXISTS interactions (
