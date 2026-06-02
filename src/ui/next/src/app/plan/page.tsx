@@ -77,24 +77,24 @@ export default function MyPlanPage() {
             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
             </button>
-            <button onClick={() => router.push('/pricing')} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+            <button role="button" aria-label="View Upgrade Plans" onClick={() => router.push('/pricing')} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
             View Upgrade Plans
             </button>
         </div>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <main id="my-plan-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Current Plan:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill</h2>
+                    <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
@@ -166,7 +166,7 @@ export default function MyPlanPage() {
 
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button role="button" aria-label="View Cost Details" onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>

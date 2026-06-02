@@ -87,7 +87,7 @@ export default function CostDashboardPage() {
         </div>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <main id="cost-dashboard-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
@@ -103,13 +103,13 @@ export default function CostDashboardPage() {
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
-               <span className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
+               <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
                 <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
-                    <p className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
+                    <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
             </div>
         </section>
@@ -121,7 +121,7 @@ export default function CostDashboardPage() {
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
+                        <span id="cost-dashboard-llm" className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
