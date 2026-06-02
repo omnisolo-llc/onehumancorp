@@ -471,4 +471,68 @@ mod tests {
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
     }
+
+    #[tokio::test]
+    async fn test_ralph_loop_multi_session_integration() {
+        let dir = tempdir().unwrap();
+        let repo_dir = dir.path().join("repo");
+        std::fs::create_dir_all(&repo_dir).unwrap();
+
+        // Git init to simulate real multi-session environment
+        let _ = std::process::Command::new("git").arg("init").current_dir(&repo_dir).output().unwrap();
+
+        let progress_file = repo_dir.join("progress.json");
+
+        // Setup partially complete progress file
+        let initial_progress = RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                Feature { name: "Phase 1: Setup".to_string(), status: "completed".to_string() },
+                Feature { name: "Phase 2: Router".to_string(), status: "pending".to_string() },
+                Feature { name: "Phase 3: Database".to_string(), status: "pending".to_string() },
+            ],
+            current_feature_index: 1, // Skip Phase 1
+            notes: vec!["Completed Phase 1".to_string()],
+            is_complete: false,
+        };
+        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+
+        struct MultiSessionLlmClient {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MultiSessionLlmClient {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                Ok(ChatResponse {
+                    message: Message::assistant(format!("Implemented feature session {}", count)),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some(format!("id{}", count)),
+                })
+            }
+        }
+
+        let llm = Arc::new(MultiSessionLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+
+        // Run the ralph loop which should pick up from index 1 and complete index 1 and 2
+        let result = ralph.run("Build a web server").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        assert!(saved_progress.is_complete);
+        assert_eq!(saved_progress.features.len(), 3);
+        assert_eq!(saved_progress.features[0].status, "completed");
+        assert_eq!(saved_progress.features[1].status, "completed");
+        assert_eq!(saved_progress.features[2].status, "completed");
+        assert!(saved_progress.notes.iter().any(|n| n.contains("Implemented feature session 1")));
+        assert!(saved_progress.notes.iter().any(|n| n.contains("Implemented feature session 2")));
+    }
 }
