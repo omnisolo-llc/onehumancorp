@@ -421,7 +421,7 @@ Parameters: {}
         String::new()
     };
 
-    let (sys_msg, _) = crate::prompt_construction::PromptBuilder::build_prompt_stack(
+    let (sys_msg, _) = ohc_builtin_agent_core::prompt_construction::PromptBuilder::build_prompt_stack(
         &cfg.server_system_message,
         &tool_definitions,
         &cfg.developer_instructions,
@@ -1948,7 +1948,7 @@ impl Agent {
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
             let start_dir = std::path::Path::new(wp);
-            let cascading_md = crate::prompt_construction::PromptBuilder::load_cascading_agents_md(start_dir).await;
+            let cascading_md = ohc_builtin_agent_core::prompt_construction::PromptBuilder::load_cascading_agents_md(start_dir).await;
             if !cascading_md.is_empty() {
                 if !final_cfg.user_instructions.is_empty() {
                     final_cfg.user_instructions = format!("{}\n\n{}", cascading_md, final_cfg.user_instructions);
@@ -2164,7 +2164,7 @@ impl Agent {
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
-            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+            ohc_builtin_agent_core::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
                 &mut final_messages,
                 final_cfg.enable_lost_in_the_middle_prevention,
                 &final_cfg.developer_instructions,
