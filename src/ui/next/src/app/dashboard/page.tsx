@@ -1268,6 +1268,55 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Social Proof Sales Popup Widget */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Proof Sales Popup</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">High Conversion</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with Urgency</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Display live recent purchases on your store to build trust and urgency. Customers are 15% more likely to buy when they see others buying.</p>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                        <div className="absolute right-3 top-3">
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`<script src="https://ohc.app/api/v1/growth/storefront/social-proof?store=${businessName}"></script>`);
+                                    setEmbedCopied(true);
+                                    setTimeout(() => setEmbedCopied(false), 2000);
+                                }}
+                                className="text-xs font-semibold bg-white border border-gray-200 px-2 py-1 rounded shadow-sm hover:bg-gray-50 transition-colors"
+                            >
+                                {embedCopied ? 'Copied!' : 'Copy'}
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium mb-2">Add this script to your website's &lt;head&gt; or before &lt;/body&gt;</p>
+                        <pre className="text-xs text-indigo-700 bg-indigo-50/50 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+{`<script src="https://ohc.app/api/v1/growth/storefront/social-proof?store=${businessName}"></script>`}
+                        </pre>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 flex justify-center">
+                    <div className="relative w-full max-w-[240px] aspect-video bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-end p-4">
+                        {/* Mock Popup Representation */}
+                        <div className="bg-white/90 backdrop-blur-md p-3 rounded-lg shadow-lg w-full flex items-center gap-3 border border-gray-100">
+                            <div className="text-2xl">🍰</div>
+                            <div className="flex flex-col gap-0.5">
+                                <p className="text-[10px] text-gray-900 font-medium"><strong>Sarah</strong> just bought</p>
+                                <p className="text-[9px] text-gray-500">Vegan Chocolate Cake</p>
+                                <p className="text-[8px] text-indigo-500 font-semibold mt-1">⚡ Powered by OHC</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
