@@ -144,7 +144,7 @@ export default function BuilderPage() {
         sort_order: i
       }));
 
-      // In a more complete implementation, we'd store the SiteDraft returned from generate,
+      // In a more complete implementation, we'd store the StoreProfile returned from generate,
       // but for now we construct a minimal valid draft payload preserving current blocks.
       const payload = {
           domain: null,
