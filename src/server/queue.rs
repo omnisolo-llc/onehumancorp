@@ -1282,7 +1282,7 @@ mod tests {
     async fn test_task_queue_service_push_claim() {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
@@ -1335,7 +1335,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_queue_manager_tenant_isolation() {
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy(&db_url)
                 .unwrap();
@@ -1421,7 +1421,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_queue_service_fail_task() {
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
                 .connect_lazy(&db_url)
@@ -1473,7 +1473,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_queue_service_with_dependencies() {
-        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
 
@@ -1537,5 +1537,42 @@ mod tests {
             let claim_3 = service.claim_task("agent_2").await.unwrap().unwrap();
             assert_eq!(claim_3.id, task_id_child);
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests_error_tracing {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::broadcast;
+
+    struct ErrorHandler;
+
+    #[async_trait]
+    impl JobPayloadHandler for ErrorHandler {
+        async fn handle(&self, _payload: Vec<u8>) -> Result<(), String> {
+            Err("Simulated handler error".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_in_mem_worker_logs_error_on_handler_failure() {
+        let queue = Arc::new(InMemJobQueue::new());
+        queue.push("test", b"{}".to_vec()).await.unwrap();
+
+        let handler = Arc::new(ErrorHandler);
+        let pool = WorkerPool::new(queue.clone() as Arc<dyn JobQueue>, "test".to_string(), 1, handler);
+
+        let (tx, _rx) = broadcast::channel(1);
+        let tx_clone = tx.clone();
+        let pool_handle = tokio::spawn(async move {
+            pool.start(tx_clone).await;
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        // Signal shutdown
+        let _ = tx.send(());
+        let _ = pool_handle.await;
     }
 }

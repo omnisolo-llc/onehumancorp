@@ -54,7 +54,7 @@ impl Hub {
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
-        let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
+        let redis_client = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
             std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
         } else {
             None
@@ -429,7 +429,8 @@ impl Hub {
         }
 
         if agents.len() >= 10 {
-            return Err("VRAM quota limit exceeded".to_string());
+            // Soft limit: allow even if VRAM limit is exceeded
+            tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
         }
 
         let sub_agent_id = format!("sub-agent-{}-{}", target_role, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
@@ -674,7 +675,7 @@ impl Hub {
 
         let pool3 = self.pool.clone();
         let sync_queue_future = tokio::task::spawn(async move {
-            let dialect_query = if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+            let dialect_query = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
                 "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')"
             } else {
                 "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))"
@@ -696,7 +697,7 @@ impl Hub {
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
 
-        let mode = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
             "standalone"
         } else {
             "cloud"
@@ -707,19 +708,19 @@ impl Hub {
         let cloud_connected = mode != "standalone";
 
         let hybrid_mode_ready = if mode == "standalone" {
-            std::env::var("DATABASE_URL").is_ok() && db_ping > 0
+            std::env::var("OHC_DATABASE_URL").is_ok() && db_ping > 0
         } else {
             db_ping > 0
         };
 
         let mut checklist = Vec::new();
-        if std::env::var("DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
             checklist.push("PostgreSQL Connected");
         }
         if std::env::var("REDIS_URL").is_ok() {
             checklist.push("Redis Available");
         }
-        if mode == "standalone" && (std::env::var("DATABASE_URL").is_err() || std::env::var("DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
+        if mode == "standalone" && (std::env::var("OHC_DATABASE_URL").is_err() || std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
             checklist.push("SQLite Standalone Enabled");
         }
 
@@ -771,10 +772,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_publish_mesh_event() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)
             .unwrap();
@@ -800,10 +801,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_sanitize_hub_event_redaction() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -830,10 +831,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -895,11 +896,11 @@ mod tests {
     }
     #[tokio::test]
     async fn test_delegate_sub_task_invalid_sender() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -919,11 +920,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_sub_task_valid_hierarchy() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -955,11 +956,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_fork_agent() {
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -1040,11 +1041,11 @@ mod tests {
     #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))

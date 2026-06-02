@@ -36,19 +36,23 @@ impl OnboardingAgent {
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 
         let prompt = format!(
-            "Extract structured business information from the following user description.
+            "You are the OHC Onboarding Expert. Extract structured business information from the following user description.
+            If the input is an Instagram/social link, infer the business details from the context of a small business.
             Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
+
+            Valid categories are: physical, digital, services, food, subscriptions.
+            Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
 
             Description: \"{}\"
 
             Example JSON:
             {{
               \"business_name\": \"Maya's Cakes\",
-              \"business_type\": \"Bakery\",
+              \"business_type\": \"Home Bakery\",
               \"categories\": [\"food\", \"physical\"],
               \"initial_products\": [
-                {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\"}},
-                {{\"name\": \"Vanilla Cupcake\", \"price\": \"3.50\"}}
+                {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\"}},
+                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\"}}
               ]
             }}",
             input
@@ -77,8 +81,11 @@ impl OnboardingAgent {
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
-                 current_step = EXCLUDED.current_step, \
+             SET state_json = CASE \
+                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
+                 ELSE onboarding_state.state_json || EXCLUDED.state_json \
+                 END, \
+                 current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
@@ -2450,7 +2457,7 @@ mod tests {
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("DATABASE_URL").ok()?;
+        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }

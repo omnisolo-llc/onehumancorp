@@ -6,6 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
+        "compaction.rs",
         "acon_context.rs",
         "auth.rs",
         "budget.rs",
@@ -44,6 +45,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "compaction.rs",
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
@@ -52,7 +54,6 @@ rust_library(
         "checkpointer.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
-        "deerflow_subagents.rs",
         "departments.rs",
         "gpt_researcher.rs",
         "guardrails.rs",
@@ -79,6 +80,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "ruflo.rs",
+        "openhands.rs",
     "ruflo_plugins.rs",
         "scalable_multi_agent.rs",
         "service.rs",
@@ -213,6 +215,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "memory_exhaustive_tests",
     "consolidation_worker",
     "ruflo",
+    "openhands",
     "ruflo_plugins",
     "observability",
     "output_parser",

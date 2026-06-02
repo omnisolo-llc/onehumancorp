@@ -46,7 +46,9 @@ export function HelpChat() {
   const nextMessageId = (suffix: string) => `${Date.now()}-${nextIdRef.current++}-${suffix}`;
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group"
+            className="bg-gray-900 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse"
             aria-label="Open help chat"
           >
             <span className="text-xl">✨</span>

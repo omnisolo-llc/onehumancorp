@@ -53,7 +53,10 @@ impl MercadoPagoClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                    let text = resp.text().await.unwrap_or_default();
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let init_point = json["init_point"].as_str().unwrap_or("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123").to_string();
+                    Ok(init_point)
                 } else {
                     Err(format!("Mercado Pago API error: {}", resp.status()))
                 }
@@ -101,7 +104,10 @@ impl MercadoPagoClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("mock_txn_123".to_string())
+                    let text = resp.text().await.unwrap_or_default();
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let txn_id = json["id"].as_i64().map(|id| id.to_string()).unwrap_or_else(|| "mock_txn_123".to_string());
+                    Ok(txn_id)
                 } else {
                     Err(format!("Mercado Pago API error: {}", resp.status()))
                 }

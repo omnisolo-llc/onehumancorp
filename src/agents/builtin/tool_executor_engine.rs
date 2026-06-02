@@ -1,4 +1,4 @@
-use std::sync::Arc;
+
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
@@ -29,12 +29,12 @@ impl ToolExecutionEngine {
                         continue;
                     } else {
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
-                        return Err(ToolError::Transient(msg));
+                        return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(msg));
+                    return Err(ToolError::LlmRecoverable(format!("{}\nPlease correct your arguments and try again. Pay close attention to the requested schema types.", msg)));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
