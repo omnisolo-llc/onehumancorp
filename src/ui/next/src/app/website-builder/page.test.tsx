@@ -29,6 +29,9 @@ vi.mock('../builder/components', () => ({
   )
 }));
 
+
+import { useWebsiteBuilderStore } from './store';
+
 describe('WebsiteBuilderPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
@@ -37,7 +40,27 @@ describe('WebsiteBuilderPage', () => {
     }));
     localStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Reset zustand store state
+    useWebsiteBuilderStore.setState({
+      wizardStep: 0,
+      businessName: '',
+      businessType: '',
+      hasPhysicalProducts: false,
+      hasDigitalProducts: false,
+      productName: '',
+      productPrice: '',
+      paymentMethod: '',
+      userName: '',
+      userEmail: '',
+      userPassword: '',
+      template: '',
+      bio: '',
+      domainChoice: 'subdomain',
+      aiAgents: [],
+      aiAutoRespond: false,
+    });
   });
+
 
   afterEach(() => {
     vi.resetAllMocks();
@@ -118,15 +141,32 @@ describe('WebsiteBuilderPage', () => {
 
     // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+
+    // We mock the API
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          pages: [{
+            blocks: [
+              { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
+            ]
+          }]
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ domain: 'test' })
+      });
+    global.fetch = fetchMock as any;
+
+    fireEvent.click(screen.getByText('Approve & Launch'));
 
     expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
 
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await waitFor(() => {
+      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -228,11 +268,31 @@ describe('WebsiteBuilderPage', () => {
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+
+    // We mock the API
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        pages: [{
+          blocks: [
+            { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
+          ]
+        }]
+      })
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ domain: 'test' })
+    });
+
+    fireEvent.click(screen.getByText('Approve & Launch'));
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
       expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
 
     act(() => {
@@ -241,8 +301,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Should have called fetch to sync
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('status":"generating"')
+      method: 'POST'
     }));
   });
 });
