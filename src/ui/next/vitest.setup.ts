@@ -52,7 +52,29 @@ vi.mock('next/server', () => {
 
 // Add fetch mock if needed
 if (typeof global.fetch === 'undefined') {
-  global.fetch = vi.fn() as any
+  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+    // Mock for dashboard metrics and other relative URLs in tests
+    return Promise.resolve(new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+    }));
+  }) as any
+} else {
+  // Override existing global.fetch for Vitest env if it throws Invalid URL on relative paths
+  const originalFetch = global.fetch;
+  global.fetch = vi.fn().mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof url === 'string' && url.startsWith('/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+            ok: true,
+            // Provide sensible defaults for the failed API calls in tests
+            metrics: {}, approvals: [], workflows: [], milestones: []
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        }));
+    }
+    return originalFetch(url, init);
+  }) as any
 }
 
 // Add standard window mocks
