@@ -211,9 +211,7 @@ impl DB {
             };
 
             if key.trim().is_empty() {
-                panic!(
-                    "CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode."
-                );
+                return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
             }
 
             let pragma_key = format!("'{}'", key.replace('\'', "''"));
@@ -1734,7 +1732,7 @@ mod e2e_cleanup_stagnant_missions_tests {
 
         };
 
-        let mut tx = pool.begin().await.unwrap();
+        let mut tx = pool.begin().await.expect("failed to begin transaction");
 
         // Use a unique tenant for this test to avoid conflicting with other tests
         let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());

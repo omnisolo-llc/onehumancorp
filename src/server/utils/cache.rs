@@ -2,11 +2,19 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{OnceLock, RwLock};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
     value: T,
     tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CacheMetrics {
+    pub hits: usize,
+    pub misses: usize,
+    pub total_latency_us: u64,
 }
 
 pub struct HybridCache<T> {
@@ -15,6 +23,9 @@ pub struct HybridCache<T> {
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
+    hits: AtomicUsize,
+    misses: AtomicUsize,
+    total_latency_us: AtomicU64,
 }
 
 impl<T> HybridCache<T>
@@ -28,6 +39,9 @@ where
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: 1000,
+            hits: AtomicUsize::new(0),
+            misses: AtomicUsize::new(0),
+            total_latency_us: AtomicU64::new(0),
         }
     }
 
@@ -38,7 +52,27 @@ where
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: capacity,
+            hits: AtomicUsize::new(0),
+            misses: AtomicUsize::new(0),
+            total_latency_us: AtomicU64::new(0),
         }
+    }
+
+    pub fn metrics(&self) -> CacheMetrics {
+        CacheMetrics {
+            hits: self.hits.load(Ordering::Relaxed),
+            misses: self.misses.load(Ordering::Relaxed),
+            total_latency_us: self.total_latency_us.load(Ordering::Relaxed),
+        }
+    }
+
+    pub fn is_healthy(&self) -> bool {
+        let metrics = self.metrics();
+        if metrics.hits + metrics.misses == 0 {
+            return true;
+        }
+        let hit_rate = metrics.hits as f64 / (metrics.hits + metrics.misses) as f64;
+        hit_rate >= 0.5
     }
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
@@ -65,15 +99,20 @@ where
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
+        let start = std::time::Instant::now();
         // Try local cache first, allowing slightly stale reads
         {
             let guard = self.get_local().read().ok()?;
             if let Some((val, expiry)) = guard.get(key) {
                 let now = std::time::Instant::now();
                 if now < *expiry {
+                    self.hits.fetch_add(1, Ordering::Relaxed);
+                    self.total_latency_us.fetch_add(start.elapsed().as_micros() as u64, Ordering::Relaxed);
                     return Some((val.clone(), false)); // Fresh
                 } else if now < *expiry + Duration::from_secs(86400) {
                     // Stale but within SWR window (1 day)
+                    self.hits.fetch_add(1, Ordering::Relaxed);
+                    self.total_latency_us.fetch_add(start.elapsed().as_micros() as u64, Ordering::Relaxed);
                     return Some((val.clone(), true));
                 }
             }
@@ -87,14 +126,21 @@ where
                 if let Ok(item) = serde_json::from_str::<CacheItem<T>>(&data) {
                     // Populate local cache
                     self.set_local(key, item.value.clone(), &item.tags, Duration::from_secs(60));
+                    self.hits.fetch_add(1, Ordering::Relaxed);
+                    self.total_latency_us.fetch_add(start.elapsed().as_micros() as u64, Ordering::Relaxed);
                     return Some((item.value, false));
                 } else if let Ok(val) = serde_json::from_str::<T>(&data) {
                     // Backwards compatibility for items saved before tags
                     self.set_local(key, val.clone(), &[], Duration::from_secs(60));
+                    self.hits.fetch_add(1, Ordering::Relaxed);
+                    self.total_latency_us.fetch_add(start.elapsed().as_micros() as u64, Ordering::Relaxed);
                     return Some((val, false));
                 }
             }
         }
+
+        self.misses.fetch_add(1, Ordering::Relaxed);
+        self.total_latency_us.fetch_add(start.elapsed().as_micros() as u64, Ordering::Relaxed);
         None
     }
 
