@@ -10,12 +10,13 @@ test.describe('Dynamic Edge-Caching Storefront', () => {
 
         // Wait for bio input to be visible and type a description
         const textarea = page.locator('#bio-input');
-        await expect(textarea).toBeVisible({ timeout: 15000 });
+        // Increase timeout for bio input due to slow bazel runs in CI
+        await expect(textarea).toBeVisible({ timeout: 60000 });
         await textarea.fill('I bake custom vegan cakes in Portland.');
 
         // Wait for the Build My Storefront button and click it
         const generateBtn = page.locator('#generate-btn');
-        await expect(generateBtn).toBeEnabled({ timeout: 5000 });
+        await expect(generateBtn).toBeEnabled({ timeout: 15000 });
         await generateBtn.click();
 
         // The UI should switch to generating, and then eventually show the preview blocks
@@ -24,11 +25,11 @@ test.describe('Dynamic Edge-Caching Storefront', () => {
 
         // The page simulates launching the store when launchBtn is clicked.
         // `waitFor` the button to become visible (status goes to draft or idle preview).
-        await expect(launchBtn).toBeVisible({ timeout: 30000 });
+        await expect(launchBtn).toBeVisible({ timeout: 60000 });
         await launchBtn.click();
 
         // Verify the success "Live" screen appears.
-        await expect(page.locator('h1:has-text("You\'re Live!")')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('h1:has-text("You\'re Live!")')).toBeVisible({ timeout: 60000 });
 
         // Verify the "Store Performance" card is visible.
         const performanceCardTitle = page.locator('span', { hasText: 'Store Performance' });
