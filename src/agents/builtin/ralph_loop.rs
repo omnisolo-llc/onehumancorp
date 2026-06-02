@@ -119,12 +119,7 @@ fn select_next_feature(progress: &RalphProgress) -> Option<usize> {
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
-            let scratchpad_context = if !progress.notes.is_empty() {
-                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
-            } else {
-                String::new()
-            };
-            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
+            feature_config.user_instructions = feature_prompt.clone();
             
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
@@ -136,19 +131,20 @@ fn select_next_feature(progress: &RalphProgress) -> Option<usize> {
                 Ok(result) => {
                     tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
-                    progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
+                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git add: {}", e);
+                    }
+                    let commit_msg = format!("Completed feature: {}", feature_name);
+
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                     let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
-                        let commit_msg = format!("Completed feature: {}\n\n{}", feature_name, result);
-                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                            tracing::error!("Phase 2 failed to git commit: {}", e);
-                        }
+                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git commit: {}", e);
                     }
                 }
                 Err(e) => {
@@ -191,7 +187,7 @@ fn select_next_feature(progress: &RalphProgress) -> Option<usize> {
             task_description: task.to_string(),
             features,
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
+            notes: vec![],
             is_complete: false,
         };
 
@@ -234,14 +230,11 @@ fn select_next_feature(progress: &RalphProgress) -> Option<usize> {
 
     async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
-        let tmp_path = format!("{}.tmp", self.progress_file_path);
-        fs::write(&tmp_path, json).await?;
-        if let Err(e) = fs::rename(&tmp_path, &self.progress_file_path).await {
-            tracing::error!("Failed to rename progress file: {}", e);
-        }
+        fs::write(&self.progress_file_path, json).await?;
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -251,6 +244,9 @@ mod tests {
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
     use std::sync::Arc;
     use tempfile::tempdir;
+    use tokio::sync::Mutex;
+    use serde_json;
+    use tokio;
 
     struct TestLlmClient {
         call_count: tokio::sync::Mutex<usize>,
@@ -308,6 +304,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ralph_loop_with_completed_features() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        let initial_progress = RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                Feature { name: "Step 1".to_string(), status: "completed".to_string(), priority_score: 10 },
+                Feature { name: "Step 2".to_string(), status: "pending".to_string(), priority_score: 10 },
+            ],
+            current_feature_index: 0,
+            notes: vec![],
+            is_complete: false,
+        };
+        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+
+        let result = ralph.run("Build a web server").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+        assert!(saved_progress.is_complete);
+    }
+
+    #[tokio::test]
     async fn test_ralph_loop_priority_selection() {
         let dir = tempdir().unwrap();
         let progress_file = dir.path().join("progress.json");
@@ -325,7 +352,7 @@ mod tests {
         };
         std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
 
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let llm = Arc::new(TestLlmClient { call_count: Mutex::new(0) });
         let agent = Arc::new(Agent::new(llm, vec![]));
         let config = AgentRunConfig::default();
 
@@ -339,37 +366,6 @@ mod tests {
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
 
         // Let's just check it completed everything eventually.
-        assert!(saved_progress.is_complete);
-    }
-
-    #[tokio::test]
-    async fn test_ralph_loop_with_completed_features() {
-        let dir = tempdir().unwrap();
-        let progress_file = dir.path().join("progress.json");
-
-        let initial_progress = RalphProgress {
-            task_description: "Build a web server".to_string(),
-            features: vec![
-                Feature { name: "Step 1".to_string(), status: "completed".to_string(), priority_score: 10 },
-                Feature { name: "Step 2".to_string(), status: "pending".to_string(), priority_score: 10 },
-            ],
-            current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
-            is_complete: false,
-        };
-        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
-
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
-        let agent = Arc::new(Agent::new(llm, vec![]));
-        let config = AgentRunConfig::default();
-
-        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
-
-        let result = ralph.run("Build a web server").await;
-        assert!(result.is_ok());
-
-        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
-        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
     }
 }

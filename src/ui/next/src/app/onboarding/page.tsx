@@ -167,11 +167,10 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedDescription })
       });
 
-      if (!intakeRes.ok) {
-        throw new Error('Failed to process business details');
-      }
-
       const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
 
       setBusinessType(intakeData.business_type || 'Online Store');
       setBusinessName(intakeData.business_name || 'My Business');
@@ -221,11 +220,11 @@ export default function OnboardingWizard() {
         })
       });
 
+      const result = await startRes.json();
       if (!startRes.ok) {
-        throw new Error('Failed to start onboarding');
+        throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       setStep(5); // Go to "You're Live" screen
@@ -626,7 +625,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
