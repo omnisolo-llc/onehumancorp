@@ -34,7 +34,14 @@ export default function Dashboard() {
   const [pendingRewards, setPendingRewards] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
-  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
+  const [businessName, setBusinessName] = useState('Elena');
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+        const storedName = localStorage.getItem('business_name');
+        if (storedName) setBusinessName(storedName);
+    }
+  }, []);
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -216,33 +223,37 @@ export default function Dashboard() {
 
             ws.onmessage = (event) => {
                 try {
-                    const binaryString = atob(event.data);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
                     let payload: any = {};
-                    try {
-                       payload = JSON.parse(new TextDecoder().decode(bytes));
-                    } catch(e) {
-                       // Since we don't have protobufjs in the legacy Next.js app, perform basic string extraction
-                       const str = new TextDecoder("utf-8").decode(bytes);
-                       // Standard protobuf strings usually have length prefixes, finding plain text action descriptions
-                       // Example actions are standard sentences like "Draft email for review"
-                       const stringMatches = str.match(/[a-zA-Z0-9\s_\-\.\:\,]{8,}/g);
-                       if (stringMatches && stringMatches.length > 0) {
-                           // Filter out base64 padding or noise
-                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing mesh task..." };
-                       } else {
-                           return; // Unprocessable binary
-                       }
+                    if (typeof event.data === 'string') {
+                        try {
+                            payload = JSON.parse(event.data);
+                        } catch(e) {
+                            // If it's not JSON, might be base64 encoded binary
+                            const binaryString = atob(event.data);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            const decoded = new TextDecoder().decode(bytes);
+                            try {
+                                payload = JSON.parse(decoded);
+                            } catch(e2) {
+                                // Fallback for raw strings
+                                payload = { action: decoded.replace(/[^\x20-\x7E]/g, '').trim() || "Working on task..." };
+                            }
+                        }
+                    } else {
+                        // Handle Blob or ArrayBuffer
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                           try {
+                               payload = JSON.parse(reader.result as string);
+                               updateSwarmActivity(payload);
+                           } catch(e) {}
+                        };
+                        return;
                     }
-                    setSwarmActivity(prev => [{
-                        id: Math.random().toString(),
-                        agent: payload.agent_id || "Swarm Agent",
-                        action: payload.action || "Working on task...",
-                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
-                    }, ...prev].slice(0, 5)); // Keep last 5
+                    updateSwarmActivity(payload);
                 } catch(e) {
                    // Ignore parsing errors
                 }
@@ -326,6 +337,15 @@ export default function Dashboard() {
     setShowSoftPaywall(false);
     alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
     handleSendCampaign();
+  };
+
+  const updateSwarmActivity = (payload: any) => {
+    setSwarmActivity(prev => [{
+        id: Math.random().toString(),
+        agent: payload.agent_id || payload.agent || "Swarm Agent",
+        action: payload.action || payload.message || "Working on task...",
+        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
+    }, ...prev].slice(0, 5));
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -436,25 +456,25 @@ export default function Dashboard() {
         onClose={() => setIsWalkthroughOpen(false)}
       />
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
-         <div className="flex justify-between items-center w-full">
+      <header className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between border-b gap-4" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
+         <div className="flex justify-between items-center w-full md:w-auto gap-4">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
-            <button onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors shadow-sm">
+            <button onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors shadow-sm whitespace-nowrap">
               Start Tour
             </button>
           </div>
           <div className="flex items-center">
             <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
-              {offlineQueueCount} Payments Pending Sync
+              {offlineQueueCount} Sync
             </div>
             <div id="network-status-indicator" className={`${isOffline ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(255, 193, 7, 0.2)", color: "#B28200", border: "1px solid rgba(255, 193, 7, 0.3)" }}>
-              Offline - Changes saved locally
+              Offline
             </div>
           </div>
         </div>
 
-         <nav className="flex items-center gap-3">
+         <nav className="flex items-center gap-3 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
              </Link>
@@ -492,7 +512,7 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main id="dashboard-screen" className="p-6 md:p-8 pb-24 md:pb-12 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
@@ -501,14 +521,14 @@ export default function Dashboard() {
                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
                </div>
            </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+               <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl ohc-hybrid-panel flex flex-col justify-center">
                    <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
                    </WithTooltip>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${(todaysSales || 0).toFixed(2)}</div>
                </WalkthroughTarget>
-               <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+               <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl ohc-hybrid-panel flex flex-col justify-center">
                    <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Visitors</h3>
                    </WithTooltip>
@@ -517,16 +537,16 @@ export default function Dashboard() {
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
-           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
-               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
+           <div className="relative p-6 shadow-sm border rounded-2xl ohc-hybrid-panel overflow-hidden">
+               <h3 className="text-lg font-bold font-outfit mb-4">Advanced AI Insights</h3>
                <div className="filter blur-sm select-none opacity-50">
-                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
+                   <div className="h-32 bg-gray-200 dark:bg-white/10 rounded-lg w-full mb-4"></div>
                    <div className="flex gap-4">
-                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
-                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-200 dark:bg-white/10 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-200 dark:bg-white/10 rounded w-1/3"></div>
                    </div>
                </div>
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
                    <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
                        Unlock predictive analytics to foresee trends and boost your revenue.
                    </p>
@@ -709,7 +729,7 @@ export default function Dashboard() {
          {/* Plain-Language Weekly Financial Brief */}
          <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+            <div className="p-6 shadow-sm border rounded-2xl ohc-hybrid-panel border-blue-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
                 <div className="flex items-start gap-4">
                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -758,22 +778,22 @@ export default function Dashboard() {
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${(todaysSales || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Today's Sales</div>
+                    <div className="text-3xl font-bold font-outfit">${(todaysSales || 0).toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Active Customers</div>
+                    <div className="text-3xl font-bold font-outfit">{activeCustomers}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Pending Orders</div>
+                    <div className="text-3xl font-bold font-outfit">{pendingOrders}</div>
                 </div>
 
             </div>
@@ -1433,25 +1453,25 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Team Invites Sent</div>
+                    <div className="text-3xl font-bold font-outfit">{teamInvitesSent}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Active Referrals</div>
+                    <div className="text-3xl font-bold font-outfit">{activeReferrals}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(revenueFromReferrals || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Revenue from Referrals</div>
+                    <div className="text-3xl font-bold font-outfit">${(revenueFromReferrals || 0).toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(pendingRewards || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium mb-1 opacity-70">Pending Rewards</div>
+                    <div className="text-3xl font-bold font-outfit">${(pendingRewards || 0).toFixed(2)}</div>
                 </div>
             </div>
          </section>
@@ -1475,21 +1495,23 @@ export default function Dashboard() {
                 ) : (
                     <div className="flex flex-col">
                         {swarmActivity.map((activity, index) => (
-                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                            <div key={activity.id} className="flex items-start justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40 gap-3" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm shrink-0 mt-0.5" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
                                         🤖
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
-                                        <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold truncate" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
+                                        <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 sm:line-clamp-none" style={{ color: '#86868B' }}>{activity.action}</p>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>{activity.time}</span>
-                                    {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
-                                    {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
-                                    {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap" style={{ color: '#86868B' }}>{activity.time}</span>
+                                    <div className="flex gap-1">
+                                        {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
+                                        {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
+                                        {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
+                                    </div>
                                 </div>
                             </div>
                         ))}

@@ -232,6 +232,7 @@ export default function OnboardingWizard() {
 
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
+      localStorage.setItem('business_name', businessName);
       setStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {

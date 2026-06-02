@@ -8,6 +8,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_MOCK === 'true') {
+        return NextResponse.json({
+            message: `Welcome ${body.admin_name}! ${body.company_name} is now live.`,
+            dashboard_url: "/dashboard",
+            storefront_url: "/builder"
+        });
+    }
+
     const res = await fetch(`${backendUrl}/api/onboarding/start`, {
       method: 'POST',
       headers: {
@@ -25,6 +33,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Failed to start onboarding' }, { status: res.status });
   } catch (e) {
+    if (process.env.NODE_ENV === 'development') {
+        return NextResponse.json({
+            message: "Development Mode: Onboarding successful without backend.",
+            dashboard_url: "/dashboard",
+            storefront_url: "/builder"
+        });
+    }
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }
