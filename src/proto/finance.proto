@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package ohc.finance;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/finance;financepb";
+
+message FinancialEvent {
+  string id = 1;
+  string tenant_id = 2;
+  string event_type = 3; // 'STRIPE_CHECKOUT', 'POS_TAP', 'CASH'
+  string source_id = 4;
+  int64 amount_cents = 5;
+  string currency = 6;
+  string description = 7;
+  int64 occurred_at_unix = 8;
+}
+
+message ProcessEventRequest {
+  FinancialEvent event = 1;
+}
+
+message ProcessEventResponse {
+  bool success = 1;
+  string transaction_id = 2;
+  int64 tax_amount_cents = 3;
+}
+
+message CalculateTaxRequest {
+  string tenant_id = 1;
+  int64 amount_cents = 2;
+  string event_type = 3;
+}
+
+message CalculateTaxResponse {
+  int64 tax_amount_cents = 1;
+  string tax_jurisdiction = 2;
+}
+
+message WalletBalance {
+  string wallet_type = 1;
+  int64 balance_cents = 2;
+  string currency = 3;
+}
+
+message GetBalancesRequest {
+  string tenant_id = 1;
+}
+
+message GetBalancesResponse {
+  repeated WalletBalance balances = 1;
+}
+
+message GenerateInsightRequest {
+  string tenant_id = 1;
+}
+
+message GenerateInsightResponse {
+  string insight_text = 1;
+}
+
+service EventRouterService {
+  rpc ProcessEvent(ProcessEventRequest) returns (ProcessEventResponse);
+}
+
+service TaxNexusService {
+  rpc CalculateTax(CalculateTaxRequest) returns (CalculateTaxResponse);
+}
+
+service FinanceAgentService {
+  rpc GetBalances(GetBalancesRequest) returns (GetBalancesResponse);
+  rpc GenerateInsight(GenerateInsightRequest) returns (GenerateInsightResponse);
+}

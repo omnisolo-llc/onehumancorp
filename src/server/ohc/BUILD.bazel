@@ -11,6 +11,8 @@ rust_library(
         "//src/proto:app_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
+        "//src/proto:finance_prost",
+        "//src/proto:finance_tonic",
         "//src/proto:hub_tonic",
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_tonic",
