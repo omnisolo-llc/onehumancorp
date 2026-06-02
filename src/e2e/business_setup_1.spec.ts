@@ -9,7 +9,7 @@ test.describe('Business Setup Wizard', () => {
       localStorage.removeItem('ohc_wizard_state');
     }, id);
     await page.goto('/website-builder');
-    await expect(page.locator('#setup-screen')).toBeVisible();
+    await expect(page.locator('h1,h2,h3').filter({ hasText: /Setup Wizard/i }).first()).toBeVisible();
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
