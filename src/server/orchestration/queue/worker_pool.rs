@@ -9,7 +9,7 @@ pub trait JobHandler: Send + Sync {
 }
 
 pub struct WorkerPool {
-    queue: Arc<OHCJobQueue>,
+    _queue: Arc<OHCJobQueue>,
     workers: Vec<JoinHandle<()>>,
     shutdown_tx: broadcast::Sender<()>,
 }
@@ -76,7 +76,7 @@ impl WorkerPool {
         }
 
         Self {
-            queue,
+            _queue: queue,
             workers,
             shutdown_tx,
         }
