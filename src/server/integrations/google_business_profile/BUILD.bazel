@@ -1,60 +1,21 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 exports_files(
     [
-        "autodream.rs",
-        "billing_api.rs",
-        "billing_webhook.rs",
-        "billing_webhook_test.rs",
-        "dynamic_workflows.rs",
-        "growth.rs",
-        "health.rs",
-        "syndication_handler.rs",
-        "mcp_webhook.rs",
-        "mesh_handler.rs",
-        "oauth/mod.rs",
-        "oauth/proxy.rs",
+        "client.rs",
         "mod.rs",
-        "offline_sync.rs",
-        "staff_mesh.rs",
-        "telemetry.rs",
-        "catalog.rs",
-        "google_business_webhook.rs",
+        "provider.rs",
     ],
     visibility = ["//visibility:public"],
 )
 
 rust_library(
-    name = "server_api",
+    name = "server_integrations_google_calendar",
     srcs = [
         "bazel_lib.rs",
-        "autodream.rs",
-        "billing_api.rs",
-        "billing_webhook.rs",
-        "billing_webhook_test.rs",
-        "dynamic_workflows.rs",
-        "growth.rs",
-        "health.rs",
-        "syndication_handler.rs",
-        "mcp_webhook.rs",
-        "mesh_handler.rs",
-        "oauth/mod.rs",
-        "oauth/proxy.rs",
+        "client.rs",
         "mod.rs",
-        "offline_sync.rs",
-        "staff_mesh.rs",
-        "telemetry.rs",
-        "catalog.rs",
-        "google_business_webhook.rs",
-        "//src/server/api/agents:approvals.rs",
-        "//src/server/api/agents:chat.rs",
-        "//src/server/api/agents:hire.rs",
-        "//src/server/api/agents:mission/handoff.rs",
-        "//src/server/api/agents:mission/mod.rs",
-        "//src/server/api/agents:mod.rs",
-        "//src/server/api/agents:settings.rs",
-        "//src/server/api/agents:webhook.rs",
-        "//src/server/api/onboarding:mod.rs",
+        "provider.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -137,7 +98,6 @@ rust_library(
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tokio",
-        "@crates//:tower",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
@@ -148,18 +108,4 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
-)
-
-rust_test(
-    name = "server_api_unit_test",
-    size = "large",
-    crate = ":server_api",
-    edition = "2024",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
