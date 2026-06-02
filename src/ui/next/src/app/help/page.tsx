@@ -30,7 +30,7 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-800"
+            className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-800 backdrop-blur-[20px] saturate-200 bg-white/80"
           />
         </div>
 
@@ -48,16 +48,6 @@ export default function HelpCenterPage() {
             ))}
           </div>
         )}
-
-        <div className="mt-16 pt-8 border-t border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Advanced Users</h2>
-          <p className="text-gray-600 mb-4">
-            Are you a developer looking to integrate directly with our systems? Check out our API reference.
-          </p>
-          <Link href="/api-docs">
-            <span className="text-blue-600 font-bold hover:underline">View API Documentation &rarr;</span>
-          </Link>
-        </div>
       </div>
     </div>
   );

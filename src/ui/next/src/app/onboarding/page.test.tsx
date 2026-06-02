@@ -15,6 +15,7 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
+      domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -122,7 +123,7 @@ describe('OnboardingWizard', () => {
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -172,7 +173,7 @@ describe('OnboardingWizard', () => {
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -192,29 +193,29 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when location is too short', async () => {
+  it('Step 1: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 3,
-        businessName: 'Bakery',
-        location: 'A',
-        businessType: 'Bakery',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        chatStep: 1,
+        businessName: 'A',
+        location: '',
+        businessType: 'Online Store',
+        categories: [],
+        firstProductName: '',
+        firstProductPrice: ''
       });
     });
 
     render(<OnboardingWizard />);
 
-    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
+    const nextButton = screen.getByRole('button', { name: /Next/i });
 
-    await user.click(generateButton);
+    await user.click(nextButton);
 
-    expect(await screen.findByText('Location must be at least 2 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
@@ -227,6 +228,7 @@ describe('OnboardingWizard', () => {
         businessName: 'Valid Name',
         businessType: 'Bakery',
         categories: ['food'],
+        domainChoice: 'subdomain',
         firstProductName: 'Cake',
         firstProductPrice: '20'
       });
@@ -238,18 +240,27 @@ describe('OnboardingWizard', () => {
 
     await user.click(continueButton);
 
-    expect(screen.queryByText('Location must be at least 2 characters.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
     render(<OnboardingWizard />);
+
+    // Verify initial Web Address options
+    const subdomainOption = screen.getByText('Free Subdomain');
+    const customOption = screen.getByText('Custom Domain');
+    expect(subdomainOption).toBeInTheDocument();
+    expect(customOption).toBeInTheDocument();
+
+    // Select Custom Domain
+    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -269,6 +280,7 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
+      expect(state.domainChoice).toBe('custom');
     });
   });
 

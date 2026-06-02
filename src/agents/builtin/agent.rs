@@ -458,9 +458,17 @@ impl Agent {
                 _ => unreachable!(),
             };
 
+            let mut phase_cfg = cfg.clone();
+            if !phase_cfg.server_system_message.is_empty() {
+                phase_cfg.server_system_message.push_str(&format!("\n\nYou are in the {} phase.", phase_prompt));
+            } else {
+                phase_cfg.server_system_message = format!("You are in the {} phase.", phase_prompt);
+            }
+            let system_prompt = build_hierarchical_system_prompt(&phase_cfg, session_tools);
+
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
-                system: format!("{}\n\nYou are in the {} phase.", cfg.server_system_message, phase_prompt),
+                system: system_prompt,
                 messages: messages.clone(),
                 tools: session_tools.iter().map(|t| crate::types::ToolDefinition {
                     name: t.name.clone(),
@@ -758,23 +766,6 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(err_msg)) | Err(crate::types::ToolError::Unexpected(err_msg)) => {
                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
-                        }
-                        Err(crate::types::ToolError::UserFixable(msg)) => {
-                            // User-fixable: interrupt execution and ask user for input
-                            let err_msg = format!("User intervention required: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
-                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
-                        }
-                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            // LLM-recoverable: return the raw error as a ToolMessage directly to the model so it can self-correct
-                            let err_str = format!("Recoverable error: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: err_str.clone(),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].error = err_str;
                         }
                         Err(e) => {
                             let err_str = e.to_string();
@@ -1353,7 +1344,7 @@ impl Agent {
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
 
         // Phase 1: Planning
-        let planner_system = format!(
+        let planner_instructions = format!(
             "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
             serde_json::to_string_pretty(&self.tools.iter().map(|t| crate::types::ToolDefinition {
                 name: t.name.clone(),
@@ -1361,6 +1352,15 @@ impl Agent {
                 parameters: t.parameters.clone(),
             }).collect::<Vec<_>>()).unwrap_or_default()
         );
+
+        let mut planner_cfg = cfg.clone();
+        if !planner_cfg.server_system_message.is_empty() {
+            planner_cfg.server_system_message.push_str(&format!("\n\n{}", planner_instructions));
+        } else {
+            planner_cfg.server_system_message = planner_instructions;
+        }
+
+        let planner_system = build_hierarchical_system_prompt(&planner_cfg, &[]);
 
         let plan_req = ChatRequest {
             model: cfg.model.clone(),
@@ -1593,9 +1593,18 @@ impl Agent {
         });
 
         // Phase 3: Replier
-        let replier_system = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
+        let replier_instructions = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
         let execution_summary = executed_steps.join("\n\n");
         let final_prompt = format!("Initial task: {}\n\nExecution steps and results:\n{}\n\nPlease provide the final answer.", initial_message, execution_summary);
+
+        let mut replier_cfg = cfg.clone();
+        if !replier_cfg.server_system_message.is_empty() {
+            replier_cfg.server_system_message.push_str(&format!("\n\n{}", replier_instructions));
+        } else {
+            replier_cfg.server_system_message = replier_instructions;
+        }
+
+        let replier_system = build_hierarchical_system_prompt(&replier_cfg, &[]);
 
         let replier_req = ChatRequest {
             model: cfg.model.clone(),
@@ -3549,107 +3558,6 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
-    }
-
-
-    #[tokio::test]
-    async fn test_tao_termination_user_fixable() {
-        struct UserFixableTool;
-        #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Err(crate::types::ToolError::UserFixable("Need login".to_string()))
-            }
-        }
-
-        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let tool = ohc_builtin_agent_tools::Tool {
-            name: "user_fixable_tool".to_string(),
-            description: "Fails requiring user fix".to_string(),
-            is_read_only: false,
-            parameters: serde_json::Value::Null,
-            execute: std::sync::Arc::new(UserFixableTool),
-        };
-
-        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.project_trusted = true;
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("User intervention required: Need login"));
-    }
-
-    #[tokio::test]
-    async fn test_tao_llm_recoverable_feedback() {
-        struct LlmRecoverableTool;
-        #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for LlmRecoverableTool {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Err(crate::types::ToolError::LlmRecoverable("Missing parameter".to_string()))
-            }
-        }
-
-        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                },
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("I will fix it!"),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let tool = ohc_builtin_agent_tools::Tool {
-            name: "llm_recoverable_tool".to_string(),
-            description: "Fails recoverably".to_string(),
-            is_read_only: false,
-            parameters: serde_json::Value::Null,
-            execute: std::sync::Arc::new(LlmRecoverableTool),
-        };
-
-        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.project_trusted = true;
-        cfg.enable_tao_orchestration_loop = true;
-
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "I will fix it!");
     }
 
     #[tokio::test]
@@ -6606,7 +6514,8 @@ mod stream_tests {
 
         let client = std::sync::Arc::new(DumbLoopMockClient);
         let agent = crate::agent::Agent::new(client, vec![mock_tool]);
-        let cfg = crate::agent::AgentRunConfig::default();
+        let mut cfg = crate::agent::AgentRunConfig::default();
+        cfg.server_system_message = "Dumb loop test system msg".to_string();
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
