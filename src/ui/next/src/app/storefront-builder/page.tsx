@@ -266,6 +266,18 @@ export default function StorefrontBuilderPage() {
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
+          {/* Store Performance Metric Card */}
+          <div className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 rounded-[16px] mb-6 flex flex-col items-start shadow-sm transition-all hover:shadow-md">
+            <div className="flex items-center gap-2 mb-1">
+              <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <h3 className="text-sm font-semibold font-outfit text-gray-900 dark:text-[#f5f5f7] m-0">Store Performance</h3>
+            </div>
+            <div className="flex items-center justify-between w-full mt-2">
+              <span className="text-xs text-gray-500 dark:text-[#a1a1a6] font-medium">Edge Cache Load Time</span>
+              <span className="text-sm font-bold text-[#34C759] dark:text-[#00C24B] bg-[#34C759]/10 dark:bg-[#00C24B]/10 px-2 py-1 rounded-md">&lt; 45ms</span>
+            </div>
+          </div>
+
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
             style={{ borderRadius: '8px' }}

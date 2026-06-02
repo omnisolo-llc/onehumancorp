@@ -174,4 +174,57 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     await page.reload();
     await expect(page.locator('.product-price')).toHaveText('$19.99');
   });
+
+  test('Store Performance metric card displays on live site', async ({ page }) => {
+    // Navigate to the storefront builder
+    await page.goto('/storefront-builder');
+
+    // Make sure we are at idle state
+    await page.evaluate(() => {
+      localStorage.setItem("ohc_builder_status", "idle");
+      localStorage.setItem("ohc_builder_bio", "A test store for e2e");
+    });
+    await page.reload();
+
+    // Type a short bio to enable the generate button
+    const textArea = page.locator('#bio-input');
+    await textArea.fill('A test store for e2e');
+
+    // Set up a mock route for the generate step
+    await page.route('**/api/v1/builder/generate', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          pages: [{
+            blocks: [{ block_type: 'HeroBlock', content: { headline: 'Test Store' } }]
+          }]
+        })
+      });
+    });
+
+    // Click Generate
+    await page.locator('#generate-btn').click();
+
+    // Wait until the preview screen appears with the 'Launch' button
+    await page.locator('#launch-btn').waitFor({ state: 'visible' });
+
+    // Set up a mock route for the publish step
+    await page.route('**/api/v1/builder/publish_draft', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ domain: 'teststore' })
+      });
+    });
+
+    // Click Launch
+    await page.locator('#launch-btn').click();
+
+    // Verify that the status changed to live and we see the Store Performance metric card
+    await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByText('Store Performance')).toBeVisible();
+    await expect(page.getByText('Edge Cache Load Time')).toBeVisible();
+    await expect(page.getByText('< 45ms')).toBeVisible();
+  });
 });
