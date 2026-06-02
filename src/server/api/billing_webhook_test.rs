@@ -28,10 +28,14 @@ async fn test_stripe_webhook_handler_completed() {
         Err(_) => return,
     };
 
+    let mut secrets = std::collections::HashMap::new();
+    secrets.insert("STRIPE_WEBHOOK_SECRET".to_string(), "test_secret".to_string());
+
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        secrets: std::sync::Arc::new(secrets),
     };
 
     // Seed the database with a test tenant
@@ -40,77 +44,72 @@ async fn test_stripe_webhook_handler_completed() {
         return; // Skip if we can't seed the database
     }
 
-    temp_env::async_with_vars(
-        [("STRIPE_WEBHOOK_SECRET", Some("test_secret"))],
-        async {
-            let app = Router::new()
-                .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-                .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
-                .with_state(webhook_state.clone());
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .with_state(webhook_state.clone());
 
-            let payload = json!({
-                "id": "evt_test",
-                "type": "checkout.session.completed",
-                "data": {
-                    "object": {
-                        "metadata": {
-                            "tenant_id": "test_tenant",
-                            "tier": "Pro"
-                        }
-                    }
+    let payload = json!({
+        "id": "evt_test",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "metadata": {
+                    "tenant_id": "test_tenant",
+                    "tier": "Pro"
                 }
-            });
-
-            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let addr = listener.local_addr().unwrap();
-            tokio::spawn(async move {
-                axum::serve(listener, app).await.unwrap();
-            });
-
-            use hmac::{Hmac, Mac};
-            use sha2::Sha256;
-            type HmacSha256 = Hmac<Sha256>;
-
-            let now = chrono::Utc::now().timestamp();
-            let payload_str = payload.to_string();
-            let signed_payload = format!("{}.{}", now, payload_str);
-            let mut mac = HmacSha256::new_from_slice(b"test_secret").unwrap();
-            mac.update(signed_payload.as_bytes());
-            let sig = hex::encode(mac.finalize().into_bytes());
-            let sig_header = format!("t={},v1={}", now, sig);
-
-            let client_req = reqwest::Client::new();
-
-            // Missing signature should return 401
-            let response_unauth = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
-                .json(&payload).send().await.unwrap();
-            assert_eq!(response_unauth.status(), reqwest::StatusCode::UNAUTHORIZED);
-
-            // Valid Request
-            let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
-                .header("Stripe-Signature", &sig_header)
-                .json(&payload).send().await.unwrap();
-            assert_eq!(response.status(), reqwest::StatusCode::OK);
-
-            // Replay Request should also return 200 OK without executing db
-            let response_replay = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
-                .header("Stripe-Signature", &sig_header)
-                .json(&payload).send().await.unwrap();
-            assert_eq!(response_replay.status(), reqwest::StatusCode::OK);
-
-            // Verify Redis Tier
-            let current_tier = rate_limiter.get_tenant_tier("test_tenant").await.unwrap();
-            assert_eq!(current_tier, PlanTier::Pro);
-
-            // Verify Database Tier
-            let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
-                .fetch_one(&db.pool)
-                .await
-                .expect("tenant row not found");
-
-            assert_eq!(row.0, "Pro");
+            }
         }
-    ).await;
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    type HmacSha256 = Hmac<Sha256>;
+
+    let now = chrono::Utc::now().timestamp();
+    let payload_str = payload.to_string();
+    let signed_payload = format!("{}.{}", now, payload_str);
+    let mut mac = HmacSha256::new_from_slice(b"test_secret").unwrap();
+    mac.update(signed_payload.as_bytes());
+    let sig = hex::encode(mac.finalize().into_bytes());
+    let sig_header = format!("t={},v1={}", now, sig);
+
+    let client_req = reqwest::Client::new();
+
+    // Missing signature should return 401
+    let response_unauth = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response_unauth.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    // Valid Request
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", &sig_header)
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    // Replay Request should also return 200 OK without executing db
+    let response_replay = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", &sig_header)
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response_replay.status(), reqwest::StatusCode::OK);
+
+    // Verify Redis Tier
+    let current_tier = rate_limiter.get_tenant_tier("test_tenant").await.unwrap();
+    assert_eq!(current_tier, PlanTier::Pro);
+
+    // Verify Database Tier
+    let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("tenant row not found");
+
+    assert_eq!(row.0, "Pro");
 }
 
 #[tokio::test]
@@ -133,10 +132,14 @@ async fn test_stripe_webhook_handler_deleted() {
         Err(_) => return,
     };
 
+    let mut secrets = std::collections::HashMap::new();
+    secrets.insert("STRIPE_WEBHOOK_SECRET".to_string(), "test_secret_deleted".to_string());
+
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        secrets: std::sync::Arc::new(secrets),
     };
 
     // Seed the database with a test tenant
@@ -145,63 +148,58 @@ async fn test_stripe_webhook_handler_deleted() {
         return; // Skip if we can't seed the database
     }
 
-    temp_env::async_with_vars(
-        [("STRIPE_WEBHOOK_SECRET", Some("test_secret_deleted"))],
-        async {
-            let app = Router::new()
-                .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-                .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
-                .with_state(webhook_state.clone());
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .with_state(webhook_state.clone());
 
-            let payload = json!({
-                "id": "evt_test",
-                "type": "customer.subscription.deleted",
-                "data": {
-                    "object": {
-                        "metadata": {
-                            "tenant_id": "test_tenant",
-                        }
-                    }
+    let payload = json!({
+        "id": "evt_test",
+        "type": "customer.subscription.deleted",
+        "data": {
+            "object": {
+                "metadata": {
+                    "tenant_id": "test_tenant",
                 }
-            });
-
-            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let addr = listener.local_addr().unwrap();
-            tokio::spawn(async move {
-                axum::serve(listener, app).await.unwrap();
-            });
-
-            use hmac::{Hmac, Mac};
-            use sha2::Sha256;
-            type HmacSha256 = Hmac<Sha256>;
-
-            let now = chrono::Utc::now().timestamp();
-            let payload_str = payload.to_string();
-            let signed_payload = format!("{}.{}", now, payload_str);
-            let mut mac = HmacSha256::new_from_slice(b"test_secret_deleted").unwrap();
-            mac.update(signed_payload.as_bytes());
-            let sig = hex::encode(mac.finalize().into_bytes());
-            let sig_header = format!("t={},v1={}", now, sig);
-
-            let client_req = reqwest::Client::new();
-            let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
-                .header("Stripe-Signature", &sig_header)
-                .json(&payload).send().await.unwrap();
-            assert_eq!(response.status(), reqwest::StatusCode::OK);
-
-            // Verify Redis Tier
-            let current_tier = rate_limiter.get_tenant_tier("test_tenant").await.unwrap();
-            assert_eq!(current_tier, PlanTier::Free);
-
-            // Verify Database Tier
-            let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
-                .fetch_one(&db.pool)
-                .await
-                .expect("tenant row not found");
-
-            assert_eq!(row.0, "Free");
+            }
         }
-    ).await;
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    type HmacSha256 = Hmac<Sha256>;
+
+    let now = chrono::Utc::now().timestamp();
+    let payload_str = payload.to_string();
+    let signed_payload = format!("{}.{}", now, payload_str);
+    let mut mac = HmacSha256::new_from_slice(b"test_secret_deleted").unwrap();
+    mac.update(signed_payload.as_bytes());
+    let sig = hex::encode(mac.finalize().into_bytes());
+    let sig_header = format!("t={},v1={}", now, sig);
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", &sig_header)
+        .json(&payload).send().await.unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    // Verify Redis Tier
+    let current_tier = rate_limiter.get_tenant_tier("test_tenant").await.unwrap();
+    assert_eq!(current_tier, PlanTier::Free);
+
+    // Verify Database Tier
+    let row: (String,) = sqlx::query_as("SELECT tier FROM tenants WHERE tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("tenant row not found");
+
+    assert_eq!(row.0, "Free");
 }
 
 
@@ -229,10 +227,14 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         Err(_) => return,
     };
 
+    let mut secrets = std::collections::HashMap::new();
+    secrets.insert("MERCADOPAGO_WEBHOOK_SECRET".to_string(), "test_mp_secret".to_string());
+
     let state = WebhookState {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: Arc::new(db),
+        secrets: std::sync::Arc::new(secrets),
     };
 
     let event = MercadoPagoEvent {
@@ -250,43 +252,38 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         },
     };
 
-    temp_env::async_with_vars(
-        [("MERCADOPAGO_WEBHOOK_SECRET", Some("test_mp_secret"))],
-        async {
-            use axum::http::Request;
-            use axum::body::Body;
-            use axum::middleware::Next;
-            use axum::routing::post;
-            use axum::Router;
+    use axum::http::Request;
+    use axum::body::Body;
+    use axum::middleware::Next;
+    use axum::routing::post;
+    use axum::Router;
 
-            let app = Router::new()
-                .route("/api/v1/webhooks/mercadopago", post(mercadopago_webhook_handler))
-                .route_layer(axum::middleware::from_fn_with_state(state.clone(), crate::api::billing_webhook::webhook_security_middleware))
-                .with_state(state.clone());
+    let app = Router::new()
+        .route("/api/v1/webhooks/mercadopago", post(mercadopago_webhook_handler))
+        .route_layer(axum::middleware::from_fn_with_state(state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .with_state(state.clone());
 
-            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-            let addr = listener.local_addr().unwrap();
-            tokio::spawn(async move {
-                axum::serve(listener, app).await.unwrap();
-            });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
 
-            use hmac::{Hmac, Mac};
-            use sha2::Sha256;
-            type HmacSha256 = Hmac<Sha256>;
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    type HmacSha256 = Hmac<Sha256>;
 
-            let payload_str = serde_json::to_string(&event).unwrap();
-            let mut mac = HmacSha256::new_from_slice(b"test_mp_secret").unwrap();
-            mac.update(payload_str.as_bytes());
-            let sig = hex::encode(mac.finalize().into_bytes());
+    let payload_str = serde_json::to_string(&event).unwrap();
+    let mut mac = HmacSha256::new_from_slice(b"test_mp_secret").unwrap();
+    mac.update(payload_str.as_bytes());
+    let sig = hex::encode(mac.finalize().into_bytes());
 
-            let client_req = reqwest::Client::new();
-            let response = client_req.post(format!("http://{}/api/v1/webhooks/mercadopago", addr))
-                .header("X-Signature", &sig)
-                .header("Content-Type", "application/json")
-                .body(payload_str)
-                .send().await.unwrap();
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/mercadopago", addr))
+        .header("X-Signature", &sig)
+        .header("Content-Type", "application/json")
+        .body(payload_str)
+        .send().await.unwrap();
 
-            assert_eq!(response.status(), reqwest::StatusCode::OK);
-        }
-    ).await;
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
 }

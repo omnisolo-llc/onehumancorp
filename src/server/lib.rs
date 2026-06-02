@@ -2394,10 +2394,20 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
 
+    let mut secrets = std::collections::HashMap::new();
+    let provider_secrets = ["STRIPE", "MERCADOPAGO", "RAZORPAY", "CALCOM", "RESEND", "AYRSHARE", "MANYCHAT", "CALENDLY", "MAILCHIMP"];
+    for provider in provider_secrets.iter() {
+        let key = format!("{}_WEBHOOK_SECRET", provider);
+        if let Ok(val) = std::env::var(&key) {
+            secrets.insert(key, val);
+        }
+    }
+
     let webhook_state = crate::api::billing_webhook::WebhookState {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: db.clone(),
+        secrets: std::sync::Arc::new(secrets),
     };
 
     let webhook_router = axum::Router::new()

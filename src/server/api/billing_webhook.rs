@@ -10,11 +10,14 @@ use serde_json::Value;
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 
+use std::collections::HashMap;
+
 #[derive(Clone)]
 pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub secrets: Arc<HashMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,9 +58,9 @@ pub async fn webhook_security_middleware(
 
     // Verify Cryptographic Signature
     let is_valid_signature = if provider == "stripe" {
-        let secret = match std::env::var("STRIPE_WEBHOOK_SECRET") {
-            Ok(s) => s,
-            Err(_) => {
+        let secret = match state.secrets.get("STRIPE_WEBHOOK_SECRET") {
+            Some(s) => s.clone(),
+            None => {
                 tracing::error!("STRIPE_WEBHOOK_SECRET environment variable is missing.");
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
@@ -96,9 +99,9 @@ pub async fn webhook_security_middleware(
     } else {
         // Generic HMAC SHA256 fallback for other providers that use X-Signature
         let secret_key = format!("{}_WEBHOOK_SECRET", provider.to_uppercase());
-        let secret = match std::env::var(&secret_key) {
-            Ok(s) => s,
-            Err(_) => {
+        let secret = match state.secrets.get(&secret_key) {
+            Some(s) => s.clone(),
+            None => {
                 tracing::error!("{} environment variable is missing.", secret_key);
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
