@@ -37,6 +37,8 @@ test.describe('CUJ: Billing Cost Tracking', () => {
     await expect(page.locator('#cost-dashboard-llm')).toBeVisible();
     await expect(page.locator('#cost-dashboard-storage')).toBeVisible();
     await expect(page.locator('#cost-dashboard-payment-fees')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-caching-savings')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-storage-savings')).toBeVisible();
 
     // Back to My Plan
     await page.getByRole('button', { name: 'Back to My Plan' }).click();

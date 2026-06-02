@@ -9,6 +9,8 @@ interface CostDashboardData {
   llm_cost: number;
   storage_cost: number;
   payment_fees: number;
+  caching_savings: number;
+  storage_savings: number;
   period_start: string;
   period_end: string;
 }
@@ -43,6 +45,8 @@ export default function CostDashboardPage() {
                 llm_cost: 0,
                 storage_cost: 0,
                 payment_fees: 0,
+                caching_savings: 0,
+                storage_savings: 0,
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
             });
@@ -58,6 +62,8 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
+            caching_savings: 0,
+            storage_savings: 0,
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
@@ -114,6 +120,30 @@ export default function CostDashboardPage() {
                 <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                     <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
+                </div>
+            </div>
+        </section>
+
+
+        {/* Savings Section */}
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Platform Savings (OHC Miser)</h2>
+
+            <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <span className="font-medium text-gray-900">Prompt Caching Savings</span>
+                        <p className="text-sm text-gray-500 mt-1">Money saved through OHC's intelligent AI context caching.</p>
+                    </div>
+                    <span id="cost-dashboard-caching-savings" className="text-lg font-semibold text-green-600">{formatCurrency(data?.caching_savings || 0)}</span>
+                </div>
+
+                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div>
+                        <span className="font-medium text-gray-900">Storage Compression Savings</span>
+                        <p className="text-sm text-gray-500 mt-1">Money saved via automatic WebP image compression.</p>
+                    </div>
+                    <span id="cost-dashboard-storage-savings" className="text-lg font-semibold text-green-600">{formatCurrency(data?.storage_savings || 0)}</span>
                 </div>
             </div>
         </section>

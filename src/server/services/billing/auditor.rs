@@ -28,7 +28,9 @@ pub struct CostAuditor {
     agent_budgets: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
     caching_savings: Mutex<f64>,
+    tenant_caching_savings: Mutex<HashMap<String, f64>>,
     storage_savings: Mutex<f64>,
+    tenant_storage_savings: Mutex<HashMap<String, f64>>,
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
@@ -57,7 +59,9 @@ impl CostAuditor {
             agent_budgets: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
             caching_savings: Mutex::new(0.0),
+            tenant_caching_savings: Mutex::new(HashMap::new()),
             storage_savings: Mutex::new(0.0),
+            tenant_storage_savings: Mutex::new(HashMap::new()),
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
@@ -140,6 +144,10 @@ impl CostAuditor {
         let mut caching_savings = self.caching_savings.lock().unwrap();
         *caching_savings += saved_cost;
 
+        let mut tenant_caching_savings = self.tenant_caching_savings.lock().unwrap();
+        let current_tenant_savings = tenant_caching_savings.entry(event.tenant_id.clone()).or_insert(0.0);
+        *current_tenant_savings += saved_cost;
+
         saved_cost
     }
 
@@ -153,16 +161,31 @@ impl CostAuditor {
         *caching_savings
     }
 
-    pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
+    pub fn record_storage_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
         let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
         
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
+        let mut tenant_storage_savings = self.tenant_storage_savings.lock().unwrap();
+        let current_tenant_savings = tenant_storage_savings.entry(tenant_id.to_string()).or_insert(0.0);
+        *current_tenant_savings += savings;
+
         let savings_cents = (savings * 100.0).round() as u64;
         self.storage_savings_counter.add(savings_cents, &[]);
 
         savings
+    }
+
+
+    pub fn get_tenant_caching_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_caching_savings = self.tenant_caching_savings.lock().unwrap();
+        *tenant_caching_savings.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_storage_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_storage_savings = self.tenant_storage_savings.lock().unwrap();
+        *tenant_storage_savings.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn get_total_storage_savings(&self) -> f64 {
@@ -427,7 +450,7 @@ mod tests {
         let original_bytes = 1024 * 1024 * 1024 * 2; // 2GB
         let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
 
-        let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
+        let savings = auditor.record_storage_compression("tenant1", original_bytes, compressed_bytes);
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
     }
