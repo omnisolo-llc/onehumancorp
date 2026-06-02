@@ -307,6 +307,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod localization;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2957,6 +2958,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }))
         }))
         .merge(webhook_router)
+        .merge(crate::api::localization::router(std::sync::Arc::new(crate::services::localization::localization_engine::LocalizationEngine::new())))
         .merge(health_router)
         .fallback(ui_handler);
 

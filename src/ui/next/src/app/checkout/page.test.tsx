@@ -3,6 +3,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CheckoutPage from './page';
 
+vi.mock('./localizationContext', () => ({
+  LocalizationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useLocalization: () => ({
+    t: (key: string, def: string) => def,
+    locale: "en",
+    currency: "USD",
+    setLocale: vi.fn(),
+    setCurrency: vi.fn(),
+    formatCurrency: (v: number) => `$${v}`,
+    isOffline: false,
+  })
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),

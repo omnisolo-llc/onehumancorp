@@ -9,6 +9,8 @@ pub struct TenantLedger {
     pub capital_repayment_cents: AtomicI64,
     pub total_repayment_target_cents: AtomicI64,
     pub split_percentage: f64,
+    pub cached_fx_rate: Mutex<Option<f64>>,
+    pub target_currency: Mutex<Option<String>>,
 }
 
 impl TenantLedger {
@@ -19,7 +21,20 @@ impl TenantLedger {
             capital_repayment_cents: AtomicI64::new(0),
             total_repayment_target_cents: AtomicI64::new(repayment_target),
             split_percentage,
+            cached_fx_rate: Mutex::new(None),
+            target_currency: Mutex::new(None),
         }
+    }
+
+    pub fn set_cached_fx_rate(&self, currency: String, rate: f64) {
+        *self.target_currency.lock().unwrap() = Some(currency);
+        *self.cached_fx_rate.lock().unwrap() = Some(rate);
+    }
+
+    pub fn process_offline_payment_reconciliation(&self, payment_cents: i64, _offline_rate: f64, real_time_rate: f64) -> (i64, i64) {
+        // Simple eventual consistency reconciliation, absorbing safe FX margins
+        let converted_cents = (payment_cents as f64 * real_time_rate).round() as i64;
+        self.process_payment(converted_cents)
     }
 
     /// Processes an incoming payment, splitting it into merchant balance and capital repayment.
