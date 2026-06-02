@@ -6,7 +6,6 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
-        "compaction.rs",
         "acon_context.rs",
         "auth.rs",
         "budget.rs",
@@ -45,7 +44,6 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
-        "compaction.rs",
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
