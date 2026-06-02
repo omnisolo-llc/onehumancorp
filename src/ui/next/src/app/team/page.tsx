@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+import AddStaffModal from './components/AddStaffModal';
 
 export type ApprovalRequest = {
   id: string;
@@ -28,6 +29,8 @@ const DEPARTMENTS = [
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [staffMembers, setStaffMembers] = useState<{id: string, name: string, role: string, status: string, duration: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -55,6 +58,23 @@ export default function TeamPage() {
       setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
     }
   }, []);
+
+  const handleAddStaff = async (name: string, role: string, phoneNumber: string) => {
+    try {
+      const res = await fetch('/api/v1/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role, phone_number: phoneNumber })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStaffMembers([...staffMembers, { id: Date.now().toString(), name, role, status: 'Invited', duration: '' }]);
+        alert('Staff member added! PIN setup link: ' + data.pin_setup_link);
+      }
+    } catch (error) {
+      console.error('Failed to add staff', error);
+    }
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -159,7 +179,54 @@ export default function TeamPage() {
           )}
         </div>
 
+        <button
+          onClick={() => setIsAddStaffModalOpen(true)}
+          className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 active:scale-[0.95] transition-all z-20"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+
+        <AddStaffModal isOpen={isAddStaffModalOpen} onClose={() => setIsAddStaffModalOpen(false)} onAddStaff={handleAddStaff} />
+
         {/* Cloud Bridge Invite Modal */}
+        {/* Human Staff Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-outfit font-semibold text-gray-800 mb-3 ml-1">Human Staff</h2>
+          {staffMembers.length === 0 ? (
+            <div className="text-center py-6 bg-white/40 rounded-2xl border border-gray-200 border-dashed">
+              <p className="text-gray-500 text-sm">No human staff added yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {staffMembers.map(staff => (
+                <div key={staff.id} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center border border-green-200">
+                      <span className="text-green-700 font-bold">{staff.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{staff.name}</p>
+                      <p className="text-xs text-gray-500">{staff.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <div className={`w-2 h-2 rounded-full ${staff.status === 'Clocked In' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                      <span className="text-sm font-medium text-gray-700">{staff.status}</span>
+                    </div>
+                    {staff.duration && <p className="text-xs text-gray-500 mt-0.5">{staff.duration}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* AI Agents Section */}
+        <div className="mb-3">
+          <h2 className="text-lg font-outfit font-semibold text-gray-800 ml-1">AI Agents</h2>
+        </div>
+
         {showInviteModal && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
