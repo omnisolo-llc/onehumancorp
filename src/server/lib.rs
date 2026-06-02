@@ -3694,6 +3694,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <script>
                         window.OHC_TOOLTIPS = {tooltips_json};
+                        // Scribe: Global Fetch Interceptor for Rate Limit Warnings
+                        const originalFetch = window.fetch;
+                        window.fetch = async function(...args) {
+                            const response = await originalFetch.apply(this, args);
+                            if (response.headers.has('x-ratelimit-warning')) {
+                                const msg = response.headers.get('x-ratelimit-warning');
+                                // Only show modal if we haven't shown it recently to avoid spam
+                                if (!window._lastRateLimitWarning || (Date.now() - window._lastRateLimitWarning > 5000)) {
+                                    window._lastRateLimitWarning = Date.now();
+                                    showUpgradeModal(msg);
+                                }
+                            }
+                            return response;
+                        };
+
+                        function showUpgradeModal(msg) {
+                            let modal = document.getElementById('rate-limit-upgrade-modal');
+                            if (!modal) {
+                                modal = document.createElement('div');
+                                modal.id = 'rate-limit-upgrade-modal';
+                                modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);";
+                                modal.innerHTML = `
+                                    <div class="card glass" style="max-width: 400px; padding: 24px; text-align: center;">
+                                        <h2 style="margin-top: 0;">Usage Limit Reached</h2>
+                                        <p id="rate-limit-msg" style="margin-bottom: 24px;">${msg}</p>
+                                        <button class="primary" style="width: 100%; margin-bottom: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="document.getElementById('rate-limit-upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade Plan</button>
+                                        <button class="secondary" style="width: 100%;" onclick="document.getElementById('rate-limit-upgrade-modal').style.display='none';">Dismiss</button>
+                                    </div>
+                                `;
+                                document.body.appendChild(modal);
+                            } else {
+                                document.getElementById('rate-limit-msg').textContent = msg;
+                                modal.style.display = 'flex';
+                            }
+                        }
 
                         // Scribe: Tooltips Implementation
                         document.addEventListener("DOMContentLoaded", () => {
@@ -5208,7 +5243,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
                             <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
+                            <button class="primary" style="margin-top: 16px; padding: 12px 24px; font-weight: bold; width: 100%; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="showScreen('pricing-screen')">Upgrade Plan</button>
                         </div>
                         <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
                         <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
@@ -5251,6 +5286,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </ul>
                         </div>
                         <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
+                        <button class="primary" style="margin-top: 12px; padding: 12px 24px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="showScreen('pricing-screen')">Upgrade Plan</button>
                     </div>
 
                     <!-- Advisory Dashboard Screen -->
