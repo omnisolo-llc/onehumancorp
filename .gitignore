@@ -130,3 +130,4 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+.last-run.json
