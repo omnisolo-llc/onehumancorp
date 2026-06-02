@@ -50,6 +50,42 @@ export default function Dashboard() {
   const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
   const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  // Operations Manager State
+  const [showOpsManagerModal, setShowOpsManagerModal] = useState<boolean>(false);
+  const [opsManagerInput, setOpsManagerInput] = useState<string>('');
+  const [isOpsManagerLoading, setIsOpsManagerLoading] = useState<boolean>(false);
+  const [opsManagerPreview, setOpsManagerPreview] = useState<any>(null);
+  const [opsManagerSuccess, setOpsManagerSuccess] = useState<boolean>(false);
+
+  const handleOpsManagerSubmit = async () => {
+      if (!opsManagerInput.trim()) return;
+      setIsOpsManagerLoading(true);
+      try {
+          const res = await fetch('/api/agents/operations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: opsManagerInput })
+          });
+          const data = await res.json();
+          setOpsManagerPreview(data);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsOpsManagerLoading(false);
+      }
+  };
+
+  const handleOpsManagerApprove = () => {
+      setOpsManagerSuccess(true);
+      setProductCount(prev => prev + 1);
+      setTimeout(() => {
+          setShowOpsManagerModal(false);
+          setOpsManagerSuccess(false);
+          setOpsManagerPreview(null);
+          setOpsManagerInput('');
+      }, 2000);
+  };
+
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
@@ -1313,12 +1349,20 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowAddItemModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
-                >
-                    <span>+ Add Item</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                      onClick={() => setShowOpsManagerModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#0071E3] text-white font-semibold rounded-xl shadow-md hover:bg-[#005bb5] transition-all font-inter text-sm"
+                  >
+                      <span>✨ Ask Operations Manager</span>
+                  </button>
+                  <button
+                      onClick={() => setShowAddItemModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                  >
+                      <span>+ Manual Add</span>
+                  </button>
+                </div>
             </div>
          </section>
 
@@ -1564,6 +1608,78 @@ export default function Dashboard() {
         </div>
       )}
 
+
+
+      {/* Operations Manager Modal */}
+      {showOpsManagerModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">OM</div>
+                <h2 className="text-xl font-bold font-outfit text-gray-900">Operations Manager</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOpsManagerModal(false);
+                  setOpsManagerPreview(null);
+                  setOpsManagerInput('');
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {opsManagerSuccess ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Item Added!</h3>
+                    <p className="text-sm text-gray-500 text-center mt-2">Your catalog has been updated.</p>
+                </div>
+            ) : opsManagerPreview ? (
+                <div className="flex flex-col gap-4">
+                    <p className="text-sm text-gray-600">I've extracted the following details. Would you like me to add this to your catalog?</p>
+                    <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 relative">
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded uppercase tracking-wider">Preview</div>
+                        <p className="text-sm font-semibold text-gray-900 mb-1">{opsManagerPreview.name}</p>
+                        <p className="text-xs text-gray-500 mb-2">{opsManagerPreview.category}</p>
+                        <p className="text-sm text-gray-700 mb-3">{opsManagerPreview.description}</p>
+                        <p className="text-lg font-bold text-gray-900">${opsManagerPreview.price}</p>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                        <button onClick={() => setOpsManagerPreview(null)} className="flex-1 py-2 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all">Edit</button>
+                        <button onClick={handleOpsManagerApprove} className="flex-1 py-2 rounded-lg font-semibold text-sm bg-[#0071E3] text-white hover:bg-[#005bb5] transition-all shadow-md">Approve</button>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col gap-4">
+                    <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-700 border border-gray-100">
+                        Hello! I'm your Operations Manager. What would you like to add to your catalog today? (e.g. "Add a dozen vanilla cupcakes for $24")
+                    </div>
+                    <textarea
+                        className="w-full border border-gray-300 p-3 rounded-xl text-sm focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none"
+                        placeholder="Type here..."
+                        rows={3}
+                        value={opsManagerInput}
+                        onChange={(e) => setOpsManagerInput(e.target.value)}
+                    />
+                    <button
+                        onClick={handleOpsManagerSubmit}
+                        disabled={isOpsManagerLoading || !opsManagerInput.trim()}
+                        className="w-full py-3 bg-[#0071E3] text-white font-bold rounded-xl shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center h-[48px]"
+                    >
+                        {isOpsManagerLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : "Submit"}
+                    </button>
+                </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {showAddItemModal && (
