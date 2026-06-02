@@ -52,7 +52,6 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   }, [isOpen, currentStepIndex, steps]);
 
   if (!isOpen || steps.length === 0) return null;
-  if (process.env.NEXT_PUBLIC_E2E === 'true') return null;
 
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
@@ -133,6 +132,8 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       {/* Speech Bubble */}
       <div
+        role="dialog"
+        aria-label={`Walkthrough Step: ${currentStep.title}`}
         className="fixed z-[1000] bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/50 rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
         style={bubbleStyle}
       >
