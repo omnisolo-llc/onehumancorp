@@ -58,6 +58,12 @@ impl Department for OperationsAgent {
             event_type: "tenant.order.fulfillment_ready".to_string(),
             payload: event.payload.clone(),
         };
+
+        // Invalidate dynamic storefront cache
+        let cache = crate::builder::edge::get_edge_cache();
+        let cache_tag = format!("ohc:cache:{}:storefront", event.tenant_id);
+        cache.invalidate_by_tag(&cache_tag).await;
+
         self.orchestrator.dispatch_event(cs_event).await
     }
 
