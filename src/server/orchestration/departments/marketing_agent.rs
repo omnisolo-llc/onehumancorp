@@ -22,10 +22,25 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.job.completed".to_string(),
+            "tenant.entity.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.entity.updated" {
+            let entity_type = event.payload.get("entity_type").and_then(|v| v.as_str()).unwrap_or("unknown");
+            if entity_type == "hours" || entity_type == "location" || entity_type == "catalog" {
+                let description = format!("Sync {} to Local Directories", entity_type);
+                let payload = serde_json::json!({
+                    "feature_type": "local_directory_sync",
+                    "entity_type": entity_type,
+                    "sync_status": "pending",
+                    "directories": ["google_maps", "apple_maps"]
+                });
+                return self.orchestrator.execute_action(DepartmentType::Marketing, description, event.tenant_id.clone(), ActionRisk::AutoExecute, payload).await.map(|_| ());
+            }
+        }
+
         let risk = ActionRisk::DraftForReview;
 
         if event.event_type == "tenant.job.completed" {

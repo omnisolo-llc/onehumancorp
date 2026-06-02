@@ -28,6 +28,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.review.received".to_string(),
         ]
     }
 
@@ -118,6 +119,27 @@ impl Department for CustomerSuccessAgent {
             ).await.map(|_| ())?;
 
             return Ok(());
+        }
+
+        if event.event_type == "tenant.review.received" {
+            let review = event.payload.get("review").and_then(|v| v.as_str()).unwrap_or("");
+            let rating = event.payload.get("rating").and_then(|v| v.as_f64()).unwrap_or(5.0);
+
+            let generated_response = if rating >= 4.0 {
+                format!("Thank you for the {}-star review! We appreciate your business.", rating)
+            } else {
+                "We're sorry to hear about your experience. We will do better next time.".to_string()
+            };
+
+            let description = format!("Draft reply for {}-star review", rating);
+            let action_payload = serde_json::json!({
+                "feature_type": "review_reply",
+                "original_review": review,
+                "rating": rating,
+                "generated_response": generated_response,
+            });
+
+            return self.orchestrator.execute_action(DepartmentType::CustomerSuccess, description, event.tenant_id.clone(), ActionRisk::DraftForReview, action_payload).await.map(|_| ());
         }
 
         self.orchestrator.execute_action(
