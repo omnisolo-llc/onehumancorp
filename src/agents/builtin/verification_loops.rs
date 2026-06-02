@@ -4,6 +4,8 @@ use std::sync::Arc;
 use serde::Deserialize;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
 
+/// 10. Verification Loops (Quality x3): Giving the model ways to verify work. Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests), Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
+
 /// A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
 pub trait ComputationalGuide: Send + Sync {
@@ -221,6 +223,7 @@ mod tests {
         assert!(err.contains("Playwright") || err.contains("Failed to execute"));
     }
 
+    #[tokio::test]
     async fn test_playwright_visual_verifier() {
         // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
         // but test the struct initialization.

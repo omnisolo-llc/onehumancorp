@@ -2293,9 +2293,6 @@ impl Agent {
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
-                if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
-                }
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
@@ -2303,10 +2300,6 @@ impl Agent {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
                 }
 
-                if let Err(e) = verification_manager.run_computational_guides("", "").await {
-                    messages.push(Message::user(e));
-                    continue;
-                }
                 if let Err(e) = verification_manager.run_visual_verifiers("").await {
                     messages.push(Message::user(e));
                     continue;
@@ -2327,6 +2320,37 @@ impl Agent {
                     content: last_assistant_content.clone(),
                 });
                 return Ok(last_assistant_content);
+            }
+
+
+            // Verification Loops (Sensors vs Guides): Guides steer before action.
+            let mut verification_manager = crate::verification_loops::VerificationManager::new();
+            if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
+                verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+            }
+
+            if !tool_calls.is_empty() {
+                if let Err(e) = verification_manager.run_computational_guides("", "").await {
+                    // LLM called tools, but a computational guide failed. We must answer the tool calls with the error
+                    // to satisfy the API's strict conversation sequence rules.
+                    let mut tool_results = Vec::new();
+                    for tc in &tool_calls {
+                        tool_results.push(crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: format!("Execution blocked by Computational Guide (Feedforward Sensor): {}. Please fix the issue before trying again.", e),
+                        });
+                    }
+                    messages.push(crate::types::Message {
+                        role: crate::types::Role::Tool,
+                        content: String::new(),
+                        tool_calls: vec![],
+                        tool_results,
+                        response_id: None,
+                        previous_response_id: Some(resp.response_id.clone().unwrap_or_default()),
+                    });
+                    continue; // Skip tool execution and loop back to the LLM with the guide error.
+                }
             }
 
             // Execute tool calls and collect results.
@@ -5285,6 +5309,74 @@ mod tests {
 
         // Since it always fails the guide, it should eventually exit or error depending on how max_iterations is handled
         assert!(result.is_err() || result.is_ok());
+    }
+
+
+    #[tokio::test]
+    async fn test_verification_loops_guides_vs_sensors() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "I will call a tool".to_string(),
+                        tool_calls: vec![
+                            crate::types::ToolCall {
+                                id: "call_1".to_string(),
+                                name: "some_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            }
+                        ],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                },
+                ChatResponse {
+                    message: crate::types::Message::assistant("I am done"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                }
+            ]),
+        });
+
+        struct MyMockToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MyMockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("tool_output".to_string())
+            }
+        }
+
+        let tool = Tool {
+            name: "some_tool".to_string(),
+            description: "A tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MyMockToolExecutor),
+        };
+
+        let agent = Agent::new(client, vec![tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 3;
+        cfg.enable_computational_guides = true;
+        cfg.computational_guide_command = "exit 1".to_string(); // This will simulate a guide failure
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Do the task", &mut on_event).await;
+
+        // Since the guide fails, the tool should NOT be executed.
+        // The guide returns an error which is sent back to the LLM as tool results.
+        // Then the LLM says "I am done" and terminates.
+        assert!(result.is_ok());
+        let final_output = result.unwrap();
+        assert_eq!(final_output, "I am done");
     }
 
     #[tokio::test]
