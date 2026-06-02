@@ -74,9 +74,12 @@ pub async fn handle_edge_request_impl(
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         let mut response = Html(cached_html).into_response();
+
+        // Return with stale-while-revalidate defaults quickly on cache hit. Actual accurate value updated on regeneration
+        let cache_control_str = "public, s-maxage=60, stale-while-revalidate=86400";
         response.headers_mut().insert(
             CACHE_CONTROL,
-            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+            cache_control_str.parse().unwrap(),
         );
         if stale {
             // Spawn background regeneration logic if it was stale, but prevent thundering herd
@@ -114,9 +117,10 @@ pub async fn handle_edge_request_impl(
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
             let mut response = Html(cached_html).into_response();
+            let cache_control_str = "public, s-maxage=60, stale-while-revalidate=86400";
             response.headers_mut().insert(
                 CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                cache_control_str.parse().unwrap(),
             );
             return Ok(response);
         }
@@ -131,11 +135,33 @@ pub async fn handle_edge_request_impl(
 
     let (html, _tags) = result?;
 
+    let (s_maxage, swr) = match sqlx::query!("SELECT s_maxage, stale_while_revalidate FROM ohc_storefront_cache_config WHERE tenant_id = $1", tenant_id_str)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(Some(row)) => (row.s_maxage, row.stale_while_revalidate),
+        _ => (60, 86400),
+    };
+
+    let cache_control_str = format!("public, s-maxage={}, stale-while-revalidate={}", s_maxage, swr);
+
     let mut response = Html(html).into_response();
     response.headers_mut().insert(
         CACHE_CONTROL,
-        "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        cache_control_str.parse().unwrap(),
     );
+
+    // Insert into tracking table using ON CONFLICT on cache key constraint
+    let tags_json = serde_json::to_value(&_tags).unwrap_or(serde_json::Value::Array(vec![]));
+    let asset_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query!(
+        "INSERT INTO ohc_edge_asset (id, tenant_id, cache_key, tags) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, cache_key) DO UPDATE SET tags = EXCLUDED.tags, updated_at = CURRENT_TIMESTAMP",
+        asset_id,
+        tenant_id_str,
+        cache_key,
+        tags_json
+    ).execute(&state.pool).await;
+
     Ok(response)
 }
 
