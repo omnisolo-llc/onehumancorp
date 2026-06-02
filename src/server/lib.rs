@@ -1,3 +1,9 @@
+#[cfg(test)]
+pub mod ohc_job_queue_test;
+pub mod ohc_worker;
+pub mod ohc_job_queue;
+pub mod ohc_universal_ledger;
+pub mod redlock;
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
