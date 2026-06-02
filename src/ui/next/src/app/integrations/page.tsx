@@ -130,6 +130,8 @@ export default function Integrations() {
       </div>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full">
+        <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Custom Software</h1>
+        <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Social Media Accounts</h2>
 
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-8 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">

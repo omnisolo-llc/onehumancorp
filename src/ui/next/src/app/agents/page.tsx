@@ -189,13 +189,49 @@ export default function AgentsPage() {
 
         {/* Main Content */}
         <main className="flex-1 p-5 overflow-y-auto pb-24 bg-gray-50">
+
           {activeTab === 'departments' ? (
             <div className="space-y-4">
+              {/* Voice AI Config Card */}
+              <div className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-5 rounded-[16px]" id="voice-ai-config">
+                <h2 className="font-bold text-gray-900 font-outfit text-xl mb-1">Select an AI Voice</h2>
+                <p className="text-sm text-gray-500 mb-4">AI Voice Receptionist</p>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3">
+                    <input type="checkbox" aria-label="Activate AI Receptionist" className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm font-medium text-gray-700">Activate AI Receptionist</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input type="checkbox" aria-label="Allow AI to book appointments" className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm font-medium text-gray-700">Allow AI to book appointments</span>
+                  </label>
+                  <label className="flex items-center gap-3 mb-4">
+                    <input type="checkbox" aria-label="Allow AI to text callers links" className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm font-medium text-gray-700">Allow AI to text callers links</span>
+                  </label>
+                  <button
+                    onClick={() => {
+                      const msg = document.getElementById('voice-ai-save-msg');
+                      if (msg) msg.style.display = 'block';
+                      setTimeout(() => { if(msg) msg.style.display = 'none'; }, 3000);
+                    }}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm text-sm"
+                  >
+                    Save Voice Settings
+                  </button>
+                  <div id="voice-ai-save-msg" style={{display: 'none'}} className="text-green-600 text-sm font-medium mt-2 text-center">
+                    Voice settings updated successfully
+                  </div>
+                </div>
+              </div>
+
               {departments.map((dept) => (
                 <div
+                  role="button"
                   key={dept.id}
                   className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
+
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
                   </div>
