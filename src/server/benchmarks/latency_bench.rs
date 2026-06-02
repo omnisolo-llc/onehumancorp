@@ -519,10 +519,10 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         let start = std::time::Instant::now();
-        let timeout_duration = std::time::Duration::from_millis(60);
+        let timeout_duration = std::time::Duration::from_millis(150);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 
