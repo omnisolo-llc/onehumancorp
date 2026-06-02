@@ -483,6 +483,7 @@ struct HttpMetricsResponse {
     pending_orders: i64,
     total_sales: f64,
     total_campaigns_sent: i64,
+    waitlist_count: i64,
 }
 
 async fn http_metrics_handler(
@@ -518,7 +519,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
+    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, waitlist_count_res) = tokio::join!(
         async {
             match &db.store {
                 crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
@@ -542,6 +543,12 @@ async fn http_metrics_handler(
                 crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
                 crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
             }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM waitlist_entries WHERE organization_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM waitlist_entries WHERE organization_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+            }
         }
     );
 
@@ -549,10 +556,11 @@ async fn http_metrics_handler(
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
+    let waitlist_count = waitlist_count_res.unwrap_or(0);
 
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent }),
+        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, waitlist_count }),
     )
         .into_response()
 }

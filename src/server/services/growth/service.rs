@@ -16,7 +16,6 @@ pub struct MyGrowthService {
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
-    waitlist: RwLock<Vec<WaitlistEntry>>,
     onboarding_funnels: RwLock<Vec<OnboardingFunnel>>,
 }
 
@@ -28,7 +27,6 @@ impl MyGrowthService {
             experiments: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
-            waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
         }
     }
@@ -521,11 +519,37 @@ impl GrowthService for MyGrowthService {
 
     async fn get_waitlist(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<WaitlistResponse>, Status> {
-        let wl = self.waitlist.read().unwrap();
+        let org_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query("SELECT id, organization_id, customer_id, resource_id, intent_timestamp, priority_score, status, created_at FROM waitlist_entries WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut entries = Vec::new();
+        for row in rows {
+            entries.push(WaitlistEntry {
+                id: row.get("id"),
+                tenant_id: row.get("organization_id"),
+                customer_id: row.get("customer_id"),
+                resource_id: row.get("resource_id"),
+                intent_timestamp_unix: row.get("intent_timestamp"),
+                priority_score: row.get("priority_score"),
+                status: row.get("status"),
+                created_at_unix: row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|t| t.timestamp()).unwrap_or(0),
+            });
+        }
+
         Ok(Response::new(WaitlistResponse {
-            entries: wl.clone(),
+            entries,
         }))
     }
 
@@ -533,19 +557,39 @@ impl GrowthService for MyGrowthService {
         &self,
         request: Request<CreateWaitlistRequest>,
     ) -> Result<Response<WaitlistEntry>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
-        if req.email.is_empty() {
-            return Err(Status::invalid_argument("email is required"));
-        }
         
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let id = format!("wl-{}", Utc::now().timestamp_millis());
+        let intent_timestamp = Utc::now().timestamp();
+
+        sqlx::query("INSERT INTO waitlist_entries (id, organization_id, customer_id, resource_id, intent_timestamp, priority_score, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(&id)
+            .bind(&org_id)
+            .bind(&req.customer_id)
+            .bind(&req.resource_id)
+            .bind(intent_timestamp)
+            .bind(req.priority_score)
+            .bind("pending")
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         let entry = WaitlistEntry {
-            id: format!("wl-{}", Utc::now().timestamp()),
-            email: req.email,
-            created_at_unix: Utc::now().timestamp(),
+            id,
+            tenant_id: org_id,
+            customer_id: req.customer_id,
+            resource_id: req.resource_id,
+            intent_timestamp_unix: intent_timestamp,
+            priority_score: req.priority_score,
+            status: "pending".to_string(),
+            created_at_unix: intent_timestamp,
         };
-        
-        let mut wl = self.waitlist.write().unwrap();
-        wl.push(entry.clone());
         
         Ok(Response::new(entry))
     }

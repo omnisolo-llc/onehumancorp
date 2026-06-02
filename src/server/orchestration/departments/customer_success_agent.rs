@@ -28,6 +28,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.waitlist.offered".to_string(),
         ]
     }
 
@@ -42,6 +43,21 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.waitlist.offered" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let resource_id = event.payload.get("resource_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                format!("Send time-limited claim link to customer {} for resource {}", customer_id, resource_id),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await?;
+
+            return Ok(());
+        }
 
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;

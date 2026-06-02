@@ -22,10 +22,80 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.capacity.opened".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.capacity.opened" {
+            let resource_id = event.payload.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            let db = self.orchestrator.db();
+            let tenant_id = &event.tenant_id;
+
+            let row = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query("SELECT id, customer_id FROM waitlist_entries WHERE organization_id = $1 AND resource_id = $2 AND status = 'pending' ORDER BY priority_score DESC, intent_timestamp ASC LIMIT 1")
+                        .bind(tenant_id)
+                        .bind(resource_id)
+                        .fetch_optional(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("SELECT id, customer_id FROM waitlist_entries WHERE organization_id = $1 AND resource_id = $2 AND status = 'pending' ORDER BY priority_score DESC, intent_timestamp ASC LIMIT 1")
+                        .bind(tenant_id)
+                        .bind(resource_id)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                }
+            };
+
+            if let Some(row) = row {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let customer_id: String = row.get("customer_id");
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("UPDATE waitlist_entries SET status = 'offered' WHERE id = $1")
+                            .bind(&id)
+                            .execute(&db.pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("UPDATE waitlist_entries SET status = 'offered' WHERE id = $1")
+                            .bind(&id)
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+
+                let wl_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: tenant_id.clone(),
+                    event_type: "tenant.waitlist.offered".to_string(),
+                    payload: serde_json::json!({
+                        "customer_id": customer_id,
+                        "resource_id": resource_id
+                    }),
+                };
+                self.orchestrator.dispatch_event(wl_event).await?;
+
+                self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    format!("Capacity opened: Waitlist priority triggered for resource {}", resource_id),
+                    tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    serde_json::json!({"customer_id": customer_id}),
+                ).await?;
+            }
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

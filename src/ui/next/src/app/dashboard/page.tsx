@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
+  const [waitlistCount, setWaitlistCount] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
@@ -272,6 +273,7 @@ export default function Dashboard() {
                 const metricsData = await metricsRes.json();
                 setTodaysSales(metricsData.total_sales);
                 setActiveCustomers(metricsData.active_customers);
+                setWaitlistCount(metricsData.waitlist_count || 0);
                 setPendingOrders(metricsData.pending_orders);
             }
 
@@ -463,6 +465,10 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div id="waitlist-dashboard-card" className="bg-white p-5 border shadow-sm flex flex-col gap-2" style={{ borderColor: "rgba(0,0,0,0.05)", borderRadius: "16px" }}>
+            <span className="text-sm font-medium text-gray-500">Waitlist Active</span>
+            <span className="text-3xl font-bold font-outfit text-gray-900">{waitlistCount}</span>
+          </div>
                <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
