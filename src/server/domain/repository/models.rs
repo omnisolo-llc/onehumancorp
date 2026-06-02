@@ -198,3 +198,15 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ConversationalCheckoutSession {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub status: String,
+    pub deposit_amount: Option<f64>,
+    pub inventory_lock_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
