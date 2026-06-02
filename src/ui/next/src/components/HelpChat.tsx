@@ -89,7 +89,9 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
+  const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
+  const forceChat = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
+  if (isE2E && !forceChat) {
     return null; // Disable in E2E
   }
 
