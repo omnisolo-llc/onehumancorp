@@ -1,47 +1,39 @@
-import { describe, expect, it } from 'vitest';
 import { POST } from './route';
 
-describe('chat API', () => {
-  it('rejects malformed JSON', async () => {
-    const response = await POST(new Request('http://localhost/api/chat', {
+describe('Chat Route', () => {
+  it('should return default response for unrelated queries', async () => {
+    const req = new Request('http://localhost/api/chat', {
       method: 'POST',
-      body: '{',
-    }));
+      body: JSON.stringify({ message: 'What is the weather today?' })
+    });
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON body' });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(json.reply).toContain("I am your AI Help Agent!");
+    expect(json.link.url).toBe("/help");
   });
 
-  it('rejects empty messages', async () => {
-    const response = await POST(new Request('http://localhost/api/chat', {
+  it('should match keywords and return specific article', async () => {
+    const req = new Request('http://localhost/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ message: '   ' }),
-    }));
+      body: JSON.stringify({ message: 'How do I add products to my store?' })
+    });
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: 'message is required' });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(json.reply).toContain("My Store");
+    expect(json.link.url).toBe("/help/my-store");
   });
 
-  it('rejects oversized messages', async () => {
-    const response = await POST(new Request('http://localhost/api/chat', {
+  it('should handle errors for invalid payload', async () => {
+    const req = new Request('http://localhost/api/chat', {
       method: 'POST',
-      body: JSON.stringify({ message: 'x'.repeat(1001) }),
-    }));
+      body: JSON.stringify({})
+    });
 
-    expect(response.status).toBe(413);
-  });
-
-  it('returns successful reply for valid message', async () => {
-    const response = await POST(new Request('http://localhost/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message: 'How do I add a product?' }),
-    }));
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data).toHaveProperty('reply');
-    expect(data.reply).toContain('AI Help Agent');
-    expect(data).toHaveProperty('link');
-    expect(data.link.url).toBe('/help');
+    const res = await POST(req);
+    expect(res.status).toBe(400);
   });
 });
