@@ -2,7 +2,6 @@
 mod tests {
     use server_lib::queue::{QueueManager, SubAgentJob};
     use sqlx::postgres::PgPoolOptions;
-    use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::Executor;
 
     #[tokio::test]
@@ -32,5 +31,4 @@ mod tests {
             let _ = qm.enqueue(job).await;
         }
     }
-
 }
