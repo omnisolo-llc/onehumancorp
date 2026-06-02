@@ -36,6 +36,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -970,9 +971,25 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
 
+        let compressed_prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
+
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        hasher.update(compressed_prompt.as_bytes());
+        let prompt_hash = hex::encode(hasher.finalize());
+        let ai_cache_key = format!("ai_cache:reason:{}", prompt_hash);
+
+        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        if let Some(cached_output) = ai_cache.get(&ai_cache_key).await {
+            return Ok(Response::new(ReasonResponse { content: cached_output }));
+        }
+
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+        match client.reason(&compressed_prompt).await {
+            Ok(content) => {
+                ai_cache.set(&ai_cache_key, content.clone(), std::time::Duration::from_secs(3600)).await;
+                Ok(Response::new(ReasonResponse { content }))
+            },
             Err(e) => Err(Status::internal(e)),
         }
     }
