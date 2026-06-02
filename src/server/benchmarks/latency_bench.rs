@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
 use chrono::Utc;
 use uuid::Uuid;
+use sqlx;
 
 pub async fn bench_queue_latency() {
 
@@ -400,6 +401,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_hybrid_latency() {
+        bench_hybrid_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
         bench_dashboard_snapshot().await;
     }
@@ -459,6 +465,21 @@ mod tests {
 
 }
 
+pub async fn bench_hybrid_latency() {
+    tracing::info!("--- Running Hybrid Latency Benchmark ---");
+
+    tracing::info!("1. Database Query Time");
+    bench_db_query_time().await;
+
+    tracing::info!("2. AI Job Dispatch Latency");
+    bench_queue_latency().await;
+
+    tracing::info!("3. API Response Time (Dashboard Snapshot)");
+    bench_api_response_time().await;
+
+    tracing::info!("--- Hybrid Latency Benchmark Complete ---");
+}
+
 pub async fn bench_advisory_insights_latency() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 10; // Few iterations due to Minimax API
@@ -466,7 +487,7 @@ pub async fn bench_advisory_insights_latency() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(crate::auth::Store::new());
+        let _store = std::sync::Arc::new(::server_auth::Store::new());
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
