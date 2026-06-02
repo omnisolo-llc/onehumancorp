@@ -42,7 +42,7 @@ function cleanup() {
 trap cleanup EXIT
 
 wait_for_port 5432 "Postgres"
-wait_for_port 6379 "Redis"
+wait_for_port 6379 "Valkey"
 
 echo "[e2e-no-bazel] Starting server..."
 export DATABASE_URL="postgres://ohc:ohc@localhost:5432/ohc"
