@@ -26,6 +26,7 @@ pub struct CreateInvoiceDraftRequest {
     pub due_date: Option<chrono::DateTime<Utc>>,
     pub items: Vec<CreateInvoiceLineItem>,
     pub tax_nexus: Option<String>,
+    pub split_config: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -61,6 +62,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/ledger/invoice/:id/update", put(update_invoice_status))
         .route("/api/ledger/invoice/:id/pay", post(apply_payment))
         .route("/api/ledger/entries/:tenant_id", get(get_ledger_entries))
+        .route("/api/ledger/invoice/:id/split", post(process_split_payments))
 }
 
 async fn get_invoice(
@@ -110,6 +112,7 @@ async fn create_invoice_draft(
         total_amount: Some(total_amount),
         currency: Some("USD".to_string()),
         tax_nexus: payload.tax_nexus,
+        split_config: payload.split_config.map(sqlx::types::Json),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
     };
@@ -161,5 +164,44 @@ async fn get_ledger_entries(
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+use crate::integrations::stripe::client::StripeClient;
+use crate::orchestration::queue::ohc_job_queue::OHCJobQueue;
+
+#[derive(Deserialize)]
+pub struct ProcessSplitRequest {
+    pub tenant_id: String,
+    pub invoice_id: String,
+}
+
+pub async fn process_split_payments(
+    State(state): State<AppState>,
+    Json(payload): Json<ProcessSplitRequest>,
+) -> impl IntoResponse {
+    let repo = LedgerRepository::new(state.db.clone());
+    let invoice = match repo.get_invoice(&payload.tenant_id, &payload.invoice_id).await {
+        Ok(Some(inv)) => inv,
+        _ => return (StatusCode::NOT_FOUND, "Invoice not found").into_response(),
+    };
+
+    let split_config = match invoice.split_config {
+        Some(config) => config.0,
+        None => return (StatusCode::BAD_REQUEST, "No split config").into_response(),
+    };
+
+    let queue = OHCJobQueue::new(state.db.pool.clone());
+
+    match queue.enqueue(
+        &payload.tenant_id,
+        "split_payment",
+        &serde_json::json!({
+            "invoice_id": invoice.id,
+            "split_config": split_config
+        })
+    ).await {
+        Ok(job_id) => (StatusCode::ACCEPTED, Json(serde_json::json!({ "job_id": job_id }))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response()
     }
 }

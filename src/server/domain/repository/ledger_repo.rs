@@ -20,13 +20,15 @@ impl LedgerRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO invoices (
+                        split_config,
                         id, tenant_id, customer_id, status, due_date,
                         total_amount, currency, tax_nexus, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ) VALUES ($11, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     "#
                 )
                 .bind(&invoice.id).bind(&invoice.tenant_id).bind(&invoice.customer_id).bind(&invoice.status)
-                .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(&invoice.tax_nexus)
+                .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(.bind(&invoice.tax_nexus)invoice.tax_nexus)
+                .bind(.bind(&invoice.tax_nexus)invoice.split_config)
                 .bind(&invoice.created_at).bind(&invoice.updated_at)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -49,13 +51,15 @@ impl LedgerRepository {
                 sqlx::query(
                     r#"
                     INSERT INTO invoices (
+                        split_config,
                         id, tenant_id, customer_id, status, due_date,
                         total_amount, currency, tax_nexus, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&invoice.id).bind(&invoice.tenant_id).bind(&invoice.customer_id).bind(&invoice.status)
-                .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(&invoice.tax_nexus)
+                .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(.bind(&invoice.tax_nexus)invoice.tax_nexus)
+                .bind(.bind(&invoice.tax_nexus)invoice.split_config)
                 .bind(&invoice.created_at).bind(&invoice.updated_at)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -328,6 +332,7 @@ mod ledger_tests {
             due_date: Some(Utc::now()),
             total_amount: Some(100.0),
             currency: Some("USD".into()),
+            split_config: None,
             tax_nexus: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
@@ -365,6 +370,7 @@ mod ledger_tests {
             due_date: Some(Utc::now()),
             total_amount: Some(250.0),
             currency: Some("USD".into()),
+            split_config: None,
             tax_nexus: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
@@ -422,6 +428,7 @@ mod ledger_tests {
             due_date: Some(Utc::now()),
             total_amount: Some(50.0),
             currency: Some("USD".into()),
+            split_config: None,
             tax_nexus: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
@@ -436,6 +443,7 @@ mod ledger_tests {
             due_date: Some(Utc::now()),
             total_amount: Some(70.0),
             currency: Some("USD".into()),
+            split_config: None,
             tax_nexus: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),

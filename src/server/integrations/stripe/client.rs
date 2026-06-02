@@ -151,3 +151,15 @@ mod tests {
         assert_eq!(token, "tss_mock_token_for_test_tenant");
     }
 }
+
+    pub async fn initiate_connect_transfer(&self, sub_merchant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            sub_merchant_id, // assume proxy for organization_id
+            "stripe_connect_transfer",
+            0.05 // mock cost
+        ).await;
+
+        // Mock Stripe Connect Transfer creation
+        Ok(format!("tr_{}", uuid::Uuid::new_v4().to_simple()))
+    }
