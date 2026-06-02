@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package ohc.invoicing;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/invoicing;invoicingpb";
+
+message InvoiceItem {
+  string id = 1;
+  string description = 2;
+  double amount_usd = 3;
+}
+
+message Invoice {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  double total_amount_usd = 4;
+  string status = 5;
+  repeated InvoiceItem items = 6;
+  string payment_link = 7;
+}
+
+message CreateInvoiceRequest {
+  string customer_id = 1;
+  string natural_language_prompt = 2;
+}
+
+message CreateInvoiceResponse {
+  Invoice invoice = 1;
+}
+
+message GetInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoiceResponse {
+  Invoice invoice = 1;
+}
+
+message ListInvoicesRequest {
+  string customer_id = 1; // Optional
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+}
+
+service InvoiceService {
+  rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+}

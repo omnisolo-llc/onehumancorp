@@ -14,6 +14,8 @@ rust_library(
     name = "server_services",
     srcs = [
         "bazel_lib.rs",
+        "invoicing/mod.rs",
+        "invoicing/service.rs",
         "booking.rs",
         "mod.rs",
         "wizard.rs",
@@ -99,6 +101,8 @@ rust_library(
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
+        "//src/proto:invoicing_prost",
+        "//src/proto:invoicing_tonic",
         "//src/server:server_lib",
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",

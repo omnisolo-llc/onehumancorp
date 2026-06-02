@@ -2981,6 +2981,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
+
     let store = std::sync::Arc::new(crate::auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)

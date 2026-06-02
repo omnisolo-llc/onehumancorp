@@ -215,3 +215,18 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# ── Invoicing ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "invoicing_proto",
+    srcs = ["invoice.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "invoicing",
+    proto = ":invoicing_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
