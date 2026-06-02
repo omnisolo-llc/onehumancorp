@@ -28,6 +28,7 @@ export default function WebsiteBuilderPage() {
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [template, setTemplate] = useState("");
+  const [instantDesc, setInstantDesc] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
@@ -518,14 +519,60 @@ export default function WebsiteBuilderPage() {
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
+                      value={instantDesc}
+                      onChange={(e) => setInstantDesc(e.target.value)}
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
+                      onClick={async () => {
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        try {
+                          const currentTenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                          const res = await fetch('/api/v1/builder/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': currentTenantId },
+                            body: JSON.stringify({ description: instantDesc })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            const siteDraft = data.site_draft || data;
+                            if (siteDraft && siteDraft.pages && siteDraft.pages.length > 0) {
+                               const convertedBlocks = siteDraft.pages[0].blocks.map((b: any) => ({
+                                  type: b.block_type === 'HeroBlock' ? 'Hero' :
+                                        b.block_type === 'ProductGridBlock' ? 'Catalog' :
+                                        b.block_type === 'ServiceBookingBlock' ? 'Booking' :
+                                        b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
+                                  props: b.content
+                               }));
+                               setBlocks(convertedBlocks);
+                               localStorage.setItem("ohc_builder_blocks", JSON.stringify(convertedBlocks));
+                            }
+
+                            // Publish right away since it's instant build
+                            const publishRes = await fetch('/api/v1/builder/publish_draft', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': currentTenantId },
+                              body: JSON.stringify({
+                                domain: null,
+                                draft: siteDraft
+                              })
+                            });
+
+                            if (publishRes.ok) {
+                                const pubData = await publishRes.json();
+                                const url = `https://${pubData.domain || 'myshop'}.ohc.store`;
+                                setLiveUrl(url);
+                                localStorage.setItem("ohc_builder_liveUrl", url);
+                                setStatus('live');
+                            } else {
+                                setStatus('idle');
+                            }
+                          } else {
+                            setStatus('idle');
+                          }
+                        } catch (e) {
+                          setStatus('idle');
+                        }
                       }}
                     >
                       Generate Storefront

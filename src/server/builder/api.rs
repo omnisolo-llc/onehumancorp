@@ -40,6 +40,15 @@ pub struct SiteDraft {
     pub pages: Vec<DraftPage>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct StoreProfile {
+    pub theme: String,
+    pub products: Vec<serde_json::Value>,
+    pub shipping_settings: serde_json::Value,
+    pub tax_settings: serde_json::Value,
+    pub site_draft: SiteDraft,
+}
+
 #[derive(Deserialize)]
 pub struct GenerateStorefrontRequest {
     pub description: String,
@@ -1177,7 +1186,7 @@ async fn generate_storefront(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<GenerateStorefrontRequest>,
-) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
+) -> Result<Json<StoreProfile>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
         .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let persisted_brand_dna = if payload.brand_dna.is_none() {
@@ -1192,10 +1201,13 @@ async fn generate_storefront(
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     if api_key.trim().is_empty() {
-        return Ok(Json(synthesize_site_draft(
-            &payload.description,
-            active_brand_dna,
-        )));
+        return Ok(Json(StoreProfile {
+            theme: "Modern".to_string(),
+            products: vec![],
+            shipping_settings: serde_json::json!({"zone": "Local", "rate": "0.00"}),
+            tax_settings: serde_json::json!({"rate": "0.0%"}),
+            site_draft: synthesize_site_draft(&payload.description, active_brand_dna),
+        }));
     }
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
@@ -1256,41 +1268,51 @@ Then, instantly generate a structural layout draft that optimizes for the 375px 
 
 The JSON must exactly match this structure:
 {{
-  "domain": null,
-  "pages": [
-    {{
-      "path": "/",
-      "title": "Home",
-      "blocks": [
-        {{
-          "block_type": "HeroBlock",
-          "content": {{ "headline": "...", "subtitle": "..." }},
-          "sort_order": 0
-        }},
-        {{
-          "block_type": "ProductGridBlock",
-          "content": {{ "items": [{{ "name": "...", "price": "...", "description": "..." }}] }},
-          "sort_order": 1
-        }},
-        {{
-          "block_type": "ServiceBookingBlock",
-          "content": {{ "title": "...", "availability": "..." }},
-          "sort_order": 2
-        }},
-        {{
-          "block_type": "TestimonialBlock",
-          "content": {{ "quotes": [{{ "text": "...", "author": "..." }}] }},
-          "sort_order": 3
+  "theme": "Modern",
+  "products": [
+     {{ "name": "...", "price": "...", "description": "..." }},
+     {{ "name": "...", "price": "...", "description": "..." }},
+     {{ "name": "...", "price": "...", "description": "..." }}
+  ],
+  "shipping_settings": {{ "zone": "Local", "rate": "5.00" }},
+  "tax_settings": {{ "rate": "8.5%" }},
+  "site_draft": {{
+    "domain": null,
+    "pages": [
+      {{
+        "path": "/",
+        "title": "Home",
+        "blocks": [
+          {{
+            "block_type": "HeroBlock",
+            "content": {{ "headline": "...", "subtitle": "..." }},
+            "sort_order": 0
+          }},
+          {{
+            "block_type": "ProductGridBlock",
+            "content": {{ "items": [{{ "name": "...", "price": "...", "description": "..." }}] }},
+            "sort_order": 1
+          }},
+          {{
+            "block_type": "ServiceBookingBlock",
+            "content": {{ "title": "...", "availability": "..." }},
+            "sort_order": 2
+          }},
+          {{
+            "block_type": "TestimonialBlock",
+            "content": {{ "quotes": [{{ "text": "...", "author": "..." }}] }},
+            "sort_order": 3
+          }}
+        ],
+        "seo_metadata": {{
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          "name": "...",
+          "description": "..."
         }}
-      ],
-      "seo_metadata": {{
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "...",
-        "description": "..."
       }}
-    }}
-  ]
+    ]
+  }}
 }}
 Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
         business_context.name,
@@ -1300,21 +1322,33 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         source_context
     );
 
-    let site_draft: SiteDraft = match minimax.reason(&promoter_prompt).await {
+    let store_profile: StoreProfile = match minimax.reason(&promoter_prompt).await {
         Ok(promoter_response) => {
             let cleaned_response = clean_model_json(&promoter_response);
             serde_json::from_str(cleaned_response).unwrap_or_else(|e| {
                 tracing::warn!("Failed to parse JSON from Promoter AI, using heuristic storefront: {}", e);
-                synthesize_site_draft(&payload.description, active_brand_dna)
+                StoreProfile {
+                    theme: "Modern".to_string(),
+                    products: vec![],
+                    shipping_settings: serde_json::json!({"zone": "Local", "rate": "0.00"}),
+                    tax_settings: serde_json::json!({"rate": "0.0%"}),
+                    site_draft: synthesize_site_draft(&payload.description, active_brand_dna),
+                }
             })
         },
         Err(e) => {
             tracing::warn!("Promoter AI unavailable, using heuristic storefront: {}", e);
-            synthesize_site_draft(&payload.description, active_brand_dna)
+            StoreProfile {
+                theme: "Modern".to_string(),
+                products: vec![],
+                shipping_settings: serde_json::json!({"zone": "Local", "rate": "0.00"}),
+                tax_settings: serde_json::json!({"rate": "0.0%"}),
+                site_draft: synthesize_site_draft(&payload.description, active_brand_dna),
+            }
         }
     };
 
-    Ok(Json(site_draft))
+    Ok(Json(store_profile))
 }
 
 async fn publish_draft(

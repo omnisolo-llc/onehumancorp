@@ -111,6 +111,29 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the instant-build flow', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('generate')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            theme: "Modern",
+            products: [],
+            site_draft: {
+              domain: null,
+              pages: [{ blocks: [] }]
+            }
+          })
+        });
+      }
+      if (url.includes('publish_draft')) {
+         return Promise.resolve({
+           ok: true,
+           json: () => Promise.resolve({ domain: 'myshop' })
+         });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
     render(<WebsiteBuilderPage />);
 
     // Step 0
@@ -118,15 +141,15 @@ describe('WebsiteBuilderPage', () => {
 
     // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Generate Storefront'));
     });
 
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    // Wait for the async API calls to resolve
+    await waitFor(() => {
+       expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    });
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -228,11 +251,14 @@ describe('WebsiteBuilderPage', () => {
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
 
-    // Status changes to 'generating', wait for it
+    await act(async () => {
+      fireEvent.click(screen.getByText('Generate Storefront'));
+    });
+
+    // Wait for the async API calls to resolve
     await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+       expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
 
     act(() => {
@@ -242,7 +268,7 @@ describe('WebsiteBuilderPage', () => {
     // Should have called fetch to sync
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('status":"generating"')
+      body: expect.stringContaining('status":"live"')
     }));
   });
 });
