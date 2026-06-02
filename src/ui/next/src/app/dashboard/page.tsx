@@ -9,6 +9,18 @@ import { OneTapReferral } from "../components/OneTapReferral";
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [isOffline, setIsOffline] = useState(false);
+
+  // Local Visibility State
+  const [isGoogleConnected, setIsGoogleConnected] = useState<boolean>(false);
+  const [pendingReviews, setPendingReviews] = useState<any[]>([
+    {
+      id: "r1",
+      star_rating: 5,
+      reviewer_name: "Sarah Jenkins",
+      review_text: "Absolutely incredible service! They arrived on time and fixed the plumbing issue in no time.",
+      draft_reply: "Hi Sarah, thank you so much for the 5-star review! We're glad you had a great experience."
+    }
+  ]);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
@@ -726,6 +738,88 @@ export default function Dashboard() {
                    </div>
                 </div>
             </div>
+         </section>
+
+         {/* Local Visibility (Google Business Profile Sync & Review Feed) */}
+         <section className="mb-8" id="local-visibility-section">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Local Visibility</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">Google Sync</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-6 shadow-sm border rounded-2xl bg-white border-green-100 relative overflow-hidden mb-4" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10"></div>
+                <div className="flex items-start gap-4 justify-between">
+                   <div className="flex items-start gap-4">
+                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                     </div>
+                     <div>
+                         <h3 className="text-sm font-bold text-gray-900 mb-1">Google Maps Presence</h3>
+                         <p className="text-gray-800 text-sm leading-relaxed mb-2">
+                             {isGoogleConnected
+                               ? "Your hours, menu, and services are automatically syncing to Google Business Profile."
+                               : "Connect your Google Business Profile to automatically sync your hours, catalog, and manage reviews."}
+                         </p>
+                         {isGoogleConnected && <p className="text-xs font-bold text-green-700">🟢 Synced with Google Maps</p>}
+                     </div>
+                   </div>
+                   {!isGoogleConnected && (
+                     <button
+                        id="connect-google-business-btn"
+                        onClick={async () => {
+                            await fetch('/api/v1/growth/local-visibility/connect', { method: 'POST', body: JSON.stringify({ auth_code: "mock" }), headers: {'Content-Type': 'application/json'} });
+                            setIsGoogleConnected(true);
+                        }}
+                        className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
+                     >
+                        Connect Google Business Profile
+                     </button>
+                   )}
+                </div>
+            </div>
+
+            {/* Pending Reviews Feed */}
+            {isGoogleConnected && pendingReviews.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Review Approval Feed</h3>
+                    {pendingReviews.map(review => (
+                        <div key={review.id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-sm text-gray-900">{review.reviewer_name}</span>
+                                    <span className="text-yellow-500 text-xs">{"★".repeat(review.star_rating)}</span>
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-600 italic mb-4">"{review.review_text}"</p>
+
+                            <div className="p-3 bg-white border border-gray-100 rounded-lg mb-3">
+                                <p className="text-xs text-gray-400 font-bold uppercase mb-1">AI Draft Reply</p>
+                                <p className="text-sm text-gray-800">{review.draft_reply}</p>
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                                <button className="px-3 py-1.5 text-gray-600 text-xs font-medium hover:bg-gray-200 rounded-lg transition-colors border border-transparent">
+                                    Edit
+                                </button>
+                                <button
+                                    id={`approve-reply-${review.id}`}
+                                    onClick={() => {
+                                        setPendingReviews(pendingReviews.filter(r => r.id !== review.id));
+                                    }}
+                                    className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                >
+                                    Approve & Reply
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
          </section>
 
          {/* Growth Loop: Wall of Love Generator */}

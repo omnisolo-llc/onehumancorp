@@ -129,6 +129,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .nest("/local-visibility", crate::api::local_visibility::router())
         .layer(Extension(GrowthState { pool, hub }))
 }
 

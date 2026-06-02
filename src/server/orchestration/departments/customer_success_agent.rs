@@ -27,6 +27,7 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.review.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -43,17 +44,58 @@ impl Department for CustomerSuccessAgent {
             ActionRisk::DraftForReview
         };
 
+        if event.event_type == "tenant.review.received" {
+            let review_text = event.payload.get("review_text").and_then(|v| v.as_str()).unwrap_or("");
+            let reviewer_name = event.payload.get("reviewer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let star_rating = event.payload.get("star_rating").and_then(|v| v.as_f64()).unwrap_or(5.0);
+
+            // Mock AI draft response generation based on sentiment
+            let generated_response = if star_rating >= 4.0 {
+                format!("Hi {}, thank you so much for the {}-star review! We're glad you had a great experience.", reviewer_name, star_rating)
+            } else {
+                format!("Hi {}, we're sorry to hear about your experience. We would love to make this right. Please reach out to us directly.", reviewer_name)
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "review_reply",
+                "original_review": review_text,
+                "reviewer_name": reviewer_name,
+                "star_rating": star_rating,
+                "generated_response": generated_response,
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                format!("Draft review reply for Google from {}", reviewer_name),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await.map(|_| ());
+        }
+
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
             let original = payload.get("original_payload");
+
+            let feature_type = if let Some(orig) = original {
+                orig.get("feature_type").and_then(|v| v.as_str()).unwrap_or("")
+            } else {
+                ""
+            };
+
             let message = if let Some(orig) = original {
                 orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
             } else {
                 "Unknown response"
             };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
 
-            let content = format!("Sent response to customer: {}", message);
+            let content = if feature_type == "review_reply" {
+                tracing::info!("EXECUTING APPROVED REVIEW REPLY: Publishing to Google: {}", message);
+                format!("Published Google review reply: {}", message)
+            } else {
+                tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+                format!("Sent response to customer: {}", message)
+            };
 
             // Log the action in the agent's memory, handling errors and using proper defaults
             // Assuming we don't have an embedding service here, we use a zero vector
