@@ -12,7 +12,6 @@ rust_library(
         "caveman.rs",
         "code_native.rs",
         "core.rs",
-        "expert_team.rs",
         "hnsw_memory.rs",
         "output_parser.rs",
         "pubsub.rs",
@@ -46,6 +45,7 @@ rust_library(
     srcs = [
         "actor_model.rs",
         "agent.rs",
+        "expert_team.rs",
         "agent_protocol.rs",
         "auth.rs",
         "autogen.rs",

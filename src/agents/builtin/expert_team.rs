@@ -1,12 +1,9 @@
-use std::sync::Arc;
-use crate::types::{ChatRequest, Message, Role, ToolCall};
+
+
 use futures::future::join_all;
-
-#[async_trait::async_trait]
-pub trait ExpertTeamLlmClient: Send + Sync {
-    async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
-}
-
+use std::sync::Arc;
+use crate::types::{Message, ChatRequest, Role, ToolCall};
+use crate::agent::{Agent, AgentRunConfig};
 /// Skill-trace tracking to prevent hard-coded bypasses.
 #[derive(Debug, Clone, Default)]
 pub struct SkillTrace {
@@ -30,44 +27,40 @@ impl SkillTrace {
     }
 }
 
-pub struct DomainExpert<T: ExpertTeamLlmClient + ?Sized> {
+
+pub struct DomainExpert {
     pub role: String,
-    pub llm: std::sync::Arc<T>,
+    pub agent: std::sync::Arc<Agent>,
+    pub config: AgentRunConfig,
 }
 
-impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
+impl DomainExpert {
     pub async fn execute(&self, task: &str, trace: &mut SkillTrace) -> Result<String, String> {
         // Track the skill usage
         trace.record_skill(&format!("{}_analysis", self.role.to_lowercase().replace(" ", "_")));
 
         let system_prompt = format!("You are an expert in {}. Provide a detailed analysis based on the user's task.", self.role);
 
-        let req = ChatRequest {
-            model: "default".to_string(),
-            system: system_prompt,
-            messages: vec![Message::user(task)],
-            tools: vec![],
-            max_tokens: 4000,
-            temperature: 0.2,
-        };
+        let mut config = self.config.clone();
+        config.server_system_message = format!("{}
+{}", config.server_system_message, system_prompt);
 
-        match self.llm.chat(req).await {
-            Ok(resp) => {
-                let text = resp.message.content;
-                Ok(text)
-            }
+        let mut on_event = |_| {};
+
+        match self.agent.run(&config, task, &mut on_event).await {
+            Ok(output) => Ok(output),
             Err(e) => Err(format!("LLM Error: {}", e)),
         }
     }
 }
 
-pub struct ExpertTeamManager<T: ExpertTeamLlmClient + ?Sized> {
+pub struct ExpertTeamManager {
     pub lead_agent_name: String,
-    pub domain_experts: Vec<DomainExpert<T>>,
+    pub domain_experts: Vec<DomainExpert>,
 }
 
-impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
-    pub fn new(lead: &str, experts: Vec<DomainExpert<T>>) -> Self {
+impl ExpertTeamManager {
+    pub fn new(lead: &str, experts: Vec<DomainExpert>) -> Self {
         Self {
             lead_agent_name: lead.to_string(),
             domain_experts: experts,
@@ -86,12 +79,13 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
 
         for expert in &self.domain_experts {
             let role_name = expert.role.clone();
-            let llm_clone = expert.llm.clone();
+            let agent_clone = expert.agent.clone();
+            let config_clone = expert.config.clone();
             let task_clone = task.to_string();
 
             let fut = async move {
                 let mut local_trace = SkillTrace::new();
-                let expert_instance = DomainExpert { role: role_name, llm: llm_clone };
+                let expert_instance = DomainExpert { role: role_name, agent: agent_clone, config: config_clone };
                 let output = expert_instance.execute(&task_clone, &mut local_trace).await;
                 (output, local_trace.skills_used)
             };
@@ -138,7 +132,7 @@ pub struct QualityGates;
 impl QualityGates {
     /// Pre-flight (e.g., initialization check).
     /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy: Expert Team Feature).
-    pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(manager: &ExpertTeamManager<T>, task: &str) -> Result<(), String> {
+    pub fn pre_flight(manager: &ExpertTeamManager, task: &str) -> Result<(), String> {
         // Enforce 6 agent initialization
         // 1 Lead (already in manager) + 5 Domain/Quality experts = 6 total
         // Therefore, we expect exactly 5 domain_experts.
@@ -222,17 +216,26 @@ impl QualityGates {
 mod tests {
     use super::*;
 
-    use crate::types::{ChatResponse, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Usage};
+    use crate::llm::LlmClient;
+    use tokio::sync::Mutex;
 
     struct MockExpertLlm {
-        role_resp: String,
+        role_resp: Mutex<Vec<String>>,
     }
 
     #[async_trait::async_trait]
-    impl ExpertTeamLlmClient for MockExpertLlm {
+    impl LlmClient for MockExpertLlm {
         async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.role_resp.lock().await;
+            let resp_str = if resps.is_empty() {
+                "default".to_string()
+            } else {
+                resps.remove(0)
+            };
+
             Ok(ChatResponse {
-                message: Message::assistant(self.role_resp.clone()),
+                message: Message::assistant(resp_str),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: Some("mock-id".to_string()),
@@ -240,14 +243,21 @@ mod tests {
         }
     }
 
+    fn create_expert(role: &str, resp: &str) -> DomainExpert {
+        let client = Arc::new(MockExpertLlm { role_resp: Mutex::new(vec![resp.to_string()]) });
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let config = AgentRunConfig::default();
+        DomainExpert { role: role.to_string(), agent, config }
+    }
+
     #[tokio::test]
     async fn test_expert_team_successful_execution() {
         let experts = vec![
-            DomainExpert { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary... Chapter 1 and Chapter 2 unique words alpha beta".to_string() }) },
-            DomainExpert { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary... Chapter 3 and Chapter 4 distinct terms gamma delta".to_string() }) },
-            DomainExpert { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary... Chapter 5 and Chapter 6 different phrasing epsilon zeta".to_string() }) },
-            DomainExpert { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary... Chapter 7 some original ideas eta theta".to_string() }) },
-            DomainExpert { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary... Chapter 8 finalizing the text iota kappa".to_string() }) },
+            create_expert("Industry Researcher", "Research summary... Chapter 1 and Chapter 2 unique words alpha beta"),
+            create_expert("Financial Analyst", "Financial summary... Chapter 3 and Chapter 4 distinct terms gamma delta"),
+            create_expert("Strategic Analyst", "Strategic summary... Chapter 5 and Chapter 6 different phrasing epsilon zeta"),
+            create_expert("Process Supervisor", "Process summary... Chapter 7 some original ideas eta theta"),
+            create_expert("Quality Auditor", "Quality summary... Chapter 8 finalizing the text iota kappa"),
         ];
         let manager = ExpertTeamManager::new("Project Director", experts);
 
@@ -267,7 +277,13 @@ mod tests {
         assert!(QualityGates::pre_merge(&summaries).is_ok());
 
         // Lead agent combines the summaries into final output
-        let mut final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed with investment.\nWe include the Chart: Market Trends.", summaries.join("\n"));
+        let mut final_output = format!("Combined Executive Summary:
+{}
+
+Overall Strategy:
+Proceed with investment.
+We include the Chart: Market Trends.", summaries.join("
+"));
         // Pad to >= 20000 words
         let word_padding = "word ".repeat(20000);
         final_output.push_str(&word_padding);
@@ -278,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_pre_flight_failure_not_enough_experts() {
-        let experts = vec![DomainExpert { role: "Lone Wolf".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "".to_string() }) }];
+        let experts = vec![create_expert("Lone Wolf", "")];
         let manager = ExpertTeamManager::new("Lead", experts);
         let res = QualityGates::pre_flight(&manager, "Task");
         assert!(res.is_err());

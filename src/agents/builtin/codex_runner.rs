@@ -138,41 +138,31 @@ impl AppServer {
         if req.method == "run_expert_team" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-            struct LlmClientAdapter {
-                inner: Arc<dyn crate::llm::LlmClient>,
-            }
-
-            #[async_trait::async_trait]
-            impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
-                async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                    self.inner.chat(req).await
-                }
-            }
-
-            let adapter = Arc::new(LlmClientAdapter { inner: self.runner.core.agent.llm.clone() });
-
             // Expert Team Implementation
+            let agent_ref = Arc::new(crate::agent::Agent::new(self.runner.core.agent.llm.clone(), vec![]));
+            let config_ref = crate::agent::AgentRunConfig::default();
+
             let experts = vec![
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Industry Researcher".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Financial Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Strategic Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Process Supervisor".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Quality Auditor".to_string(), llm: adapter.clone() },
+                crate::expert_team::DomainExpert { role: "Industry Researcher".to_string(), agent: agent_ref.clone(), config: config_ref.clone() },
+                crate::expert_team::DomainExpert { role: "Financial Analyst".to_string(), agent: agent_ref.clone(), config: config_ref.clone() },
+                crate::expert_team::DomainExpert { role: "Strategic Analyst".to_string(), agent: agent_ref.clone(), config: config_ref.clone() },
+                crate::expert_team::DomainExpert { role: "Process Supervisor".to_string(), agent: agent_ref.clone(), config: config_ref.clone() },
+                crate::expert_team::DomainExpert { role: "Quality Auditor".to_string(), agent: agent_ref.clone(), config: config_ref.clone() },
             ];
 
-            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new("Project Director", experts);
+            let manager = crate::expert_team::ExpertTeamManager::new("Project Director", experts);
 
             // Gate 1: Pre-flight
-            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
+            if let Err(e) = crate::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
                 let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
                 return serde_json::to_string(&resp).unwrap();
             }
 
-            let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
+            let mut trace = crate::expert_team::SkillTrace::new();
             match manager.execute_parallel_tasks(&initial_message, &mut trace).await {
                 Ok(summaries) => {
                     // Gate 2: Pre-merge
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
+                    if let Err(e) = crate::expert_team::QualityGates::pre_merge(&summaries) {
                         let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
                         return serde_json::to_string(&resp).unwrap();
                     }
@@ -180,7 +170,7 @@ impl AppServer {
                     let final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n{}", summaries.join("\n"), " word".repeat(20000));
 
                     // Gate 3: Pre-deliver
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
+                    if let Err(e) = crate::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
                         let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
                         return serde_json::to_string(&resp).unwrap();
                     }
