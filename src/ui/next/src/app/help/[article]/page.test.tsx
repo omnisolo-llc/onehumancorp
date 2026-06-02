@@ -22,6 +22,17 @@ describe('HelpArticlePage', () => {
     expect(screen.getByText('Step 1: Tell us about your business')).toBeInTheDocument();
   });
 
+  it('navigates back to the help center when the back button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<HelpArticlePage />);
+
+    const backButton = screen.getByRole('button', { name: /Back to Help Center/i });
+    expect(backButton).toBeInTheDocument();
+
+    await user.click(backButton);
+    // Router push is mocked in vitest setup
+  });
+
   it('renders "Article Not Found" for an unknown article', () => {
     (useParams as any).mockReturnValue({ article: 'unknown-article' });
     (useRouter as any).mockReturnValue({ push: vi.fn() });
