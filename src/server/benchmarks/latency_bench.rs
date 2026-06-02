@@ -210,6 +210,7 @@ pub async fn bench_dashboard_snapshot() {
             agent_id: "test".to_string(),
         });
 
+        let start = std::time::Instant::now();
         let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
@@ -354,6 +355,7 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         let start = std::time::Instant::now();
+
         let timeout_duration = std::time::Duration::from_millis(60);
 
         let result = tokio::time::timeout(timeout_duration, async {
@@ -368,6 +370,7 @@ mod tests {
     #[tokio::test]
     async fn test_chaos_degradation_network() {
         let start = std::time::Instant::now();
+
         let slow_network = async {
             tokio::task::yield_now().await;
             tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
@@ -385,10 +388,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_mobile_payload_optimization() {
+        bench_mobile_payload_optimization().await;
+    }
+
+    #[tokio::test]
     async fn test_run_bench_ops_service() {
-        // Just verify ops service is accessible and runs, if we wanted to bench it we'd add it here.
-        // The instructions ask for a performance benchmark and comprehensive unit tests.
-        // We added the tests in the actual file.
+        bench_ops_service().await;
+
+
     }
 
 }
@@ -413,12 +421,13 @@ pub async fn bench_advisory_insights_latency() {
 
             let tenant_id = "system".to_string();
 
-            let start = std::time::Instant::now();
+
             let db_org = db.clone();
             let db_orders = db.clone();
             let tenant_id_org = tenant_id.clone();
             let tenant_id_orders = tenant_id.clone();
 
+            let start = std::time::Instant::now();
             let (_org_res, _active_orders_res) = tokio::join!(
                 tokio::spawn(async move {
                     sqlx::query_as::<_, (String, String)>(
@@ -464,6 +473,7 @@ pub async fn bench_advisory_insights_latency() {
     for _ in 0..iterations {
         let start = std::time::Instant::now();
 
+
         let (_org_res, _active_orders_res) = tokio::join!(
             async {
                 sqlx::query_as::<_, (String, String)>(
@@ -495,4 +505,126 @@ pub async fn bench_advisory_insights_latency() {
         fetch_times_sqlite[(iterations as f32 * 0.95) as usize],
         fetch_times_sqlite[(iterations as f32 * 0.99) as usize]
     );
+}
+
+pub async fn bench_mobile_payload_optimization() {
+    tracing::info!("Benchmarking Mobile Payload Optimization Fetching...");
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:?cache=shared")
+        .await
+        .unwrap();
+
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    let iterations = 10;
+
+    for i in 0..50 {
+        hub.register_agent(::server_ohc::orchestration::Agent {
+            id: format!("agent-{}", i),
+            name: format!("Agent {}", i),
+            role: "test".to_string(),
+            organization_id: "system".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+    }
+
+    let mut mobile_times = Vec::new();
+    for _ in 0..iterations {
+
+
+        let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+
+        let db_arc = std::sync::Arc::new(db.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let mut request = tonic::Request::new(req_mobile);
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        use ::server_ohc::app::dashboard_service_server::DashboardService;
+        let start = std::time::Instant::now();
+        let _res_mobile = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
+
+        mobile_times.push(start.elapsed().as_micros());
+    }
+
+    mobile_times.sort();
+    tracing::info!("Mobile Payload Optimized Fetch: p50: {} us, p95: {} us, p99: {} us", mobile_times[iterations / 2], mobile_times[(iterations as f32 * 0.95) as usize], mobile_times[(iterations as f32 * 0.99) as usize]);
+
+    let mut desktop_times = Vec::new();
+    for _ in 0..iterations {
+
+
+        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+
+        let db_arc = std::sync::Arc::new(db.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let mut request = tonic::Request::new(req_desktop);
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        use ::server_ohc::app::dashboard_service_server::DashboardService;
+        let start = std::time::Instant::now();
+        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
+
+        desktop_times.push(start.elapsed().as_micros());
+    }
+
+    desktop_times.sort();
+    tracing::info!("Desktop Payload Unoptimized Fetch: p50: {} us, p95: {} us, p99: {} us", desktop_times[iterations / 2], desktop_times[(iterations as f32 * 0.95) as usize], desktop_times[(iterations as f32 * 0.99) as usize]);
+}
+
+pub async fn bench_ops_service() {
+    use ::server_ohc::orchestration::ops_service_server::OpsService;
+    use tonic::Request;
+
+    tracing::info!("Benchmarking OpsService...");
+    let (tx, _rx) = tokio::sync::mpsc::channel(100);
+
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:?cache=shared")
+        .await
+        .unwrap();
+
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+
+    let iterations = 10;
+
+    let ops_service = crate::services::ops::service::MyOpsService::new(hub.clone());
+
+    // Seed incidents
+    for _ in 0..50 {
+        ops_service.create_incident(Request::new(::server_ohc::orchestration::CreateIncidentRequest {
+            severity: "HIGH".to_string(),
+            summary: "Benchmark Incident".to_string(),
+            rca: "RCA details".to_string(),
+        })).await.unwrap();
+    }
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+
+
+        let start = std::time::Instant::now();
+        let _res = ops_service.get_incidents(Request::new(::server_ohc::orchestration::EmptyRequest {})).await.unwrap().into_inner();
+
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    tracing::info!("OpsService Get Incidents Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }

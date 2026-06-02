@@ -66,6 +66,8 @@ rust_library(
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
+        "//src/server/services/dashboard:server_services_dashboard",
+        "//src/server/services/ops:server_services_ops",
         "//src/server/telemetry:server_telemetry",
         "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
