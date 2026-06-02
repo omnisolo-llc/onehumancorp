@@ -7,8 +7,31 @@ import { WithTooltip } from '../../components/TooltipRegistry';
 export default function PricingPage() {
   const router = useRouter();
 
-  const handleUpgrade = (tier: string) => {
-    router.push('/checkout?tier=' + tier);
+  const handleUpgrade = async (tier: string) => {
+    try {
+        const token = localStorage.getItem('token') || 'test-token';
+        const res = await fetch('/api/billing/upgrade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ tier })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.checkout_url) {
+                window.location.href = data.checkout_url;
+            } else {
+                router.push('/checkout?tier=' + tier);
+            }
+        } else {
+            router.push('/checkout?tier=' + tier);
+        }
+    } catch (e) {
+        console.error("Failed to fetch upgrade url", e);
+        router.push('/checkout?tier=' + tier);
+    }
   };
 
   return (

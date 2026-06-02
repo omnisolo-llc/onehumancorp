@@ -5186,9 +5186,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
+                        <button onclick="
+    fetch('/api/billing/upgrade', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+        },
+        body: JSON.stringify({ tier: 'Starter' })
+    }).then(res => res.json()).then(data => {
+        if(data.checkout_url) window.location.href = data.checkout_url;
+        else showScreen('pricing-screen');
+    });
+">Upgrade via Stripe</button>
                         <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
+                        <button class="secondary" onclick="
+    if (confirm('Are you sure you want to cancel your subscription?')) {
+        fetch('/api/billing/cancel', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+            }
+        }).then(res => {
+            if (res.ok) {
+                alert('Subscription cancelled');
+                showScreen('dashboard-screen');
+            } else {
+                alert('Failed to cancel subscription');
+            }
+        });
+    }
+">Cancel Subscription</button>
                         <button class="secondary">Download Invoice</button>
                         <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>

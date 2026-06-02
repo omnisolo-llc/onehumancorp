@@ -3,6 +3,23 @@ use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
 
+
+#[derive(serde::Deserialize)]
+pub struct UpgradeRequest {
+    pub tier: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct UpgradeResponse {
+    pub checkout_url: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CancelResponse {
+    pub success: bool,
+    pub message: String,
+}
+
 #[derive(serde::Serialize)]
 pub struct MyPlanResponse {
     pub current_plan: String,
@@ -28,6 +45,8 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/upgrade", axum::routing::post(upgrade_handler))
+        .route("/cancel", axum::routing::post(cancel_handler))
         .with_state(hub)
 }
 
@@ -154,4 +173,59 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn upgrade_handler(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::State(hub): axum::extract::State<Arc<Hub>>,
+    axum::extract::Json(body): axum::extract::Json<UpgradeRequest>,
+) -> axum::response::Result<axum::Json<UpgradeResponse>, axum::http::StatusCode> {
+    if auth_info.org_id.is_empty() {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
+    let tenant_id = auth_info.org_id;
+
+    let amount = match body.tier.as_str() {
+        "Starter" => 29.0,
+        "Pro" => 79.0,
+        "Business" => 299.0,
+        _ => 0.0,
+    };
+
+    let tracker = hub.tracker();
+    if let Some(stripe) = &tracker.stripe_client {
+        match stripe.create_checkout_session(&body.tier, &tenant_id, amount).await {
+            Ok(url) => return Ok(axum::Json(UpgradeResponse { checkout_url: url })),
+            Err(e) => {
+                tracing::error!("Failed to create checkout session: {}", e);
+                return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+    }
+
+    // Fallback Mock URL if no stripe client
+    Ok(axum::Json(UpgradeResponse { checkout_url: format!("https://checkout.stripe.com/pay/mock_{}", body.tier) }))
+}
+
+pub async fn cancel_handler(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::State(hub): axum::extract::State<Arc<Hub>>,
+) -> axum::response::Result<axum::Json<CancelResponse>, axum::http::StatusCode> {
+    if auth_info.org_id.is_empty() {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
+    let tenant_id = auth_info.org_id;
+
+    let tracker = hub.tracker();
+    if let Some(stripe) = &tracker.stripe_client {
+        match stripe.cancel_subscription(&tenant_id).await {
+            Ok(_) => return Ok(axum::Json(CancelResponse { success: true, message: "Subscription cancelled successfully".to_string() })),
+            Err(e) => {
+                tracing::error!("Failed to cancel subscription: {}", e);
+                return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+    }
+
+    Ok(axum::Json(CancelResponse { success: true, message: "Subscription cancelled (mock)".to_string() }))
 }

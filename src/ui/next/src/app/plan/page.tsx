@@ -178,7 +178,27 @@ export default function MyPlanPage() {
                 <h3 className="font-medium text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button onClick={async () => {
+                if (confirm("Are you sure you want to cancel your subscription?")) {
+                    const token = localStorage.getItem('token') || 'test-token';
+                    try {
+                        const res = await fetch('/api/billing/cancel', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        if (res.ok) {
+                            alert("Subscription cancelled");
+                            window.location.reload();
+                        } else {
+                            alert("Failed to cancel subscription");
+                        }
+                    } catch (e) {
+                        alert("Error cancelling subscription");
+                    }
+                }
+            }} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>
