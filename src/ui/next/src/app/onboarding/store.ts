@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 interface OnboardingState {
   step: number;
   chatStep: number;
+  isInstantBuild: boolean;
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
@@ -36,6 +37,7 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
+  setIsInstantBuild: (isInstantBuild: boolean) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -43,6 +45,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       step: 1,
       chatStep: 1,
+      isInstantBuild: false,
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
@@ -75,6 +78,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
+      setIsInstantBuild: (isInstantBuild) => set({ isInstantBuild }),
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure

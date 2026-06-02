@@ -7,6 +7,7 @@ export default function OnboardingWizard() {
   const {
     step, setStep,
     chatStep, setChatStep,
+    isInstantBuild, setIsInstantBuild,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
@@ -151,7 +152,7 @@ export default function OnboardingWizard() {
     aiAgents, aiAutoRespond, isLoaded
   ]);
 
-  const handleIntake = async () => {
+  const handleIntake = async (isInstant?: boolean) => {
     setIsLoading(true);
     setError('');
 
@@ -159,7 +160,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = isInstant ? businessDescription : `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -182,7 +183,18 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
+      if (isInstant) {
+        handleStartOnboarding({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: businessDescription,
+          selling_categories: intakeData.categories || ['physical'],
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+        });
+      } else {
+        setStep(2); // Go to review step
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -191,7 +203,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleStartOnboarding = async () => {
+  const handleStartOnboarding = async (instantParams?: any) => {
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
@@ -208,20 +220,20 @@ export default function OnboardingWizard() {
           'X-User-ID': userId,
         },
         body: JSON.stringify({
-          business_type: businessType,
-          company_name: businessName,
-          company_description: businessDescription || whatYouSell,
-          selling_categories: categories,
+          business_type: instantParams?.business_type || businessType,
+          company_name: instantParams?.company_name || businessName,
+          company_description: instantParams?.company_description || businessDescription || whatYouSell,
+          selling_categories: instantParams?.selling_categories || categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
           admin_name: 'Admin',
           admin_password: 'password123',
-          website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
-          domain_choice: domainChoice || 'subdomain',
+          website_template: instantParams?.website_template || websiteTemplate,
+          first_product_name: instantParams?.first_product_name || firstProductName,
+          first_product_price: instantParams?.first_product_price || firstProductPrice,
+          domain_choice: instantParams?.domain_choice || domainChoice || 'subdomain',
           price_type: 'fixed',
-          location: location || ''
+          location: instantParams?.location || location || ''
         })
       });
 
@@ -279,16 +291,78 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="flex justify-center mb-6">
+                <div className="bg-white/30 dark:bg-black/30 p-1 rounded-full flex gap-1 border border-white/50 dark:border-white/10">
+                  <button
+                    onClick={() => setIsInstantBuild(false)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${!isInstantBuild ? 'bg-white dark:bg-gray-800 shadow-sm text-[#1D1D1F] dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                  >
+                    Guided Setup
+                  </button>
+                  <button
+                    onClick={() => setIsInstantBuild(true)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${isInstantBuild ? 'bg-[#0066FF] shadow-sm text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Instant Build
+                  </button>
+                </div>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
 
+              {isInstantBuild ? (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                    <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      Tell us everything in one paragraph. We'll handle the rest.
+                    </p>
+                  </div>
+
+                  {error && <p className="text-red-500 text-sm font-semibold mb-2">{error}</p>}
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <textarea
+                        autoFocus
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && businessDescription.trim() && !isLoading) {
+                            e.preventDefault();
+                            handleIntake(true);
+                          }
+                        }}
+                        placeholder="e.g. I run a halal food cart in NYC called Fatima's Kitchen. We sell chicken over rice and falafel wraps. People can order ahead for pickup."
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-40 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => handleIntake(true)}
+                      disabled={!businessDescription.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Building your storefront...
+                        </span>
+                      ) : 'Generate Storefront Now'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
               {chatStep === 1 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
@@ -463,6 +537,8 @@ export default function OnboardingWizard() {
                     </button>
                   </div>
                 </div>
+              )}
+              </>
               )}
             </div>
           )}

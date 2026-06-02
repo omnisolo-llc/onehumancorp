@@ -21,6 +21,7 @@ describe('OnboardingWizard', () => {
       isLoading: false,
       error: '',
       startResult: null,
+      isInstantBuild: false,
     });
 
     global.fetch = vi.fn().mockImplementation((url) => {
@@ -35,9 +36,94 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
+  });
+
+  it('Handles Instant Build flow successfully', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake and start success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Switch to Instant Build
+    const instantBuildBtn = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantBuildBtn);
+
+    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+
+    const descInput = screen.getByPlaceholderText(/I run a halal food cart/i);
+    await user.type(descInput, 'I sell vegan cakes in Portland.');
+
+    const generateBtn = screen.getByRole('button', { name: /Generate Storefront Now/i });
+    await user.click(generateBtn);
+
+    // Verify it transitions straight to Step 5 (Live Screen) on success
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/intake', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.any(Object));
+  });
+
+  it('Handles Instant Build flow error', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake failure
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: "Failed to generate instant storefront" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Switch to Instant Build
+    const instantBuildBtn = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantBuildBtn);
+
+    const descInput = screen.getByPlaceholderText(/I run a halal food cart/i);
+    await user.type(descInput, 'I sell vegan cakes in Portland.');
+
+    const generateBtn = screen.getByRole('button', { name: /Generate Storefront Now/i });
+    await user.click(generateBtn);
+
+    // Verify error appears and stays on step 1
+    await waitFor(() => {
+      expect(screen.getAllByText("Failed to generate instant storefront")[0]).toBeInTheDocument();
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('Handles enter key progression in chat steps', async () => {
