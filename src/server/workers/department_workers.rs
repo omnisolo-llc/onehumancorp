@@ -224,6 +224,140 @@ impl OperationsWorker {
                             999.0
                         };
 
+
+                        // PREDICTIVE SUPPLY CHAIN & DRAFT PO
+                        // Create or update InventoryPrediction
+                        let pred_id = Uuid::new_v4().to_string();
+                        let status_val = if inventory_count < 5 || days_until_empty < 7.0 { "ACTION_REQUIRED" } else { "OK" };
+                        let dep_date = if days_until_empty < 999.0 {
+                            Some(Utc::now() + chrono::Duration::days(days_until_empty as i64))
+                        } else {
+                            None
+                        };
+
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO inventory_predictions (id, tenant_id, product_id, predicted_depletion_date, confidence_score, daily_velocity, status)
+                                    VALUES ($1, $2, $3, $4, 0.9, $5, $6)
+                                    ON CONFLICT (id) DO UPDATE SET
+                                        predicted_depletion_date = EXCLUDED.predicted_depletion_date,
+                                        daily_velocity = EXCLUDED.daily_velocity,
+                                        status = EXCLUDED.status,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    "#
+                                )
+                                .bind(&pred_id)
+                                .bind(&tenant_id)
+                                .bind(product_id)
+                                .bind(dep_date)
+                                .bind(daily_sales)
+                                .bind(status_val)
+                                .execute(&db.pool).await;
+
+                                // If ACTION_REQUIRED, lock and draft PO
+                                if status_val == "ACTION_REQUIRED" {
+                                    let lock_key = format!("ohc:lock:{}:draft_po:{}", tenant_id, product_id);
+                                    let mut lock_acquired = false;
+
+                                    // Distributed lock to prevent duplicate PO drafting
+                                    // Use simple Redis lock (or memory if no redis)
+                                    if let Ok(mut redis_con) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string())).unwrap().get_connection() {
+                                        let res: redis::RedisResult<bool> = redis::cmd("SET")
+                                            .arg(&lock_key)
+                                            .arg("LOCKED")
+                                            .arg("NX")
+                                            .arg("EX")
+                                            .arg(30)
+                                            .query(&mut redis_con);
+                                        lock_acquired = res.unwrap_or(false);
+                                    } else {
+                                        lock_acquired = true;
+                                    }
+
+                                    if lock_acquired {
+
+                                    // simple advisory lock via redis could be used, but since we're in rust we might use the queue logic or skip redlock if not trivial.
+                                    // Let's implement a simple drafted PO logic
+                                    let existing_po: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders WHERE tenant_id = $1 AND status = 'DRAFT' AND id IN (SELECT purchase_order_id FROM po_line_items WHERE raw_material_id = $2)")
+                                        .bind(&tenant_id)
+                                        .bind(product_id)
+                                        .fetch_one(&db.pool).await.unwrap_or(0);
+
+                                    if existing_po == 0 {
+                                        let po_id = Uuid::new_v4().to_string();
+                                        // Assume vendor_id can be fetched or set to null if unknown. For now we use the existing supplier logic.
+                                        let vendor_id = Uuid::new_v4().to_string(); // Temporary dummy
+
+                                        let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES ($1, $2, $3, 'DRAFT', 0)")
+                                            .bind(&po_id).bind(&tenant_id).bind(&vendor_id).execute(&db.pool).await;
+
+                                        let line_id = Uuid::new_v4().to_string();
+                                        let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, unit_price) VALUES ($1, $2, $3, $4, 20, 10.0)")
+                                            .bind(&line_id).bind(&tenant_id).bind(&po_id).bind(product_id).execute(&db.pool).await;
+                                    }
+                                    }
+                                }
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO inventory_predictions (id, tenant_id, product_id, predicted_depletion_date, confidence_score, daily_velocity, status)
+                                    VALUES (?, ?, ?, ?, 0.9, ?, ?)
+                                    ON CONFLICT (id) DO UPDATE SET
+                                        predicted_depletion_date = excluded.predicted_depletion_date,
+                                        daily_velocity = excluded.daily_velocity,
+                                        status = excluded.status,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    "#
+                                )
+                                .bind(&pred_id)
+                                .bind(&tenant_id)
+                                .bind(product_id)
+                                .bind(dep_date)
+                                .bind(daily_sales)
+                                .bind(status_val)
+                                .execute(pool).await;
+
+                                if status_val == "ACTION_REQUIRED" {
+                                    let lock_key = format!("ohc:lock:{}:draft_po:{}", tenant_id, product_id);
+                                    let mut lock_acquired = false;
+                                    if let Ok(mut redis_con) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string())).unwrap().get_connection() {
+                                        let res: redis::RedisResult<bool> = redis::cmd("SET")
+                                            .arg(&lock_key)
+                                            .arg("LOCKED")
+                                            .arg("NX")
+                                            .arg("EX")
+                                            .arg(30)
+                                            .query(&mut redis_con);
+                                        lock_acquired = res.unwrap_or(false);
+                                    } else {
+                                        lock_acquired = true; // In sqlite mode, likely standalone single worker anyway
+                                    }
+
+                                    if lock_acquired {
+                                        let existing_po: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM purchase_orders WHERE tenant_id = ? AND status = 'DRAFT' AND id IN (SELECT purchase_order_id FROM po_line_items WHERE raw_material_id = ?)")
+                                            .bind(&tenant_id)
+                                            .bind(product_id)
+                                            .fetch_one(pool).await.unwrap_or(0);
+
+                                    if existing_po == 0 {
+                                        let po_id = Uuid::new_v4().to_string();
+                                        let vendor_id = Uuid::new_v4().to_string();
+
+                                        let _ = sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, 'DRAFT', 0)")
+                                            .bind(&po_id).bind(&tenant_id).bind(&vendor_id).execute(pool).await;
+
+                                        let line_id = Uuid::new_v4().to_string();
+                                        let _ = sqlx::query("INSERT INTO po_line_items (id, tenant_id, purchase_order_id, raw_material_id, quantity, unit_price) VALUES (?, ?, ?, ?, 20, 10.0)")
+                                            .bind(&line_id).bind(&tenant_id).bind(&po_id).bind(product_id).execute(pool).await;
+                                    }
+                                    }
+                                }
+                            }
+                        };
+
                         if inventory_count < 5 || days_until_empty < 7.0 {
                             // Deduplicate: check if a PENDING restock task already exists for this product
                             let title = format!("Restock Item: {}", product_name);

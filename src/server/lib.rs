@@ -4030,6 +4030,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Pending Actions Hub</h3>
                         </div>
                         <div class="card glass" id="activity-feed"></div>
+
+                        <!-- Predictive Supply Chain / Restock Predictions Widget -->
+                        <div class="card glass" id="restock-predictions-widget">
+                            <h3 style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 20px;">📦</span> Restock Action Required
+                            </h3>
+                            <div id="restock-predictions-list"></div>
+                        </div>
+
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>

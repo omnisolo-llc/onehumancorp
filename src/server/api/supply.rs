@@ -45,6 +45,8 @@ where
         .route("/vendors", get(list_vendors).post(create_vendor))
         .route("/raw_materials", get(list_raw_materials).post(create_raw_material))
         .route("/bom_items", get(list_bom_items).post(create_bom_item))
+        .route("/approve_po", post(approve_po))
+        .route("/pending_pos", get(list_pending_pos))
         .with_state(db)
 }
 
@@ -207,4 +209,153 @@ async fn create_bom_item(
     }
 
     (StatusCode::OK, Json(payload)).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct ApprovePoRequest {
+    pub purchase_order_id: String,
+}
+
+async fn approve_po(
+    State(db): State<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<ApprovePoRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_default();
+    if tenant_id.is_empty() {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    match &db.store {
+        DbStore::Postgres => {
+            let res = sqlx::query("UPDATE purchase_orders SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                .bind(&payload.purchase_order_id)
+                .bind(&tenant_id)
+                .execute(&db.pool).await;
+            if res.is_ok() {
+                StatusCode::OK.into_response()
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+        DbStore::Sqlite(pool) => {
+            let res = sqlx::query("UPDATE purchase_orders SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
+                .bind(&payload.purchase_order_id)
+                .bind(&tenant_id)
+                .execute(pool).await;
+            if res.is_ok() {
+                StatusCode::OK.into_response()
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct PendingPoDto {
+    pub id: String,
+    pub vendor_id: Option<String>,
+    pub product_name: String,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub total_cost: f64,
+    pub predicted_depletion_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub days_until_empty: i32,
+}
+
+async fn list_pending_pos(
+    State(db): State<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_default();
+    if tenant_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json::<Vec<PendingPoDto>>(vec![])).into_response();
+    }
+
+    // Join purchase_orders, po_line_items, products, and inventory_predictions
+    // To return DRAFT POs along with AI prediction context.
+    let query_postgres = r#"
+        SELECT
+            po.id, po.vendor_id, po.total_cost,
+            pli.quantity, pli.unit_price,
+            p.name as product_name,
+            ip.predicted_depletion_date
+        FROM purchase_orders po
+        JOIN po_line_items pli ON po.id = pli.purchase_order_id
+        JOIN products p ON p.id = pli.raw_material_id
+        LEFT JOIN inventory_predictions ip ON ip.product_id = p.id
+        WHERE po.tenant_id = $1 AND po.status = 'DRAFT'
+    "#;
+
+    let query_sqlite = r#"
+        SELECT
+            po.id, po.vendor_id, po.total_cost,
+            pli.quantity, pli.unit_price,
+            p.name as product_name,
+            ip.predicted_depletion_date
+        FROM purchase_orders po
+        JOIN po_line_items pli ON po.id = pli.purchase_order_id
+        JOIN products p ON p.id = pli.raw_material_id
+        LEFT JOIN inventory_predictions ip ON ip.product_id = p.id
+        WHERE po.tenant_id = ? AND po.status = 'DRAFT'
+    "#;
+
+    // A bit manual mapping to calculate days_until_empty
+    match &db.store {
+        DbStore::Postgres => {
+            if let Ok(rows) = sqlx::query(query_postgres).bind(&tenant_id).fetch_all(&db.pool).await {
+                let mut dtos = Vec::new();
+                for r in rows {
+                    use sqlx::Row;
+                    let dep_date: Option<chrono::DateTime<chrono::Utc>> = r.get("predicted_depletion_date");
+                    let days_until_empty = if let Some(d) = dep_date {
+                        (d - chrono::Utc::now()).num_days() as i32
+                    } else {
+                        999
+                    };
+                    dtos.push(PendingPoDto {
+                        id: r.get("id"),
+                        vendor_id: r.get("vendor_id"),
+                        product_name: r.get("product_name"),
+                        quantity: r.get("quantity"),
+                        unit_price: r.try_get("unit_price").unwrap_or(0.0),
+                        total_cost: r.try_get("total_cost").unwrap_or(0.0),
+                        predicted_depletion_date: dep_date,
+                        days_until_empty,
+                    });
+                }
+                (StatusCode::OK, Json(dtos)).into_response()
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json::<Vec<PendingPoDto>>(vec![])).into_response()
+            }
+        }
+        DbStore::Sqlite(pool) => {
+            if let Ok(rows) = sqlx::query(query_sqlite).bind(&tenant_id).fetch_all(pool).await {
+                let mut dtos = Vec::new();
+                for r in rows {
+                    use sqlx::Row;
+                    let dep_date: Option<chrono::DateTime<chrono::Utc>> = r.get("predicted_depletion_date");
+                    let days_until_empty = if let Some(d) = dep_date {
+                        (d - chrono::Utc::now()).num_days() as i32
+                    } else {
+                        999
+                    };
+                    dtos.push(PendingPoDto {
+                        id: r.get("id"),
+                        vendor_id: r.get("vendor_id"),
+                        product_name: r.get("product_name"),
+                        quantity: r.get("quantity"),
+                        unit_price: r.try_get("unit_price").unwrap_or(0.0),
+                        total_cost: r.try_get("total_cost").unwrap_or(0.0),
+                        predicted_depletion_date: dep_date,
+                        days_until_empty,
+                    });
+                }
+                (StatusCode::OK, Json(dtos)).into_response()
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json::<Vec<PendingPoDto>>(vec![])).into_response()
+            }
+        }
+    }
 }

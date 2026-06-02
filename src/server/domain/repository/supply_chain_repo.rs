@@ -117,3 +117,23 @@ impl SupplyChainRepo {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::{DB, DbStore, get_pool};
+    use sqlx::SqlitePool;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_supply_chain_repo_new() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let db = Arc::new(DB {
+            pool: get_pool(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        let repo = SupplyChainRepo::new(db);
+        // It initializes correctly
+    }
+}
