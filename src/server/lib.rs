@@ -2920,12 +2920,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
+            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
+            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
+            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
@@ -2966,16 +2966,29 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help";
+            let mut link_url = "/help/getting-started";
 
-            for (kw, desc) in help_articles {
-                if query.contains(kw) {
-                    reply = format!("Based on our help center: {}", desc);
-                    if kw == "api" {
-                        link_url = "/api-docs";
-                    }
-                    break;
-                }
+            if query.contains("getting started") {
+                reply = format!("Based on our help center: {}", help_articles[0].1);
+                link_url = "/help/getting-started";
+            } else if query.contains("store") {
+                reply = format!("Based on our help center: {}", help_articles[1].1);
+                link_url = "/help/my-store";
+            } else if query.contains("payment") {
+                reply = format!("Based on our help center: {}", help_articles[2].1);
+                link_url = "/help/payments";
+            } else if query.contains("ai agent") {
+                reply = format!("Based on our help center: {}", help_articles[3].1);
+                link_url = "/help/ai-agents";
+            } else if query.contains("marketing") {
+                reply = format!("Based on our help center: {}", help_articles[4].1);
+                link_url = "/help/marketing";
+            } else if query.contains("billing") {
+                reply = format!("Based on our help center: {}", help_articles[5].1);
+                link_url = "/help/account-billing";
+            } else if query.contains("api") || query.contains("advanced") {
+                reply = format!("Based on our help center: {}", help_articles[6].1);
+                link_url = "/api-docs";
             }
 
             axum::Json(serde_json::json!({
@@ -7441,7 +7454,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if(data.link.url === '/api-docs') {
                                         aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
                                     } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
+                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_self">Read the full article →</a>';
                                     }
                                 }
                                 messages.appendChild(aiMsg);
