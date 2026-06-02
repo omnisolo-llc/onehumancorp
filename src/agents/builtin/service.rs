@@ -665,7 +665,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
+        tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -916,7 +916,7 @@ impl AgentService for AgentServiceImpl {
                     }
                     Err(_) => {
                         let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
                              continue;

@@ -6,7 +6,9 @@ test.describe('Viral Affiliate Marketing Engine', () => {
     await page.goto('/dashboard');
 
     // Open Influencer Dashboard
-    await page.getByRole('button', { name: /Open Influencer View/i }).click();
+    // Open referral modal first since the button is in there
+    await page.getByRole('button', { name: /Get \$50 Credit/i }).click();
+    await page.getByRole('button', { name: /Open Influencer View/i }).first().click();
 
     // Expect the modal to be visible
     await expect(page.getByRole('heading', { name: /Your Affiliate Link/i })).toBeVisible();

@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use crate::types::{ChatRequest, Message, Role, ToolCall};
+use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 
 #[async_trait::async_trait]
@@ -61,12 +60,12 @@ impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
     }
 }
 
-pub struct ExpertTeamManager<T: ExpertTeamLlmClient + ?Sized + 'static> {
+pub struct ExpertTeamManager<T: ExpertTeamLlmClient + ?Sized> {
     pub lead_agent_name: String,
     pub domain_experts: Vec<DomainExpert<T>>,
 }
 
-impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
+impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
     pub fn new(lead: &str, experts: Vec<DomainExpert<T>>) -> Self {
         Self {
             lead_agent_name: lead.to_string(),
@@ -89,12 +88,12 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
             let llm_clone = expert.llm.clone();
             let task_clone = task.to_string();
 
-            let fut = tokio::spawn(async move {
+            let fut = async move {
                 let mut local_trace = SkillTrace::new();
                 let expert_instance = DomainExpert { role: role_name, llm: llm_clone };
                 let output = expert_instance.execute(&task_clone, &mut local_trace).await;
                 (output, local_trace.skills_used)
-            });
+            };
             futures.push(fut);
         }
 
@@ -102,11 +101,7 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
 
         let mut condensed_summaries = Vec::new();
 
-        for join_res in results {
-            let (output_res, skills) = match join_res {
-                Ok(res) => res,
-                Err(e) => return Err(format!("Task execution panicked: {}", e)),
-            };
+        for (output_res, skills) in results {
             match output_res {
                 Ok(output) => {
                     // Merge skills back

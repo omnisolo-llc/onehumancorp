@@ -12,8 +12,6 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-
-
     messages: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
     instances: RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
     pull_requests: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
@@ -36,26 +34,6 @@ pub struct IntegrationsRegistry {
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
-
-
-
-
-
-
-    #[allow(dead_code)]
-    buffer_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::buffer::provider::BufferProvider>>>,
-    #[allow(dead_code)]
-    convertkit_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::convertkit::provider::ConvertKitProvider>>>,
-    #[allow(dead_code)]
-    messagebird_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::messagebird::provider::MessageBirdProvider>>>,
-    #[allow(dead_code)]
-    nylas_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nylas::provider::NylasProvider>>>,
-    #[allow(dead_code)]
-    acuity_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::acuity::provider::AcuityProvider>>>,
-    #[allow(dead_code)]
-    shipengine_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shipengine::provider::ShipengineProvider>>>,
-    #[allow(dead_code)]
-    teams_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::teams::provider::TeamsProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
@@ -97,19 +75,6 @@ impl IntegrationsRegistry {
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-
-
-
-
-
-
-            buffer_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            convertkit_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            messagebird_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            nylas_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            acuity_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            shipengine_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            teams_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }

@@ -1,3 +1,10 @@
+
+
+
+use std::sync::OnceLock;
+use crate::utils::cache::HybridCache;
+
+pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -48,6 +55,30 @@ pub struct TrackVisitorResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateAffiliateLinkRequest {
+    pub customer_id: String,
+    pub discount_percentage: Option<i32>,
+    pub commission_percentage: Option<i32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateAffiliateLinkResponse {
+    pub affiliate_link: String,
+    pub affiliate_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrackAffiliateRequest {
+    pub affiliate_code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AffiliateStatsResponse {
+    pub total_affiliates: i64,
+    pub total_commission_cents: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Milestone {
     pub id: String,
     pub title: String,
@@ -85,6 +116,9 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
+        .route("/affiliate/track", post(handle_affiliate_track))
+        .route("/affiliate/stats", get(handle_affiliate_stats))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
@@ -276,6 +310,82 @@ async fn handle_track_visitor(
     Json(TrackVisitorResponse { tracked: true })
 }
 
+async fn handle_affiliate_generate_link(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<GenerateAffiliateLinkRequest>,
+) -> Result<Json<GenerateAffiliateLinkResponse>, StatusCode> {
+    let affiliate_code = uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string();
+    let id = uuid::Uuid::new_v4().to_string();
+    let discount = req.discount_percentage.unwrap_or(10);
+    let commission = req.commission_percentage.unwrap_or(10);
+
+    match sqlx::query("INSERT INTO affiliate_links (id, tenant_id, customer_id, affiliate_code, discount_percentage, commission_percentage) VALUES ($1, $2, $3, $4, $5, $6)")
+        .bind(&id)
+        .bind(&auth_info.org_id)
+        .bind(&req.customer_id)
+        .bind(&affiliate_code)
+        .bind(discount)
+        .bind(commission)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => {
+            let affiliate_link = format!("https://ohc.store/ref/{}", affiliate_code);
+            Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
+        }
+        Err(e) => {
+            tracing::error!("Failed to generate affiliate link: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn handle_affiliate_track(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<TrackAffiliateRequest>,
+) -> impl IntoResponse {
+    use axum::http::header::SET_COOKIE;
+    use axum::http::HeaderValue;
+
+    let cookie_str = format!("affiliate_code={}; Path=/; HttpOnly; Max-Age=2592000", req.affiliate_code);
+
+    let mut response = Json(serde_json::json!({ "tracked": true })).into_response();
+    if let Ok(header_val) = HeaderValue::from_str(&cookie_str) {
+        response.headers_mut().insert(SET_COOKIE, header_val);
+    }
+
+    response
+}
+
+async fn handle_affiliate_stats(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<AffiliateStatsResponse>, StatusCode> {
+    let mut total_affiliates: i64 = 0;
+    let mut total_commission_cents: i64 = 0;
+
+    let res_aff = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    if let Ok(count) = res_aff {
+        total_affiliates = count;
+    }
+
+    let res_comm = sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    if let Ok(sum) = res_comm {
+        total_commission_cents = sum;
+    }
+
+    Ok(Json(AffiliateStatsResponse { total_affiliates, total_commission_cents }))
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StorefrontEmbedQuery {
     pub tenant: Option<String>,
@@ -361,6 +471,22 @@ async fn handle_og_card(
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&safe_name));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -374,10 +500,11 @@ async fn handle_og_card(
   <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_check_milestones(
@@ -387,13 +514,20 @@ async fn handle_check_milestones(
     use sqlx::Row;
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
-    let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-        .bind(tenant_id)
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default();
-
-    let reached_types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+    let cache_key = format!("growth:milestones:{}", tenant_id);
+    let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
+    let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
+        cached_types
+    } else {
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
+        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
+        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
+        types
+    };
 
     let milestones = vec![
         Milestone {
@@ -422,6 +556,7 @@ async fn handle_check_milestones(
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
+    pub mobile: Option<bool>,
 }
 
 async fn handle_get_milestone_card(
@@ -461,6 +596,22 @@ async fn handle_get_milestone_card(
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
+    if false {
+        let escape_xml_local = |s: &str| {
+            s.replace("&", "&amp;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
+        };
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&title));
+        return axum::response::Response::builder()
+            .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+            .body(axum::body::Body::from(response_svg))
+            .unwrap()
+            .into_response();
+    }
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -480,10 +631,11 @@ async fn handle_get_milestone_card(
   <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
+        .body(axum::body::Body::from(svg))
+        .unwrap()
+        .into_response()
 }
 
 async fn handle_get_team_invites(
@@ -722,7 +874,7 @@ mod tests {
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -790,7 +942,7 @@ mod tests {
     async fn test_referral_click_and_convert() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -840,7 +992,7 @@ mod tests {
     async fn test_referral_clicks_and_conversions() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -881,7 +1033,7 @@ mod tests {
     async fn test_referral_generate() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -945,7 +1097,7 @@ mod tests {
     async fn test_team_invite_accept() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
@@ -980,7 +1132,7 @@ mod tests {
     async fn test_onboarding_metrics() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
+            tracing::debug!("Skipping DB test, DB not available");
             return;
         }
 
