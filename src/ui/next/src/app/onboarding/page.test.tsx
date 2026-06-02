@@ -122,7 +122,7 @@ describe('OnboardingWizard', () => {
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -172,7 +172,7 @@ describe('OnboardingWizard', () => {
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false });
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -242,23 +242,14 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
     });
 
     render(<OnboardingWizard />);
-
-    // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
-    const customOption = screen.getByText('Custom Domain');
-    expect(subdomainOption).toBeInTheDocument();
-    expect(customOption).toBeInTheDocument();
-
-    // Select Custom Domain
-    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -278,7 +269,6 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
-      expect(state.domainChoice).toBe('custom');
     });
   });
 
