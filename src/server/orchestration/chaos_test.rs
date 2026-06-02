@@ -361,7 +361,7 @@ mod chaos_tests {
         // Cloud and Standalone should behave identically at the API boundary
         assert_eq!(cloud_tasks.is_ok(), standalone_tasks.is_ok(), "Mode parity gap: Cloud and Standalone behave differently under network partition.");
         if let Ok(c_tasks) = cloud_tasks {
-            let s_tasks = standalone_tasks.unwrap();
+            let s_tasks = standalone_tasks.unwrap_or_else(|_| vec![]);
             assert_eq!(c_tasks.len(), 0, "Expected empty fallback under partition");
             assert_eq!(s_tasks.len(), 0, "Expected empty fallback under partition");
         }
@@ -548,6 +548,30 @@ mod chaos_tests {
         let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_db_write_latency_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        // Attempting to transition state on a dead/latent database should quickly fail with an err (safely, no panic)
+        let result = state_manager.transition_state("task_write_latency", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        assert!(result.is_err(), "DB write operations must safely propagate err on latency/disconnect instead of crashing");
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("error communicating with database") || err_msg.contains("Connection refused"), "Expected connection error, got {}", err_msg);
     }
 
     #[tokio::test]

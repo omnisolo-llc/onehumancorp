@@ -877,11 +877,12 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
+                let default_msgs = vec![];
+                let msgs_val = state.get("messages").and_then(|v| v.as_array()).unwrap_or(&default_msgs);
                 let mut msgs = vec![];
                 for m in msgs_val {
-                    let role_str = m["role"].as_str().unwrap();
-                    let content = m["content"].as_str().unwrap().to_string();
+                    let role_str = m.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                    let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let role = match role_str {
                         "user" => crate::types::Role::User,
                         "assistant" => crate::types::Role::Assistant,
@@ -893,9 +894,9 @@ impl Agent {
                     if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
                         for tc in tcs {
                             tool_calls.push(crate::types::ToolCall {
-                                id: tc["id"].as_str().unwrap().to_string(),
-                                name: tc["name"].as_str().unwrap().to_string(),
-                                arguments: tc["arguments"].clone(),
+                                id: tc.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                name: tc.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                arguments: tc.get("arguments").cloned().unwrap_or(serde_json::json!({})),
                             });
                         }
                     }
@@ -903,9 +904,9 @@ impl Agent {
                     if let Some(trs) = m.get("tool_results").and_then(|v| v.as_array()) {
                         for tr in trs {
                             tool_results.push(crate::types::ToolResult {
-                                tool_call_id: tr["tool_call_id"].as_str().unwrap().to_string(),
-                                content: tr["content"].as_str().unwrap_or("").to_string(),
-                                error: tr["error"].as_str().unwrap_or("").to_string(),
+                                tool_call_id: tr.get("tool_call_id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                content: tr.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                error: tr.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                             });
                         }
                     }
@@ -981,15 +982,17 @@ impl Agent {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
             Box::pin(async move {
-                let last_msg = state.get("last_message").unwrap();
-                let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
+                let default_val = serde_json::json!({});
+                let last_msg = state.get("last_message").unwrap_or(&default_val);
+                let default_tc_arr = vec![];
+                let tool_calls = last_msg.get("tool_calls").and_then(|v| v.as_array()).unwrap_or(&default_tc_arr);
 
-                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
+                let mut error_counts = state.get("error_counts").and_then(|v| v.as_object()).cloned().unwrap_or_default();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
                 for tc_val in tool_calls {
-                    let name = tc_val["name"].as_str().unwrap();
+                    let name = tc_val.get("name").and_then(|v| v.as_str()).unwrap_or("");
                     let is_read_only = tt.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false);
                     if is_read_only {
                         read_only_calls.push(tc_val.clone());
@@ -1006,9 +1009,9 @@ impl Agent {
                     let tt_clone = tt.clone();
                     let cfg_arc_clone = cfg_arc_node.clone();
                     read_only_futures.push(async move {
-                        let name = tc_val["name"].as_str().unwrap();
-                        let args = tc_val["arguments"].clone();
-                        let id = tc_val["id"].as_str().unwrap().to_string();
+                        let name = tc_val.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let args = tc_val.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+                        let id = tc_val.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
                         let tc = crate::types::ToolCall {
                             id: id.clone(),
@@ -1042,10 +1045,10 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc.get("id").and_then(|v| v.as_str()).unwrap_or("") == id).unwrap_or(0);
                     match final_res {
                         Ok(res) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            let tool_name = tool_calls.iter().find(|tc| tc.get("id").and_then(|v| v.as_str()).unwrap_or("") == id).and_then(|tc| tc.get("name").and_then(|v| v.as_str())).unwrap_or("").to_string();
                             error_counts.insert(tool_name, serde_json::json!(0));
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -1054,8 +1057,8 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            let tool_name = tool_calls.iter().find(|tc| tc.get("id").and_then(|v| v.as_str()).unwrap_or("") == id).and_then(|tc| tc.get("name").and_then(|v| v.as_str())).unwrap_or("").to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
@@ -1086,10 +1089,10 @@ impl Agent {
 
                 // Execute mutating calls sequentially
                 for tc_val in mutating_calls {
-                    let name = tc_val["name"].as_str().unwrap();
-                    let args = tc_val["arguments"].clone();
-                    let id = tc_val["id"].as_str().unwrap();
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    let name = tc_val.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let args = tc_val.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+                    let id = tc_val.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                    let idx = tool_calls.iter().position(|tc| tc.get("id").and_then(|v| v.as_str()).unwrap_or("") == id).unwrap_or(0);
 
                     let tc = crate::types::ToolCall {
                         id: id.to_string(),
@@ -1103,7 +1106,7 @@ impl Agent {
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > cfg_max_retries as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
@@ -1127,7 +1130,7 @@ impl Agent {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
                             let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
@@ -1159,7 +1162,7 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
