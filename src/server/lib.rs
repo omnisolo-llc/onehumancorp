@@ -2,6 +2,10 @@ pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
+pub mod currency;
+pub mod localization;
+
+
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -7615,4 +7619,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     axum::response::Html(content)
 }
 pub mod crypto;
+
+
 // resolves #9690

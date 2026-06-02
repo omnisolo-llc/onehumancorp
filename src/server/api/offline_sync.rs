@@ -1,12 +1,16 @@
 use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::currency::multi_currency_ledger::MultiCurrencyLedger;
 
 #[derive(Deserialize, Debug)]
 pub struct OfflineMutation {
     pub transaction_id: String,
-    pub product_id: String,
-    pub quantity_deducted: i32,
+    pub product_id: Option<String>,
+    pub quantity_deducted: Option<i32>,
+    pub amount: Option<f64>,
+    pub currency: Option<String>,
+    pub type_str: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -39,45 +43,67 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+    let ledger = MultiCurrencyLedger::new(Arc::new(db.clone()));
+
     for mutation in &payload.mutations {
-        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+        if let Some(product_id) = &mutation.product_id {
+            if let Some(quantity_deducted) = mutation.quantity_deducted {
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
-        let query = "
-            UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
-            WHERE id = $2 AND tenant_id = $3
-            RETURNING id
-        ";
+                let query = "
+                    UPDATE products
+                    SET inventory_count = GREATEST(0, inventory_count - $1)
+                    WHERE id = $2 AND tenant_id = $3
+                    RETURNING id
+                ";
 
-        let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted)
-            .bind(&mutation.product_id)
-            .bind(&tenant_id)
-            .fetch_optional(&db)
-            .await;
+                let result = sqlx::query(query)
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db)
+                    .await;
 
-        match result {
-            Ok(Some(_)) => {
-                // Publish mesh event
-                let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    action: "InventoryUpdated".to_string(),
-                    agent_id: "system".to_string(),
-                    status: "".to_string(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                    payload: serde_json::json!({
-                        "product_id": mutation.product_id,
-                        "transaction_id": mutation.transaction_id,
-                        "quantity_deducted": mutation.quantity_deducted,
-                        "tenant_id": tenant_id
-                    }).to_string().into_bytes(),
-                };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
+                match result {
+                    Ok(Some(_)) => {
+                        // Publish mesh event
+                        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                            action: "InventoryUpdated".to_string(),
+                            agent_id: "system".to_string(),
+                            status: "".to_string(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                            payload: serde_json::json!({
+                                "product_id": product_id,
+                                "transaction_id": mutation.transaction_id,
+                                "quantity_deducted": quantity_deducted,
+                                "tenant_id": tenant_id
+                            }).to_string().into_bytes(),
+                        };
+                        let _ = mesh.publish("mesh:inventory:updated", event).await;
+                    }
+                    Ok(None) => {
+                        tracing::warn!("Product {} not found or unauthorized for tenant {}", product_id, tenant_id);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to deduct inventory for product {}: {}", product_id, e);
+                    }
+                }
             }
-            Ok(None) => {
-                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
-            }
-            Err(e) => {
-                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+        }
+
+        if let Some(amount) = mutation.amount {
+            if let Some(currency) = &mutation.currency {
+                // Determine target currency (USD by default for simple demonstration, could be fetched from tenant profile)
+                let target_currency = "USD";
+                // Get exchange rate from cache or assume 1.0 if not available (ideally this comes from a real FX service)
+                let mut exchange_rate = 1.0;
+                if currency == "EUR" { exchange_rate = 1.1; }
+                else if currency == "GBP" { exchange_rate = 1.25; }
+                else if currency == "ARS" { exchange_rate = 0.0011; }
+                else if currency == "MXN" { exchange_rate = 0.059; }
+                else if currency == "BRL" { exchange_rate = 0.20; }
+
+                let _ = ledger.append_entry(&tenant_id, amount, currency, target_currency, exchange_rate, "Completed").await;
             }
         }
     }
@@ -131,8 +157,11 @@ mod tests {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx1".to_string(),
-                    product_id: "prod-offline-1".to_string(),
-                    quantity_deducted: 3,
+                    product_id: Some("prod-offline-1".to_string()),
+                    quantity_deducted: Some(3),
+                    amount: None,
+                    currency: None,
+                    type_str: None,
                 },
             ],
         };
@@ -152,8 +181,11 @@ mod tests {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx2".to_string(),
-                    product_id: "prod-offline-1".to_string(),
-                    quantity_deducted: 10,
+                    product_id: Some("prod-offline-1".to_string()),
+                    quantity_deducted: Some(10),
+                    amount: None,
+                    currency: None,
+                    type_str: None,
                 },
             ],
         };

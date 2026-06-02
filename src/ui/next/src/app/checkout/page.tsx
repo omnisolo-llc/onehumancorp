@@ -1,8 +1,46 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'MXN', 'BRL', 'ARS'];
+const LANGUAGES = ['en', 'es', 'pt', 'ar', 'fr'];
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    checkout: 'Checkout',
+    enterDetails: 'Please enter your payment details below.',
+    guarantee: '100% money back guarantee. Secure SSL payments.',
+    payNow: 'Pay Now',
+    processing: 'Processing...',
+    tapToPay: 'Tap to Pay (Stripe Terminal)',
+    payMercadoPago: 'Pay with Mercado Pago',
+    cancel: 'Cancel',
+    converted: 'Converted using yesterday\'s rate. Will finalize on sync.'
+  },
+  es: {
+    checkout: 'Pago',
+    enterDetails: 'Por favor, introduzca sus datos de pago a continuación.',
+    guarantee: '100% garantía de devolución de dinero. Pagos SSL seguros.',
+    payNow: 'Pagar Ahora',
+    processing: 'Procesando...',
+    tapToPay: 'Tocar para Pagar (Stripe Terminal)',
+    payMercadoPago: 'Pagar con Mercado Pago',
+    cancel: 'Cancelar',
+    converted: 'Convertido usando la tasa de ayer. Se finalizará en la sincronización.'
+  },
+  ar: {
+    checkout: 'الدفع',
+    enterDetails: 'يرجى إدخال تفاصيل الدفع الخاصة بك أدناه.',
+    guarantee: 'ضمان استرداد الأموال بنسبة 100٪. مدفوعات SSL آمنة.',
+    payNow: 'ادفع الآن',
+    processing: 'جاري المعالجة...',
+    tapToPay: 'انقر للدفع (Stripe Terminal)',
+    payMercadoPago: 'ادفع باستخدام Mercado Pago',
+    cancel: 'إلغاء',
+    converted: 'تم التحويل باستخدام سعر الأمس. سيتم الانتهاء عند المزامنة.'
+  }
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -10,6 +48,40 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+
+  const [currency, setCurrency] = useState('USD');
+  const [language, setLanguage] = useState('en');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const t = (key: string) => TRANSLATIONS[language]?.[key] || TRANSLATIONS['en'][key] || key;
+
+  useEffect(() => {
+    // Load from cache if offline
+    if (!navigator.onLine) {
+        try {
+            const cachedCurrency = localStorage.getItem('ohc_offline_currency');
+            const cachedLanguage = localStorage.getItem('ohc_offline_language');
+            if (cachedCurrency) setCurrency(cachedCurrency);
+            if (cachedLanguage) setLanguage(cachedLanguage);
+        } catch(e) {}
+    }
+  }, []);
+
+  const handleCurrencyChange = (c: string) => {
+      setCurrency(c);
+      try { localStorage.setItem('ohc_offline_currency', c); } catch(e) {}
+      if (!navigator.onLine) {
+          setToastMessage(t('converted'));
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+      }
+  };
+
+  const handleLanguageChange = (l: string) => {
+      setLanguage(l);
+      try { localStorage.setItem('ohc_offline_language', l); } catch(e) {}
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -39,14 +111,30 @@ export default function CheckoutPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>{t('checkout')}</h1>
+        <div className="flex gap-2">
+            <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm outline-none"
+            >
+                {LANGUAGES.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+            </select>
+            <select
+                value={currency}
+                onChange={(e) => handleCurrencyChange(e.target.value)}
+                className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm outline-none"
+            >
+                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+        </div>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <p className="text-gray-700">{t('enterDetails')}</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-          <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
+          <p className="text-sm text-gray-600">{t('guarantee')}</p>
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
@@ -54,7 +142,7 @@ export default function CheckoutPage() {
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
+              {isProcessing ? t('processing') : t('payNow')}
             </button>
           </WithTooltip>
 
@@ -76,6 +164,7 @@ export default function CheckoutPage() {
                   queue.push({
                     id: 'txn_' + Date.now(),
                     amount: parseFloat(amount),
+                    currency: currency,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
@@ -108,11 +197,17 @@ export default function CheckoutPage() {
               onClick={() => router.push('/pricing')}
               className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </WithTooltip>
         </div>
       </main>
+
+      {showToast && (
+          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 text-sm">
+              {toastMessage}
+          </div>
+      )}
 
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (

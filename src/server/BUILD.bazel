@@ -259,6 +259,11 @@ SERVER_RS_SRCS = [
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
+] + [
+    "currency/mod.rs",
+    "currency/multi_currency_ledger.rs",
+    "localization/mod.rs",
+    "localization/cache.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules
