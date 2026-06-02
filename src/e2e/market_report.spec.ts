@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Market Dynamics Report', () => {
-  test('CUJ: Business owner navigates to Market Dynamics Report and views insights', async ({ adminPage: page }) => {
+  test('CUJ: Business owner navigates to Market Dynamics Report and views insights', async ({ page }) => {
     // 1. Navigate to the dashboard
     await page.goto('/dashboard');
 
