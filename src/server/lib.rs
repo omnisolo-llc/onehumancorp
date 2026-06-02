@@ -401,13 +401,19 @@ pub mod proto {
     pub mod app {
         pub use app_proto::ohc::api::v1::*;
     }
+    pub mod invoicing {
+        pub use invoicing_proto::ohc::invoicing::*;
+    }
 }
 
 use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use crate::ohc::invoicing::invoicing_service_server::InvoicingService;
+use crate::ohc::invoicing::{CreateInvoiceRequest, CreateInvoiceResponse, Invoice, InvoiceItem};
 use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
 use crate::ohc::billing::billing_service_server::BillingServiceServer;
 use crate::ohc::orchestration::*;
 
+#[derive(Clone)]
 pub struct MyHubService {
     hub: Arc<Hub>,
     dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
@@ -416,6 +422,89 @@ pub struct MyHubService {
     onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
+}
+
+#[tonic::async_trait]
+impl InvoicingService for MyHubService {
+    async fn create_invoice(
+        &self,
+        request: tonic::Request<CreateInvoiceRequest>,
+    ) -> Result<tonic::Response<CreateInvoiceResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
+            .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
+        let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { auth_info.org_id.clone() };
+
+        let req = request.into_inner();
+
+        // Parse amount from prompt (mock AI Sales Agent parser)
+        let re = regex::Regex::new(r"\$(\d+(?:\.\d{2})?)").unwrap();
+        let total_amount = if let Some(caps) = re.captures(&req.prompt) {
+            caps.get(1).unwrap().as_str().parse::<f64>().unwrap_or(0.0)
+        } else {
+            return Err(tonic::Status::invalid_argument("Could not find amount in prompt"));
+        };
+
+        let invoice_id = uuid::Uuid::new_v4().to_string();
+        let item_id = uuid::Uuid::new_v4().to_string();
+        let payment_intent_id = uuid::Uuid::new_v4().to_string();
+
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new("mock_key".to_string());
+        let payment_link = stripe_client.create_payment_link(&invoice_id, total_amount).await
+            .map_err(|e| tonic::Status::internal(format!("Stripe error: {}", e)))?;
+
+        let pool = crate::db::get_pool();
+
+        sqlx::query(
+            "INSERT INTO invoices (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, 'draft', $4)"
+        )
+        .bind(&invoice_id)
+        .bind(&tenant_id)
+        .bind(&req.customer_id)
+        .bind(total_amount)
+        .execute(&pool)
+        .await
+        .map_err(|e| tonic::Status::internal(format!("DB error (invoices): {}", e)))?;
+
+        sqlx::query(
+            "INSERT INTO invoice_items (id, invoice_id, tenant_id, description, quantity, unit_price) VALUES ($1, $2, $3, $4, 1, $5)"
+        )
+        .bind(&item_id)
+        .bind(&invoice_id)
+        .bind(&tenant_id)
+        .bind(&req.prompt)
+        .bind(total_amount)
+        .execute(&pool)
+        .await
+        .map_err(|e| tonic::Status::internal(format!("DB error (invoice_items): {}", e)))?;
+
+        sqlx::query(
+            "INSERT INTO payment_intents (id, tenant_id, invoice_id, provider_id, status, payment_link) VALUES ($1, $2, $3, 'stripe', 'created', $4)"
+        )
+        .bind(&payment_intent_id)
+        .bind(&tenant_id)
+        .bind(&invoice_id)
+        .bind(&payment_link)
+        .execute(&pool)
+        .await
+        .map_err(|e| tonic::Status::internal(format!("DB error (payment_intents): {}", e)))?;
+
+        Ok(tonic::Response::new(CreateInvoiceResponse {
+            invoice: Some(Invoice {
+                id: invoice_id,
+                tenant_id: tenant_id,
+                customer_id: req.customer_id,
+                status: "draft".to_string(),
+                total_amount,
+                items: vec![InvoiceItem {
+                    id: item_id,
+                    description: req.prompt,
+                    quantity: 1,
+                    unit_price: total_amount,
+                }],
+                payment_link,
+            }),
+        }))
+    }
 }
 
 impl MyHubService {
@@ -2513,6 +2602,32 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ),
     );
     let app = axum::Router::new()
+        .route("/api/invoicing/create", axum::routing::post({
+            let hub_core_for_invoicing = hub.clone();
+            let pool_for_invoicing = db.pool.clone();
+            let db_for_invoicing = db.clone();
+            let dept_for_invoicing = dept_orchestrator.clone();
+            move |axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<crate::ohc::invoicing::CreateInvoiceRequest>| {
+                let hub_service_for_invoicing = MyHubService::new(hub_core_for_invoicing.clone(), pool_for_invoicing.clone(), db_for_invoicing.clone(), dept_for_invoicing.clone());
+                async move {
+                    let mut request = tonic::Request::new(req);
+                    let auth_info = ::server_auth::orchestration::AuthInfo { org_id: claims.organization_id.unwrap_or_default(), agent_id: "".to_string(), spiffe_id: "".to_string() };
+                    request.extensions_mut().insert(auth_info);
+
+                    use crate::ohc::invoicing::invoicing_service_server::InvoicingService;
+                    match hub_service_for_invoicing.create_invoice(request).await {
+                        Ok(response) => {
+                            let invoice = response.into_inner().invoice.unwrap();
+                            let response_json = serde_json::json!({ "invoice": invoice });
+                            Ok(axum::Json(response_json))
+                        },
+                        Err(_) => {
+                            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    }
+                }
+            }
+        }))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -3069,7 +3184,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
-        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(HubServiceServer::with_interceptor(hub_service.clone(), spiffe_interceptor))
+        .add_service(crate::ohc::invoicing::invoicing_service_server::InvoicingServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
@@ -3819,6 +3935,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </script>
                     </div>
 
+                    <!-- Invoicing Screen -->
+                    <div id="invoicing-screen" class="screen glass" style="max-width: 375px; margin: 0 auto; padding: 16px; box-sizing: border-box;">
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
+                        <h1>Create Invoice</h1>
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Tell your AI Sales Agent what you need to bill for.</p>
+
+                        <div class="card glass">
+                            <textarea id="invoice-prompt" rows="3" style="width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; margin-bottom: 12px;" placeholder="e.g. Send an invoice for $50 to John for plumbing repair"></textarea>
+                            <button style="width: 100%;" onclick="generateInvoice()">✨ Generate Quote & Payment Link</button>
+                        </div>
+
+                        <div id="invoice-preview" class="card glass" style="display: none; margin-top: 20px;">
+                            <h3 style="margin-top: 0;">Invoice Preview</h3>
+                            <div style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <p><strong>Customer ID:</strong> <span id="preview-customer"></span></p>
+                                <p><strong>Total Amount:</strong> $<span id="preview-amount"></span></p>
+                                <p><strong>Items:</strong> <span id="preview-items"></span></p>
+                                <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.1); margin: 12px 0;">
+                                <p><strong>Payment Link:</strong></p>
+                                <a id="preview-link" href="#" target="_blank" style="word-break: break-all; color: var(--primary);"></a>
+                            </div>
+                            <button style="width: 100%;">Send via SMS/WhatsApp</button>
+                        </div>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -4034,6 +4175,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Bottom Nav for dashboard_nav.spec.ts -->
                         <div class="glass" role="navigation" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
                             <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
+                            <button class="nav-item" onclick="showScreen('invoicing-screen')">🧾<br>Invoice</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
@@ -4041,6 +4183,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
+                            <button class="nav-item" onclick="showScreen('invoicing-screen')">Invoice</button>
                             <button class="nav-item">Distribute</button>
                         </div>
                     </div>
@@ -7016,6 +7159,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="api-docs-screen" class="screen" style="padding: 0;">
                         <div id="swagger-ui"></div>
                     </div>
+
+                    <script>
+                        async function generateInvoice() {
+                            const prompt = document.getElementById('invoice-prompt').value;
+                            if (!prompt) return alert('Please enter a prompt');
+
+                            try {
+                                const response = await fetch('/api/invoicing/create', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ prompt: prompt, customer_id: prompt.match(/to (\w+)/i)?.[1] || "John" })
+                                });
+
+                                if (!response.ok) throw new Error('Failed to generate invoice');
+                                const { invoice } = await response.json();
+                                document.getElementById('preview-customer').innerText = invoice.customer_id;
+                                document.getElementById('preview-amount').innerText = invoice.total_amount;
+                                document.getElementById('preview-items').innerText = invoice.items[0].description;
+                                document.getElementById('preview-link').innerText = invoice.payment_link;
+                                document.getElementById('preview-link').href = invoice.payment_link;
+                                document.getElementById('invoice-preview').style.display = 'block';
+                            } catch (e) { alert('Failed to generate invoice: ' + e); }
+                        }
+                    </script>
                 </body>
             </html>
         "##.replace("{tooltips_json}", &tooltips_json),

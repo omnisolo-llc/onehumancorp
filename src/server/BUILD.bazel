@@ -293,6 +293,8 @@ rust_library(
         "//src/proto:docs_prost",
         "//src/proto:docs_tonic",
         "//src/proto:hub_tonic",
+        "//src/proto:invoicing_prost",
+        "//src/proto:invoicing_tonic",
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",

@@ -63,6 +63,33 @@ impl StripeClient {
         }
     }
 
+    pub async fn create_payment_link(&self, _invoice_id: &str, amount_usd: f64) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown", // assume customer_id is a proxy for organization_id
+            "stripe_payment_link",
+            0.10 // mock cost for api orchestration
+        ).await;
+
+        // Use PaymentRouter to optimize method
+        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
+
+        match pm {
+            crate::integrations::stripe::routing::PaymentMethod::Ach => {
+                Ok(format!("https://buy.stripe.com/test_ach_{}", _invoice_id))
+            },
+            crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
+                Ok(format!("https://buy.stripe.com/test_{}", _invoice_id))
+            },
+            crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
+                Ok(format!("https://buy.razorpay.com/test_{}", _invoice_id))
+            },
+            crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
+                Ok(format!("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id={}", _invoice_id))
+            }
+        }
+    }
+
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),

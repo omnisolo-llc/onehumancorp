@@ -10,6 +10,7 @@ exports_files([
     "common.proto",
     "docs.proto",
     "hub.proto",
+    "invoicing.proto",
     "model.proto",
     "organization.proto",
     "skills.proto",
@@ -200,6 +201,22 @@ proto_rust_library(
     proto = ":interop_proto",
     visibility = ["//visibility:public"],
 )
+
+# ── Invoicing ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "invoicing_proto",
+    srcs = ["invoicing.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "invoicing",
+    proto = ":invoicing_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
 
 # ── Docs ──────────────────────────────────────────────────────────────────────
 
