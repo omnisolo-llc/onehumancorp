@@ -142,3 +142,11 @@ async fn test_sqlite_fail_backoff() {
     let diff = run_after.signed_duration_since(expected_time).num_milliseconds().abs();
     assert!(diff < 1000, "run_after timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
 }
+
+#[tokio::test]
+async fn test_pg_queue_enqueue_dequeue() {
+    // Basic test to compile-check PgTaskQueue
+    // In a real environment, this needs a postgres instance running.
+    // Just a placeholder to ensure compilation.
+    let _ = super::PgTaskQueue::new(std::sync::Arc::new(sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap()));
+}

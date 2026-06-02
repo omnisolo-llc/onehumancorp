@@ -52,7 +52,7 @@ impl StateMachine {
     }
 
     pub async fn transition(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String> {
-        let _guard = self.lock.acquire(task_id).await?;
+        let _guard = self.lock.acquire("system", "task", task_id).await.map_err(|e| e.to_string())?;
 
         let current_state = self.repo.get_task_state(task_id)?;
 

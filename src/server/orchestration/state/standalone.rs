@@ -160,7 +160,7 @@ impl StateManager for StandaloneStateManager {
                 "standalone_state_manager".to_string(),
                 30,
             )
-            .await?;
+            .await.map_err(|e| e.to_string())?;
             self.transition_state_inner(
                 task_id,
                 tenant_id,
@@ -195,7 +195,7 @@ impl StateManager for StandaloneStateManager {
                 "standalone_state_manager".to_string(),
                 30,
             )
-            .await?;
+            .await.map_err(|e| e.to_string())?;
 
             let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 

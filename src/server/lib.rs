@@ -2138,6 +2138,24 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    // Spawn Background Job Queue Worker
+    let job_roles = vec![
+        "The Operations Manager".to_string(),
+        "The Promoter".to_string(),
+        "The Ambassador".to_string(),
+        "The Salesperson".to_string(),
+        "The Accountant".to_string(),
+        "The Protector".to_string(),
+        "The Advisor".to_string(),
+    ];
+    let job_worker = crate::workers::job_queue_worker::JobQueueWorker::new(
+        db.clone(),
+        std::sync::Arc::new(crate::orchestration::queue::PgTaskQueue::new(db.pool.clone())),
+        std::sync::Arc::new(crate::orchestration::locks::StandaloneLock::new()),
+        job_roles,
+    );
+    job_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();

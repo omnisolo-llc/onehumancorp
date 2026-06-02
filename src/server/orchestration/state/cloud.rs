@@ -138,7 +138,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
         let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
+            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await.map_err(|e| e.to_string())?;
             self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
         };
 
