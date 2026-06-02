@@ -15,5 +15,5 @@ sh_test(
         "vitest.config.ts",
         "vitest.setup.ts",
     ],
-    tags = ["no-sandbox", "local"],
+    tags = ["no-sandbox"],
 )

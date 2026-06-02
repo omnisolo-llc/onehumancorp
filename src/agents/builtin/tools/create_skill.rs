@@ -5,6 +5,7 @@ use std::sync::Arc;
 use super::{Tool, ToolExecutor};
 
 
+#[allow(dead_code)]
 struct CreateSkillExecutor {
     memory_store: (),
     // We are mocking persistence for now as LongTermMemory is not exported easily

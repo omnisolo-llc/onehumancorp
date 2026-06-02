@@ -99,7 +99,7 @@ impl RedisRateLimiter {
         self
     }
 
-    pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?;
