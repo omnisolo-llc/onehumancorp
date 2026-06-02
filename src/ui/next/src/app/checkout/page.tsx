@@ -4,12 +4,66 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
+const TRANSLATIONS: Record<string, Record<string, string>> = {
+  'en-US': {
+    checkout: 'Checkout',
+    enter_details: 'Please enter your payment details below.',
+    guarantee: '100% money back guarantee. Secure SSL payments.',
+    pay_now: 'Pay Now',
+    processing: 'Processing...',
+    tap_to_pay: 'Tap to Pay (Stripe Terminal)',
+    mercado_pago: 'Pay with Mercado Pago',
+    cancel: 'Cancel',
+    payment_successful: 'Payment Successful!',
+    order_confirmed: 'Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a ',
+    credit: '$10 credit',
+    your_link: 'Your Unique Link',
+    copy: 'Copy',
+    copied: 'Copied!',
+    or_share: 'Or Share Via',
+    continue_dashboard: 'Continue to Dashboard',
+    offline_msg: 'You are offline. Payment of {amount} {currency} saved locally and will process when reconnected.'
+  },
+  'ar-AE': {
+    checkout: 'الدفع',
+    enter_details: 'يرجى إدخال تفاصيل الدفع أدناه.',
+    guarantee: 'ضمان استرداد الأموال بنسبة 100٪. مدفوعات SSL آمنة.',
+    pay_now: 'ادفع الآن',
+    processing: 'جاري المعالجة...',
+    tap_to_pay: 'انقر للدفع (Stripe Terminal)',
+    mercado_pago: 'الدفع باستخدام Mercado Pago',
+    cancel: 'إلغاء',
+    payment_successful: 'تم الدفع بنجاح!',
+    order_confirmed: 'تم تأكيد طلبك. شارك مع أصدقائك! عندما يشترون ، يحصلون على خصم 10٪ وتكسب ',
+    credit: 'رصيد بقيمة 10 دولارات',
+    your_link: 'الرابط الفريد الخاص بك',
+    copy: 'نسخ',
+    copied: 'تم النسخ!',
+    or_share: 'أو شارك عبر',
+    continue_dashboard: 'المتابعة إلى لوحة التحكم',
+    offline_msg: 'أنت غير متصل بالإنترنت. تم حفظ دفعة {amount} {currency} محليًا وستتم معالجتها عند إعادة الاتصال.'
+  }
+};
+
+const OFFLINE_EXCHANGE_RATES: Record<string, number> = {
+  'USD': 1.0,
+  'AED': 3.67,
+  'EUR': 0.92,
+  'GBP': 0.79,
+  'BRL': 5.02
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [locale, setLocale] = useState('en-US');
+  const [currency, setCurrency] = useState('USD');
+  const [offlineMessage, setOfflineMessage] = useState("");
+
+  const t = (key: string) => TRANSLATIONS[locale]?.[key] || TRANSLATIONS['en-US'][key] || key;
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -37,16 +91,39 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className={`flex flex-col min-h-screen font-inter ${locale === 'ar-AE' ? 'text-right' : 'text-left'}`} dir={locale === 'ar-AE' ? 'rtl' : 'ltr'} style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>{t('checkout')}</h1>
+        <div className="flex gap-2">
+            <select
+              value={locale}
+              onChange={(e) => setLocale(e.target.value)}
+              className="bg-white/50 border border-gray-200 rounded-md text-sm px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              data-testid="locale-select"
+            >
+                <option value="en-US">English</option>
+                <option value="ar-AE">العربية</option>
+            </select>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="bg-white/50 border border-gray-200 rounded-md text-sm px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              data-testid="currency-select"
+            >
+                <option value="USD">USD ($)</option>
+                <option value="AED">AED (د.إ)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="BRL">BRL (R$)</option>
+            </select>
+        </div>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <p className="text-gray-700">{t('enter_details')}</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-          <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
+          <p className="text-sm text-gray-600">{t('guarantee')}</p>
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
@@ -54,7 +131,7 @@ export default function CheckoutPage() {
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
+              {isProcessing ? t('processing') : t('pay_now')}
             </button>
           </WithTooltip>
 
@@ -65,7 +142,7 @@ export default function CheckoutPage() {
                 if (!amount) return;
 
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
+                  alert(`Payment of ${amount} ${currency} successful!`);
                   router.push('/dashboard');
                 } else {
                   let queue = [];
@@ -73,23 +150,34 @@ export default function CheckoutPage() {
                     queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
                   } catch (e) {}
 
+                  const exchangeRate = OFFLINE_EXCHANGE_RATES[currency] || 1.0;
+
                   queue.push({
                     id: 'txn_' + Date.now(),
                     amount: parseFloat(amount),
+                    currency: currency,
+                    exchange_rate: exchangeRate,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
+
+                  const msg = t('offline_msg').replace('{amount}', amount).replace('{currency}', currency);
+                  setOfflineMessage(msg);
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
-              Tap to Pay (Stripe Terminal)
+              {t('tap_to_pay')}
             </button>
           </WithTooltip>
+
+          {offlineMessage && (
+            <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm font-medium border border-yellow-200">
+              {offlineMessage}
+            </div>
+          )}
 
           <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
             <button
@@ -99,7 +187,7 @@ export default function CheckoutPage() {
               }}
               className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              Pay with Mercado Pago
+              {t('mercado_pago')}
             </button>
           </WithTooltip>
 
@@ -108,7 +196,7 @@ export default function CheckoutPage() {
               onClick={() => router.push('/pricing')}
               className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </WithTooltip>
         </div>
@@ -127,14 +215,14 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">{t('payment_successful')}</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+              {t('order_confirmed')} <strong className="text-gray-900">{t('credit')}</strong>.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Your Unique Link</label>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">{t('your_link')}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -150,14 +238,14 @@ export default function CheckoutPage() {
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                   >
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? t('copied') : t('copy')}
                   </button>
                 </div>
               </div>
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
+                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">{t('or_share')}</span></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -185,7 +273,7 @@ export default function CheckoutPage() {
                 onClick={() => router.push('/dashboard')}
                 className="w-full px-4 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
               >
-                Continue to Dashboard
+                {t('continue_dashboard')}
               </button>
             </div>
           </div>

@@ -7,6 +7,8 @@ pub struct OfflineMutation {
     pub transaction_id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
+    pub currency: Option<String>,
+    pub exchange_rate: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -58,6 +60,49 @@ pub async fn offline_sync_handler(
 
         match result {
             Ok(Some(_)) => {
+                // Multi-Currency Reconciliation Check
+                if let (Some(currency), Some(offline_rate)) = (&mutation.currency, mutation.exchange_rate) {
+                    if currency != "USD" {
+                        // Simulated real-time exchange rate
+                        let real_time_rate = match currency.as_str() {
+                            "AED" => 3.65, // Rate changed slightly while offline!
+                            "EUR" => 0.90,
+                            "GBP" => 0.78,
+                            "BRL" => 5.10,
+                            _ => 1.0,
+                        };
+
+                        let spread = offline_rate - real_time_rate;
+                        if spread.abs() > 0.01 {
+                             tracing::warn!("Currency fluctuation detected during offline sync for {}. Offline Rate: {}, Real-time Rate: {}", currency, offline_rate, real_time_rate);
+
+                             let payload = serde_json::json!({
+                                 "transaction_id": mutation.transaction_id,
+                                 "currency": currency,
+                                 "offline_rate": offline_rate,
+                                 "real_time_rate": real_time_rate,
+                                 "spread": spread
+                             });
+
+                             // Let's directly append to the ledger using SQL for the handler instead of relying on the orchestration module
+                             let entry_id = uuid::Uuid::new_v4().to_string();
+                             if let Err(e) = sqlx::query(
+                                 "INSERT INTO ohc_universal_ledger (id, tenant_id, action_type, department, state_change, created_at)
+                                  VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
+                             )
+                             .bind(&entry_id)
+                             .bind(&tenant_id)
+                             .bind("CurrencyReconciliation")
+                             .bind("Finance")
+                             .bind(&payload)
+                             .execute(&db)
+                             .await {
+                                 tracing::error!("Failed to record CurrencyReconciliation in ledger: {}", e);
+                             }
+                        }
+                    }
+                }
+
                 // Publish mesh event
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
                     action: "InventoryUpdated".to_string(),
@@ -68,7 +113,9 @@ pub async fn offline_sync_handler(
                         "product_id": mutation.product_id,
                         "transaction_id": mutation.transaction_id,
                         "quantity_deducted": mutation.quantity_deducted,
-                        "tenant_id": tenant_id
+                        "tenant_id": tenant_id,
+                        "currency": mutation.currency,
+                        "exchange_rate": mutation.exchange_rate
                     }).to_string().into_bytes(),
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
@@ -133,6 +180,8 @@ mod tests {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
+                    currency: Some("AED".to_string()),
+                    exchange_rate: Some(3.67),
                 },
             ],
         };
@@ -154,6 +203,8 @@ mod tests {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
+                    currency: Some("USD".to_string()),
+                    exchange_rate: Some(1.0),
                 },
             ],
         };
