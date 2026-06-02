@@ -1,4 +1,5 @@
 use crate::db::{DB, DbStore};
+use sqlx::Executor;
 use crate::tasks::SharedTask;
 use chrono::Utc;
 use sqlx::Row;
@@ -1186,7 +1187,7 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-                    use sqlx::Executor;
+
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
@@ -1342,14 +1343,14 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-                    use sqlx::Executor;
+
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
             })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-                    use sqlx::Executor;
+
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
