@@ -27,6 +27,11 @@ pub async fn handle_oauth_callback(
         let parts: Vec<&str> = state.splitn(3, '_').collect();
         if parts.len() == 3 {
             let tunnel_id = parts[1];
+            // Validate tunnel_id
+            if !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+                return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel ID format").into_response();
+            }
+
             let actual_state = parts[2];
 
             // Redirect to the standalone instance via the tunnel proxy
@@ -34,9 +39,9 @@ pub async fn handle_oauth_callback(
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
-                tunnel_base_url, tunnel_id, query.code, actual_state);
+                tunnel_base_url, tunnel_id, urlencoding::encode(&query.code), urlencoding::encode(actual_state));
             for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", k, v));
+                redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
             }
             return Redirect::temporary(&redirect_url).into_response();
         }

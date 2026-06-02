@@ -21,6 +21,7 @@ impl UserRepository for SqliteUserRepository {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         // For SQLite in Standalone mode, there's no multi-tenant isolation via connection parameters.
         // We still store the org_id to conform to the interface.
+        let safe_org_id = if _org_id.trim().is_empty() { user.organization_id.clone() } else { Some(_org_id.to_string()) };
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
@@ -33,7 +34,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(&user.organization_id)
+        .bind(&safe_org_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
