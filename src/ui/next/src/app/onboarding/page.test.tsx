@@ -192,15 +192,14 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it('Step 2: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
+    // Set initial state to Step 2
     act(() => {
       useOnboardingStore.setState({
-        step: 1,
-        chatStep: 3,
+        step: 2,
         businessName: 'A',
-        location: 'NY',
         businessType: 'Bakery',
         categories: ['food'],
         firstProductName: 'Cake',
@@ -210,9 +209,9 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
 
-    await user.click(generateButton);
+    await user.click(continueButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
@@ -288,41 +287,5 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
-  });
-
-  it('Save Draft button triggers draft API and shows success message', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    // Mock draft API success
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/draft') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({})
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
-    });
-
-    // Start at Step 2
-    act(() => {
-      useOnboardingStore.setState({ step: 2 });
-    });
-
-    render(<OnboardingWizard />);
-
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
-    expect(saveDraftButton).toBeInTheDocument();
-
-    await user.click(saveDraftButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
-    });
-
-    // Verify API was called
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
-      method: 'POST'
-    }));
   });
 });

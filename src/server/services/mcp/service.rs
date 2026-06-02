@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
+use crate::tools::local_proxy::server::LocalProxyServer;
 use crate::tools::config_sync::server::ConfigSyncServer;
 
 pub struct MyMcpService {
@@ -12,6 +13,7 @@ pub struct MyMcpService {
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
+    local_proxy_server: Arc<LocalProxyServer>,
     config_sync_server: Arc<ConfigSyncServer>,
 }
 
@@ -22,6 +24,7 @@ impl MyMcpService {
             registry,
             hub: hub.clone(),
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
+            local_proxy_server: Arc::new(LocalProxyServer::new()),
             config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
         }
     }
@@ -65,7 +68,9 @@ impl McpService for MyMcpService {
     ) -> Result<Response<McpToolsResponse>, Status> {
         let mut tools = self.dynamic_tools.read().unwrap().clone();
         let hybrid_fs_tools = self.hybrid_fs_server.get_tools();
+        let local_proxy_tools = self.local_proxy_server.get_tools();
         tools.extend(hybrid_fs_tools);
+        tools.extend(local_proxy_tools);
         let config_sync_tools = self.config_sync_server.get_tools();
         tools.extend(config_sync_tools);
         Ok(Response::new(McpToolsResponse {
@@ -210,11 +215,7 @@ impl McpService for MyMcpService {
             "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
                 // Determine tenant_id from spiffe_id on each request to ensure multi-tenancy
                 let spiffe_id_str = &req.spiffe_id;
-                let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-                let tenant_id = parsed.0;
-                if tenant_id.is_empty() {
-                    return Err(Status::unauthenticated("empty tenant ID in SPIFFE ID"));
-                }
+                let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
                 let provider = crate::tools::hybridfsmcp::factory::create_fs_provider(Some(tenant_id));
                 let request_specific_server = crate::tools::hybridfsmcp::server::HybridFSMcpServer::new(provider);
                 match request_specific_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
@@ -222,7 +223,13 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
-            _ => Err(Status::not_found(format!("tool {} not implemented", req.tool_id)))
+            "local_stateful_proxy" => {
+                match self.local_proxy_server.invoke_tool(&req).await {
+                    Ok(resp) => Ok(Response::new(resp)),
+                    Err(e) => Err(e),
+                }
+            }
+            _ => Err(Status::unimplemented(format!("tool {} not implemented", req.tool_id)))
         }
     }
 
@@ -232,8 +239,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -242,7 +248,7 @@ impl McpService for MyMcpService {
         let req = request.into_inner();
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), tenant_id.clone());
-        let ctx_root = std::env::var("CONTEXT_ROOT").ok();
+        let ctx_root = std::env::var("OHC_CONTEXT_ROOT").ok();
         let sip_db = if let Some(root) = ctx_root {
             sip_db.with_context_root(root)
         } else {
@@ -284,8 +290,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
