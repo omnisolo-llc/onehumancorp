@@ -37,6 +37,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+pub static INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -2413,8 +2414,15 @@ async fn generate_manychat_draft_handler() -> axum::response::Response {
 
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let pool = crate::db::get_pool();
+    let org_id = user.organization_id.unwrap_or_default();
 
+    let cache_key = format!("inbox:{}", org_id);
+    let cache = INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(messages) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(messages)).into_response();
+    }
+
+    let pool = crate::db::get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
@@ -2423,7 +2431,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }
     };
 
-    let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
@@ -2449,6 +2456,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "created_at": created_at_str,
                 })
             }).collect();
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
@@ -7609,3 +7617,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 }
 pub mod crypto;
 // resolves #9690
+
+
+#[cfg(test)]
+mod inbox_tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use axum::extract::Extension;
+
+    #[tokio::test]
+    async fn test_inbox_messages_handler_cache() {
+        let claims = ::server_common::Claims {
+            sub: "test_user".to_string(),
+            exp: 9999999999,
+            roles: vec![],
+            organization_id: Some("test_org".to_string()),
+            session_id: None,
+        };
+
+        let cache_key = format!("inbox:{}", claims.organization_id.clone().unwrap());
+        let cache = INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        cache.invalidate(&cache_key).await;
+
+        let dummy_messages: Vec<serde_json::Value> = vec![serde_json::json!({
+            "id": "1",
+            "tenant_id": "test_org",
+            "source": "web",
+            "content": "hello",
+            "draft_reply": "hi",
+            "status": "new",
+            "created_at": "2023-01-01 00:00:00"
+        })];
+        cache.set(&cache_key, dummy_messages, std::time::Duration::from_secs(5)).await;
+
+        let user_extension = Extension(claims);
+        let response = super::get_inbox_messages_handler(user_extension).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+    }
+}
