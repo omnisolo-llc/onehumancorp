@@ -290,11 +290,11 @@ async fn handle_storefront_embed(
     let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-    let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
-    let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
-    let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
-    let price_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#555" };
-    let link_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#333" };
+    let _bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
+    let _text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
+    let _border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
+    let _price_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#555" };
+    let _link_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#333" };
 
     // Basic HTML escaping
     let escape_html = |s: &str| {
@@ -317,27 +317,57 @@ async fn handle_storefront_embed(
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {bg_color}; color: {text_color}; }}
-        .card {{ border: 1px solid {border_color}; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
-        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }}
-        .price {{ color: {price_color}; font-size: 1rem; margin: 0 0 16px 0; }}
-        .btn {{ display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }}
-        .footer {{ text-align: center; margin-top: 16px; font-size: 0.85rem; }}
-        .footer a {{ color: {link_color}; text-decoration: none; font-weight: bold; }}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        body {{ margin: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: transparent; padding: 12px; }}
+        .card {{
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 300px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            color: #1D1D1F;
+        }}
+        .dark-mode .card {{
+            background: rgba(30, 30, 30, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #F5F5F7;
+        }}
+        .title {{ font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; margin: 0 0 4px 0; letter-spacing: -0.02em; }}
+        .price {{ color: #4b5563; font-size: 1rem; font-weight: 500; margin: 0 0 20px 0; }}
+        .dark-mode .price {{ color: #9ca3af; }}
+        .btn {{
+            display: block; width: 100%; text-align: center;
+            background: #1D1D1F; color: white;
+            padding: 12px; text-decoration: none; border-radius: 12px;
+            font-weight: 600; font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }}
+        .btn:hover {{ background: #000; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }}
+        .dark-mode .btn {{ background: #F5F5F7; color: #1D1D1F; }}
+        .dark-mode .btn:hover {{ background: #FFF; }}
+        .footer {{ text-align: center; margin-top: 16px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }}
+        .footer a {{ color: #6b7280; text-decoration: none; transition: color 0.2s ease; }}
+        .footer a:hover {{ color: #1D1D1F; }}
+        .dark-mode .footer a {{ color: #9ca3af; }}
+        .dark-mode .footer a:hover {{ color: #F5F5F7; }}
     </style>
 </head>
-<body>
+<body class="{theme_class}">
     <div class="card">
         <h2 class="title">{safe_name}</h2>
         <p class="price">{safe_price}</p>
-        <a href="#" class="btn">Buy Now</a>
+        <a class="btn" href="ohc://store/{safe_tenant}" target="_top">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="ohc://join?ref={safe_tenant}" target="_top">Powered by OHC</a>
         </div>
     </div>
 </body>
 </html>
-"##);
+"##, theme_class = if query.theme.as_deref() == Some("dark") { "dark-mode" } else { "" });
     axum::response::Html(html)
 }
 
