@@ -10,10 +10,10 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      chatStep: 1,
+
       businessName: '',
-      whatYouSell: '',
-      location: '',
+
+
       businessDescription: '',
       domainChoice: 'subdomain',
       aiAgents: [],
