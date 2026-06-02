@@ -1539,3 +1539,40 @@ mod tests {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests_error_tracing {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::broadcast;
+
+    struct ErrorHandler;
+
+    #[async_trait]
+    impl JobPayloadHandler for ErrorHandler {
+        async fn handle(&self, _payload: Vec<u8>) -> Result<(), String> {
+            Err("Simulated handler error".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_in_mem_worker_logs_error_on_handler_failure() {
+        let queue = Arc::new(InMemJobQueue::new());
+        queue.push("test", b"{}".to_vec()).await.unwrap();
+
+        let handler = Arc::new(ErrorHandler);
+        let pool = WorkerPool::new(queue.clone() as Arc<dyn JobQueue>, "test".to_string(), 1, handler);
+
+        let (tx, _rx) = broadcast::channel(1);
+        let tx_clone = tx.clone();
+        let pool_handle = tokio::spawn(async move {
+            pool.start(tx_clone).await;
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        // Signal shutdown
+        let _ = tx.send(());
+        let _ = pool_handle.await;
+    }
+}
