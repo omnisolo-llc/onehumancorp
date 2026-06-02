@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { InteractiveWalkthrough } from '../../components/Walkthrough';
 
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals'>('departments');
@@ -16,6 +17,16 @@ export default function AgentsPage() {
   const [workflowLoading, setWorkflowLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('walkthrough') === 'true') {
+        setShowWalkthrough(true);
+      }
+    }
+  }, []);
 
   const fetchFeed = async () => {
     setFeedLoading(true);
@@ -194,6 +205,7 @@ export default function AgentsPage() {
               {departments.map((dept) => (
                 <div
                   key={dept.id}
+                  id={`agent-card-${dept.id}`}
                   className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
@@ -375,6 +387,20 @@ export default function AgentsPage() {
           )}
         </main>
       </div>
+
+      <InteractiveWalkthrough
+        isOpen={showWalkthrough}
+        onClose={() => setShowWalkthrough(false)}
+        steps={[
+          {
+            targetId: "agent-card-operations",
+            title: "Activate Your AI Support Agent",
+            content: "Click on an AI agent's card, like The Manager, to activate them and assign specific tasks. They will handle your operations automatically.",
+            position: "bottom"
+          }
+        ]}
+      />
+
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }

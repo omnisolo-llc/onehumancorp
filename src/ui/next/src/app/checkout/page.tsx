@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { InteractiveWalkthrough } from '../../components/Walkthrough';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -10,6 +11,16 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('walkthrough') === 'true') {
+        setShowWalkthrough(true);
+      }
+    }
+  }, []);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -50,6 +61,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
+              id="checkout-pay-now-btn"
               onClick={handlePayment}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
@@ -191,6 +203,19 @@ export default function CheckoutPage() {
           </div>
         </div>
       )}
+
+      <InteractiveWalkthrough
+        isOpen={showWalkthrough}
+        onClose={() => setShowWalkthrough(false)}
+        steps={[
+          {
+            targetId: "checkout-pay-now-btn",
+            title: "Accept Your First Payment",
+            content: "Click this button to securely finish the checkout process. Our platform handles all the complexity of SSL, payment gateways, and banking automatically.",
+            position: "bottom"
+          }
+        ]}
+      />
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
