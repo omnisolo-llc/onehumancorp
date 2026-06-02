@@ -1,22 +1,32 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::fs::File;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
+
+
+#[derive(Deserialize)]
+struct HeadArgs {
+    path: String,
+    #[serde(default = "default_lines")]
+    lines: u64,
+}
+
+fn default_lines() -> u64 {
+    10
+}
 
 struct HeadExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for HeadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("head: path is required".to_string()))?;
+impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
+    async fn execute_typed(&self, args: HeadArgs) -> Result<String, ToolError> {
+        let path = &args.path;
 
         // Basic path sanitization: disallow relative path traversal
         if path.contains("..") {
@@ -30,7 +40,7 @@ impl ToolExecutor for HeadExecutor {
             .await
             .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+        let lines_to_read = args.lines as usize;
         if lines_to_read > 1000 {
             return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
         }
@@ -72,7 +82,7 @@ pub fn head_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(HeadExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(HeadExecutor { working_dir })),
     }
 }
 
@@ -91,7 +101,7 @@ mod tests {
         let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
 
         let args = json!({ "path": "test.txt", "lines": 2 });
-        let result = executor.execute(args).await.unwrap();
+        let result = super::super::ToolExecutor::execute(&PydanticAdapter::new(executor), args).await.unwrap();
         assert_eq!(result, "line1\nline2");
     }
 
@@ -105,7 +115,7 @@ mod tests {
         let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
 
         let args = json!({ "path": "test.txt" });
-        let result = executor.execute(args).await.unwrap();
+        let result = super::super::ToolExecutor::execute(&PydanticAdapter::new(executor), args).await.unwrap();
         let result_lines: Vec<&str> = result.split('\n').collect();
         assert_eq!(result_lines.len(), 10);
         assert_eq!(result_lines[0], "line1");
@@ -116,7 +126,7 @@ mod tests {
     async fn test_head_path_traversal() {
         let executor = HeadExecutor { working_dir: None };
         let args = json!({ "path": "../../../etc/passwd" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&PydanticAdapter::new(executor), args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("path traversal"));
@@ -129,7 +139,7 @@ mod tests {
     async fn test_head_jit_limit() {
         let executor = HeadExecutor { working_dir: None };
         let args = json!({ "path": "test.txt", "lines": 1001 });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&PydanticAdapter::new(executor), args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Cannot read more than 1000 lines"));
