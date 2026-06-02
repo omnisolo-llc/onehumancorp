@@ -2057,10 +2057,23 @@ impl Agent {
             }
         }
 
+        // SONA Trajectory Injection Mechanic
+        let mut injected_message = initial_message.to_string();
+        {
+            let matcher = self.pattern_matcher.lock().await;
+            if let Some(pattern) = matcher.find_best_match(initial_message) {
+                tracing::info!("SONA Trajectory Pattern Match found: ID {}", pattern.id);
+                injected_message = format!(
+                    "[SONA Trajectory Hint: A similar past task followed this successful trajectory (tools used: {:?}). Consider this pattern if applicable.]\n\n{}",
+                    pattern.successful_tools, initial_message
+                );
+            }
+        }
+
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            messages.push(Message::user(&injected_message));
         } else if !initial_message.is_empty() {
-            messages.push(Message::user(initial_message));
+            messages.push(Message::user(&injected_message));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -2375,6 +2388,34 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
+
+                // Post-flight trajectory recording (SONA)
+                {
+                    let mut successful_tools = Vec::new();
+                    for msg in &messages {
+                        for tr in &msg.tool_results {
+                            if tr.error.is_empty() {
+                                // Find the matching tool name
+                                for prev_msg in &messages {
+                                    if let Some(tc) = prev_msg.tool_calls.iter().find(|t| t.id == tr.tool_call_id) {
+                                        successful_tools.push(tc.name.clone());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !successful_tools.is_empty() {
+                        let mut matcher = self.pattern_matcher.lock().await;
+                        matcher.record_pattern(TrajectoryPattern {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            initial_context: initial_message.to_string(),
+                            successful_tools,
+                            outcome_score: 1.0,
+                        });
+                    }
+                }
+
                 return Ok(last_assistant_content);
             }
 
@@ -7221,4 +7262,105 @@ mod tao_tests {
         let _observation = "Format results back -> Repeat";
         assert_eq!(_thought, "Assemble prompt");
     }
+}
+
+#[tokio::test]
+async fn test_sona_pattern_recording_and_injection() {
+    use crate::types::{ChatRequest, ChatResponse, Usage, Message, ToolCall, ToolResult, Role};
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use std::sync::Mutex;
+
+    struct SonaMockLlm {
+        call_count: Mutex<usize>,
+        received_prompts: Mutex<Vec<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for SonaMockLlm {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().unwrap();
+            *count += 1;
+
+            self.received_prompts.lock().unwrap().push(req.messages.last().unwrap().content.clone());
+
+            if *count == 1 || *count == 3 {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Let's use a tool".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: format!("call_{}", count),
+                            name: "my_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Task done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+    }
+
+    struct MyTool;
+    #[async_trait::async_trait]
+    impl ToolExecutor for MyTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+            Ok("tool success".to_string())
+        }
+    }
+
+    let llm = Arc::new(SonaMockLlm {
+        call_count: Mutex::new(0),
+        received_prompts: Mutex::new(Vec::new()),
+    });
+
+    let tool = Tool {
+        name: "my_tool".to_string(),
+        description: "my tool".to_string(),
+        is_read_only: false,
+        parameters: serde_json::json!({}),
+        execute: Arc::new(MyTool),
+    };
+
+    let agent = Agent::new(llm.clone(), vec![tool]);
+    let cfg = AgentRunConfig::default();
+
+    let task = "Perform a very specific SONA task";
+    let mut on_event = |_| {};
+
+    // First run
+    let res1 = agent.run(&cfg, task, &mut on_event).await.unwrap();
+    assert_eq!(res1, "Task done");
+
+    // Check that pattern was recorded
+    {
+        let matcher = agent.pattern_matcher.lock().await;
+        let patterns = matcher.get_patterns();
+        assert_eq!(patterns.len(), 1);
+        assert_eq!(patterns[0].initial_context, task);
+        assert_eq!(patterns[0].successful_tools, vec!["my_tool".to_string()]);
+    }
+
+    // Second run
+    let res2 = agent.run(&cfg, task, &mut on_event).await.unwrap();
+    assert_eq!(res2, "Task done");
+
+    // Check that hint was injected
+    let prompts = llm.received_prompts.lock().unwrap();
+    // 1: initial message
+    // 2: tool results message
+    // 3: initial message WITH HINT
+    // 4: tool results message
+    assert!(prompts[2].contains("[SONA Trajectory Hint: A similar past task followed this successful trajectory (tools used: [\"my_tool\"])"));
 }
