@@ -169,7 +169,7 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-8 backdrop-blur-[20px] saturate-200">
+    <div className="min-h-screen bg-[#F5F5F7] p-8">
       <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm">
         <p className="text-yellow-700 text-sm">
           <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
@@ -177,7 +177,7 @@ export default function ApiDocsPage() {
       </div>
       {mounted && (
         <WithTooltip id="api-docs-tooltip" defaultText="Interactive Swagger API Documentation">
-          <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-xl border border-white/40">
+          <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40">
             <SwaggerUI spec={swaggerSpec} />
           </div>
         </WithTooltip>
