@@ -5,14 +5,12 @@ use sqlx::Row;
 
 pub struct TaskDbService {
     db: Arc<DB>,
-    sqlite_mu: tokio::sync::Mutex<()>,
 }
 
 impl TaskDbService {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            sqlite_mu: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -63,42 +61,22 @@ impl TaskDbService {
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let _lock = self.sqlite_mu.lock().await;
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT * FROM shared_tasks
-                    WHERE status = 'PENDING'
-                    LIMIT 1
+                    UPDATE shared_tasks
+                    SET status = 'ASSIGNED', assigned_agent_id = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = (SELECT id FROM shared_tasks WHERE status = 'PENDING' LIMIT 1)
+                    RETURNING *
                     "#
                 )
+                .bind(agent_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if let Some(row) = row_opt {
-                    let id: String = row.get("id");
-
-                    sqlx::query(
-                        r#"
-                        UPDATE shared_tasks
-                        SET status = 'ASSIGNED', assigned_agent_id = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                        "#
-                    )
-                    .bind(agent_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                    let updated_row = sqlx::query("SELECT * FROM shared_tasks WHERE id = ?")
-                        .bind(&id)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
-
+                if let Some(updated_row) = row_opt {
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Ok(Some(Self::sqlite_row_to_task(updated_row)))
                 } else {

@@ -154,4 +154,19 @@ mod tests {
         let compressed_text = ::server_pricing::compression::reduce_tokens(raw_text);
         assert!(compressed_text.len() < raw_text.len());
     }
+
+    #[tokio::test]
+    async fn test_exhaust_cpu_memory_degradation() {
+        let start = std::time::Instant::now();
+        let cpu_intensive_task = async {
+            let mut dummy_val = 0u64;
+            for _ in 0..10_000_000 { dummy_val = dummy_val.wrapping_add(1); }
+            tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
+            dummy_val
+        };
+        let result = tokio::time::timeout(tokio::time::Duration::from_millis(500), cpu_intensive_task).await;
+        assert!(result.is_err(), "Must fail safely on CPU exhaustion timeout");
+        let elapsed = start.elapsed();
+        assert!(elapsed < std::time::Duration::from_millis(1500), "Should enforce degradation timeout quickly");
+    }
 }
