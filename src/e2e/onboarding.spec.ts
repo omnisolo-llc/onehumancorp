@@ -35,16 +35,21 @@ test.describe('Non-Technical Small Business Owner Onboarding Flow (Day One)', ()
 
     // Now fill properly
     await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
+
+    // IMPORTANT: Wait for validation to pass before clicking next again
+    await expect(page.getByText('Business name must be at least 3 characters')).not.toBeVisible();
+
     await nextBtn3.click();
 
     // Step: What do you sell?
-    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible({ timeout: 10000 });
     await page.getByLabel(/Physical Products/).check();
 
     const nextBtn4 = page.locator('#step-4').getByRole('button', { name: /Next/ });
     await nextBtn4.click();
 
     // Step: Product Setup
+    await expect(page.getByRole('heading', { name: 'Add your first product' })).toBeVisible({ timeout: 10000 });
     await page.getByPlaceholder('What is the name of this product?').fill('Custom Cookies');
     await page.getByPlaceholder('0.00').fill('24.99');
 
@@ -52,10 +57,11 @@ test.describe('Non-Technical Small Business Owner Onboarding Flow (Day One)', ()
     await nextBtn5.click();
 
     // Step: Payments
-    await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: 'Online', exact: true }).click();
 
     // Step: Account Setup
+    await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible({ timeout: 10000 });
     const email = `maya+${Date.now()}@example.com`;
     await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Smith');
     await page.getByPlaceholder('you@email.com').fill(email);
@@ -65,19 +71,21 @@ test.describe('Non-Technical Small Business Owner Onboarding Flow (Day One)', ()
     await nextBtn7.click();
 
     // Step: Style & Team
+    await expect(page.getByRole('heading', { name: 'Choose a style for your store' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: 'Modern' }).click();
 
     const nextBtn8 = page.locator('#step-8').getByRole('button', { name: /Next/ });
     await nextBtn8.click();
 
     // Step: Domain Selection
+    await expect(page.getByRole('heading', { name: 'Choose your domain' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /Free OHC Domain/ }).click();
 
     const nextBtn9 = page.locator('#step-9').getByRole('button', { name: /Next/ });
     await nextBtn9.click();
 
     // Publish
-    await expect(page.getByRole('heading', { name: 'Review your choices' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Review your choices' })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
     // Success Step
@@ -88,6 +96,6 @@ test.describe('Non-Technical Small Business Owner Onboarding Flow (Day One)', ()
     await expect(dashboardLink).toBeVisible();
     await dashboardLink.click();
 
-    await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
+    await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible({ timeout: 10000 });
   });
 });
