@@ -1225,6 +1225,13 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Store Setup Walkthrough Targets */}
+         <div className="hidden">
+           <div id="setup-store-target"></div>
+           <div id="first-payment-target"></div>
+           <div id="ai-agent-target"></div>
+         </div>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">

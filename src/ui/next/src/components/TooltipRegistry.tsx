@@ -89,24 +89,24 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   };
 
   // Mobile support: Long press
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
   const handleTouchStart = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => {
       handleMouseEnter();
     }, 500); // 500ms for long press
   };
 
   const handleTouchEnd = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setTimeout(() => {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    window.setTimeout(() => {
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
   };
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     };
   }, []);
 

@@ -67,4 +67,32 @@ test.describe('Help Center and Contextual Help', () => {
      // Ensure page loaded
      await expect(page.locator('h1', { hasText: 'KAIROS Orchestration' })).toBeVisible();
   });
+
+  test('Persona: Business Owner uses interactive walkthroughs', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Open help widget
+    const helpButton = page.locator('button[aria-label="Help widget"]');
+    if (await helpButton.isVisible()) {
+      await helpButton.click();
+    } else {
+      const helpIconBtn = page.getByRole('button', { name: '?' });
+      await helpIconBtn.click();
+    }
+
+    // Check if Tours are visible
+    await expect(page.locator('text=Interactive Tours').first()).toBeVisible();
+
+    // Start a tour
+    await page.click('text=Tour: Set up your store');
+
+    // Speech bubble should appear
+    await expect(page.locator('text=Quick Guide').first()).toBeVisible();
+    await expect(page.locator('text=Enter your business description and customize your brand.').first()).toBeVisible();
+
+    // Close tour
+    await page.click('button:has-text("Finish")');
+    await expect(page.locator('text=Quick Guide').first()).not.toBeVisible();
+  });
 });

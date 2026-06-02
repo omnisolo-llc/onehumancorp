@@ -153,9 +153,9 @@ export default function HelpArticlePage() {
         <button onClick={() => router.push('/help')} className="mb-6 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
           &larr; Back to Help Center
         </button>
-        <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">{articleData.title}</h1>
-          <div className="prose prose-blue max-w-none text-gray-700">
+        <div className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100/50 transition-all">
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-outfit text-gray-900 mb-4 sm:mb-6">{articleData.title}</h1>
+          <div className="prose prose-blue max-w-none text-gray-700 text-sm sm:text-base">
             {articleData.content}
           </div>
         </div>

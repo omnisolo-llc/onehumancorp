@@ -81,4 +81,33 @@ describe('HelpChat Component', () => {
       expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
     });
   });
+
+  it('renders links correctly when returned by the Help Agent', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        reply: "Here is a useful article.",
+        link: { url: "/help/article-link", title: "Read more here" }
+      })
+    }));
+
+    render(<HelpChat />);
+
+    const button = screen.getByText('Ask anything').closest('button');
+    fireEvent.click(button!);
+
+    const input = screen.getByPlaceholderText('Ask me anything...');
+    fireEvent.change(input, { target: { value: 'Do you have an article?' } });
+
+    const submitBtn = input.closest('form')!.querySelector('button[type="submit"]');
+    fireEvent.click(submitBtn!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Here is a useful article.')).toBeInTheDocument();
+      const linkElement = screen.getByText('Read more here');
+      expect(linkElement).toBeInTheDocument();
+      expect(linkElement.tagName).toBe('A');
+      expect(linkElement).toHaveAttribute('href', '/help/article-link');
+    });
+  });
 });
