@@ -3623,7 +3623,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
             #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
             #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.4); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
             .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; }
@@ -3660,7 +3660,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         document.addEventListener("DOMContentLoaded", () => {
                             const tooltipEl = document.createElement("div");
                             tooltipEl.id = "global-tooltip-bubble";
-                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+                            tooltipEl.style.cssText = "position: fixed; background: rgba(50, 50, 50, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
                             document.body.appendChild(tooltipEl);
 
                             let tooltipTimeout = null;
@@ -6953,7 +6953,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Help Center Screen -->
-                    <div id="help-screen" class="screen">
+                    <div id="help-screen" class="screen card glass">
                         <div id="help-widget-container">
                         <h1>Help Center</h1>
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
@@ -6973,7 +6973,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Changelog Screen -->
-                    <div id="changelog-screen" class="screen">
+                    <div id="changelog-screen" class="screen card glass">
                         <h1>What's New</h1>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
@@ -6995,7 +6995,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- API Docs Screen -->
-                    <div id="api-docs-screen" class="screen" style="padding: 0;">
+                    <div id="api-docs-screen" class="screen card glass" style="padding: 0;">
                         <div id="swagger-ui"></div>
                     </div>
                 </body>

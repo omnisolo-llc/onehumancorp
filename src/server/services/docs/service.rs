@@ -103,6 +103,21 @@ fn get_tooltips() -> &'static Vec<Tooltip> {
                 title: "Standalone Mode".to_string(),
                 plain_language_description: "Runs entirely on your computer. Great if you don't have internet.".to_string(),
             },
+            Tooltip {
+                element_id: "todays-sales".to_string(),
+                title: "Today's Sales".to_string(),
+                plain_language_description: "Your total sales for today. Check back often to track your progress.".to_string(),
+            },
+            Tooltip {
+                element_id: "approval-inbox".to_string(),
+                title: "Approval Inbox".to_string(),
+                plain_language_description: "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string(),
+            },
+            Tooltip {
+                element_id: "nav-changelog".to_string(),
+                title: "What's New".to_string(),
+                plain_language_description: "See what's new in the latest OneHumanCorp updates.".to_string(),
+            },
         ]
     })
 }
