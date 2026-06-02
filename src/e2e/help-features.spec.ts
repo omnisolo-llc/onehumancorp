@@ -15,6 +15,7 @@ test.describe('Documentation & Help Center CUJ', () => {
 
     // Wait for dashboard to load fully
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
 
     // Check if HelpChat component is accessible via the Ask AI button
     const askAiButton = page.getByRole('button', { name: '✨ Ask anything' });
