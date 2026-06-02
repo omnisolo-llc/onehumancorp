@@ -251,6 +251,8 @@ async fn create_workflow_handler(
 }
 pub mod db;
 pub use ::server_auth as auth;
+#[cfg(bazel)]
+extern crate ohc_builtin_agent;
 pub mod hub;
 pub mod minimax;
 pub mod billing;
@@ -282,7 +284,12 @@ pub mod benchmarks;
 
 pub use ::server_config as config;
 pub use ::server_common as common;
+
+#[cfg(bazel)]
+extern crate server_ohc as ohc;
+#[cfg(not(bazel))]
 pub use crate::proto as ohc;
+
 pub mod builder;
 pub mod tools;
 pub mod voice;
