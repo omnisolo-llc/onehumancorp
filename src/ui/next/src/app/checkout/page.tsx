@@ -117,30 +117,30 @@ export default function CheckoutPage() {
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="bg-white/10 backdrop-blur-[20px] saturate-200 w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/20 text-white">
             {/* Background embellishment */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
+              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-400">
                 🎉
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+            <h2 className="text-2xl font-bold font-outfit text-white mb-2">Payment Successful!</h2>
+            <p className="text-white/80 mb-6 text-sm leading-relaxed">
+              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-white">$10 credit</strong>.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Your Unique Link</label>
+                <label className="block text-xs font-semibold text-white/90 uppercase tracking-wide mb-2">Your Unique Link</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     readOnly
                     value={referralLink}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none"
                   />
                   <button
                     onClick={() => {
@@ -148,7 +148,7 @@ export default function CheckoutPage() {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-500/20 text-green-300' : 'bg-white/20 text-white hover:bg-white/30'}`}
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
@@ -156,8 +156,8 @@ export default function CheckoutPage() {
               </div>
 
               <div className="relative py-3">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/20"></div></div>
+                <div className="relative flex justify-center"><span className="bg-transparent px-2 text-xs text-white/60 uppercase font-semibold tracking-wide">Or Share Via</span></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -183,7 +183,7 @@ export default function CheckoutPage() {
 
               <button
                 onClick={() => router.push('/dashboard')}
-                className="w-full px-4 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
+                className="w-full px-4 py-3 text-indigo-300 bg-indigo-500/20 rounded-lg font-medium hover:bg-indigo-500/30 transition-colors"
               >
                 Continue to Dashboard
               </button>

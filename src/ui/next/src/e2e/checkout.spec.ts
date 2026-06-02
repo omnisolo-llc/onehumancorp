@@ -20,5 +20,10 @@ test.describe('Checkout Flow', () => {
     // Should show success modal
     await expect(page.getByText('Payment Successful!')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Continue to Dashboard' })).toBeVisible();
+
+    // Verify glassmorphism properties are applied to the success modal
+    const modalContent = page.locator('text=Payment Successful!').locator('..');
+    await expect(modalContent).toHaveCSS('backdrop-filter', /blur\(20px\)/);
+    await expect(modalContent).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.1)');
   });
 });
