@@ -34,6 +34,7 @@ interface WebsiteBuilderState {
   setDomainChoice: (domain: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
+  loadState?: (state: Partial<WebsiteBuilderState>) => void;
 }
 
 export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
@@ -71,6 +72,7 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       setDomainChoice: (domainChoice) => set({ domainChoice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      loadState: (state) => set(state),
     }),
     {
       name: 'website-builder-storage',
