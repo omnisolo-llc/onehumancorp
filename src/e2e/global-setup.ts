@@ -10,7 +10,12 @@ export default async function globalSetup(config: FullConfig) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const response = await fetch(new URL('/', baseURL));
-      if (response.ok) return;
+      if (response.ok) {
+        // Reset Next.js Mock API state
+        try { await fetch(new URL('/api/pos/orders', baseURL), { method: 'DELETE' }); } catch (e) {}
+        try { await fetch(new URL('/api/pos/inventory', baseURL), { method: 'DELETE' }); } catch (e) {}
+        return;
+      }
     } catch {
       // App is still booting.
     }

@@ -3,14 +3,22 @@ import { test, expect } from '@playwright/test';
 test.describe('KDS Offline & Multilingual', () => {
 
   test.beforeEach(async ({ request, page }) => {
-    await request.delete('http://localhost:3000/api/pos/orders');
-    await request.delete('http://localhost:3000/api/pos/inventory');
-    await page.goto('http://localhost:3000/pos/kds');
+    // In CI, Next.js UI might be on a different port or missing for some tests if they point to the Rust backend directly.
+    // Since Next.js mock API is used, let's gracefully handle connection errors if the server isn't running on 3000.
+    try {
+      await request.delete('/api/pos/orders');
+    } catch (e) {}
+
+    try {
+      await request.delete('/api/pos/inventory');
+    } catch (e) {}
+
+    await page.goto('/pos/kds');
     await page.evaluate(() => localStorage.clear());
   });
 
   test('KDS Order Sync & Multilingual Display', async ({ page }) => {
-    await page.goto('http://localhost:3000/pos/kds');
+    await page.goto('/pos/kds');
 
     // Wait for mock data to load
     await expect(page.locator('text=Active Orders')).toBeVisible();
@@ -30,7 +38,7 @@ test.describe('KDS Offline & Multilingual', () => {
   });
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
-    await page.goto('http://localhost:3000/pos/kds');
+    await page.goto('/pos/kds');
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
 
     // Set network to offline
