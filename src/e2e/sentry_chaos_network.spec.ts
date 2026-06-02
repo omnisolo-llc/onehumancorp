@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('🛡️ Sentry: Chaos Network Resilience', () => {
-    test('Verify UI remains functional during simulated network jitter', async ({ adminPage: page }) => {
+    test('Verify UI remains functional during simulated network jitter', async ({ page }) => {
         await page.goto('/dashboard/inventory');
         await page.route('**/api/**', async route => {
             const delay = Math.floor(Math.random() * 500);

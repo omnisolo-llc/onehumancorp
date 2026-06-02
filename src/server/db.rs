@@ -80,9 +80,6 @@ impl DB {
         }
     }
 
-    pub fn returning_id_tenant_payload(&self) -> &str {
-        "RETURNING id, tenant_id, payload"
-    }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let database_url = env::var("OHC_DATABASE_URL")
