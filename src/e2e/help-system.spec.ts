@@ -68,12 +68,9 @@ test.describe('Help Center & Documentation System', () => {
         await page.goto('/dashboard');
 
         // Find help widget button via aria-label
-        const helpWidgetBtn = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '?' }).first();
-        const fallbackBtn = page.locator('button[aria-label="Help"]');
-        const theBtn = (await helpWidgetBtn.isVisible()) ? helpWidgetBtn : fallbackBtn;
-
-        await expect(theBtn).toBeVisible();
-        await theBtn.click();
+        const helpWidgetBtn = page.locator('button[aria-label="Help"]');
+        await expect(helpWidgetBtn).toBeVisible();
+        await helpWidgetBtn.click();
 
         const videosBtn = page.locator('button:has-text("Videos")');
         await expect(videosBtn).toBeVisible();
@@ -100,20 +97,15 @@ test.describe('Help Center & Documentation System', () => {
         // Go to storefront builder to have the right target element (generate-btn) available
         await page.goto('/storefront-builder');
 
-        const helpWidgetBtn = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '?' }).first();
-        const fallbackBtn = page.locator('button[aria-label="Help"]');
-        const theBtn = (await helpWidgetBtn.isVisible()) ? helpWidgetBtn : fallbackBtn;
-
-        await expect(theBtn).toBeVisible();
-        await theBtn.click();
+        const helpWidgetBtn = page.locator('button[aria-label="Help"]');
+        await expect(helpWidgetBtn).toBeVisible();
+        await helpWidgetBtn.click();
 
         const storeTourBtn = page.locator('span:has-text("Tour: Activate your AI Support Agent")');
         await expect(storeTourBtn).toBeVisible();
         await storeTourBtn.click();
 
-        // The interactive walkthrough targets specific ID's to show the tooltip box.
-        // It requires the target element to exist. "generate-btn" exists on the builder.
-        // Now look for the tooltip message box from the walkthrough showing up on screen:
-        await expect(page.locator('text="Activate your AI agent."')).toBeVisible({ timeout: 5000 });
+        // Look for the speech bubble tooltip
+        await expect(page.locator('h3:has-text("Activate your AI agent.")')).toBeVisible({ timeout: 5000 });
     });
 });
