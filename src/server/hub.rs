@@ -374,7 +374,7 @@ impl Hub {
             tokio::task::spawn_blocking(move || {
                 if let Ok(mut conn) = client.get_connection() {
                     if !json.is_empty() {
-                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 3600);
+                        let _: Result<(), _> = redis::Commands::set_ex(&mut conn, "hub:meetings", json, 5);
                     }
                 }
             });
@@ -678,7 +678,7 @@ impl Hub {
             let dialect_query = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
                 "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')"
             } else {
-                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))"
+                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))"
             };
             sqlx::query_scalar::<_, i64>(dialect_query).fetch_one(&pool3).await
         });

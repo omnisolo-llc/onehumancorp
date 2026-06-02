@@ -68,12 +68,7 @@ pub async fn my_plan_handler(
     let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-    let base_bill = match tier {
-        ::server_pricing::rate_limit::PlanTier::Free => 0.0,
-        ::server_pricing::rate_limit::PlanTier::Starter => 29.0,
-        ::server_pricing::rate_limit::PlanTier::Pro => 79.0,
-        ::server_pricing::rate_limit::PlanTier::Business => 299.0,
-    };
+    let base_bill = tier.base_price();
 
     let now = chrono::Utc::now();
     use chrono::Datelike;

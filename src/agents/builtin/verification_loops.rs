@@ -97,6 +97,7 @@ impl VisualVerifier for PlaywrightVisualVerifier {
 
 pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
+    pub model: String,
 }
 
 #[derive(Deserialize)]
@@ -113,7 +114,7 @@ impl InferentialSensor for LlmJudgeSensor {
         let user_prompt = format!("Task: {}\nOutput: {}", task, output);
 
         let req = ChatRequest {
-            model: "judge-model".to_string(),
+            model: self.model.clone(),
             system: system_prompt.to_string(),
             messages: vec![Message::user(user_prompt)],
             tools: vec![],
@@ -194,10 +195,18 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                id: "call_1".to_string(),
+                name: "structured_output".to_string(),
+                arguments: serde_json::json!({
+                    "data": serde_json::from_str::<serde_json::Value>(&self.response_text).unwrap_or(serde_json::json!({}))
+                }),
+            };
+
             let msg = Message {
                 role: ohc_builtin_agent_core::types::Role::Assistant,
-                content: self.response_text.clone(),
-                tool_calls: vec![],
+                content: "".to_string(),
+                tool_calls: vec![tool_call],
                 tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
@@ -250,13 +259,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_verification_manager_inferential() {
+        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
+        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() });
+
+        let mut manager = VerificationManager::new();
+        manager.add_inferential(judge);
+
+        assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_llm_judge_sensor() {
         let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = LlmJudgeSensor { llm: pass_llm };
+        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
         let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm };
+        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));

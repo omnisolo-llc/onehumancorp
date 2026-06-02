@@ -7,6 +7,13 @@ use crate::hub::Hub;
 use tokio_stream::Stream;
 use std::pin::Pin;
 use tokio_stream::StreamExt;
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+
+static INCIDENTS_CACHE: OnceLock<HybridCache<Vec<Incident>>> = OnceLock::new();
+static COMPUTE_PROFILES_CACHE: OnceLock<HybridCache<Vec<ComputeProfile>>> = OnceLock::new();
+static BUDGET_ALERTS_CACHE: OnceLock<HybridCache<Vec<BudgetAlert>>> = OnceLock::new();
+static PIPELINES_CACHE: OnceLock<HybridCache<Vec<Pipeline>>> = OnceLock::new();
 
 pub struct MyOpsService {
     hub: Arc<Hub>,
@@ -34,9 +41,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IncidentsResponse>, Status> {
-        let incidents = self.incidents.read().unwrap();
+        let cache_key = "ops_incidents".to_string();
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(incidents) = cache.get(&cache_key).await {
+            return Ok(Response::new(IncidentsResponse { incidents }));
+        }
+
+        let incidents = self.incidents.read().unwrap().clone();
+        cache.set(&cache_key, incidents.clone(), std::time::Duration::from_secs(5)).await;
+
         Ok(Response::new(IncidentsResponse {
-            incidents: incidents.clone(),
+            incidents,
         }))
     }
 
@@ -54,15 +70,20 @@ impl OpsService for MyOpsService {
             id: format!("inc-{}", now.timestamp()),
             severity: req.severity,
             summary: req.summary,
+            status: "OPEN".to_string(),
             rca: req.rca,
-            status: "INVESTIGATING".to_string(),
+            resolution_plan_id: "".to_string(),
             created_at_unix: now.timestamp(),
             updated_at_unix: now.timestamp(),
-            resolution_plan_id: String::new(),
         };
         
-        let mut incidents = self.incidents.write().unwrap();
-        incidents.push(incident.clone());
+        {
+            let mut incidents = self.incidents.write().unwrap();
+            incidents.push(incident.clone());
+        }
+
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_incidents").await;
         
         Ok(Response::new(incident))
     }
@@ -72,27 +93,25 @@ impl OpsService for MyOpsService {
         request: Request<IncidentStatusRequest>,
     ) -> Result<Response<Incident>, Status> {
         let req = request.into_inner();
-        if req.incident_id.is_empty() || req.status.is_empty() {
-            return Err(Status::invalid_argument("incidentId and status are required"));
-        }
-
-        let mut incidents = self.incidents.write().unwrap();
         let mut found = false;
         let mut updated = None;
         
-        for inc in incidents.iter_mut() {
-            if inc.id == req.incident_id {
-                inc.status = req.status.clone();
-                inc.updated_at_unix = Utc::now().timestamp();
-                if !req.resolution_plan_id.is_empty() {
-                    inc.resolution_plan_id = req.resolution_plan_id.clone();
+        {
+            let mut incidents = self.incidents.write().unwrap();
+            for inc in incidents.iter_mut() {
+                if inc.id == req.incident_id {
+                    inc.status = req.status.clone();
+                    inc.updated_at_unix = Utc::now().timestamp();
+                    if !req.resolution_plan_id.is_empty() {
+                        inc.resolution_plan_id = req.resolution_plan_id.clone();
+                    }
+                    if !req.rca.is_empty() {
+                        inc.rca = req.rca.clone();
+                    }
+                    updated = Some(inc.clone());
+                    found = true;
+                    break;
                 }
-                if !req.rca.is_empty() {
-                    inc.rca = req.rca.clone();
-                }
-                updated = Some(inc.clone());
-                found = true;
-                break;
             }
         }
         
@@ -100,6 +119,9 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("incident not found"));
         }
         
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_incidents").await;
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -107,9 +129,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<ComputeProfilesResponse>, Status> {
-        let profiles = self.compute_profiles.read().unwrap();
+        let cache_key = "ops_compute_profiles".to_string();
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(profiles) = cache.get(&cache_key).await {
+            return Ok(Response::new(ComputeProfilesResponse { profiles }));
+        }
+
+        let profiles = self.compute_profiles.read().unwrap().clone();
+        cache.set(&cache_key, profiles.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(Response::new(ComputeProfilesResponse {
-            profiles: profiles.clone(),
+            profiles,
         }))
     }
 
@@ -130,9 +161,14 @@ impl OpsService for MyOpsService {
             created_at_unix: Utc::now().timestamp(),
         };
         
-        let mut profiles = self.compute_profiles.write().unwrap();
-        profiles.push(profile.clone());
+        {
+            let mut profiles = self.compute_profiles.write().unwrap();
+            profiles.push(profile.clone());
+        }
         
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_compute_profiles").await;
+
         Ok(Response::new(profile))
     }
 
@@ -158,9 +194,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<BudgetAlertsResponse>, Status> {
-        let alerts = self.budget_alerts.read().unwrap();
+        let cache_key = "ops_budget_alerts".to_string();
+        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(alerts) = cache.get(&cache_key).await {
+            return Ok(Response::new(BudgetAlertsResponse { alerts }));
+        }
+
+        let alerts = self.budget_alerts.read().unwrap().clone();
+        cache.set(&cache_key, alerts.clone(), std::time::Duration::from_secs(60)).await;
+
         Ok(Response::new(BudgetAlertsResponse {
-            alerts: alerts.clone(),
+            alerts,
         }))
     }
 
@@ -169,10 +214,6 @@ impl OpsService for MyOpsService {
         request: Request<CreateBudgetAlertRequest>,
     ) -> Result<Response<BudgetAlert>, Status> {
         let req = request.into_inner();
-        if req.threshold_usd <= 0.0 {
-            return Err(Status::invalid_argument("thresholdUsd must be greater than zero"));
-        }
-
         let alert = BudgetAlert {
             id: format!("alert-{}", Utc::now().timestamp()),
             organization_id: req.organization_id,
@@ -180,12 +221,17 @@ impl OpsService for MyOpsService {
             notify_at_pct: req.notify_at_pct,
             predictive: req.predictive,
             forecast_hours: req.forecast_hours,
-            triggered: false,
             created_at_unix: Utc::now().timestamp(),
+            triggered: false,
         };
         
-        let mut alerts = self.budget_alerts.write().unwrap();
-        alerts.push(alert.clone());
+        {
+            let mut alerts = self.budget_alerts.write().unwrap();
+            alerts.push(alert.clone());
+        }
+
+        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_budget_alerts").await;
         
         Ok(Response::new(alert))
     }
@@ -194,9 +240,18 @@ impl OpsService for MyOpsService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<PipelinesResponse>, Status> {
-        let pipelines = self.pipelines.read().unwrap();
+        let cache_key = "ops_pipelines".to_string();
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(pipelines) = cache.get(&cache_key).await {
+            return Ok(Response::new(PipelinesResponse { pipelines }));
+        }
+
+        let pipelines = self.pipelines.read().unwrap().clone();
+        cache.set(&cache_key, pipelines.clone(), std::time::Duration::from_secs(5)).await;
+
         Ok(Response::new(PipelinesResponse {
-            pipelines: pipelines.clone(),
+            pipelines,
         }))
     }
 
@@ -205,25 +260,25 @@ impl OpsService for MyOpsService {
         request: Request<CreatePipelineRequest>,
     ) -> Result<Response<Pipeline>, Status> {
         let req = request.into_inner();
-        if req.name.is_empty() {
-            return Err(Status::invalid_argument("name is required"));
-        }
-
-        let now = Utc::now();
         let pipeline = Pipeline {
-            id: format!("pipeline-{}", now.timestamp()),
+            id: format!("pipe-{}", Utc::now().timestamp()),
             name: req.name,
-            status: "PENDING".to_string(),
             branch: req.branch,
             initiated_by: req.initiated_by,
-            staging_url: String::new(),
-            created_at_unix: now.timestamp(),
-            updated_at_unix: now.timestamp(),
+            status: "PENDING".to_string(),
+            staging_url: "".to_string(),
+            created_at_unix: Utc::now().timestamp(),
+            updated_at_unix: Utc::now().timestamp(),
         };
         
-        let mut pipelines = self.pipelines.write().unwrap();
-        pipelines.push(pipeline.clone());
+        {
+            let mut pipelines = self.pipelines.write().unwrap();
+            pipelines.push(pipeline.clone());
+        }
         
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_pipelines").await;
+
         Ok(Response::new(pipeline))
     }
 
@@ -232,20 +287,19 @@ impl OpsService for MyOpsService {
         request: Request<PipelinePromoteRequest>,
     ) -> Result<Response<Pipeline>, Status> {
         let req = request.into_inner();
-        let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
         
-        for p in pipelines.iter_mut() {
-            if p.id == req.pipeline_id {
-                if p.status != "STAGING" {
-                    return Err(Status::failed_precondition("pipeline must be in STAGING status to promote"));
+        {
+            let mut pipelines = self.pipelines.write().unwrap();
+            for p in pipelines.iter_mut() {
+                if p.id == req.pipeline_id {
+                    p.status = "PROMOTED".to_string();
+                    p.updated_at_unix = Utc::now().timestamp();
+                    updated = Some(p.clone());
+                    found = true;
+                    break;
                 }
-                p.status = "PROMOTED".to_string();
-                p.updated_at_unix = Utc::now().timestamp();
-                updated = Some(p.clone());
-                found = true;
-                break;
             }
         }
         
@@ -253,6 +307,9 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("pipeline not found"));
         }
         
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_pipelines").await;
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -261,20 +318,22 @@ impl OpsService for MyOpsService {
         request: Request<UpdatePipelineStatusRequest>,
     ) -> Result<Response<Pipeline>, Status> {
         let req = request.into_inner();
-        let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
         
-        for p in pipelines.iter_mut() {
-            if p.id == req.pipeline_id {
-                p.status = req.status.clone();
-                p.updated_at_unix = Utc::now().timestamp();
-                if !req.staging_url.is_empty() {
-                    p.staging_url = req.staging_url.clone();
+        {
+            let mut pipelines = self.pipelines.write().unwrap();
+            for p in pipelines.iter_mut() {
+                if p.id == req.pipeline_id {
+                    p.status = req.status.clone();
+                    if !req.staging_url.is_empty() {
+                        p.staging_url = req.staging_url.clone();
+                    }
+                    p.updated_at_unix = Utc::now().timestamp();
+                    updated = Some(p.clone());
+                    found = true;
+                    break;
                 }
-                updated = Some(p.clone());
-                found = true;
-                break;
             }
         }
         
@@ -282,6 +341,9 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("pipeline not found"));
         }
         
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        cache.invalidate("ops_pipelines").await;
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -392,12 +454,11 @@ mod tests {
     use ::server_ohc::orchestration::{
         EmptyRequest, CreateIncidentRequest, IncidentStatusRequest, CreateComputeProfileRequest,
         GetClusterStatusRequest, CreateBudgetAlertRequest, CreatePipelineRequest,
-        PipelinePromoteRequest, UpdatePipelineStatusRequest, ScaleRequest,
+        PipelinePromoteRequest, UpdatePipelineStatusRequest,
     };
     use crate::hub::Hub;
     use std::sync::Arc;
     use tonic::Request;
-    use chrono::Utc;
 
     async fn setup_ops_service() -> MyOpsService {
         let database_url = "sqlite::memory:";

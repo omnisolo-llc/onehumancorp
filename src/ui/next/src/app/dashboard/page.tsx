@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { OneTapReferral } from "../components/OneTapReferral";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -28,6 +29,9 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [activeReferrals, setActiveReferrals] = useState<number>(0);
+  const [revenueFromReferrals, setRevenueFromReferrals] = useState<number>(0);
+  const [pendingRewards, setPendingRewards] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -280,7 +284,10 @@ export default function Dashboard() {
 
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
-                setTeamInvitesSent(invitesData.total_invites);
+                setTeamInvitesSent(invitesData.total_invites !== undefined ? invitesData.total_invites : (invitesData?.metrics?.team_invites_sent || 0));
+                setActiveReferrals(invitesData?.metrics?.active_referrals || 0);
+                setRevenueFromReferrals(invitesData?.metrics?.revenue || 0);
+                setPendingRewards(invitesData?.metrics?.pending_rewards || 0);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -460,20 +467,27 @@ export default function Dashboard() {
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
+             <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
+               Business Analytics
+             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-               <span>🤖</span> AI Departments
-             </Link>
+             <WithTooltip id="agents-tab-tooltip" defaultText="Hire and manage your AI assistants here.">
+               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+                 <span>🤖</span> AI Departments
+               </Link>
+             </WithTooltip>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
-             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-               My Plan
+             <Link href="/plan" passHref legacyBehavior>
+               <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
+                 Billing
+               </button>
              </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
@@ -495,7 +509,7 @@ export default function Dashboard() {
                    <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
                    </WithTooltip>
-                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${(todaysSales || 0).toFixed(2)}</div>
                </WalkthroughTarget>
                <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
                    <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
@@ -752,7 +766,7 @@ export default function Dashboard() {
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${(todaysSales || 0).toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -1430,17 +1444,17 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(revenueFromReferrals || 0).toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(pendingRewards || 0).toFixed(2)}</div>
                 </div>
             </div>
          </section>
@@ -2207,6 +2221,10 @@ export default function Dashboard() {
       )}
 
       {/* Referral Modal */}
+      <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
+        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
+      </div>
+
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">

@@ -74,6 +74,15 @@ impl PlanTier {
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
+
+    pub fn base_price(&self) -> f64 {
+        match self {
+            PlanTier::Free => 0.0,
+            PlanTier::Starter => 29.0,
+            PlanTier::Pro => 79.0,
+            PlanTier::Business => 299.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -172,7 +181,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
@@ -193,7 +202,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
@@ -233,7 +242,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
@@ -280,7 +289,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
@@ -338,7 +347,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
@@ -390,6 +399,11 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+
+        assert_eq!(PlanTier::Free.base_price(), 0.0);
+        assert_eq!(PlanTier::Starter.base_price(), 29.0);
+        assert_eq!(PlanTier::Pro.base_price(), 79.0);
+        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[tokio::test]
