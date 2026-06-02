@@ -220,8 +220,7 @@ export default function OnboardingWizard() {
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
-          price_type: 'fixed',
-          location: location || ''
+          price_type: 'fixed'
         })
       });
 

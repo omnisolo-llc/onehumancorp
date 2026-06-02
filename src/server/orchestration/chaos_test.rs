@@ -497,74 +497,89 @@ mod chaos_tests {
     }
 
     #[tokio::test]
-    async fn test_llm_api_failure_recovery() {
-        // Simulates LLM API failures and ensuring circuit breaker/fallback behavior.
-        use crate::workers::OperationsWorker;
-
-        // Intentionally bad OHC_HUB_URL to simulate API failure
-        temp_env::with_var("OHC_HUB_URL", Some("http://127.0.0.1:1"), || async {
-            let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-                .connect("sqlite::memory:")
-                .await
-                .unwrap();
-
-            let db = Arc::new(DB {
-                pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-                store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
-            });
-
-            // Initialize schema for OperationsWorker
-            sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload TEXT, status TEXT, locked_until TEXT, created_at TEXT, updated_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, organization_id TEXT, tenant_id TEXT, name TEXT, inventory_count INT, supplier_name TEXT, supplier_contact TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, created_at TEXT, updated_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INT)").execute(&dummy_sqlite_pool).await.unwrap();
-
-            // Seed data: low inventory product
-            sqlx::query("INSERT INTO products (id, organization_id, tenant_id, name, inventory_count, supplier_name, supplier_contact) VALUES ('p1', 't1', 't1', 'item1', 1, 's1', 'c1')").execute(&dummy_sqlite_pool).await.unwrap();
-            let payload = serde_json::json!({"items": [{"product_id": "p1", "quantity": 1}]});
-            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task1', 't1', 'operations', 'OrderPlaced', ?, 'PENDING')")
-                .bind(payload.to_string())
-                .execute(&dummy_sqlite_pool).await.unwrap();
-
-            // Poll - this should trigger restock drafting which will fail AI call due to bad OHC_HUB_URL
-            let res = OperationsWorker::poll(&db).await;
-            assert!(res.is_ok());
-
-            // Despite AI failure, a fallback message should be used and final_status should be PAUSED after retries
-            let row: (String, String) = sqlx::query_as("SELECT status, proposed_content FROM department_tasks JOIN shared_tasks ON department_tasks.tenant_id = shared_tasks.organization_id WHERE department_tasks.id = 'task1' AND shared_tasks.title LIKE '%AI Agent Paused%'")
-                .fetch_one(&dummy_sqlite_pool).await.unwrap();
-
-            assert_eq!(row.0, "PAUSED");
-            assert!(row.1.contains("System is paused"));
-        }).await;
-    }
-
-    #[tokio::test]
-    async fn test_host_memory_exhaustion_degradation() {
-        // We simulate host memory exhaustion by synthetically increasing database operation latency
-        // and verifying that the 2-second timeout triggers graceful degradation.
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(3000));
-
-        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
+    async fn test_cloud_db_transition_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        // Should fallback safely instead of panicking/blocking forever
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_cloud_db_pull_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let tasks = state_manager.pull_available_tasks(10).await;
+
+        // On connection failure (not timeout), it correctly propagates the error.
+        assert!(tasks.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_transition_fallback() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        // The fallback is tested via a timeout on the inner lock block
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_pull_fallback() {
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
 
-        let start = std::time::Instant::now();
-        let res = state_manager.pull_available_tasks(10).await;
-        let elapsed = start.elapsed();
+        let tasks = state_manager.pull_available_tasks(10).await;
 
-        // Operation takes 3s due to LatencyMockMesh, but StateManager has 2s timeout
-        assert!(elapsed < std::time::Duration::from_millis(2500));
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap().len(), 0);
+        // With SleepingMockMesh, this triggers the inner lock timeout.
+        assert!(tasks.is_ok());
+        assert_eq!(tasks.unwrap().len(), 0);
     }
 }

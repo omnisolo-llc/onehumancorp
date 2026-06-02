@@ -31,17 +31,24 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
-static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
-    "about", "as", "of",
-];
+use std::sync::OnceLock;
+
+static STOP_WORDS: OnceLock<std::collections::HashSet<&'static str>> = OnceLock::new();
 
 pub fn reduce_tokens(data: &str) -> String {
+    let stop_words = STOP_WORDS.get_or_init(|| {
+        [
+            "a", "an", "the", "is", "are",
+            "and", "or", "but", "in", "on",
+            "at", "to", "for", "with", "by",
+            "about", "as", "of",
+        ].iter().cloned().collect()
+    });
+
     data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            let clean_word = word.to_lowercase();
+            !stop_words.contains(clean_word.as_str())
         })
         .collect::<Vec<&str>>()
         .join(" ")

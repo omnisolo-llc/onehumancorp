@@ -194,18 +194,10 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let tool_call = ohc_builtin_agent_core::types::ToolCall {
-                id: "call_1".to_string(),
-                name: "structured_output".to_string(),
-                arguments: serde_json::json!({
-                    "data": serde_json::from_str::<serde_json::Value>(&self.response_text).unwrap_or(serde_json::json!({}))
-                }),
-            };
-
             let msg = Message {
                 role: ohc_builtin_agent_core::types::Role::Assistant,
-                content: "".to_string(),
-                tool_calls: vec![tool_call],
+                content: self.response_text.clone(),
+                tool_calls: vec![],
                 tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
