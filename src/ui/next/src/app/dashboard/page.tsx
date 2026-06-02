@@ -723,6 +723,23 @@ export default function Dashboard() {
                    </div>
                 </div>
             </div>
+
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div className="flex-1">
+                      <div className="font-bold text-gray-900 flex items-center gap-2 mb-2 text-lg font-outfit">
+                          📦 Printable Unboxing Inserts
+                      </div>
+                      <div className="text-sm text-gray-600 mb-4 leading-relaxed">Add discount codes & "Powered by OHC" to physical packages to drive referrals and retention.</div>
+                      <Link href="/unboxing-inserts" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-all hover:scale-[1.02] inline-block">
+                          Design Insert
+                      </Link>
+                  </div>
+                  <div className="flex-none">
+                      <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                          <span className="text-3xl">🏷️</span>
+                      </div>
+                  </div>
+              </div>
          </section>
 
          {/* Growth Loop: Wall of Love Generator */}
