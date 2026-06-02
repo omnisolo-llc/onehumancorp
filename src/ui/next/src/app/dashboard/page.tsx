@@ -1222,6 +1222,27 @@ export default function Dashboard() {
 
 
 
+         {/* Owner Dashboard - Viral Growth Metrics */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Viral Growth & Affiliates</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Affiliates</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl font-bold font-outfit text-indigo-600">1</span>
+                  <span className="text-sm bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-semibold">+1 this week</span>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Affiliate Revenue</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl font-bold font-outfit text-green-600">$0.00</span>
+                  <span className="text-sm bg-green-50 text-green-700 px-2 py-1 rounded-md font-semibold">Pending payouts</span>
+                </div>
+              </div>
+            </div>
+         </section>
+
          {/* Products & Monetization Snapshot */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
