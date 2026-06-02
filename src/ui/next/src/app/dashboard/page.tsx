@@ -40,6 +40,7 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+  const [tierData, setTierData] = useState<any>(null);
 
   // Growth Loop: Post-Purchase Social Share State
   const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
@@ -138,6 +139,14 @@ export default function Dashboard() {
     checkMilestones();
 
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
+
+    // Fetch referral tier data
+    fetch('/api/v1/growth/referrals/tier')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setTierData(data);
+      }).catch(err => console.error("Error fetching referral tier", err));
+
     async function fetchApprovals() {
       try {
         const res = await fetch('/api/agents/approvals');
@@ -467,7 +476,15 @@ export default function Dashboard() {
                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
                </div>
            </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+               <div className="p-6 shadow-sm border border-indigo-100 rounded-2xl cursor-pointer hover:bg-indigo-50/50 transition-colors bg-white flex flex-col justify-center" onClick={() => router.push('/referrals')}>
+                   <div className="flex justify-between items-start mb-2">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Referral Tier</h3>
+                       <span className="text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded text-xs font-medium">{tierData ? `${Math.round(tierData.discount_percentage * 100)}% off` : 'Loading...'}</span>
+                   </div>
+                   <div className="text-2xl font-bold font-outfit text-gray-900">{tierData ? tierData.current_tier : '...'}</div>
+                   <p className="text-xs text-gray-500 mt-1 font-inter">{tierData ? `${tierData.total_conversions} / ${tierData.next_tier_threshold} to Next` : 'Loading data...'}</p>
+               </div>
                <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>

@@ -92,10 +92,19 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
+        .route("/referrals/tier", get(handle_get_referral_tier))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralTierResponse {
+    pub current_tier: String,
+    pub discount_percentage: f64,
+    pub total_conversions: i32,
+    pub next_tier_threshold: i32,
 }
 
 
@@ -617,6 +626,42 @@ async fn handle_referral_convert(
 }
 
 
+async fn handle_get_referral_tier(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReferralTierResponse>, StatusCode> {
+    use sqlx::Row;
+    let query = "SELECT COALESCE(SUM(conversions), 0) as total FROM referrals WHERE tenant_id = $1";
+    let row = sqlx::query(query)
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch referrals for tier calc: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let total_conversions: i64 = row.try_get("total").unwrap_or(0);
+    let total_conversions_i32 = total_conversions as i32;
+
+    let tier_name = crate::services::growth::referrals::calculate_referral_tier(total_conversions_i32);
+    let discount = crate::services::growth::referrals::calculate_tier_discount(tier_name);
+
+    let next_threshold = match tier_name {
+        "Bronze" => 5,
+        "Silver" => 20,
+        "Gold" => 50,
+        _ => 50, // Platinum is max
+    };
+
+    Ok(Json(ReferralTierResponse {
+        current_tier: tier_name.to_string(),
+        discount_percentage: discount,
+        total_conversions: total_conversions_i32,
+        next_tier_threshold: next_threshold,
+    }))
+}
+
 async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
@@ -876,6 +921,36 @@ mod tests {
         assert_eq!(conversions, 1);
     }
 
+
+    #[tokio::test]
+    async fn test_get_referral_tier() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org-tier".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, 'test-org-tier', 'test-agent', 'code-tier', 0, 7, 0) ON CONFLICT DO NOTHING")
+            .bind("ref-tier-123")
+            .execute(&pool).await.unwrap();
+
+        let res = handle_get_referral_tier(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
+        assert!(res.is_ok());
+        let data = res.unwrap().0;
+        assert_eq!(data.current_tier, "Silver");
+        assert_eq!(data.total_conversions, 7);
+        assert_eq!(data.next_tier_threshold, 20);
+    }
 
     #[tokio::test]
     async fn test_referral_generate() {

@@ -1,10 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+type TierData = {
+  current_tier: string;
+  discount_percentage: number;
+  total_conversions: number;
+  next_tier_threshold: number;
+};
+
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
+  const [tierData, setTierData] = useState<TierData | null>(null);
   const referralLink = "ohc://join?ref=DEFAULT";
+
+  useEffect(() => {
+    fetch('/api/v1/growth/referrals/tier')
+      .then(res => res.json())
+      .then(data => setTierData(data))
+      .catch(err => console.error("Failed to fetch referral tier", err));
+  }, []);
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
 
   return (
@@ -13,6 +29,41 @@ export default function ReferralsPage() {
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-8 mt-16 md:mt-0">
         <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-8">Referral Dashboard</h1>
+
+        {tierData && (
+          <div className="mb-8 p-6 rounded-2xl shadow-md border border-white/40" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)' }}>
+            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Current Tier</h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold font-outfit text-indigo-700">{tierData.current_tier}</span>
+                  <span className="bg-indigo-100 text-indigo-800 text-xs px-3 py-1 rounded-full font-bold">
+                    {tierData.discount_percentage * 100}% Discount
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  You have {tierData.total_conversions} successful referrals.
+                </p>
+              </div>
+
+              <div className="w-full md:w-1/2">
+                <div className="flex justify-between text-xs font-semibold text-gray-600 mb-2">
+                  <span>{tierData.total_conversions} referrals</span>
+                  <span>Next tier: {tierData.next_tier_threshold}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-indigo-500 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (tierData.total_conversions / tierData.next_tier_threshold) * 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-right">
+                  {Math.max(0, tierData.next_tier_threshold - tierData.total_conversions)} more to unlock the next level
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -z-10"></div>

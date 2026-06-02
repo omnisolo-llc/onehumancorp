@@ -19,6 +19,7 @@ export function currentAppSmoke(label: string) {
 
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' }).first()).toBeVisible();
+    await expect(page.getByText('Current Tier').first()).toBeVisible();
 
     await page.goto('/storefront-builder');
     await expect(page.locator('.builder-block').first()).toBeVisible();
