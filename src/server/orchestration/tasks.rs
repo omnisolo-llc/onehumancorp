@@ -7,7 +7,7 @@ use std::sync::Arc;
 use opentelemetry::global;
 use opentelemetry::trace::Tracer;
 
-pub fn task_claim_timeout() -> std::time::Duration {
+fn task_claim_timeout() -> std::time::Duration {
     std::env::var("OHC_TASK_CLAIM_TIMEOUT_MS")
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())

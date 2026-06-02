@@ -10,10 +10,11 @@ pub async fn enqueue_publish_site_job(
     // Instead of simple spawn, we should use a job queue, but using spawn since queue impl takes custom payload
     // In a real implementation this would enqueue to a PostgreSQL table for processing via SKIP LOCKED pattern.
     // For now we persist a record and simulate processing.
+    let mut conn = super::db::acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query("INSERT INTO tasks (tenant_id, mission_type, payload, status) VALUES ($1, 'publish_site', $2, 'pending') ON CONFLICT DO NOTHING")
         .bind(tenant_id)
         .bind(serde_json::json!({ "site_id": site_id }))
-        .execute(pool)
+        .execute(&mut *conn)
         .await
         .ok();
 
@@ -66,22 +67,20 @@ async fn execute_publish_site_job(
                         seo_json["@type"] = serde_json::Value::String("LocalBusiness".to_string());
                     }
 
-                    sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE id = $2")
-                        .bind(&seo_json)
-                        .bind(page.id)
-                        .execute(pool)
+                    super::db::update_page_seo_metadata(pool, tenant_id, page.id, seo_json)
                         .await?;
                 }
             }
         }
     }
 
+    let mut conn = super::db::acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query(
         "UPDATE builder_sites SET published_at = NOW(), updated_at = NOW() WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
     .bind(site_id)
-    .execute(pool)
+    .execute(&mut *conn)
     .await?;
 
     let cache = crate::builder::edge::get_edge_cache();
@@ -90,7 +89,7 @@ async fn execute_publish_site_job(
     let cache_key = format!("edge_site_{}_{}", tenant_id, site_id); // Keeping old var for notify to not break it
     sqlx::query("NOTIFY edge_cache_invalidation, $1")
         .bind(&cache_key)
-        .execute(pool)
+        .execute(&mut *conn)
         .await
         .ok();
     info!("Ops Agent: Invalidated edge cache for {}", cache_key);

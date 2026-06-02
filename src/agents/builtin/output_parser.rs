@@ -370,4 +370,56 @@ mod tests {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
     }
+
+    #[tokio::test]
+    async fn test_retry_parser_malformed_json_recovery() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_text_resp("this is completely { malformed JSON ["),
+                create_text_resp(r#"{"result": "recovered"}"#)
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered");
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_schema_mismatch_correction() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_schema": true}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "corrected_schema"}})),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "corrected_schema");
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_exhaustion_returns_recoverable_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_text_resp("bad 1"),
+                create_text_resp("bad 2"),
+                create_text_resp("bad 3"),
+                create_text_resp("bad 4"),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Output parsing failed after 2 retries"));
+            },
+            _ => panic!("Expected LlmRecoverable error for exhaustion"),
+        }
+    }
 }

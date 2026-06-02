@@ -912,7 +912,53 @@ impl PromoterWorker {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
+                            let brand_context = match &db_social.store {
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query_scalar::<_, serde_json::Value>(
+                                        r#"
+                                        SELECT toolbox
+                                        FROM builder_brand_toolboxes
+                                        WHERE tenant_id::text = $1
+                                        ORDER BY updated_at DESC, created_at DESC
+                                        LIMIT 1
+                                        "#
+                                    )
+                                    .bind(org_id)
+                                    .fetch_optional(&db_social.pool)
+                                    .await
+                                    .ok()
+                                    .flatten()
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query_scalar::<_, String>(
+                                        "SELECT toolbox FROM builder_brand_toolboxes WHERE tenant_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1"
+                                    )
+                                    .bind(org_id)
+                                    .fetch_optional(pool)
+                                    .await
+                                    .ok()
+                                    .flatten()
+                                    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+                                }
+                            }
+                            .and_then(|toolbox| {
+                                let dna = toolbox.get("brand_dna")?;
+                                Some(format!(
+                                    "Brand DNA: name={}, type={}, positioning={}, tone={}, colors={}",
+                                    dna.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                                    dna.get("business_type").and_then(|v| v.as_str()).unwrap_or(""),
+                                    dna.get("positioning").and_then(|v| v.as_str()).unwrap_or(""),
+                                    dna.get("tone_of_voice").map(|v| v.to_string()).unwrap_or_default(),
+                                    dna.get("colors").map(|v| v.to_string()).unwrap_or_default(),
+                                ))
+                            })
+                            .unwrap_or_else(|| "No saved Brand DNA yet; infer a simple clear brand voice from the product.".to_string());
+
+                            let prompt = format!(
+                                "Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Use this saved brand context: {}. Include captions, visual directions, and calls to action. Be professional, specific, and on-brand.",
+                                product_name,
+                                brand_context
+                            );
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
