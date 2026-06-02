@@ -17,6 +17,18 @@ pub struct IntakeProduct {
     pub price: String,
 }
 
+
+fn deep_merge(a: &mut serde_json::Value, b: serde_json::Value) {
+    match (a, b) {
+        (serde_json::Value::Object(a_map), serde_json::Value::Object(b_map)) => {
+            for (k, v) in b_map {
+                deep_merge(a_map.entry(k).or_insert(serde_json::Value::Null), v);
+            }
+        }
+        (a, b) => *a = b,
+    }
+}
+
 #[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
@@ -77,21 +89,36 @@ impl OnboardingAgent {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        let existing_row = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut final_state = state_json.clone();
+        if let Some(record) = existing_row {
+            use sqlx::Row;
+            let existing: serde_json::Value = record.get("state_json");
+            let mut merged = existing.clone();
+            deep_merge(&mut merged, final_state);
+            final_state = merged;
+        }
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = CASE \
-                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
-                 ELSE onboarding_state.state_json || EXCLUDED.state_json \
-                 END, \
+             SET state_json = EXCLUDED.state_json, \
                  current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
         .bind(user_id)
         .bind(current_step)
-        .bind(state_json)
+        .bind(&final_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
