@@ -94,7 +94,7 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
+    <div className="p-4 max-w-[375px] mx-auto mac-glass-container min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
         <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
           &lt; Back
@@ -124,7 +124,7 @@ export default function InboxPage() {
       {/* Scheduler Modal */}
       {showScheduler && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+          <div className="mac-glass-container w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900">Schedule Post</h2>
               <button
@@ -138,7 +138,7 @@ export default function InboxPage() {
               id="post-content"
               value={postContent}
               onChange={e => setPostContent(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] mb-4"
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm text-black mac-glass-container focus:outline-none focus:ring-2 focus:ring-[#0066FF] mb-4"
               rows={4}
               placeholder="What do you want to post?"
             />
@@ -175,7 +175,7 @@ export default function InboxPage() {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+          <div className="mac-glass-container w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
               <button
@@ -211,7 +211,7 @@ export default function InboxPage() {
         </div>
       )}
 
-      <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
+      <div id="messages-list" className="mac-glass-container rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
         {messages.map(msg => (
           <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
             <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
@@ -237,7 +237,7 @@ export default function InboxPage() {
                           id="reply-input-edit"
                           value={replyInput}
                           onChange={e => setReplyInput(e.target.value)}
-                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
+                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black mac-glass-container focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
                           rows={3}
                         />
                         <div className="flex justify-end mt-2 gap-2">
@@ -253,7 +253,7 @@ export default function InboxPage() {
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                                Send
                            </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 mac-glass-container text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                Edit
                            </button>

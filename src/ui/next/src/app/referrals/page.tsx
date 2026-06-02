@@ -14,7 +14,7 @@ export default function ReferralsPage() {
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-8 mt-16 md:mt-0">
         <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-8">Referral Dashboard</h1>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
+        <div className="mac-glass-container rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -z-10"></div>
 
           <div className="max-w-2xl">
@@ -81,7 +81,7 @@ export default function ReferralsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="mac-glass-container rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
                 <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
                 <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
@@ -105,16 +105,16 @@ export default function ReferralsPage() {
                 </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="mac-glass-container rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Manage Data</h3>
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>
 
                <div className="space-y-3">
-                   <button className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                   <button className="w-full mac-glass-container border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                        View Referral Logs
                    </button>
-                   <button className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                   <button className="w-full mac-glass-container border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                        Export Data
                    </button>

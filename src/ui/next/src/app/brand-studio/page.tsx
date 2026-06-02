@@ -113,7 +113,7 @@ export default function BrandStudioPage() {
   return (
     <main className="min-h-screen bg-[#F5F5F7] font-inter text-gray-950">
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[360px_1fr] lg:px-8">
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-gray-200 mac-glass-container p-5 shadow-sm">
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Brand Studio
@@ -126,7 +126,7 @@ export default function BrandStudioPage() {
           </label>
           <textarea
             id="brand-description"
-            className="mb-4 h-32 w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 h-32 w-full resize-none rounded-lg border border-gray-300 mac-glass-container p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
@@ -136,7 +136,7 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="website-url"
-            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 w-full rounded-lg border border-gray-300 mac-glass-container p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={websiteUrl}
             onChange={(event) => setWebsiteUrl(event.target.value)}
             placeholder="https://example.com"
@@ -147,7 +147,7 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="product-url"
-            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 w-full rounded-lg border border-gray-300 mac-glass-container p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={productUrl}
             onChange={(event) => setProductUrl(event.target.value)}
             placeholder="https://example.com/product"
@@ -158,7 +158,7 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="campaign-prompt"
-            className="mb-5 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-5 w-full rounded-lg border border-gray-300 mac-glass-container p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={campaignPrompt}
             onChange={(event) => setCampaignPrompt(event.target.value)}
           />
@@ -172,7 +172,7 @@ export default function BrandStudioPage() {
           </button>
 
           <button
-            className="mt-3 flex h-12 w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-bold text-gray-900 transition hover:bg-gray-50 disabled:text-gray-400"
+            className="mt-3 flex h-12 w-full items-center justify-center rounded-lg border border-gray-300 mac-glass-container px-4 text-sm font-bold text-gray-900 transition hover:bg-gray-50 disabled:text-gray-400"
             onClick={publishWebsite}
             disabled={!toolbox?.id || publishStatus === "Publishing website..."}
           >
@@ -192,7 +192,7 @@ export default function BrandStudioPage() {
           )}
         </section>
 
-        <section className="min-h-[720px] rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="min-h-[720px] rounded-lg border border-gray-200 mac-glass-container p-5 shadow-sm">
           {!toolbox ? (
             <div className="flex h-full min-h-[560px] items-center justify-center rounded-lg border border-dashed border-gray-300 text-center">
               <div>

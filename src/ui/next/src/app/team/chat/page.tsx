@@ -74,7 +74,7 @@ export default function TeamChatPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] min-h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] min-h-[812px] mac-glass-container shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 border-b border-gray-100 flex items-center gap-4">
@@ -148,7 +148,7 @@ export default function TeamChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-gray-100 bg-white">
+        <div className="p-4 border-t border-gray-100 mac-glass-container">
           <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 px-4 py-2">
             <input
               type="text"

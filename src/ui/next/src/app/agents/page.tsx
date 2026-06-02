@@ -133,7 +133,7 @@ export default function AgentsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center font-inter">
       {/* 375px Mobile Container constraint as per design doc */}
-      <div className="w-full max-w-[375px] bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col">
+      <div className="w-full max-w-[375px] mac-glass-container min-h-screen shadow-xl relative overflow-x-hidden flex flex-col">
         {/* Header */}
         <header className="px-5 pt-8 pb-4 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-20 border-b border-gray-100">
           <div className="flex justify-between items-center mb-4">
@@ -219,7 +219,7 @@ export default function AgentsPage() {
 
           ) : activeTab === 'workflows' ? (
             <div className="space-y-4 pb-8">
-              <form onSubmit={createWorkflow} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+              <form onSubmit={createWorkflow} className="mac-glass-container rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div>
                     <h2 className="font-bold text-gray-900 font-outfit text-xl">Create Workflow</h2>
@@ -264,12 +264,12 @@ export default function AgentsPage() {
               </form>
 
               {workflows.length === 0 ? (
-                <div className="bg-white rounded-[16px] border border-dashed border-gray-300 p-5 text-center">
+                <div className="mac-glass-container rounded-[16px] border border-dashed border-gray-300 p-5 text-center">
                   <p className="text-gray-500 text-sm">No workflows yet.</p>
                 </div>
               ) : (
                 workflows.map((workflow) => (
-                  <div key={workflow.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                  <div key={workflow.id} className="mac-glass-container rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
                     <div className="flex justify-between items-start gap-3">
                       <div>
                         <h3 className="font-bold text-gray-900 font-outfit text-lg">{workflow.name}</h3>
@@ -306,7 +306,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {feed.map((item) => (
-                    <div key={item.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                    <div key={item.id} className="mac-glass-container rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {item.department}
@@ -340,7 +340,7 @@ export default function AgentsPage() {
               ) : (
                 <div className="space-y-4 pb-8">
                   {approvals.map((req) => (
-                    <div key={req.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                    <div key={req.id} className="mac-glass-container rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
                       <div className="flex justify-between items-start mb-3">
                         <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {req.department}

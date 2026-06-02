@@ -41,7 +41,7 @@ export default function CalendarPage() {
 
         {/* Appointments Column */}
         <div className="md:col-span-2 space-y-6">
-          <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="mac-glass-container rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
             <div className="space-y-4">
               {appointments.map(apt => (
@@ -71,7 +71,7 @@ export default function CalendarPage() {
 
         {/* AI Operations Activity Feed */}
         <div className="md:col-span-1 space-y-6">
-          <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="mac-glass-container rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🤖</span>
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Operations Agent</h2>
@@ -84,7 +84,7 @@ export default function CalendarPage() {
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-100 text-blue-500 shadow shrink-0  z-10">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                   </div>
-                  <div className="w-[calc(100%-4rem)]  bg-white p-4 rounded border border-gray-100 shadow-sm ml-4 ">
+                  <div className="w-[calc(100%-4rem)]  mac-glass-container p-4 rounded border border-gray-100 shadow-sm ml-4 ">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-gray-500">{activity.time}</span>
                     </div>

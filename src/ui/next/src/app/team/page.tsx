@@ -163,7 +163,7 @@ export default function TeamPage() {
         {showInviteModal && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              className="mac-glass-container rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
               style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
               <div className="flex justify-between items-start mb-2">

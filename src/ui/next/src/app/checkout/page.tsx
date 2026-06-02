@@ -117,7 +117,7 @@ export default function CheckoutPage() {
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
 
@@ -157,7 +157,7 @@ export default function CheckoutPage() {
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
+                <div className="relative flex justify-center"><span className="mac-glass-container px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">

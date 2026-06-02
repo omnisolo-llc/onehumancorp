@@ -192,14 +192,14 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
+            className="flex-1 bg-black dark:mac-glass-container text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
             Share
           </a>
           <a
             href={`ohc://join?ref=${props.tenantId || 'storefront'}-referral`}
-            className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
+            className="flex-1 mac-glass-container dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
           </a>
