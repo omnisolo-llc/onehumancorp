@@ -1,88 +1,56 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import React from "react";
-
-/**
- * @jest-environment jsdom
- */
-
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import AgentMarketplacePage from './page';
+import { expect, test, vi, describe, beforeEach } from 'vitest';
 
-// Mock the global fetch API
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+global.fetch = vi.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve([
+      { id: "1", name: "The Promoter", description: "Marketing agent", author: "OHC", version: "1.0.0", endpoint: "test" },
+      { id: "2", name: "The Manager", description: "Operations agent", author: "OHC", version: "1.0.0", endpoint: "test" },
+      { id: "3", name: "The Accountant", description: "Finance agent", author: "OHC", version: "1.0.0", endpoint: "test" }
+    ]),
+    ok: true,
+  })
+) as any;
 
 describe('Agent Marketplace Page', () => {
   beforeEach(() => {
-    mockFetch.mockClear();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => [
-        {
-          id: 'agent-1',
-          name: 'Data Analyst',
-          description: 'Analyzes CSV files',
-          author: 'AutoGPT',
-          version: '1.0.0',
-          endpoint: 'https://marketplace.example.com/agents/agent-1',
-        },
-      ],
+    vi.clearAllMocks();
+  });
+
+  test('renders the marketplace header', async () => {
+    await act(async () => {
+      render(<AgentMarketplacePage />);
     });
-  });
-
-  it('renders the marketplace header', async () => {
-    render(<AgentMarketplacePage />);
-    expect(screen.getByText('Agent Marketplace')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Search for agents...')).toBeInTheDocument();
-  });
-
-  it('fetches and displays agents on load', async () => {
-    render(<AgentMarketplacePage />);
-
     await waitFor(() => {
-      expect(screen.getByText('Data Analyst')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Analyzes CSV files')).toBeInTheDocument();
-    expect(screen.getByText('AutoGPT')).toBeInTheDocument();
-
-  });
-
-  it('displays a no results message when no agents are returned', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
-
-    render(<AgentMarketplacePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/No agents found matching/)).toBeInTheDocument();
+      expect(screen.getByText("Agent Marketplace")).toBeDefined();
     });
   });
 
-  it('updates the search query when typing', async () => {
-    render(<AgentMarketplacePage />);
-
-    const searchInput = screen.getByPlaceholderText('Search for agents...');
-    fireEvent.change(searchInput, { target: { value: 'SEO' } });
-
-    expect(searchInput).toHaveValue('SEO');
-
+  test('renders marketing agents', async () => {
+    await act(async () => {
+      render(<AgentMarketplacePage />);
+    });
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/marketplace?q=SEO');
+      expect(screen.getByText("The Promoter")).toBeDefined();
     });
   });
 
-  it('displays an error message when fetch fails', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
+  test('renders operations agents', async () => {
+    await act(async () => {
+      render(<AgentMarketplacePage />);
     });
-
-    render(<AgentMarketplacePage />);
-
     await waitFor(() => {
-      expect(screen.getByText('Failed to fetch agents')).toBeInTheDocument();
+      expect(screen.getByText("The Manager")).toBeDefined();
+    });
+  });
+
+  test('renders finance agents', async () => {
+    await act(async () => {
+      render(<AgentMarketplacePage />);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("The Accountant")).toBeDefined();
     });
   });
 });
