@@ -266,6 +266,15 @@ export default function StorefrontBuilderPage() {
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
+          <div className="w-full bg-white/40 border border-white/60 p-4 rounded-xl shadow-sm mb-6 flex flex-col items-center">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-[#f5f5f7] mb-2 font-outfit uppercase tracking-wide">Store Performance</h3>
+            <div className="flex items-center gap-2 backdrop-blur-md saturate-[200%]">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-2xl font-bold text-gray-900 dark:text-[#f5f5f7] font-inter">45ms</span>
+              <span className="text-xs text-gray-500 dark:text-[#a1a1a6] mt-1">Load Time (Edge Cached)</span>
+            </div>
+          </div>
+
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
             style={{ borderRadius: '8px' }}

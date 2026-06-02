@@ -110,6 +110,7 @@ mod tests {
         assert_eq!(val, Some("old html".to_string()));
 
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        // Avoid requiring external databases by using SQLite entirely for testing. We use the store to bypass postgres calls.
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: crate::db::DbStore::Sqlite(pool),
@@ -138,5 +139,15 @@ mod tests {
         // Cache should be invalidated
         let val_after = cache.get("ohc:cache:test_tenant_1:storefront:testhash").await;
         assert_eq!(val_after, None);
+
+        let event2 = DepartmentEvent {
+            id: "evt2".to_string(),
+            tenant_id: "test_tenant_1".to_string(),
+            event_type: "tenant.product.updated".to_string(),
+            payload: serde_json::json!({}),
+        };
+
+        let res2 = agent.handle_event(&event2).await;
+        assert!(res2.is_ok());
     }
 }
