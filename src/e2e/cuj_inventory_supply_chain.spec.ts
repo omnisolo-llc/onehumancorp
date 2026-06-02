@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('CUJ: Inventory and Supply Chain Management', () => {
   test('Persona: Business Owner approves an automated purchase order', async ({ page }) => {
@@ -6,10 +6,10 @@ test.describe('CUJ: Inventory and Supply Chain Management', () => {
     await page.goto('/inventory');
 
     // Check page title
-    await expect(page.locator('h1').filter({ hasText: 'Inventory' }).first()).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Inventory' }).first()).toBeVisible();
 
     // Check low stock alert is present
-    await expect(page.locator('h2')).toContainText('Low Stock Alerts');
+    await expect(page.locator('h2', { hasText: 'Low Stock Alerts' }).first()).toBeVisible();
 
     // Verify the simulated low stock item is displayed
     const alertCard = page.locator('[data-testid="alert-card-mat1"]');
