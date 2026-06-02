@@ -61,6 +61,18 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
               onClick={() => {
+                alert("Local Delivery selected. You will be notified when your order is on the way!");
+                router.push("/dashboard");
+              }}
+              className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors shadow-sm mb-4"
+            >
+              Local Delivery
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
+            <button
+              onClick={() => {
                 const amount = prompt("Enter amount to charge:");
                 if (!amount) return;
 

@@ -1,0 +1,41 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "service.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_services_delivery",
+    srcs = [
+        "bazel_lib.rs",
+        "mod.rs",
+        "service.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/proto:delivery_tonic",
+        "//src/server/auth:server_auth",
+        "//src/server/ohc:server_ohc",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:prost",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tokio-stream",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)

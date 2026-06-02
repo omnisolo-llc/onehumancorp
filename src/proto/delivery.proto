@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package ohc.delivery;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/delivery;deliverypb";
+
+message Point {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Polygon {
+  repeated Point points = 1;
+}
+
+message DeliveryZone {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  Polygon zone_polygon = 4;
+  int64 flat_fee_cents = 5;
+  int64 min_order_value_cents = 6;
+  int32 max_daily_deliveries = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message DeliveryTask {
+  string id = 1;
+  string tenant_id = 2;
+  string order_id = 3;
+  string driver_id = 4;
+  string status = 5;
+  int64 estimated_arrival_unix = 6;
+  Point delivery_location = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message Waypoint {
+  string delivery_task_id = 1;
+  int32 sequence_number = 2;
+  Point location = 3;
+  int64 estimated_arrival_unix = 4;
+}
+
+message RoutePlan {
+  string id = 1;
+  string tenant_id = 2;
+  string delivery_date = 3;
+  repeated Waypoint waypoints = 4;
+  int64 created_at_unix = 5;
+  int64 updated_at_unix = 6;
+}
+
+message CreateDeliveryZoneRequest { DeliveryZone zone = 1; }
+message CreateDeliveryZoneResponse { DeliveryZone zone = 1; }
+message GetDeliveryZonesRequest { string tenant_id = 1; }
+message GetDeliveryZonesResponse { repeated DeliveryZone zones = 1; }
+message GetDailyItineraryRequest { string tenant_id = 1; string delivery_date = 2; string driver_id = 3; }
+message GetDailyItineraryResponse { RoutePlan route_plan = 1; repeated DeliveryTask tasks = 2; }
+message UpdateTaskStatusRequest { string task_id = 1; string status = 2; }
+message UpdateTaskStatusResponse { DeliveryTask task = 1; }
+
+service DeliveryService {
+  rpc CreateDeliveryZone(CreateDeliveryZoneRequest) returns (CreateDeliveryZoneResponse);
+  rpc GetDeliveryZones(GetDeliveryZonesRequest) returns (GetDeliveryZonesResponse);
+  rpc GetDailyItinerary(GetDailyItineraryRequest) returns (GetDailyItineraryResponse);
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+}
