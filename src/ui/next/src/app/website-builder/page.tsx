@@ -304,7 +304,7 @@ export default function WebsiteBuilderPage() {
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
-                      Start My Business Next
+                      Start My Business
                     </button>
 
                     <button
