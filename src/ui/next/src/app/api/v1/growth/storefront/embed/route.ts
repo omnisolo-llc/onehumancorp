@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+
 
 function safeTenant(value: string | null): string {
   const normalized = (value || 'my-store').trim().slice(0, 80);
@@ -185,7 +185,7 @@ export async function GET(request: Request) {
     </html>
   `;
 
-  return new NextResponse(html, {
+  return new Response(html, {
     headers: {
       'Content-Type': 'text/html',
       'Cache-Control': 'public, max-age=60, s-maxage=60',

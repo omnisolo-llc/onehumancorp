@@ -144,7 +144,17 @@ export function HelpChat() {
                 )}
               </div>
             ))}
+
+            {messages.length === 1 && (
+              <div className="flex flex-col gap-2 mt-4 mb-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Quick Links</span>
+                <a href="/help" className="text-sm text-blue-600 hover:text-blue-800 bg-blue-50/50 p-2 rounded-lg border border-blue-100 hover:bg-blue-100/50 transition-colors">📚 Browse Help Center</a>
+                <a href="/api-docs" className="text-sm text-indigo-600 hover:text-indigo-800 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100 hover:bg-indigo-100/50 transition-colors">⚙️ API Documentation</a>
+                <a href="/changelog" className="text-sm text-green-600 hover:text-green-800 bg-green-50/50 p-2 rounded-lg border border-green-100 hover:bg-green-100/50 transition-colors">✨ Release Notes</a>
+              </div>
+            )}
             <div ref={messagesEndRef} />
+
           </div>
 
           {/* Input */}
@@ -153,7 +163,7 @@ export function HelpChat() {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask me anything..."
+              placeholder="Ask our AI or search the Help Center..."
               className="flex-1 bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter"
             />
             <button

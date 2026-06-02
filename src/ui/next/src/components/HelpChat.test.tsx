@@ -25,7 +25,7 @@ describe('HelpChat Component', () => {
 
     expect(screen.getByText('Help Agent')).toBeInTheDocument();
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Ask me anything...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask our AI or search the Help Center...')).toBeInTheDocument();
   });
 
   it('sends a message and displays user and agent reply', async () => {
@@ -44,7 +44,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(button!);
 
     // Type message
-    const input = screen.getByPlaceholderText('Ask me anything...');
+    const input = screen.getByPlaceholderText('Ask our AI or search the Help Center...');
     fireEvent.change(input, { target: { value: 'How do I add a product?' } });
 
     // Submit
@@ -71,7 +71,7 @@ describe('HelpChat Component', () => {
     const button = screen.getByText('Ask anything').closest('button');
     fireEvent.click(button!);
 
-    const input = screen.getByPlaceholderText('Ask me anything...');
+    const input = screen.getByPlaceholderText('Ask our AI or search the Help Center...');
     fireEvent.change(input, { target: { value: 'Will this fail?' } });
 
     const submitBtn = input.closest('form')!.querySelector('button[type="submit"]');
