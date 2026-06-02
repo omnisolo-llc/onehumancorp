@@ -30,3 +30,11 @@ export async function POST(request: Request) {
 
   return NextResponse.json(processedEvents, { status: 201 });
 }
+
+export async function DELETE() {
+  inventoryItems = [
+    { id: 'inv_1', name_en: 'Chicken Over Rice', name_ar: 'دجاج فوق الرز', is_sold_out: false },
+    { id: 'inv_2', name_en: 'Lamb Combo', name_ar: 'كومبو لحم ضأن', is_sold_out: false }
+  ];
+  return NextResponse.json({ success: true });
+}

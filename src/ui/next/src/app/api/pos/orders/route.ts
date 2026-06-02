@@ -32,3 +32,11 @@ export async function POST(request: Request) {
 
   return NextResponse.json(processedEvents, { status: 201 });
 }
+
+export async function DELETE() {
+  orders = [
+    { id: '1', customer_name: 'Ahmed', items: ['2x Chicken Over Rice'], status: 'Received', created_at: new Date().toISOString() },
+    { id: '2', customer_name: 'Sarah', items: ['1x Lamb Combo', '1x Soda'], status: 'Preparing', created_at: new Date().toISOString() }
+  ];
+  return NextResponse.json({ success: true });
+}
