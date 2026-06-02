@@ -3,7 +3,8 @@ import { test, expect } from './fixtures';
 test.describe('Pricing & Cost Dashboard CUJ', () => {
 
   test('Persona: Business Owner can view their current plan limits', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Billing', exact: true }).click();
 
     // 1. Verify Plan details
     await expect(page.getByRole('heading', { name: /My Plan/i })).toBeVisible();
@@ -19,7 +20,8 @@ test.describe('Pricing & Cost Dashboard CUJ', () => {
 
   test('Persona: Business Owner can view the cost dashboard breakdown', async ({ page }) => {
     // 1. Navigate to My Plan, then Cost Dashboard
-    await page.goto('/plan');
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Billing', exact: true }).click();
     await page.getByRole('button', { name: /View Cost Details/i }).click();
     await page.waitForURL('**/cost-dashboard');
 
@@ -34,7 +36,8 @@ test.describe('Pricing & Cost Dashboard CUJ', () => {
 
   test('Persona: Business Owner can view upgrade pricing tiers', async ({ page }) => {
     // 1. Navigate to My Plan, then Pricing
-    await page.goto('/plan');
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Billing', exact: true }).click();
     await page.getByRole('button', { name: /View Upgrade Plans/i }).click();
     await page.waitForURL('**/pricing');
 
