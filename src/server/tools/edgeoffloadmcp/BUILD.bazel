@@ -1,0 +1,8 @@
+exports_files(
+    [
+        "mod.rs",
+        "server.rs",
+        "tests.rs",
+    ],
+    visibility = ["//visibility:public"],
+)

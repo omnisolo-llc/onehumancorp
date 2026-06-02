@@ -1,0 +1,73 @@
+syntax = "proto3";
+package ohc.campaign;
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/campaign;campaignpb";
+
+message Campaign {
+    string id = 1;
+    string tenant_id = 2;
+    string goal = 3;
+    string status = 4;
+    int64 start_time_unix = 5;
+    int64 end_time_unix = 6;
+}
+
+message CampaignAsset {
+    string id = 1;
+    string tenant_id = 2;
+    string campaign_id = 3;
+    string type = 4;
+    string content_url = 5;
+}
+
+message ChannelExecution {
+    string id = 1;
+    string tenant_id = 2;
+    string campaign_id = 3;
+    string channel = 4;
+    int32 metrics_sent = 5;
+    int32 metrics_clicks = 6;
+    int32 metrics_conversions = 7;
+}
+
+message PromotionCode {
+    string code = 1;
+    string tenant_id = 2;
+    string campaign_id = 3;
+    double discount_value = 4;
+    string discount_type = 5;
+}
+
+message CreateDraftRequest {
+    string tenant_id = 1;
+    string goal = 2;
+}
+
+message CreateDraftResponse {
+    Campaign campaign = 1;
+}
+
+message AddAssetRequest {
+    string tenant_id = 1;
+    string campaign_id = 2;
+    string type = 3;
+    string content_url = 4;
+}
+
+message AddAssetResponse {
+    CampaignAsset asset = 1;
+}
+
+message LaunchCampaignRequest {
+    string tenant_id = 1;
+    string campaign_id = 2;
+}
+
+message LaunchCampaignResponse {
+    Campaign campaign = 1;
+}
+
+service CampaignService {
+    rpc CreateDraft(CreateDraftRequest) returns (CreateDraftResponse);
+    rpc AddAsset(AddAssetRequest) returns (AddAssetResponse);
+    rpc LaunchCampaign(LaunchCampaignRequest) returns (LaunchCampaignResponse);
+}
