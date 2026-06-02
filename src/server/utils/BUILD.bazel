@@ -18,6 +18,7 @@ rust_library(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/common:server_common",
         "//src/server/config:server_config",
         "//src/server/auth:server_auth",
         "//src/server/pricing:server_pricing",
