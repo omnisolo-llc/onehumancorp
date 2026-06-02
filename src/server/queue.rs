@@ -556,7 +556,7 @@ pub struct SubAgentJob {
 }
 
 pub struct QueueManager {
-    pool: sqlx::PgPool,
+    pub pool: sqlx::PgPool,
 }
 
 impl QueueManager {

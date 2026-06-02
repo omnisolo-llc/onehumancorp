@@ -1747,15 +1747,15 @@ mod e2e_cleanup_stagnant_missions_tests {
             .bind(&test_tenant)
             .execute(&mut *tx).await.unwrap();
 
-        // 3. Pending mission updated 2 hours ago (should be updated)
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', CURRENT_TIMESTAMP - INTERVAL '2 hours', $1)")
+        // 3. Pending mission updated 49 hours ago (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', CURRENT_TIMESTAMP - INTERVAL '49 hours', $1)")
             .bind(&test_tenant)
             .execute(&mut *tx).await.unwrap();
 
         tx.commit().await.unwrap();
 
-        // Clean up missions older than 3600 seconds
-        let _affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+        // Clean up missions older than 172800 seconds (48 hours)
+        let _affected = db.cleanup_stagnant_missions(172800).await.unwrap();
 
         let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
             .bind(&test_tenant)
