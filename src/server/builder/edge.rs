@@ -288,3 +288,31 @@ async fn regenerate_cache(
 
     Ok((html, tags))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_edge_cache_invalidation() {
+        let cache = get_edge_cache();
+        let cache_key = "test_storefront_key".to_string();
+        let tenant_tag = "tenant-id:test-tenant".to_string();
+
+        // Ensure cache starts empty for this key
+        cache.invalidate(&cache_key).await;
+
+        // Set a mock value with a tag
+        let tags = vec![tenant_tag.clone()];
+        cache.set_with_tags(&cache_key, "<html>Mock Storefront</html>".to_string(), tags, std::time::Duration::from_secs(60)).await;
+
+        // Verify it was set
+        assert!(cache.get(&cache_key).await.is_some());
+
+        // Call invalidate_by_tag
+        cache.invalidate_by_tag(&tenant_tag).await;
+
+        // Verify the cache was cleared
+        assert!(cache.get(&cache_key).await.is_none());
+    }
+}

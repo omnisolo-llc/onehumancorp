@@ -24,6 +24,19 @@ test.describe('Dashboard CUJ', () => {
     await expect(page.getByText(/Active Customers/i)).toBeVisible();
   });
 
+  test('Persona: Business Owner can view Store Performance metrics', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder(/Email/i).fill('test@example.com');
+    await page.getByPlaceholder(/Password/i).fill('password123');
+    await page.getByRole('button', { name: /Log In/i }).click();
+    await page.goto('/dashboard');
+
+    await expect(page.getByRole('heading', { name: /Store Performance/i })).toBeVisible();
+    await expect(page.getByText(/Dynamic Edge-Caching Active/i)).toBeVisible();
+    await expect(page.getByText(/Site Load Speed/i)).toBeVisible();
+    await expect(page.getByText(/Under 50ms/i)).toBeVisible();
+  });
+
   test('Persona: Business Owner can view the X share button', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');

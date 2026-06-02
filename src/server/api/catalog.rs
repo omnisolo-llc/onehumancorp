@@ -61,6 +61,10 @@ async fn handle_create_product(
     // Record product addition
     let _ = hub.tracker().record_product_added(&tenant_id).await;
 
+    // Invalidate edge cache for the tenant
+    let cache = crate::builder::edge::get_edge_cache();
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
     // In a real app we'd save to the DB here
 
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()

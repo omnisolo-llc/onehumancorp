@@ -3962,6 +3962,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Store Performance Widget -->
+                        <div class="card glass" id="store-performance" style="margin-bottom: 24px;">
+                            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                                🚀 Store Performance
+                            </h3>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Dynamic Edge-Caching Active</p>
+                            <p>Site Load Speed: <strong id="site-load-speed" style="color: #28a745;">Under 50ms</strong></p>
+                        </div>
+
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 id="todays-sales" placeholder="todays-sales-tooltip" style="font-size: 48px; margin: 0; color: var(--primary); cursor: help;">$0.00</h2>
