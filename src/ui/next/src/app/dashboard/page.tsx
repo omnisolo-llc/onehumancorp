@@ -80,6 +80,10 @@ export default function Dashboard() {
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
+  // Growth Loop: Footer Branding State
+  const [badgeEnabled, setBadgeEnabled] = useState<boolean>(false);
+
+
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -1232,6 +1236,56 @@ export default function Dashboard() {
                 >
                     <span>+ Add Item</span>
                 </button>
+            </div>
+         </section>
+
+
+         {/* Growth Loop: Footer Branding Loop */}
+         <section className="mb-8" id="footer-branding-loop">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Storefront Branding</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Powered by OHC Badge</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Display the "Powered by OHC" badge on your storefront footer. When customers click it and sign up, they get priority AI setup, and you earn a $10/month credit for helping us grow!</p>
+
+                    {badgeEnabled && (
+                        <div id="badge-enabled-message" className="mb-4 p-3 rounded-xl font-medium text-sm border bg-green-50 text-green-700 border-green-200 shadow-sm flex items-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Badge enabled! You are now earning a $10/month credit.
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            id="toggle-badge-btn"
+                            onClick={() => setBadgeEnabled(!badgeEnabled)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${badgeEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                            role="switch"
+                            aria-checked={badgeEnabled}
+                        >
+                            <span className="sr-only">Enable Powered by OHC Badge</span>
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${badgeEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                            />
+                        </button>
+                        <span className="text-sm font-semibold text-gray-900">{badgeEnabled ? 'Enabled' : 'Disabled'}</span>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-6 flex flex-col items-center justify-center border border-gray-100 shadow-inner min-h-[160px]">
+                     <span className="text-xs text-gray-400 mb-2 font-medium tracking-wide uppercase">Preview</span>
+                     <div className={`transition-opacity duration-300 ${badgeEnabled ? 'opacity-100' : 'opacity-30'}`}>
+                         <div className="flex items-center gap-1.5 text-xs text-gray-500 font-semibold hover:text-indigo-600 cursor-pointer transition-colors px-3 py-1.5 bg-white border border-gray-200 rounded-full shadow-sm">
+                             <span className="text-yellow-500">⚡</span> Powered by OHC
+                         </div>
+                     </div>
+                </div>
             </div>
          </section>
 
