@@ -71,3 +71,66 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
         .route("/product", post(handle_create_product))
         .layer(Extension(hub))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Request;
+    use axum::body::Body;
+    use tower::ServiceExt;
+    use ::server_common::Claims;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_create_product() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
+
+        let db_arc = Arc::new(crate::db::DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool)
+        });
+
+        let hub = Arc::new(Hub::new(tx, db_arc.pool.clone()));
+
+        let app = Router::new()
+            .route("/product", post(handle_create_product))
+            .layer(Extension(hub))
+            .layer(Extension(Claims {
+                sub: "user-123".to_string(),
+                email: "test@example.com".to_string(),
+                exp: 0,
+                organization_id: Some("tenant-123".to_string()),
+                iat: 0,
+                username: "test_user".to_string(),
+                roles: vec![],
+                session_id: Some("sess".to_string()),
+                jti: "jti".to_string(),
+            }));
+
+        let payload = r#"{
+            "name": "Test Cake",
+            "price": "20.00",
+            "duration": 60,
+            "description": "Delicious test cake",
+            "item_type": "physical"
+        }"#;
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/product")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(payload))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}
