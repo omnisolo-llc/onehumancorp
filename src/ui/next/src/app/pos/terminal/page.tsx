@@ -21,7 +21,81 @@ export default function TerminalPage() {
   const [activeStaff, setActiveStaff] = useState<any | null>(null);
   const [clockedIn, setClockedIn] = useState(false);
   const [error, setError] = useState('');
+
   const [syncing, setSyncing] = useState(false);
+
+  // Localization state
+  const [language, setLanguage] = useState('en');
+  const [currency, setCurrency] = useState('USD');
+  const [i18n, setI18n] = useState<Record<string, string>>({});
+  const [fxRates, setFxRates] = useState<Record<string, number>>({});
+  const [showOfflineToast, setShowOfflineToast] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Localization fetch
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial load from cache
+    const cachedI18n = JSON.parse(localStorage.getItem(`ohc_i18n_${language}`) || '{}');
+    const cachedFx = JSON.parse(localStorage.getItem('ohc_fx_rates') || '{}');
+    if (Object.keys(cachedI18n).length > 0) setI18n(cachedI18n);
+    if (Object.keys(cachedFx).length > 0) setFxRates(cachedFx);
+
+    if (navigator.onLine) {
+        // Fetch fresh if online
+        fetch(`/api/localization/i18n?tenant_id=default_tenant&language_code=${language}`)
+          .then(res => res.json())
+          .then(data => {
+            const map: Record<string, string> = {};
+            data.forEach((d: any) => map[d.translation_key] = d.translation_value);
+            setI18n(map);
+            localStorage.setItem(`ohc_i18n_${language}`, JSON.stringify(map));
+          }).catch(console.error);
+
+        fetch(`/api/localization/fx?base_currency=USD`)
+          .then(res => res.json())
+          .then(data => {
+            const map: Record<string, number> = {};
+            data.forEach((d: any) => map[d.target_currency] = d.exchange_rate);
+            setFxRates(map);
+            localStorage.setItem('ohc_fx_rates', JSON.stringify(map));
+          }).catch(console.error);
+    }
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
+  }, [language]);
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setLanguage(e.target.value);
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setCurrency(e.target.value);
+    if (!isOnline) {
+      setShowOfflineToast(true);
+      setTimeout(() => setShowOfflineToast(false), 3000);
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amountUSD: number) => {
+    if (currency === 'USD' || !fxRates[currency]) return `$${amountUSD.toFixed(2)}`;
+    const converted = amountUSD * fxRates[currency];
+    const prefix = currency === 'AED' ? 'د.إ' : currency === 'EUR' ? '€' : currency;
+    return `${prefix} ${converted.toFixed(2)}`;
+  };
+
+  // Translation helper
+  const t = (key: string, defaultText: string) => i18n[key] || defaultText;
+
 
   // Background sync
   useEffect(() => {
@@ -149,15 +223,36 @@ export default function TerminalPage() {
       <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{activeStaff.role}</p>
+        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
+              <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role, activeStaff.role)}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select value={language} onChange={handleLanguageChange} className="bg-transparent text-sm text-gray-500 font-medium focus:outline-none">
+                <option value="en">EN</option>
+                <option value="ar">AR</option>
+                <option value="es">ES</option>
+              </select>
+              <select value={currency} onChange={handleCurrencyChange} className="bg-transparent text-sm text-gray-500 font-medium focus:outline-none">
+                <option value="USD">USD</option>
+                <option value="AED">AED</option>
+                <option value="EUR">EUR</option>
+              </select>
+              <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900 ml-2">
+                {t('lock', 'Lock')}
+              </button>
+            </div>
           </div>
-          <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
-            Lock
-          </button>
         </div>
+
+
+        {showOfflineToast && (
+          <div className="absolute top-[120px] left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-4 py-2 rounded-full z-50 backdrop-blur-md shadow-lg animate-fade-in whitespace-nowrap">
+             {t('offline_conversion_toast', "Converted using yesterday's rate. Will finalize on sync.")}
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
@@ -169,10 +264,10 @@ export default function TerminalPage() {
                 </svg>
              </div>
              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">
-               {clockedIn ? 'Clocked In' : 'Not Clocked In'}
+               {clockedIn ? t('clocked_in', 'Clocked In') : t('not_clocked_in', 'Not Clocked In')}
              </h2>
              <p className="text-sm text-gray-500 mb-6">
-                {clockedIn ? 'Your time is being tracked locally.' : 'Clock in to start your shift.'}
+                {clockedIn ? t('tracked_locally', 'Your time is being tracked locally.') : t('clock_in_to_start', 'Clock in to start your shift.')}
              </p>
 
              {clockedIn ? (
@@ -180,27 +275,30 @@ export default function TerminalPage() {
                  onClick={() => handleClockAction('CLOCK_OUT')}
                  className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
                >
-                 Clock Out
+                 {t('clock_out', 'Clock Out')}
                </button>
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
                  className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
                >
-                 Clock In
+                 {t('clock_in', 'Clock In')}
                </button>
              )}
            </div>
 
            {/* Role-based UI rendering */}
-           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">Quick Actions</h3>
+           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('quick_actions', 'Quick Actions')}</h3>
 
            <div className="grid grid-cols-2 gap-4">
              <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-               <div className="text-blue-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+               <div className="flex justify-between items-start">
+                   <div className="text-blue-500 mb-2">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                   </div>
+                   <div className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">{formatCurrency(45.00)}</div>
                </div>
-               <span className="font-medium text-gray-900">New Order</span>
+               <span className="font-medium text-gray-900">{t('new_order', 'New Order')}</span>
              </button>
 
              {activeStaff.role === 'Manager' && (
@@ -208,7 +306,7 @@ export default function TerminalPage() {
                  <div className="text-purple-500 mb-2">
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                  </div>
-                 <span className="font-medium text-gray-900">Reports</span>
+                 <span className="font-medium text-gray-900">{t('reports', 'Reports')}</span>
                </button>
              )}
 
@@ -216,7 +314,7 @@ export default function TerminalPage() {
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
-               <span className="font-medium text-gray-900">Refunds</span>
+               <span className="font-medium text-gray-900">{t('refunds', 'Refunds')}</span>
              </button>
            </div>
         </div>
