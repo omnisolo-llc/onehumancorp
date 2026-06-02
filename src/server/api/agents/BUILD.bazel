@@ -2,6 +2,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 exports_files(
     [
+        "aiaas.rs",
         "approvals.rs",
         "chat.rs",
         "hire.rs",
@@ -18,6 +19,7 @@ rust_library(
     name = "server_api_agents",
     srcs = [
         "bazel_lib.rs",
+        "aiaas.rs",
         "approvals.rs",
         "chat.rs",
         "hire.rs",
