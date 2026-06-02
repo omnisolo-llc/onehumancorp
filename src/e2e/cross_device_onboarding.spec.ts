@@ -29,12 +29,11 @@ test.describe('Cross Device Onboarding CUJ', () => {
     // Step 3: Give your business a name
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
 
-    // 3. Owner enters business name
+    // 3. Owner enters business name and waits for auto-save debounce (500ms)
     const nameInput = page.getByPlaceholder(/e.g. Maya's Cakes/i);
+    const responsePromise = page.waitForResponse(r => r.url().includes('/api/onboarding/state') && r.request().method() === 'POST' && r.request().postData()?.includes('Cross Device Bakery'));
     await nameInput.fill('Cross Device Bakery');
-
-    // Wait for the debounce to trigger auto-save (500ms)
-    await page.waitForTimeout(1000);
+    await responsePromise;
 
     // 4. Simulate a cross-device session or reload
     await page.reload();
