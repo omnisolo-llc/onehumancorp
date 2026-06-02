@@ -215,6 +215,16 @@ export default function AgentsPage() {
                   </div>
                 </div>
               ))}
+              <div className="flex justify-center p-4">
+                <button className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">Hire Agent</button>
+              </div>
+            </div>
+          ) : activeTab === 'workflows' ? (
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
           ) : activeTab === 'workflows' ? (

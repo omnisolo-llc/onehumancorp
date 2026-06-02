@@ -1255,6 +1255,38 @@ export default function Dashboard() {
                               const url = `ohc://join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
+                              setShowMilestoneBanner(false);
+                          }}
+                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
+                      >
+                          Share & Claim Reward
+                      </button>
+                  </div>
+                  <div className="hidden md:block w-32 h-32 opacity-80">
+                      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                          <path fill="#FFFFFF" d="M42.7,-73.4C55.9,-67.6,67.6,-56.9,76.6,-44.3C85.5,-31.6,91.8,-17.1,91.1,-3.1C90.4,11,82.8,24.5,73.4,36.1C64,47.7,52.8,57.3,40.1,64.2C27.5,71.1,13.7,75.4,0,75.3C-13.6,75.3,-27.3,71,-40.1,64.3C-52.9,57.5,-64.8,48.3,-72.6,36C-80.3,23.6,-84,8.1,-82.4,-6.7C-80.8,-21.4,-73.9,-35.4,-63.9,-46C-53.9,-56.6,-40.8,-63.9,-27.9,-69.8C-15,-75.7,-2.3,-80.4,10.6,-79.8C23.6,-79.2,36.5,-73.4,42.7,-73.4Z" transform="translate(100 100)" />
+                      </svg>
+                  </div>
+              </div>
+           </section>
+         )}
+
+         {showMilestoneBanner && (
+           <section className="mb-8 animate-fade-in">
+              <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                  <div className="flex-1 text-white">
+                      <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl">🎉</span>
+                          <h3 className="text-xl font-bold font-outfit text-white">Milestone Unlocked: Your First Customers!</h3>
+                      </div>
+                      <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
+                      <button
+                          onClick={() => {
+                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const url = `ohc://join?ref=${tenant}`;
+                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
                           }}
                           className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
@@ -1270,6 +1302,33 @@ export default function Dashboard() {
               </div>
            </section>
          )}
+
+         {/* Growth Loop: Social Share Cards */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Share Cards</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Create Viral Share Cards</h3>
+                    <p className="text-sm text-gray-600 mb-4">Design beautiful, customizable share cards for your storefront that feature the "Powered by OHC" viral loop.</p>
+                    <Link
+                        href="/share-cards"
+                        className="inline-block px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-colors"
+                    >
+                        Generate Share Cards
+                    </Link>
+                </div>
+                <div className="hidden md:flex items-center justify-center bg-gray-50 rounded-xl p-4 border border-gray-100 w-48 h-32">
+                    <span className="text-4xl">🎴</span>
+                </div>
+            </div>
+         </section>
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
