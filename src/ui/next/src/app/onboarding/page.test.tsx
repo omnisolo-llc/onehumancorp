@@ -35,8 +35,8 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    expect(await screen.findByText("Tell us about your business")).toBeInTheDocument();
+    const button = await screen.findByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
 
@@ -62,7 +62,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1 - Use Enter Key
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery{Enter}');
 
     // Chat Step 2 - Use Enter Key
@@ -108,24 +108,24 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = await screen.findByRole('button', { name: /Next/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = await screen.findByRole('button', { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = await screen.findByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -137,7 +137,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
     });
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const continueButton = await screen.findByRole('button', { name: /Continue/i });
     await user.click(continueButton);
 
     // Verify it transitions to Step 3: Style & Team
@@ -146,7 +146,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = await screen.findByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -171,24 +171,24 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = await screen.findByRole('button', { name: /Next/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = await screen.findByRole('button', { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = await screen.findByRole('button', { name: /Generate My Business/i });
 
     await user.click(button);
 
@@ -220,7 +220,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = await screen.findByRole('button', { name: /Launch Store/i });
 
     await user.click(launchButton);
 
@@ -251,7 +251,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const nextButton = screen.getByRole('button', { name: /Next/i });
+    const nextButton = await screen.findByRole('button', { name: /Next/i });
 
     await user.click(nextButton);
 
@@ -276,7 +276,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const continueButton = await screen.findByRole('button', { name: /Continue/i });
 
     await user.click(continueButton);
 
@@ -294,7 +294,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
+    const subdomainOption = await screen.findByText('Free Subdomain');
     const customOption = screen.getByText('Custom Domain');
     expect(subdomainOption).toBeInTheDocument();
     expect(customOption).toBeInTheDocument();
@@ -307,7 +307,7 @@ describe('OnboardingWizard', () => {
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    const toggle = screen.getByRole('checkbox');
+    const toggle = await screen.findByRole('checkbox');
     expect(toggle).toBeChecked();
 
     // Select Sales Agent
@@ -363,7 +363,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    const saveDraftButton = await screen.findByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
 
     await user.click(saveDraftButton);
