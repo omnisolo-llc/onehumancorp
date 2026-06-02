@@ -1,30 +1,33 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import OnboardingWizard from './page';
-import { useOnboardingStore } from './store';
-import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor, act } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import OnboardingWizard from "./page";
+import { useOnboardingStore } from "./store";
+import { beforeEach, describe, it, expect, vi, afterEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 
-describe('OnboardingWizard', () => {
+describe("OnboardingWizard", () => {
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
       chatStep: 1,
-      businessName: '',
-      whatYouSell: '',
-      location: '',
-      businessDescription: '',
-      domainChoice: 'subdomain',
+      businessName: "",
+      whatYouSell: "",
+      location: "",
+      businessDescription: "",
+      domainChoice: "subdomain",
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
-      error: '',
+      error: "",
       startResult: null,
     });
 
     global.fetch = vi.fn().mockImplementation((url) => {
-        return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     }) as any;
   });
 
@@ -32,46 +35,51 @@ describe('OnboardingWizard', () => {
     vi.clearAllMocks();
   });
 
-  it('Step 1: Renders initial screen correctly', async () => {
+  it("Step 1: Renders initial screen correctly", async () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole("button", { name: /Next/i });
     expect(button).toBeDisabled();
   });
 
-  it('Handles enter key progression in chat steps', async () => {
+  it("Handles enter key progression in chat steps", async () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake') {
+      if (url === "/api/onboarding/intake") {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            business_type: 'Bakery',
-            business_name: 'Maya Bakery',
-            categories: ['food'],
-            initial_products: [{ name: 'Cake', price: '20' }]
-          })
+            business_type: "Bakery",
+            business_name: "Maya Bakery",
+            categories: ["food"],
+            initial_products: [{ name: "Cake", price: "20" }],
+          }),
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     });
 
     render(<OnboardingWizard />);
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery{Enter}');
+    await user.type(nameInput, "Maya Bakery{Enter}");
 
     // Chat Step 2 - Use Enter Key
-    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes{Enter}');
+    const sellInput = await screen.findByPlaceholderText(
+      /I bake custom vegan cakes/i,
+    );
+    await user.type(sellInput, "Cakes{Enter}");
 
     // Chat Step 3 - Use Enter Key
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY{Enter}');
+    await user.type(locInput, "NY{Enter}");
 
     // Verify it transitions to Step 2: Review Details by triggering handleIntake
     await waitFor(() => {
@@ -80,52 +88,57 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it("Handles multi-step successful onboarding flow", async () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake') {
+      if (url === "/api/onboarding/intake") {
         return Promise.resolve({
           ok: true,
           json: async () => ({
-            business_type: 'Bakery',
-            business_name: 'Maya Bakery',
-            categories: ['food'],
-            initial_products: [{ name: 'Cake', price: '20' }]
-          })
+            business_type: "Bakery",
+            business_name: "Maya Bakery",
+            categories: ["food"],
+            initial_products: [{ name: "Cake", price: "20" }],
+          }),
         });
       }
-      if (url === '/api/onboarding/start') {
+      if (url === "/api/onboarding/start") {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ message: "Success!" })
+          json: async () => ({ message: "Success!" }),
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     });
 
     render(<OnboardingWizard />);
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
+    await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole("button", { name: /Next/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
+    await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole("button", { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    await user.type(locInput, "NY");
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole("button", {
+      name: /Generate My Business/i,
+    });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -137,7 +150,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
     });
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const continueButton = screen.getByRole("button", { name: /Continue/i });
     await user.click(continueButton);
 
     // Verify it transitions to Step 3: Style & Team
@@ -146,7 +159,7 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole("button", { name: /Launch Store/i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -156,53 +169,67 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Step 1: Handles intake API failure', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("Step 1: Handles intake API failure", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
+      if (url === "/api/onboarding/intake" || url === "/api/onboarding/start") {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: "Failed to process business details" }),
+        });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     });
 
     render(<OnboardingWizard />);
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
+    await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole("button", { name: /Next/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
+    await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole("button", { name: /Next/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    await user.type(locInput, "NY");
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole("button", {
+      name: /Generate My Business/i,
+    });
 
     await user.click(button);
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
-      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
+      expect(
+        screen.getByText("Failed to process business details"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("Step 3: Handles start API failure and returns to Step 3", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
@@ -212,90 +239,107 @@ describe('OnboardingWizard', () => {
 
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
+      if (url === "/api/onboarding/intake" || url === "/api/onboarding/start") {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: "Failed to start onboarding" }),
+        });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     });
 
     render(<OnboardingWizard />);
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = screen.getByRole("button", { name: /Launch Store/i });
 
     await user.click(launchButton);
 
     // Verify error appears and step goes back to 3
     await waitFor(() => {
-      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
+      expect(
+        screen.getByText("Failed to start onboarding"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it("Step 1: Displays validation error when business name is too short", async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
         chatStep: 1,
-        businessName: 'A',
-        location: '',
-        businessType: 'Online Store',
+        businessName: "A",
+        location: "",
+        businessType: "Online Store",
         categories: [],
-        firstProductName: '',
-        firstProductPrice: ''
+        firstProductName: "",
+        firstProductPrice: "",
       });
     });
 
     render(<OnboardingWizard />);
 
-    const nextButton = screen.getByRole('button', { name: /Next/i });
+    const nextButton = screen.getByRole("button", { name: /Next/i });
 
     await user.click(nextButton);
 
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+    expect(
+      await screen.findByText("Business Name must be at least 3 characters."),
+    ).toBeInTheDocument();
   });
 
-  it('Step 2: Proceeds to Step 3 when validation passes', async () => {
+  it("Step 2: Proceeds to Step 3 when validation passes", async () => {
     const user = userEvent.setup({ delay: null });
 
     // Set initial state to Step 2
     act(() => {
       useOnboardingStore.setState({
         step: 2,
-        businessName: 'Valid Name',
-        businessType: 'Bakery',
-        categories: ['food'],
-        domainChoice: 'subdomain',
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        businessName: "Valid Name",
+        businessType: "Bakery",
+        categories: ["food"],
+        domainChoice: "subdomain",
+        firstProductName: "Cake",
+        firstProductPrice: "20",
       });
     });
 
     render(<OnboardingWizard />);
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    const continueButton = screen.getByRole("button", { name: /Continue/i });
 
     await user.click(continueButton);
 
-    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
-    expect(screen.getByText('Style & Team')).toBeInTheDocument();
+    expect(
+      screen.queryByText("Business Name must be at least 3 characters."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Style & Team")).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it("Step 3: Can select Web Address, AI agents and toggle auto-respond", async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+      useOnboardingStore.setState({
+        step: 3,
+        aiAgents: [],
+        aiAutoRespond: true,
+        domainChoice: "subdomain",
+      });
     });
 
     render(<OnboardingWizard />);
 
     // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
-    const customOption = screen.getByText('Custom Domain');
+    const subdomainOption = screen.getByText("Free Subdomain");
+    const customOption = screen.getByText("Custom Domain");
     expect(subdomainOption).toBeInTheDocument();
     expect(customOption).toBeInTheDocument();
 
@@ -303,11 +347,11 @@ describe('OnboardingWizard', () => {
     await user.click(customOption);
 
     // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
+    const salesAgent = screen.getByText("Sales Agent");
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    const toggle = screen.getByRole('checkbox');
+    const toggle = screen.getByRole("checkbox");
     expect(toggle).toBeChecked();
 
     // Select Sales Agent
@@ -318,17 +362,19 @@ describe('OnboardingWizard', () => {
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAgents).toContain("Sales Agent");
       expect(state.aiAutoRespond).toBe(false);
-      expect(state.domainChoice).toBe('custom');
+      expect(state.domainChoice).toBe("custom");
     });
   });
 
-  it('Step 5: Shows Live Screen with correct links', async () => {
+  it("Step 5: Shows Live Screen with correct links", async () => {
     act(() => {
       useOnboardingStore.setState({
         step: 5,
-        startResult: { message: "Your business has been successfully launched." }
+        startResult: {
+          message: "Your business has been successfully launched.",
+        },
       });
     });
 
@@ -336,24 +382,31 @@ describe('OnboardingWizard', () => {
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+      expect(
+        screen.getByText("Your business has been successfully launched."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /Go to Dashboard/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /Preview Storefront/i }),
+      ).toBeInTheDocument();
     });
   });
 
-  it('Save Draft button triggers draft API and shows success message', async () => {
-    const user = userEvent.setup({ delay: null });
-
+  it("Auto-save triggers draft API and shows success message", async () => {
     // Mock draft API success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/draft') {
+      if (url === "/api/onboarding/draft") {
         return Promise.resolve({
           ok: true,
-          json: async () => ({})
+          json: async () => ({}),
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ wizardState: {} }),
+      });
     });
 
     // Start at Step 2
@@ -363,18 +416,25 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
-    expect(saveDraftButton).toBeInTheDocument();
-
-    await user.click(saveDraftButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    // Trigger state change to kick off the effect (which has a 1000ms timeout)
+    act(() => {
+      useOnboardingStore.setState({ businessName: "Test Business" });
     });
 
+    // Wait for the Auto-saved text
+    await waitFor(
+      () => {
+        expect(screen.getByText("Auto-saved")).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
+
     // Verify API was called
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
-      method: 'POST'
-    }));
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/onboarding/draft",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
   });
 });
