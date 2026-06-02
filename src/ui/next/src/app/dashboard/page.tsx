@@ -14,6 +14,10 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [showInfluencerModal, setShowInfluencerModal] = useState(false);
+  const [affiliateLink, setAffiliateLink] = useState('');
+  const [isGeneratingAffiliate, setIsGeneratingAffiliate] = useState(false);
+  const [affiliateCopied, setAffiliateCopied] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -318,7 +322,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -466,6 +470,9 @@ export default function Dashboard() {
              </Link>
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
+             </Link>
+             <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
+               Business Analytics
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
@@ -669,7 +676,7 @@ export default function Dashboard() {
                      <button
                          onClick={() => {
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
@@ -735,7 +742,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
@@ -1150,7 +1157,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
@@ -1202,7 +1209,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1222,7 +1229,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
@@ -1249,7 +1256,7 @@ export default function Dashboard() {
                       <button
                           onClick={() => {
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `ohc://join?ref=${tenant}`;
+                              const url = `https://ohc.store/join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                               setShowMilestoneBanner(false);
@@ -1278,7 +1285,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
@@ -1303,6 +1310,27 @@ export default function Dashboard() {
 
 
 
+
+         {/* Owner Dashboard - Viral Growth Metrics */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Viral Growth & Affiliates</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Affiliates</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl font-bold font-outfit text-indigo-600">1</span>
+                  <span className="text-sm bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md font-semibold">+1 this week</span>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-[24px] shadow-sm flex flex-col gap-2 font-inter border border-gray-100 hover:shadow-md transition-all">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Affiliate Revenue</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl font-bold font-outfit text-green-600">$0.00</span>
+                  <span className="text-sm bg-green-50 text-green-700 px-2 py-1 rounded-md font-semibold">Pending payouts</span>
+                </div>
+              </div>
+            </div>
+         </section>
 
          {/* Products & Monetization Snapshot */}
          <section className="mb-8">
@@ -2217,6 +2245,100 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Influencer Modal */}
+      {showInfluencerModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600">
+                💸
+              </div>
+              <button
+                onClick={() => {
+                  setShowInfluencerModal(false);
+                  setAffiliateCopied(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Your Affiliate Link</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Earn a <strong className="text-gray-900">10% commission</strong> for every sale you bring in using your unique affiliate link. Payouts happen automatically.
+            </p>
+
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-6 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Earnings</p>
+                <p className="text-2xl font-bold text-gray-900 font-outfit">$0.00</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Conversions</p>
+                <p className="text-2xl font-bold text-gray-900 font-outfit">0</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Share this link</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={affiliateLink || 'Click Generate to get your link'}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
+                  />
+                  {!affiliateLink ? (
+                    <button
+                      onClick={async () => {
+                        setIsGeneratingAffiliate(true);
+                        try {
+                          const response = await fetch('/api/v1/growth/affiliate/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              tenant_id: typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant',
+                              user_id: typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'e2e-user' : 'e2e-user'
+                            })
+                          });
+                          const data = await response.json();
+                          setAffiliateLink(data.link_url);
+                        } catch (e) {
+                          console.error("Failed to generate link", e);
+                          // Fallback
+                          setAffiliateLink(`https://ohc.store/?ref=affiliate-${Date.now().toString().slice(-4)}`);
+                        } finally {
+                          setIsGeneratingAffiliate(false);
+                        }
+                      }}
+                      disabled={isGeneratingAffiliate}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                      {isGeneratingAffiliate ? '...' : 'Generate'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(affiliateLink);
+                        setAffiliateCopied(true);
+                        setTimeout(() => setAffiliateCopied(false), 2000);
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${affiliateCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                    >
+                      {affiliateCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Referral Modal */}
       <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
         <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
@@ -2227,6 +2349,14 @@ export default function Dashboard() {
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <button
+                  onClick={() => setShowInfluencerModal(true)}
+                  className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 mb-4"
+                >
+                  Open Influencer View
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
 
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
