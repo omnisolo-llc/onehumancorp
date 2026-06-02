@@ -167,11 +167,10 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ description: combinedDescription })
       });
 
-      if (!intakeRes.ok) {
-        throw new Error('Failed to process business details');
-      }
-
       const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
 
       setBusinessType(intakeData.business_type || 'Online Store');
       setBusinessName(intakeData.business_name || 'My Business');
@@ -221,11 +220,11 @@ export default function OnboardingWizard() {
         })
       });
 
+      const result = await startRes.json();
       if (!startRes.ok) {
-        throw new Error('Failed to start onboarding');
+        throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       setStep(5); // Go to "You're Live" screen
@@ -563,26 +562,6 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Web Address</label>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div
-                      onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Free Subdomain</span>
-                      <span className="text-[10px] opacity-70">your-name.ohc.store</span>
-                    </div>
-                    <div
-                      onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Custom Domain</span>
-                      <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
                   <div className="space-y-2">
                     {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
@@ -646,7 +625,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>

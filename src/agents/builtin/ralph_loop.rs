@@ -10,8 +10,6 @@ pub struct RalphProgress {
     pub task_description: String,
     pub features: Vec<Feature>,
     pub current_feature_index: usize,
-    #[serde(default)]
-    pub notes: Vec<String>,
     pub is_complete: bool,
 }
 
@@ -98,12 +96,7 @@ impl RalphLoop {
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
-            let scratchpad_context = if !progress.notes.is_empty() {
-                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
-            } else {
-                String::new()
-            };
-            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
+            feature_config.user_instructions = feature_prompt.clone();
             
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
@@ -115,19 +108,20 @@ impl RalphLoop {
                 Ok(result) => {
                     tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
-                    progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
+                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git add: {}", e);
+                    }
+                    let commit_msg = format!("Completed feature: {}", feature_name);
+
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                     let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
-                        let commit_msg = format!("Completed feature: {}\n\n{}", feature_name, result);
-                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                            tracing::error!("Phase 2 failed to git commit: {}", e);
-                        }
+                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                        tracing::error!("Phase 2 failed to git commit: {}", e);
                     }
                 }
                 Err(e) => {
@@ -170,7 +164,6 @@ impl RalphLoop {
             task_description: task.to_string(),
             features,
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
 
@@ -213,11 +206,7 @@ impl RalphLoop {
 
     async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
-        let tmp_path = format!("{}.tmp", self.progress_file_path);
-        fs::write(&tmp_path, json).await?;
-        if let Err(e) = fs::rename(&tmp_path, &self.progress_file_path).await {
-            tracing::error!("Failed to rename progress file: {}", e);
-        }
+        fs::write(&self.progress_file_path, json).await?;
         Ok(())
     }
 }
@@ -300,7 +289,6 @@ mod tests {
                 Feature { name: "Step 3".to_string(), status: "pending".to_string() },
             ],
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
         std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
@@ -333,7 +321,6 @@ mod tests {
                 Feature { name: "Step 2".to_string(), status: "pending".to_string() },
             ],
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
         std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
