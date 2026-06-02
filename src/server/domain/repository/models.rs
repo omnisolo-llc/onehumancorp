@@ -191,8 +191,11 @@ pub struct DepletionLog {
 pub struct InventoryPrediction {
     pub id: String,
     pub tenant_id: String,
-    pub raw_material_id: String,
+    pub product_id: Option<String>,
+    pub raw_material_id: Option<String>,
     pub predicted_stockout_date: Option<DateTime<Utc>>,
+    pub confidence_score: Option<f64>,
+    pub suggested_reorder_quantity: Option<i32>,
     pub predicted_daily_velocity: Option<f64>,
     pub current_inventory: Option<i32>,
     pub status: Option<String>,
