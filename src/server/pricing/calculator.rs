@@ -304,4 +304,39 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
     }
+
+    #[test]
+    fn test_calculate_efficiency_edge_cases() {
+        assert_eq!(calculate_efficiency(-5.0, 100), 0.0);
+        assert_eq!(calculate_efficiency(0.0, 100), 0.0);
+        assert_eq!(calculate_efficiency(10.0, 0), 0.0);
+    }
+
+    #[test]
+    fn test_cost_config_edge_cases() {
+        let config = CostConfig {
+            cost_per_input_token: -0.01,
+            cost_per_output_token: 0.02,
+            cost_per_cached_input_token: 0.0,
+            cost_per_local_embedding: 0.0,
+            discount_factor: 1.5, // 150% discount should result in negative cost but our logic permits it
+            cost_per_gb_month: -0.1, // Negative cost per GB should yield negative savings or 0 if clamped
+            cost_per_compute_hour: -2.0,
+            cost_per_network_gb: -0.5,
+        };
+
+        // calculate_cost_with_config does not prevent negative costs from config values
+        let cost = calculate_cost_with_config(100, 100, 0, 0, &config);
+        // (100 * -0.01 + 100 * 0.02) * (1 - 1.5) = (-1.0 + 2.0) * -0.5 = -0.5
+        assert_eq!(cost, -0.5);
+
+        // negative network cost
+        assert_eq!(calculate_network_cost(10 * 1024 * 1024 * 1024, &config), -5.0);
+
+        // negative compute cost
+        assert_eq!(calculate_compute_cost(5.0, &config), -10.0);
+
+        // check zero original bytes for savings
+        assert_eq!(calculate_storage_savings(0, 100, &config), 0.0);
+    }
 }
