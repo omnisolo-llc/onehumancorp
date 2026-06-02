@@ -32,15 +32,15 @@ describe('OnboardingWizard', () => {
     vi.clearAllMocks();
   });
 
-  it('Step 1: Renders initial screen correctly', async () => {
+    it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it('Handles single-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
     // Mock intake success
@@ -67,23 +67,8 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I am Maya. I bake vegan cakes/i);
+    await user.type(descInput, 'I bake custom vegan cakes in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -130,32 +115,17 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery');
-
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn1);
-
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY');
+    const descInput = screen.getByPlaceholderText(/I am Maya. I bake vegan cakes/i);
+    await user.type(descInput, 'I bake custom vegan cakes in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await user.click(button);
 
-    // Verify error appears and step goes back to 1
+    // Verify error appears
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(button).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
@@ -193,29 +163,23 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('Step 1: Displays validation error when business name is too short', async () => {
+  it('Step 1: Displays validation error when business description is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 1,
-        businessName: 'A',
-        location: '',
-        businessType: 'Online Store',
-        categories: [],
-        firstProductName: '',
-        firstProductPrice: ''
+        businessDescription: 'Short',
       });
     });
 
     render(<OnboardingWizard />);
 
-    const nextButton = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
 
-    await user.click(nextButton);
+    await user.click(button);
 
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Please provide a bit more detail about your business.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
@@ -230,7 +194,8 @@ describe('OnboardingWizard', () => {
         categories: ['food'],
         domainChoice: 'subdomain',
         firstProductName: 'Cake',
-        firstProductPrice: '20'
+        firstProductPrice: '20',
+        businessDescription: 'My business description'
       });
     });
 
