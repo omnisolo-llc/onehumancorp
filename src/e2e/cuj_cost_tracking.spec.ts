@@ -33,7 +33,10 @@ test.describe('CUJ: Billing Cost Tracking', () => {
     // Verify dynamic metrics are populated
     await expect(page.locator('#cost-dashboard-period')).toContainText('Period:');
     await expect(page.locator('#cost-dashboard-total')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
     await expect(page.locator('#cost-dashboard-llm')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-storage')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-payment-fees')).toBeVisible();
 
     // Back to My Plan
     await page.getByRole('button', { name: 'Back to My Plan' }).click();

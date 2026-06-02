@@ -3857,12 +3857,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                     <!-- Upgrade Modal -->
-                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
-                        <div style="background: white; width: 100%; max-width: 400px; padding: 24px; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.1);">
-                            <h2 style="margin-top: 0;">Limit Reached</h2>
-                            <p id="upgrade-modal-message" style="margin-bottom: 24px; color: #444; line-height: 1.5;"></p>
-                            <button style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">Upgrade with Apple Pay</button>
-                            <button class="secondary" style="width: 100%;" onclick="document.getElementById('upgrade-modal').style.display='none';">Cancel</button>
+                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; backdrop-filter: blur(8px);">
+                        <div style="background: rgba(255, 255, 255, 0.65); width: 100%; max-width: 400px; padding: 32px 24px; border-radius: 24px 24px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,0.1); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: 'Outfit', 'Inter', sans-serif;">
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <div style="font-size: 48px; margin-bottom: 12px;">📈</div>
+                                <h2 style="margin-top: 0; font-weight: 700; color: #1D1D1F;">Business is Growing!</h2>
+                            </div>
+                            <p id="upgrade-modal-message" style="margin-bottom: 32px; color: #444; line-height: 1.6; text-align: center; font-size: 16px;"></p>
+                            <button style="width: 100%; margin-bottom: 12px; background-color: #1D1D1F; color: white; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#333'" onmouseout="this.style.backgroundColor='#1D1D1F'" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">
+                                 Pay Upgrade
+                            </button>
+                            <button style="width: 100%; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: #444; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(0,0,0,0.05)'" onmouseout="this.style.backgroundColor='transparent'" onclick="document.getElementById('upgrade-modal').style.display='none';">
+                                Maybe Later
+                            </button>
                         </div>
                     </div>
 
