@@ -7,10 +7,8 @@
     "@bufbuild/protoplugin": "^2.11.0",
     "@modelcontextprotocol/server-github": "^0.6.2",
     "@types/pg": "^8.20.0",
-    "dompurify": "^3.4.7",
     "google-protobuf": "^3.21.4",
     "pg": "^8.21.0",
-    "swagger-ui-react": "^5.32.6",
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"
   },
@@ -31,7 +29,6 @@
     "ink-testing-library": "^4.0.0",
     "ink-text-input": "^6.0.0",
     "jsdom": "^29.1.1",
-    "next": "^16.2.7",
     "playwright": "1.50.1",
     "react-dom": "^19.2.5",
     "ts-node": "^10.9.2",
