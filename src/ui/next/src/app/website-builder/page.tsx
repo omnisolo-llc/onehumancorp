@@ -411,24 +411,30 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="What is your business called?"
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Business Name</label>
+                      <input
+                        type="text"
+                        className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                        style={{ borderRadius: '8px' }}
+                        placeholder="What is your business called?"
                       value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                    />
-                    <input
+                        onChange={(e) => setBusinessName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Short Description</label>
+                      <input
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya's Cakes"
+                      placeholder="e.g. Custom cakes and cookies"
                       value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                    />
+                        onChange={(e) => setBio(e.target.value)}
+                      />
+                    </div>
                     <button
-                      disabled={!businessName.trim()}
+                      disabled={!businessName.trim() || !bio.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(3)}
                     >
@@ -474,22 +480,28 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="What is the name of this product?"
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name</label>
+                      <input
+                        type="text"
+                        className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                        style={{ borderRadius: '8px' }}
+                        placeholder="What is the name of this product?"
                       value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                    />
-                    <input
-                      type="text"
+                        onChange={(e) => setProductName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price</label>
+                      <input
+                        type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="0.00"
                       value={productPrice}
-                      onChange={(e) => setProductPrice(e.target.value)}
-                    />
+                        onChange={(e) => setProductPrice(e.target.value)}
+                      />
+                    </div>
                     <button
                       disabled={!productName.trim() || !productPrice.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -525,32 +537,41 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
                   <div id="step-7" className="mt-6 flex flex-col gap-4">
-                    <input
-                      type="text"
-                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya Smith"
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                        style={{ borderRadius: '8px' }}
+                        placeholder="e.g. Maya Smith"
                       value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
-                    <input
-                      type="email"
+                        onChange={(e) => setUserName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                      <input
+                        type="email"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="you@email.com"
                       value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                    />
-                    <input
-                      type="password"
+                        onChange={(e) => setUserEmail(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                      <input
+                        type="password"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="Password"
                       value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
-                    />
+                        onChange={(e) => setUserPassword(e.target.value)}
+                      />
+                    </div>
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                      disabled={!userName.trim() || !userEmail.trim() || !userEmail.includes("@") || userPassword.length < 6}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >

@@ -87,6 +87,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Step 2
     fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. Custom cakes and cookies'), { target: { value: 'Some bio' } });
     fireEvent.click(screen.getByText('Next'));
 
     // Step 3
