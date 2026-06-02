@@ -46,7 +46,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('renders initial setup screen', async () => {
     render(<WebsiteBuilderPage />);
-    expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
+    expect(screen.getByText('Your business, live in minutes.')).to.exist;
 
     // Check local storage init fetching
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.any(Object));
@@ -100,14 +100,14 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Publish my business'));
 
     // Verify generating screen
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Agents are building your store...')).to.exist;
 
     act(() => {
       vi.advanceTimersByTime(2000);
     });
 
     // Verify live screen
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    expect(screen.getByText('Success! Your business is live!')).to.exist;
   });
 
   it('can follow the instant-build flow', async () => {
@@ -120,13 +120,13 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
     fireEvent.click(screen.getByText('Generate Storefront'));
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Agents are building your store...')).to.exist;
 
     act(() => {
       vi.advanceTimersByTime(2000);
     });
 
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    expect(screen.getByText('Success! Your business is live!')).to.exist;
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -187,14 +187,14 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
+      expect(screen.getByText('1-Tap Launch')).to.exist;
     });
 
     fireEvent.click(screen.getByText('1-Tap Launch'));
 
     await waitFor(() => {
-      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-      expect(screen.getByText('https://testdomain.ohc.store')).toBeInTheDocument();
+      expect(screen.getByText('Success! Your business is live!')).to.exist;
+      expect(screen.getByText('https://testdomain.ohc.store')).to.exist;
     });
   });
 
@@ -232,7 +232,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+      expect(screen.getByText('Agents are building your store...')).to.exist;
     });
 
     act(() => {

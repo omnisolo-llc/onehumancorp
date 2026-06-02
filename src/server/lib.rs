@@ -2111,6 +2111,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     ops_worker.start();
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
+
+    // Start Delivery Dispatch Worker
+    let dde_worker = Arc::new(crate::services::delivery::DeliveryDispatchWorker::new(db.clone()));
+    let _dde_pool = crate::orchestration::queue::WorkerPool::new(std::sync::Arc::new(crate::orchestration::queue::OHCJobQueue::new(db.clone(), std::env::var("REDIS_URL").ok())), 2, vec!["DISPATCH_DELIVERY".to_string()], dde_worker);
     cs_worker.start();
 
     // Start Maintenance Worker

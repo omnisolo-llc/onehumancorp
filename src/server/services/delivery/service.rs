@@ -286,4 +286,242 @@ impl DeliveryService for DeliveryServiceImpl {
              })),
          }
     }
+
+    #[instrument(skip(self))]
+    async fn register_courier(
+        &self,
+        request: Request<RegisterCourierRequest>,
+    ) -> Result<Response<RegisterCourierResponse>, Status> {
+        let req = request.into_inner();
+
+        if req.organization_id.is_empty() || req.name.is_empty() || req.phone.is_empty() {
+            return Err(Status::invalid_argument("organization_id, name, and phone are required"));
+        }
+
+        let id = Uuid::new_v4();
+
+        let row = sqlx::query(
+            r#"
+            INSERT INTO couriers (id, organization_id, name, phone, vehicle_type, status)
+            VALUES ($1, $2, $3, $4, $5, 'ONLINE')
+            RETURNING id, organization_id, name, phone, vehicle_type, status, stripe_account_id,
+                      ST_Y(location) as lat, ST_X(location) as lng,
+                      EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
+                      EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
+            "#
+        )
+        .bind(id)
+        .bind(&req.organization_id)
+        .bind(&req.name)
+        .bind(&req.phone)
+        .bind(&req.vehicle_type)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        let courier = Courier {
+            id: row.get::<Uuid, _>("id").to_string(),
+            organization_id: row.get::<String, _>("organization_id"),
+            name: row.get::<String, _>("name"),
+            phone: row.get::<String, _>("phone"),
+            vehicle_type: row.get::<String, _>("vehicle_type"),
+            status: row.get::<String, _>("status"),
+            stripe_account_id: row.get::<Option<String>, _>("stripe_account_id").unwrap_or_default(),
+            location_lat: row.get::<Option<f64>, _>("lat").unwrap_or(0.0),
+            location_lng: row.get::<Option<f64>, _>("lng").unwrap_or(0.0),
+            created_at_unix: row.get::<i64, _>("created_at_unix"),
+            updated_at_unix: row.get::<i64, _>("updated_at_unix"),
+        };
+
+        Ok(Response::new(RegisterCourierResponse { courier: Some(courier) }))
+    }
+
+    #[instrument(skip(self))]
+    async fn list_available_delivery_jobs(
+        &self,
+        request: Request<ListAvailableDeliveryJobsRequest>,
+    ) -> Result<Response<ListAvailableDeliveryJobsResponse>, Status> {
+        let req = request.into_inner();
+
+        if req.organization_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id is required"));
+        }
+
+        let rows = sqlx::query(
+            r#"
+            SELECT id, organization_id, order_id, courier_id, status, payout_cents,
+                   ST_Y(pickup_location) as p_lat, ST_X(pickup_location) as p_lng,
+                   ST_Y(delivery_location) as d_lat, ST_X(delivery_location) as d_lng,
+                   EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
+                   EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
+            FROM delivery_jobs
+            WHERE organization_id = $1 AND status = 'AVAILABLE'
+            "#
+        )
+        .bind(&req.organization_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        let mut jobs = Vec::new();
+        for r in rows {
+            jobs.push(DeliveryJob {
+                id: r.get::<Uuid, _>("id").to_string(),
+                organization_id: r.get::<String, _>("organization_id"),
+                order_id: r.get::<String, _>("order_id"),
+                courier_id: r.get::<Option<Uuid>, _>("courier_id").map(|u| u.to_string()).unwrap_or_default(),
+                status: r.get::<String, _>("status"),
+                pickup_location_lat: r.get::<Option<f64>, _>("p_lat").unwrap_or(0.0),
+                pickup_location_lng: r.get::<Option<f64>, _>("p_lng").unwrap_or(0.0),
+                delivery_location_lat: r.get::<Option<f64>, _>("d_lat").unwrap_or(0.0),
+                delivery_location_lng: r.get::<Option<f64>, _>("d_lng").unwrap_or(0.0),
+                payout_cents: r.get::<i64, _>("payout_cents"),
+                created_at_unix: r.get::<i64, _>("created_at_unix"),
+                updated_at_unix: r.get::<i64, _>("updated_at_unix"),
+            });
+        }
+
+        Ok(Response::new(ListAvailableDeliveryJobsResponse { jobs }))
+    }
+
+    #[instrument(skip(self))]
+    async fn claim_delivery_job(
+        &self,
+        request: Request<ClaimDeliveryJobRequest>,
+    ) -> Result<Response<ClaimDeliveryJobResponse>, Status> {
+        let req = request.into_inner();
+
+        if req.organization_id.is_empty() || req.job_id.is_empty() || req.courier_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id, job_id, and courier_id are required"));
+        }
+
+        let job_uuid = Uuid::parse_str(&req.job_id).map_err(|_| Status::invalid_argument("Invalid job_id format"))?;
+        let courier_uuid = Uuid::parse_str(&req.courier_id).map_err(|_| Status::invalid_argument("Invalid courier_id format"))?;
+
+        let row = sqlx::query(
+            r#"
+            UPDATE delivery_jobs
+            SET status = 'CLAIMED', courier_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2 AND organization_id = $3 AND status = 'AVAILABLE'
+            RETURNING id, organization_id, order_id, courier_id, status, payout_cents,
+                      ST_Y(pickup_location) as p_lat, ST_X(pickup_location) as p_lng,
+                      ST_Y(delivery_location) as d_lat, ST_X(delivery_location) as d_lng,
+                      EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
+                      EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
+            "#
+        )
+        .bind(courier_uuid)
+        .bind(job_uuid)
+        .bind(&req.organization_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        match row {
+            Some(r) => {
+                let job = DeliveryJob {
+                    id: r.get::<Uuid, _>("id").to_string(),
+                    organization_id: r.get::<String, _>("organization_id"),
+                    order_id: r.get::<String, _>("order_id"),
+                    courier_id: r.get::<Option<Uuid>, _>("courier_id").map(|u| u.to_string()).unwrap_or_default(),
+                    status: r.get::<String, _>("status"),
+                    pickup_location_lat: r.get::<Option<f64>, _>("p_lat").unwrap_or(0.0),
+                    pickup_location_lng: r.get::<Option<f64>, _>("p_lng").unwrap_or(0.0),
+                    delivery_location_lat: r.get::<Option<f64>, _>("d_lat").unwrap_or(0.0),
+                    delivery_location_lng: r.get::<Option<f64>, _>("d_lng").unwrap_or(0.0),
+                    payout_cents: r.get::<i64, _>("payout_cents"),
+                    created_at_unix: r.get::<i64, _>("created_at_unix"),
+                    updated_at_unix: r.get::<i64, _>("updated_at_unix"),
+                };
+                Ok(Response::new(ClaimDeliveryJobResponse { job: Some(job) }))
+            }
+            None => Err(Status::not_found("Job not found or already claimed")),
+        }
+    }
+
+    #[instrument(skip(self))]
+    async fn mark_delivery_job_delivered(
+        &self,
+        request: Request<MarkDeliveryJobDeliveredRequest>,
+    ) -> Result<Response<MarkDeliveryJobDeliveredResponse>, Status> {
+        let req = request.into_inner();
+
+        if req.organization_id.is_empty() || req.job_id.is_empty() || req.courier_id.is_empty() {
+            return Err(Status::invalid_argument("organization_id, job_id, and courier_id are required"));
+        }
+
+        let job_uuid = Uuid::parse_str(&req.job_id).map_err(|_| Status::invalid_argument("Invalid job_id format"))?;
+        let courier_uuid = Uuid::parse_str(&req.courier_id).map_err(|_| Status::invalid_argument("Invalid courier_id format"))?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(format!("Db error: {}", e)))?;
+
+        let row = sqlx::query(
+            r#"
+            UPDATE delivery_jobs
+            SET status = 'DELIVERED', updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND organization_id = $2 AND courier_id = $3 AND status = 'CLAIMED'
+            RETURNING id, organization_id, order_id, courier_id, status, payout_cents,
+                      ST_Y(pickup_location) as p_lat, ST_X(pickup_location) as p_lng,
+                      ST_Y(delivery_location) as d_lat, ST_X(delivery_location) as d_lng,
+                      EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
+                      EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
+            "#
+        )
+        .bind(job_uuid)
+        .bind(&req.organization_id)
+        .bind(courier_uuid)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        match row {
+            Some(r) => {
+                let payout_cents = r.get::<i64, _>("payout_cents");
+
+                let courier_row = sqlx::query("SELECT stripe_account_id FROM couriers WHERE id = $1")
+                    .bind(courier_uuid)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(format!("Db error: {}", e)))?;
+
+                if let Some(cr) = courier_row {
+                    let account_id: Option<String> = cr.get("stripe_account_id");
+                    if let Some(acct) = account_id {
+                        if payout_cents > 0 {
+                            let redis_url = std::env::var("REDIS_URL").ok();
+                            let batcher = crate::integrations::stripe::payout_batcher::PayoutBatcher::new(redis_url, 1000); // $10 threshold
+                            let client = crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "dummy_key".to_string()));
+
+                            // Fire and forget or await payout logic here
+                            let acct_clone = acct.clone();
+                            let pool_clone = self.pool.clone();
+
+                            tokio::spawn(async move {
+                                let _ = client.process_payout_with_batching(&acct_clone, payout_cents, &batcher).await;
+                            });
+                        }
+                    }
+                }
+
+                tx.commit().await.map_err(|e| Status::internal(format!("Tx error: {}", e)))?;
+
+                let job = DeliveryJob {
+                    id: r.get::<Uuid, _>("id").to_string(),
+                    organization_id: r.get::<String, _>("organization_id"),
+                    order_id: r.get::<String, _>("order_id"),
+                    courier_id: r.get::<Option<Uuid>, _>("courier_id").map(|u| u.to_string()).unwrap_or_default(),
+                    status: r.get::<String, _>("status"),
+                    pickup_location_lat: r.get::<Option<f64>, _>("p_lat").unwrap_or(0.0),
+                    pickup_location_lng: r.get::<Option<f64>, _>("p_lng").unwrap_or(0.0),
+                    delivery_location_lat: r.get::<Option<f64>, _>("d_lat").unwrap_or(0.0),
+                    delivery_location_lng: r.get::<Option<f64>, _>("d_lng").unwrap_or(0.0),
+                    payout_cents,
+                    created_at_unix: r.get::<i64, _>("created_at_unix"),
+                    updated_at_unix: r.get::<i64, _>("updated_at_unix"),
+                };
+                Ok(Response::new(MarkDeliveryJobDeliveredResponse { job: Some(job) }))
+            }
+            None => Err(Status::not_found("Job not found, not claimed by this courier, or not in CLAIMED status")),
+        }
+    }
 }
