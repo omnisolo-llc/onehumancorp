@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -79,6 +80,8 @@ export default function Dashboard() {
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -403,12 +406,37 @@ export default function Dashboard() {
     }
   };
 
+  const walkthroughSteps = [
+    {
+      targetId: "sales-card-target",
+      title: "Track Your Revenue",
+      content: "This card shows the total amount of money your store has made today. Keep an eye on it to see your business grow!",
+      position: "bottom" as const
+    },
+    {
+      targetId: "visitors-card-target",
+      title: "Monitor Your Traffic",
+      content: "Here you can see how many people have visited your store today. More visitors means more chances to make a sale.",
+      position: "bottom" as const
+    }
+  ];
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+      <InteractiveWalkthrough
+        steps={walkthroughSteps}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
+            <button onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors shadow-sm">
+              Start Tour
+            </button>
+          </div>
           <div className="flex items-center">
             <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
               {offlineQueueCount} Payments Pending Sync
@@ -463,14 +491,18 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+               <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
+                   </WithTooltip>
                    <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
-               </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+               </WalkthroughTarget>
+               <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Visitors</h3>
+                   </WithTooltip>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
-               </div>
+               </WalkthroughTarget>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
@@ -2175,6 +2207,10 @@ export default function Dashboard() {
       )}
 
       {/* Referral Modal */}
+      <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
+        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
+      </div>
+
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
