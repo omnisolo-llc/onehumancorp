@@ -252,6 +252,85 @@ pub async fn stripe_webhook_handler(
             }
             StatusCode::OK.into_response()
         },
+        "payment_intent.succeeded" | "terminal.reader.succeeded_payment" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+
+            if let Some(tenant_id) = tenant_id_opt {
+                if let Some(items_str) = obj.get("metadata").and_then(|m| m.get("items")).and_then(|i| i.as_str()) {
+                    if let Ok(items) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                        for item in items {
+                            if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
+                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+
+                                // Decrement inventory
+                                let _ = match &webhook_state.db.store {
+                                    DbStore::Sqlite(pool) => {
+                                        sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
+                                            .bind(quantity)
+                                            .bind(product_id)
+                                            .bind(tenant_id)
+                                            .bind(tenant_id)
+                                            .execute(pool)
+                                            .await
+                                    },
+                                    DbStore::Postgres => {
+                                        sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
+                                            .bind(quantity)
+                                            .bind(product_id)
+                                            .bind(tenant_id)
+                                            .execute(&webhook_state.db.pool)
+                                            .await
+                                    }
+                                };
+
+                                // Write to universal ledger
+                                let entry_id = uuid::Uuid::new_v4().to_string();
+                                let action_type = "inventory_decrement";
+                                let state_change = serde_json::json!({
+                                    "product_id": product_id,
+                                    "quantity": -quantity,
+                                    "source": payload.r#type
+                                });
+
+                                let _ = match &webhook_state.db.store {
+                                    DbStore::Sqlite(pool) => {
+                                        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES (?, ?, 'operations', ?, ?)")
+                                            .bind(&entry_id)
+                                            .bind(tenant_id)
+                                            .bind(action_type)
+                                            .bind(state_change.to_string())
+                                            .execute(pool)
+                                            .await
+                                    },
+                                    DbStore::Postgres => {
+                                        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'operations', $3, $4)")
+                                            .bind(&entry_id)
+                                            .bind(tenant_id)
+                                            .bind(action_type)
+                                            .bind(state_change)
+                                            .execute(&webhook_state.db.pool)
+                                            .await
+                                    }
+                                };
+
+                                // Invalidate CDN cache
+                                let cache = crate::builder::edge::get_edge_cache();
+                                let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                            }
+                        }
+
+                        // Invalidate tenant storefront cache
+                        let cache = crate::builder::edge::get_edge_cache();
+                        let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                    }
+                }
+            }
+
+            StatusCode::OK.into_response()
+        },
         _ => {
             // Unhandled event types are ignored successfully
             StatusCode::OK.into_response()
