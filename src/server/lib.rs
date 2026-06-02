@@ -2934,6 +2934,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .merge(webhook_router)
         .merge(health_router)
+        .merge(crate::api::staff_api::staff_routes(db.clone()))
         .fallback(ui_handler);
 
     let port = std::env::var("OHC_PORT")
