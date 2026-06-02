@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Instant, Duration};
 use dashmap::DashMap;
@@ -12,6 +13,8 @@ pub struct CachedResponse {
 pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
     ttl: Duration,
+    pub hit_count: Arc<AtomicUsize>,
+    pub miss_count: Arc<AtomicUsize>,
 }
 
 impl PromptCache {
@@ -19,6 +22,8 @@ impl PromptCache {
         PromptCache {
             cache: Arc::new(DashMap::new()),
             ttl,
+            hit_count: Arc::new(AtomicUsize::new(0)),
+            miss_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -26,12 +31,14 @@ impl PromptCache {
         let entry = self.cache.get(prompt);
         if let Some(entry_ref) = entry {
             if entry_ref.created_at.elapsed() <= self.ttl {
+                self.hit_count.fetch_add(1, Ordering::Relaxed);
                 return Some(entry_ref.clone());
             }
             drop(entry_ref);
             // Remove expired entry atomically
             self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > self.ttl);
         }
+        self.miss_count.fetch_add(1, Ordering::Relaxed);
         None
     }
 

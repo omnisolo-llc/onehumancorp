@@ -76,6 +76,16 @@ export default function CostDashboardPage() {
       return '$' + (cents / 100).toFixed(2);
   };
 
+  // Calculate profit margin
+  const totalRevenueCents = data?.total_revenue || 0;
+  const totalCostsCents = data?.total_costs || 0;
+  let profitMargin = 0;
+  if (totalRevenueCents > 0) {
+      profitMargin = ((totalRevenueCents - totalCostsCents) / totalRevenueCents) * 100;
+  }
+  const profitMarginFormatted = profitMargin.toFixed(1) + '%';
+  const isProfitable = profitMargin >= 0;
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
@@ -106,7 +116,7 @@ export default function CostDashboardPage() {
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
@@ -115,6 +125,25 @@ export default function CostDashboardPage() {
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                     <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                 </div>
+                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Profit Margin</h2>
+                    <p id="cost-dashboard-margin" className={`text-3xl font-bold font-outfit ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>{profitMarginFormatted}</p>
+                </div>
+            </div>
+
+            <div>
+               <div className="flex justify-between text-sm font-medium mb-2">
+                   <span className="text-gray-500">Margin Indicator</span>
+                   <span className={isProfitable ? 'text-green-600' : 'text-red-600'}>{isProfitable ? 'Healthy' : 'Needs Attention'}</span>
+               </div>
+               <div className="w-full bg-gray-200 rounded-full h-3 relative overflow-hidden">
+                   {totalRevenueCents > 0 && (
+                       <div
+                           className={`h-full rounded-full absolute left-0 top-0 ${isProfitable ? 'bg-green-500' : 'bg-red-500'}`}
+                           style={{ width: `${Math.min(Math.max(profitMargin, 0), 100)}%` }}
+                       />
+                   )}
+               </div>
             </div>
         </section>
 

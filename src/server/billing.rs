@@ -4,6 +4,7 @@ use ::server_pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
 use std::sync::Arc;
+use dashmap::DashMap;
 
 #[derive(Clone)]
 pub struct Tracker {
@@ -11,11 +12,18 @@ pub struct Tracker {
     pub stripe_client: Option<Arc<StripeClient>>,
     pub mercadopago_client: Option<Arc<MercadoPagoClient>>,
     pub auditor: Option<Arc<crate::services::billing::auditor::CostAuditor>>,
+    subscription_cache: Option<Arc<DashMap<String, (crate::integrations::stripe::client::StripeSubscription, std::time::Instant)>>>,
 }
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None }
+        Tracker {
+            rate_limiter: None,
+            stripe_client: None,
+            mercadopago_client: None,
+            auditor: None,
+            subscription_cache: Some(Arc::new(DashMap::new())),
+        }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
@@ -29,9 +37,10 @@ impl Tracker {
                 stripe_client,
                 mercadopago_client: mercadopago_client.clone(),
                 auditor: None,
+                subscription_cache: Some(Arc::new(DashMap::new())),
             }
         } else {
-            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None, subscription_cache: Some(Arc::new(DashMap::new())) }
         }
     }
 
@@ -187,8 +196,20 @@ impl Tracker {
     }
 
     pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+        if let Some(ref cache) = self.subscription_cache {
+            if let Some(entry) = cache.get(subscription_id) {
+                if entry.1.elapsed() < std::time::Duration::from_secs(300) { // 5-minute cache
+                    return Ok(entry.0.clone());
+                }
+            }
+        }
+
         if let Some(ref client) = self.stripe_client {
-            client.get_subscription(subscription_id).await
+            let sub = client.get_subscription(subscription_id).await?;
+            if let Some(ref cache) = self.subscription_cache {
+                cache.insert(subscription_id.to_string(), (sub.clone(), std::time::Instant::now()));
+            }
+            Ok(sub)
         } else {
             Err("Stripe client not configured".to_string())
         }
