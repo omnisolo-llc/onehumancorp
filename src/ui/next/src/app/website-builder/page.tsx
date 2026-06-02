@@ -1,15 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
-  const [bio, setBio] = useState("");
+
+  const {
+    wizardStep, setWizardStep,
+    businessName, setBusinessName,
+    businessType, setBusinessType,
+    hasPhysicalProducts, setHasPhysicalProducts,
+    hasDigitalProducts, setHasDigitalProducts,
+    productName, setProductName,
+    productPrice, setProductPrice,
+    paymentMethod, setPaymentMethod,
+    userName, setUserName,
+    userEmail, setUserEmail,
+    userPassword, setUserPassword,
+    template, setTemplate,
+    bio, setBio,
+    domainChoice, setDomainChoice,
+    aiAgents, setAiAgents,
+    aiAutoRespond, setAiAutoRespond
+  } = useWebsiteBuilderStore();
+
+
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
-  const [wizardStep, setWizardStep] = useState<number | string>(0);
+
   const [liveUrl, setLiveUrl] = useState("");
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -17,25 +38,23 @@ export default function WebsiteBuilderPage() {
   const [tenantId, setTenantId] = useState("storefront");
 
   // Wizard state bindings
-  const [businessName, setBusinessName] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [hasPhysicalProducts, setHasPhysicalProducts] = useState(false);
-  const [hasDigitalProducts, setHasDigitalProducts] = useState(false);
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [template, setTemplate] = useState("");
+
+
+
+
+
+
+
+
+
+
+
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
 
-    const savedBio = localStorage.getItem("ohc_builder_bio");
-    if (savedBio) setBio(savedBio);
 
     const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
     if (savedStatus) setStatus(savedStatus);
@@ -53,14 +72,36 @@ export default function WebsiteBuilderPage() {
     if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
 
+
+  // Sync full state to backend
   useEffect(() => {
-    // Only save to server if there's actual state to save that deviates from idle
-    if (status !== 'idle' || bio !== '' || blocks.length > 0) {
+    // Only save if there's actual state
+    if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
       const userId = localStorage.getItem('user_id') || 'test-user';
 
+      const wizardState = {
+        step: wizardStep,
+        businessName,
+        businessType,
+        hasPhysicalProducts,
+        hasDigitalProducts,
+        productName,
+        productPrice,
+        paymentMethod,
+        userName,
+        userEmail,
+        userPassword,
+        template,
+        bio,
+        domainChoice,
+        aiAgents,
+        aiAutoRespond
+      };
+
       const payload = {
-        builderState: { bio, blocks, status }
+        builderState: { bio, blocks, status },
+        wizardState
       };
 
       const timer = setTimeout(() => {
@@ -73,7 +114,9 @@ export default function WebsiteBuilderPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [bio, blocks, status]);
+  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+
+
 
   // Read state from server on mount
   useEffect(() => {
@@ -89,14 +132,29 @@ export default function WebsiteBuilderPage() {
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
         if (data.builderState.status) setStatus(data.builderState.status);
       }
+      if (data && data.wizardState) {
+        if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
+        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
+        if (data.wizardState.productName) setProductName(data.wizardState.productName);
+        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
+        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
+        if (data.wizardState.userName) setUserName(data.wizardState.userName);
+        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
+        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
+        if (data.wizardState.template) setTemplate(data.wizardState.template);
+        if (data.wizardState.bio) setBio(data.wizardState.bio);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      }
     })
     .catch(err => console.error('Failed to load builder state', err));
   }, []);
 
-  const updateBio = (newBio: string) => {
-    setBio(newBio);
-    localStorage.setItem("ohc_builder_bio", newBio);
-  };
+
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
@@ -183,7 +241,7 @@ export default function WebsiteBuilderPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        updateStatus("live");
+        setStatus("live");
         const url = `https://${data.domain || 'myshop'}.ohc.store`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
@@ -212,7 +270,12 @@ export default function WebsiteBuilderPage() {
     };
 
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      {/* Background Glows for Premium Aesthetic */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+
         <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
           <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
@@ -601,7 +664,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
@@ -612,7 +675,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center mac-glass-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -638,7 +701,7 @@ export default function WebsiteBuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
