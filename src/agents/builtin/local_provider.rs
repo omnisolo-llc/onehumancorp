@@ -3,6 +3,8 @@ use std::time::Duration;
 use crate::minimax::MinimaxClient;
 use ::server_pricing::prompt_caching::PromptCache;
 use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+/// agenticSeek Unique Harness Innovations: Fully local agent, no API costs
+/// Connects to a local Ollama or compatible endpoint to ensure zero API costs and full local autonomy.
 
 pub struct LocalLLMProvider {
     endpoint: String,
