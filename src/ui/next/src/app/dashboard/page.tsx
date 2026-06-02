@@ -547,6 +547,95 @@ export default function Dashboard() {
            </div>
          </section>
 
+         {/* Local Visibility (The Promoter) */}
+         <section className="mb-6 animate-fade-in">
+           <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                <div>
+                    <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] flex items-center gap-2">
+                        Local Visibility
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isGbpConnected ? 'bg-[#34C759]/10 text-[#34C759]' : 'bg-[#FF9500]/10 text-[#FF9500]'}`}>
+                            {isGbpConnected ? '🟢 Synced with Google Maps' : '⚠️ Action Needed'}
+                        </span>
+                    </h2>
+                    <p className="text-sm text-[#86868B] mt-1 font-inter">
+                        Managed by "The Promoter" AI Agent
+                    </p>
+                </div>
+                {!isGbpConnected && (
+                    <button
+                        onClick={handleConnectGbp}
+                        className="mt-4 sm:mt-0 px-4 py-2 bg-[#0066FF] hover:bg-[#005CE6] text-white rounded-lg text-sm font-semibold transition-colors w-full sm:w-auto text-center min-h-[44px]"
+                    >
+                        Connect Google Maps
+                    </button>
+                )}
+            </div>
+
+            {isGbpConnected && (
+                <div className="mt-4 border-t border-[#D2D2D7] pt-4 font-inter">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-bold text-[#1D1D1F]">
+                            {pendingReviews.length > 0 ? `${pendingReviews.length} New Reviews to Approve` : 'No Pending Reviews'}
+                        </h3>
+                        <Link href="/local-visibility" className="text-[#0066FF] text-sm font-medium hover:underline">
+                            Manage Sync
+                        </Link>
+                    </div>
+
+                    {isLoadingReviews && (
+                        <p className="text-sm text-[#86868B]">Loading reviews...</p>
+                    )}
+
+                    {!isLoadingReviews && pendingReviews.length > 0 && (
+                        <div className="space-y-4">
+                            {pendingReviews.map(review => (
+                                <div key={review.id} className="bg-white/50 rounded-xl p-4 border border-[#E5E5EA]">
+                                    <div className="flex items-start gap-3 mb-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0066FF] to-[#34C759] flex items-center justify-center text-white font-bold text-xs">
+                                            {review.customer_name.charAt(0)}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-sm text-[#1D1D1F]">{review.customer_name}</span>
+                                                <span className="text-[#FF9500] text-xs font-bold">{'★'.repeat(review.rating)}</span>
+                                            </div>
+                                            <p className="text-sm text-[#1D1D1F] mt-1 italic">"{review.comment}"</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#F5F5F7] rounded-lg p-3 border border-[#E5E5EA]">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs font-bold text-[#0066FF]">AI Draft Reply</span>
+                                        </div>
+                                        <p className="text-sm text-[#86868B]">{review.ai_draft}</p>
+                                    </div>
+
+                                    <div className="mt-3 flex gap-2">
+                                        <button
+                                            onClick={() => handleApproveReview(review.id, review.ai_draft)}
+                                            disabled={approvingReviewId === review.id}
+                                            className="flex-1 px-4 py-3 bg-[#1D1D1F] text-white rounded-lg text-sm font-semibold hover:bg-black transition-colors min-h-[44px] disabled:opacity-50"
+                                        >
+                                            {approvingReviewId === review.id ? 'Approving...' : 'Approve & Reply'}
+                                        </button>
+                                        <button className="px-4 py-3 bg-white text-[#1D1D1F] border border-[#D2D2D7] rounded-lg text-sm font-semibold hover:bg-[#F5F5F7] transition-colors min-h-[44px]">
+                                            Edit
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {!isLoadingReviews && pendingReviews.length === 0 && (
+                        <p className="text-sm text-[#86868B]">All caught up! Your latest reviews have been answered.</p>
+                    )}
+                </div>
+            )}
+           </div>
+         </section>
+
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">
