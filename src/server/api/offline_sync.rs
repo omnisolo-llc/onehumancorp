@@ -95,7 +95,6 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
     use sqlx::postgres::PgPoolOptions;
 
-
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
         let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();

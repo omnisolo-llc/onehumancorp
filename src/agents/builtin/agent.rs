@@ -109,7 +109,6 @@ pub struct AgentRunConfig {
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
-    pub enable_gpt_researcher: bool,
     pub enable_acon_context_strategy: bool,
     pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
@@ -169,7 +168,6 @@ impl Default for AgentRunConfig {
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
-            enable_gpt_researcher: false,
             enable_acon_context_strategy: false,
             acon_config: None,
             enable_progressive_skills: false,
@@ -1308,46 +1306,6 @@ impl Agent {
 
     /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
-    pub async fn run_gpt_researcher<F>(
-        &self,
-        cfg: &AgentRunConfig,
-        initial_message: &str,
-        on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
-    where
-        F: FnMut(AgentEvent) + Send + Sync,
-    {
-        on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        struct WrapperClient {
-            llm: std::sync::Arc<dyn LlmClient>,
-        }
-        #[async_trait::async_trait]
-        impl crate::gpt_researcher::ResearcherLlmClient for WrapperClient {
-            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                self.llm.chat(req).await
-            }
-        }
-
-        let researcher_client = std::sync::Arc::new(WrapperClient { llm: self.llm.clone() });
-
-        let planner = std::sync::Arc::new(crate::gpt_researcher::PlannerAgent::new(researcher_client.clone(), cfg.model.clone()));
-        let executor = std::sync::Arc::new(crate::gpt_researcher::ExecutionAgent::new(researcher_client, cfg.model.clone()));
-
-        let manager = crate::gpt_researcher::GptResearcherManager::new(planner, executor);
-
-        let report = match manager.conduct_research(initial_message).await {
-            Ok(report) => report,
-            Err(e) => {
-                on_event(AgentEvent::TaskError { error: format!("GPT Researcher failed: {}", e) });
-                return Err(e.into());
-            }
-        };
-
-        on_event(AgentEvent::TaskComplete { content: report.clone() });
-        Ok(report)
-    }
-
     pub async fn run_plan_and_execute<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1997,9 +1955,6 @@ impl Agent {
         }
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
-        }
-        if final_cfg.enable_gpt_researcher {
-            return self.run_gpt_researcher(&final_cfg, initial_message, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
@@ -3035,16 +2990,10 @@ impl Agent {
 
     // SOTA Harness Patterns (2025-2026): Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
-        let mut errors = Vec::new();
-        Self::validate_schema_recursive(args, schema, "", &mut errors);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors.join("\n"))
-        }
+        Self::validate_schema_recursive(args, schema, "")
     }
 
-    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str, errors: &mut Vec<String>) {
+    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str) -> Result<(), String> {
         let prefix = if path.is_empty() { String::new() } else { format!("{}.", path) };
 
         if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
@@ -3052,13 +3001,13 @@ impl Agent {
                 for req in req_array {
                     if let Some(req_str) = req.as_str() {
                         if !args_obj.contains_key(req_str) {
-                            errors.push(format!("missing required parameter: '{}{}'", prefix, req_str));
+                            return Err(format!("missing required parameter: '{}{}'", prefix, req_str));
                         }
                     }
                 }
             } else if !req_array.is_empty() {
                 let p = if path.is_empty() { "arguments".to_string() } else { format!("parameter '{}'", path) };
-                errors.push(format!("{} must be an object", p));
+                return Err(format!("{} must be an object", p));
             }
         }
 
@@ -3094,13 +3043,13 @@ impl Agent {
                                 } else {
                                     "unknown"
                                 };
-                                errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
+                                return Err(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
                             }
                         }
 
                         // Recurse into objects
                         if v.is_object() {
-                            Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
+                            Self::validate_schema_recursive(v, prop_schema, &current_path)?;
                         }
 
                         // Recurse into arrays
@@ -3133,12 +3082,12 @@ impl Agent {
                                         } else {
                                             "unknown"
                                         };
-                                        errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
+                                        return Err(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
                                     }
                                 }
 
                                 if item.is_object() {
-                                    Self::validate_schema_recursive(item, items_schema, &item_path, errors);
+                                    Self::validate_schema_recursive(item, items_schema, &item_path)?;
                                 }
                             }
                         }
@@ -3146,6 +3095,8 @@ impl Agent {
                 }
             }
         }
+
+        Ok(())
     }
 
     async fn execute_tool(
@@ -3306,23 +3257,6 @@ mod tests {
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
         assert_eq!(err, "parameter 'user.tags[0]' has invalid type: expected object, got string");
-
-        // 9. Multiple errors simultaneously
-        let args = serde_json::json!({
-            "user": {
-                "name": 123,
-                "address": {
-                    "city": "NY"
-                },
-                "tags": [
-                    { "name": "wrong" }
-                ]
-            }
-        });
-        let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert!(err.contains("missing required parameter: 'user.address.zipcode'"));
-        assert!(err.contains("parameter 'user.name' has invalid type: expected string, got number"));
-        assert!(err.contains("missing required parameter: 'user.tags[0].id'"));
     }
 
     #[tokio::test]
@@ -3705,9 +3639,8 @@ mod tests {
         assert_eq!(res.unwrap(), "Done!");
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[tokio::test]
     async fn test_tao_termination_guardrail_user_fixable() {
-        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 crate::types::ChatResponse {
@@ -3748,10 +3681,8 @@ mod tests {
         cfg.enable_tao_orchestration_loop = true;
 
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
-        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
-        let err_str = res.unwrap_err().to_string();
-        assert!(err_str.contains("Guardrail tripwire fires (UserFixable): needs human") || err_str.contains("User aborted"));
+        assert!(res.unwrap_err().to_string().contains("Guardrail tripwire fires (UserFixable): needs human"));
     }
 
     #[tokio::test]
@@ -4003,65 +3934,6 @@ mod tests {
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
-    }
-
-    #[tokio::test]
-    async fn test_gpt_researcher_mechanic() {
-        struct MockClient {
-            pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
-        }
-        #[async_trait::async_trait]
-        impl LlmClient for MockClient {
-            async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut reqs = self.requests.lock().await;
-                reqs.push(req.clone());
-
-                if req.system.contains("You are a research planner") {
-                    let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
-                    Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant(plan.to_string()),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
-                    })
-                } else if req.system.contains("You are a specialized research execution agent") {
-                    Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Detailed content here"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
-                    })
-                } else {
-                    Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Unknown"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
-                    })
-                }
-            }
-        }
-
-        let client = std::sync::Arc::new(MockClient { requests: tokio::sync::Mutex::new(vec![]) });
-        let agent = Agent::new(client.clone(), vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_gpt_researcher = true;
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run(&cfg, "Research quantum computing", &mut on_event).await;
-        assert!(result.is_ok());
-        let res_str = result.unwrap();
-
-        assert!(res_str.contains("# Research Report: Research quantum computing"));
-        assert!(res_str.contains("## Sub-topic A"));
-        assert!(res_str.contains("## Sub-topic B"));
-        assert!(res_str.contains("Detailed content here"));
-
-        let reqs = client.requests.lock().await;
-        // 1 planner + 2 executors = 3 calls
-        assert_eq!(reqs.len(), 3);
     }
 
     #[tokio::test]
@@ -5035,7 +4907,6 @@ mod tests {
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
-        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
                 message: crate::types::Message {
@@ -5055,11 +4926,10 @@ mod tests {
         let mut events3 = vec![];
         let mut on_event3 = |e| { events3.push(e); };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
-        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
+                error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
             }
@@ -6336,17 +6206,14 @@ mod tests {
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];
-        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let res4 = agent4.run(&cfg, "Start", &mut |e| events4.push(e)).await;
-        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res4.is_err());
-        let err_str = res4.unwrap_err().to_string();
-        assert!(err_str.contains("User intervention required: User aborted. Original error: please login to proceed") || err_str.contains("USER_FIXABLE: User aborted. Original error: please login to proceed"));
+        assert!(res4.unwrap_err().to_string().contains("User intervention required: please login to proceed"));
 
         let mut found_event = false;
         for e in events4 {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                assert!(error.contains("User aborted. Original error: please login to proceed"));
+                assert!(error.contains("please login to proceed"));
                 found_event = true;
             }
         }

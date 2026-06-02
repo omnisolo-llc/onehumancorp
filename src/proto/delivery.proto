@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ohc.api.v1;
 
-
+import "src/proto/organization.proto";
 
 option go_package = "github.com/onehumancorp/mono/src/proto/ohc/api/v1;apiv1";
 
