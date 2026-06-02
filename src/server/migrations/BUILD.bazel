@@ -7,3 +7,7 @@ filegroup(
         "//src/server/db:__pkg__",
     ],
 )
+filegroup(
+    name = "068_ledger_schema.sql",
+    srcs = ["068_ledger_schema.sql"],
+)
