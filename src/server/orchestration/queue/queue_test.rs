@@ -10,7 +10,7 @@ async fn test_sqlite_task_queue() {
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            organization_id TEXT,
+            tenant_id TEXT,
             parent_task_id TEXT,
             agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
@@ -58,7 +58,7 @@ async fn test_sqlite_task_queue_empty_dequeue() {
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            organization_id TEXT,
+            tenant_id TEXT,
             parent_task_id TEXT,
             agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
@@ -85,7 +85,7 @@ async fn test_sqlite_fail_backoff() {
     sqlx::query(
         "CREATE TABLE sub_agent_jobs (
             id TEXT PRIMARY KEY,
-            organization_id TEXT,
+            tenant_id TEXT,
             parent_task_id TEXT,
             agent_role TEXT NOT NULL,
             payload TEXT NOT NULL,
