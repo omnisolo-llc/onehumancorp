@@ -30,7 +30,17 @@ export default function Dashboard() {
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
-  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
+  const [tenantId, setTenantId] = useState<string>('my-store');
+  const [businessName, setBusinessName] = useState<string>('Maya');
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
+      setTenantId(storedTenant);
+      setBusinessName(localStorage.getItem('business_name') || 'Maya');
+      setReferralLink(`https://ohc.store/join?ref=${storedTenant}`);
+    }
+  }, []);
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -83,9 +93,6 @@ export default function Dashboard() {
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
-  useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
-  }, []);
 
   const openReferralModal = async () => {
     setIsGeneratingReferral(true);
@@ -100,12 +107,12 @@ export default function Dashboard() {
         }
       } else {
         // Fallback to local storage tenant if API fails or no auth
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const tenant = tenantId;
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const tenant = tenantId;
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     } finally {
       setIsGeneratingReferral(false);
@@ -256,15 +263,14 @@ export default function Dashboard() {
     const fetchMetrics = async () => {
         try {
             const token = localStorage.getItem('token') || 'test-token';
-            const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
             const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ tenant_id: tenant })
+                    body: JSON.stringify({ tenant_id: tenantId })
                 }),
-                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenantId}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -310,7 +316,7 @@ export default function Dashboard() {
   };
 
   const claimTrialExtension = () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    const tenant = tenantId;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
@@ -657,8 +663,7 @@ export default function Dashboard() {
                      </div>
                      <button
                          onClick={() => {
-                             const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenantId}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
@@ -666,7 +671,7 @@ export default function Dashboard() {
                              fetch('/api/v1/growth/referrals/click', {
                                  method: 'POST',
                                  headers: { 'Content-Type': 'application/json' },
-                                 body: JSON.stringify({ id: tenant })
+                                 body: JSON.stringify({ id: tenantId })
                              }).catch(console.error);
 
                              alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
@@ -1094,7 +1099,7 @@ export default function Dashboard() {
                             setShowPromoModal(true);
                             setIsGeneratingPromo(true);
                             try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                const tenant = tenantId;
                                 const response = await fetch("/api/v1/growth/promotions/generate", {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
@@ -1191,7 +1196,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${tenantId} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1211,7 +1216,7 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${tenantId} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
@@ -1237,7 +1242,7 @@ export default function Dashboard() {
                       <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
                       <button
                           onClick={() => {
-                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const tenant = tenantId;
                               const url = `ohc://join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
@@ -1946,7 +1951,7 @@ export default function Dashboard() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    const tenant = tenantId;
                                     await fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -2159,7 +2164,7 @@ export default function Dashboard() {
       {/* Embed Modal */}
       {showEmbedModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
@@ -2185,13 +2190,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}
@@ -2208,12 +2213,12 @@ export default function Dashboard() {
 
       {/* Referral Modal */}
       <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
-        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
+        <OneTapReferral tenantId={tenantId} source="dashboard_float" />
       </div>
 
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 

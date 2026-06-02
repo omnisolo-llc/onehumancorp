@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info};
 
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult, Usage};
+use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult};
 use ohc_builtin_agent_tools::ToolExecutor;
 
 /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops

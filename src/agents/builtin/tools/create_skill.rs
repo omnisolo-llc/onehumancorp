@@ -6,6 +6,7 @@ use super::{Tool, ToolExecutor};
 
 
 struct CreateSkillExecutor {
+    #[allow(dead_code)]
     memory_store: (),
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
