@@ -339,7 +339,7 @@ mod tests {
 
         // It shouldn't crash, it should return the final answer
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Final answer");
+        assert_eq!(result.expect("unwrap replaced by expect"), "Final answer");
 
         // We should have an event logging the failure
         let has_error_event = events.iter().any(|e| match e {
