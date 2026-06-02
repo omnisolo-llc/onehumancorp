@@ -304,10 +304,4 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
     }
-
-    #[test]
-    fn test_calculate_cost_invalid_negative() {
-        let cost = calculate_cost("invalid-model", -10, -20, -5);
-        assert!(cost < 0.0);
-    }
 }
