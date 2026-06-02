@@ -30,4 +30,17 @@ describe('HelpArticlePage', () => {
     expect(screen.getByText('Article Not Found')).toBeInTheDocument();
     expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
   });
+
+  it('navigates back to help center when back button is clicked', () => {
+    (useParams as any).mockReturnValue({ article: 'getting-started' });
+    const pushMock = vi.fn();
+    (useRouter as any).mockReturnValue({ push: pushMock });
+
+    render(<HelpArticlePage />);
+
+    const backButton = screen.getByText('← Back to Help Center');
+    backButton.click();
+
+    expect(pushMock).toHaveBeenCalledWith('/help');
+  });
 });

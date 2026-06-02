@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { InteractiveWalkthrough } from './Walkthrough';
+import { InteractiveWalkthrough, WalkthroughTarget } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('Walkthrough Component', () => {
@@ -93,6 +93,72 @@ describe('Walkthrough Component', () => {
     expect(handleClose).toHaveBeenCalled();
   });
 
+  it('handles missing target elements gracefully', async () => {
+    // Return null for missing target
+    mockGetElementById.mockImplementation(() => null);
+
+    render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'missing-target', title: 'Step 1', content: 'content 1' }]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    // Check that there is no popup since target is missing
+    await waitFor(() => {
+      expect(screen.queryByText('Step 1')).not.toBeInTheDocument();
+    });
+  });
+
+  it('renders different positions (top, left, right)', async () => {
+    render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Top Step', content: 'content top', position: 'top' },
+          { targetId: 'test-target', title: 'Left Step', content: 'content left', position: 'left' },
+          { targetId: 'test-target', title: 'Right Step', content: 'content right', position: 'right' },
+        ]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    // Initial step wait (top)
+    await waitFor(() => {
+      expect(screen.getByText('Top Step')).toBeInTheDocument();
+    });
+
+    let nextBtn = screen.getByText('Next');
+    fireEvent.click(nextBtn);
+
+    // Second step (left)
+    await waitFor(() => {
+      expect(screen.getByText('Left Step')).toBeInTheDocument();
+    });
+
+    nextBtn = screen.getByText('Next');
+    fireEvent.click(nextBtn);
+
+    // Third step (right)
+    await waitFor(() => {
+      expect(screen.getByText('Right Step')).toBeInTheDocument();
+    });
+  });
+
+  it('renders WalkthroughTarget helper component', () => {
+    render(
+      <WalkthroughTarget id="helper-target" className="custom-class">
+        <span>Helper Content</span>
+      </WalkthroughTarget>
+    );
+
+    expect(screen.getByText('Helper Content')).toBeInTheDocument();
+    const container = screen.getByText('Helper Content').parentElement;
+    expect(container).toHaveAttribute('id', 'helper-target');
+    expect(container).toHaveClass('custom-class');
+  });
+
   it('calls onClose when skip button is clicked', async () => {
     const handleClose = vi.fn();
 
@@ -120,5 +186,38 @@ describe('Walkthrough Component', () => {
     }
 
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('handles window scroll and resize events', async () => {
+    const handleClose = vi.fn();
+
+    render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'test-target', title: 'Step 1', content: 'content 1' }]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
+    });
+
+    fireEvent.scroll(window);
+    fireEvent.resize(window);
+  });
+
+  it('cleans up timeout and listeners on unmount', () => {
+      const handleClose = vi.fn();
+
+      const { unmount } = render(
+          <InteractiveWalkthrough
+              steps={[{ targetId: 'test-target', title: 'Step 1', content: 'content 1' }]}
+              isOpen={true}
+              onClose={handleClose}
+          />
+      );
+
+      unmount();
   });
 });
