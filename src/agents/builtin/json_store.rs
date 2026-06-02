@@ -159,4 +159,28 @@ mod tests {
         assert!(arch_entries[0].content.contains("microservices"));
         assert!(arch_entries[1].content.contains("state graphs"));
     }
+
+    #[tokio::test]
+    async fn test_namespace_json_store_search_query() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = NamespaceJsonStore::new(temp_dir.path());
+
+        store.store("Apples are red", vec![]).await.unwrap();
+        store.store("Bananas are yellow", vec![]).await.unwrap();
+        store.store("Cherries are red", vec![]).await.unwrap();
+
+        let res = store.retrieve("red", 10).await.unwrap();
+        assert_eq!(res.len(), 2);
+        assert!(res.contains(&"Apples are red".to_string()));
+        assert!(res.contains(&"Cherries are red".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_namespace_json_store_missing_file() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let store = NamespaceJsonStore::new(temp_dir.path());
+
+        let entries = store.read_namespace("missing_namespace").await.unwrap();
+        assert_eq!(entries.len(), 0);
+    }
 }

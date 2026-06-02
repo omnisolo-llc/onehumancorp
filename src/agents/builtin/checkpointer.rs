@@ -582,4 +582,14 @@ mod tests {
         let content = std::fs::read_to_string(&progress_path).unwrap();
         assert!(content.contains(r#""state": "1""#));
     }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_get_not_found() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        // Request a checkpoint that doesn't exist
+        let retrieved = saver.get_checkpoint("thread-git-missing", "invalid-hash").await.unwrap();
+        assert!(retrieved.is_none());
+    }
 }
