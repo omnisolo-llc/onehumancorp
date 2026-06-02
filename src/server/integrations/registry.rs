@@ -22,6 +22,7 @@ pub struct IntegrationsRegistry {
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    google_business_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_business::provider::GoogleBusinessProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
@@ -63,6 +64,7 @@ impl IntegrationsRegistry {
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_business_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -223,6 +225,10 @@ impl IntegrationsRegistry {
         if integration_id == "cal_com" {
             let mut clients = self.cal_com_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "google_business" {
+            let mut clients = self.google_business_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_business::provider::GoogleBusinessProvider::new(creds.api_token.clone())));
         }
         if integration_id == "google_calendar" {
             let mut clients = self.google_calendar_clients.write().unwrap();
@@ -793,6 +799,29 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+
+    pub async fn google_business_sync_menu(&self, integration_id: &str, menu_data: &str) -> Result<String, String> {
+        let client = {
+            let clients = self.google_business_clients.read().unwrap();
+            clients.get(integration_id).cloned()
+        };
+        if let Some(c) = client {
+            return c.sync_menu(menu_data).await;
+        }
+        Err("Google Business integration not found".to_string())
+    }
+
+    pub async fn google_business_sync_hours(&self, integration_id: &str, hours_data: &str) -> Result<String, String> {
+        let client = {
+            let clients = self.google_business_clients.read().unwrap();
+            clients.get(integration_id).cloned()
+        };
+        if let Some(c) = client {
+            return c.sync_hours(hours_data).await;
+        }
+        Err("Google Business integration not found".to_string())
+    }
+
 }
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {

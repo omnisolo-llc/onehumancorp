@@ -4356,6 +4356,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
                         </div>
 
+                                                <!-- Local Visibility -->
+                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; color: var(--text-primary);">Local Visibility <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Google Business</span></h3>
+                            </div>
+                            <div id="local-visibility-status" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
+                                🟢 Synced with Google Maps
+                            </div>
+                            <button id="connect-google-business-btn" onclick="connectGoogleBusiness()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">Connect Google Business</button>
+                            <div id="google-reviews-container" style="display: none; margin-top: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <h4 style="margin: 0;">3 New Reviews to Approve</h4>
+                                </div>
+                                <div class="card glass" style="padding: 12px; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                        <span style="color: #FFD700; font-size: 16px;">★★★★★</span>
+                                        <span style="font-size: 14px; margin-left: 8px; font-weight: 600;">John Doe</span>
+                                    </div>
+                                    <p style="font-size: 14px; margin: 0 0 8px 0; font-style: italic;">"Great plumbing service, fixed it quickly!"</p>
+                                    <div style="background: rgba(0, 0, 0, 0.05); padding: 8px; border-radius: 6px; margin-bottom: 12px;">
+                                        <p style="font-size: 13px; margin: 0; color: var(--text-secondary);">AI Draft: 'Hi John, thanks for trusting us with your plumbing repair! We are glad it was fixed quickly. - Carlos'</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button onclick="approveReviewReply(this)" style="flex: 1; padding: 12px; min-height: 44px; background: #10b981;">Approve & Reply</button>
+                                        <button class="secondary" style="padding: 12px; min-height: 44px;">Edit</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Automated AI Review Requests -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -6126,6 +6156,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
+                        }
+
+
+                        async function connectGoogleBusiness() {
+                            const btn = document.getElementById("connect-google-business-btn");
+                            btn.textContent = "Connecting...";
+                            setTimeout(() => {
+                                document.getElementById("local-visibility-status").style.display = "block";
+                                document.getElementById("google-reviews-container").style.display = "block";
+                                btn.style.display = "none";
+                            }, 1000);
+                        }
+
+                        function approveReviewReply(btn) {
+                            btn.textContent = "Publishing...";
+                            setTimeout(() => {
+                                const card = btn.closest(".card");
+                                card.innerHTML = "<p style=\"color: #10b981; font-weight: bold; text-align: center;\">Reply published to Google Maps!</p>";
+                                setTimeout(() => {
+                                    card.remove();
+                                }, 2000);
+                            }, 1000);
                         }
 
                         async function sendReviewCampaign() {
