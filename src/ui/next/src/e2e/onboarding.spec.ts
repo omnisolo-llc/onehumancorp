@@ -36,6 +36,52 @@ test.describe('Onboarding Wizard Flow', () => {
     });
   });
 
+  test('completes Instant Build onboarding flow', async ({ page }) => {
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({
+        business_type: 'Handyman',
+        business_name: 'Carlos Fixes',
+        categories: ['services'],
+        initial_products: [{ name: 'Repair', price: '100' }]
+      })
+    }));
+
+    await page.route('**/api/onboarding/start', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({ message: 'Success!' })
+    }));
+
+    // Navigate to onboarding page
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Mode Selection
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Instant Build")').click();
+
+    // Step 2: Instant Build Textarea
+    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+    const textarea = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
+    await textarea.fill('I am a freelance handyman named Carlos in NYC doing repairs.');
+
+    // Launch
+    const [response] = await Promise.all([
+      page.waitForResponse('**/api/onboarding/start'),
+      page.locator('button:has-text("Generate Storefront")').click()
+    ]);
+
+    // Live Screen
+    await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="Success!"')).toBeVisible();
+
+    const dashboardLink = page.locator('a:has-text("Go to Dashboard")');
+    await expect(dashboardLink).toBeVisible();
+    await expect(dashboardLink).toHaveAttribute('href', '/dashboard');
+
+    await dashboardLink.click();
+    await page.waitForURL('**/dashboard');
+  });
+
   test('completes full onboarding flow', async ({ page }) => {
     // Mock the APIs
     await page.route('**/api/onboarding/intake', route => route.fulfill({
@@ -56,8 +102,10 @@ test.describe('Onboarding Wizard Flow', () => {
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Guided Setup")').click();
+
     // Step 1: Business Name
-    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
     await page.locator('button:has-text("Next")').click();
@@ -118,6 +166,9 @@ test.describe('Onboarding Wizard Flow', () => {
 
     await page.goto('http://localhost:3000/onboarding');
 
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Guided Setup")').click();
+
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill("Maya's Dream Cakes");
     await page.locator('button:has-text("Next")').click();
@@ -164,6 +215,9 @@ test.describe('Onboarding Wizard Flow', () => {
 
     await page.goto('http://localhost:3000/onboarding');
 
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Guided Setup")').click();
+
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
     await page.locator('button:has-text("Next")').click();
@@ -196,6 +250,9 @@ test.describe('Onboarding Wizard Flow', () => {
     }));
 
     await page.goto('http://localhost:3000/onboarding');
+
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Guided Setup")').click();
 
     // Step 1: Business Name
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
@@ -246,6 +303,9 @@ test.describe('Onboarding Wizard Flow', () => {
     }));
 
     await page.goto('http://localhost:3000/onboarding');
+
+    await expect(page.locator('text="Choose Setup Mode"')).toBeVisible();
+    await page.locator('button:has-text("Guided Setup")').click();
 
     // Enter Business Name
     await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();

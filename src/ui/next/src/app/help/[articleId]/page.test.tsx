@@ -1,85 +1,59 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import HelpArticlePage from './page';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+import HelpArticlePage from './page';
+import { useRouter, useParams } from 'next/navigation';
 
-// Mock next/navigation
-const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
-  useParams: () => ({
-    articleId: 'getting-started'
-  })
+  useRouter: vi.fn(),
+  useParams: vi.fn()
 }));
 
 describe('HelpArticlePage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        title: "Getting Started with Your Store",
-        contentHtml: "<p>Welcome to OneHumanCorp!</p>"
-      })
-    });
-  });
-
-  it('renders loading state initially', async () => {
-    let resolvePromise: any;
-    const promise = new Promise(resolve => { resolvePromise = resolve; });
-    global.fetch = vi.fn().mockImplementation(() => promise);
+  it('renders getting-started article correctly', () => {
+    (useParams as any).mockReturnValue({ articleId: 'getting-started' });
+    (useRouter as any).mockReturnValue({ push: vi.fn() });
 
     render(<HelpArticlePage />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
 
-    await act(async () => {
-      resolvePromise({
-        ok: true,
-        json: () => Promise.resolve({
-            title: "Getting Started with Your Store",
-            contentHtml: "<p>Welcome to OneHumanCorp!</p>"
-        })
-      });
-    });
+    expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
+    expect(screen.getByText('Step 1: Tell us about your business')).toBeInTheDocument();
   });
 
-  it('renders article loaded from API', async () => {
-    render(<HelpArticlePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
-      expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
-    });
-  });
-
-  it('navigates back when clicking the back button', async () => {
+  it('navigates back to the help center when the back button is clicked', async () => {
     const user = userEvent.setup();
     render(<HelpArticlePage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
-    });
-
     const backButton = screen.getByRole('button', { name: /Back to Help Center/i });
-    await user.click(backButton);
+    expect(backButton).toBeInTheDocument();
 
-    expect(mockPush).toHaveBeenCalledWith('/help');
+    await user.click(backButton);
+    // Router push is mocked in vitest setup
   });
 
-  it('handles not found error', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-    });
+  it('renders "Article Not Found" for an unknown article', () => {
+    (useParams as any).mockReturnValue({ articleId: 'unknown-article' });
+    (useRouter as any).mockReturnValue({ push: vi.fn() });
 
     render(<HelpArticlePage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Article Not Found')).toBeInTheDocument();
-      expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
-    });
+    expect(screen.getByText('Article Not Found')).toBeInTheDocument();
+    expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
+  });
+
+  it('navigates back to the help center when the back button is clicked', async () => {
+    (useParams as any).mockReturnValue({ articleId: 'getting-started' });
+    const pushMock = vi.fn();
+    (useRouter as any).mockReturnValue({ push: pushMock });
+
+    const user = userEvent.setup();
+    render(<HelpArticlePage />);
+
+    const backButton = screen.getByText(/Back to Help Center/i);
+    await user.click(backButton);
+
+    expect(pushMock).toHaveBeenCalledWith('/help');
   });
 });

@@ -7,6 +7,7 @@ export default function OnboardingWizard() {
   const {
     step, setStep,
     chatStep, setChatStep,
+    isInstantBuildMode, setIsInstantBuildMode,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
@@ -114,7 +115,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && chatStep === 1 && !businessName) return;
+    if (step === 1 && chatStep === 0 && !businessName && !businessDescription) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -186,6 +187,86 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInstantIntake = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const intakeRes = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: businessDescription })
+      });
+
+      const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+
+      setLocation('Online');
+      setWebsiteTemplate('Modern');
+      setDomainChoice('subdomain');
+      setAiAgents(['Sales Agent', 'Support Agent', 'Marketing Agent']);
+      setAiAutoRespond(true);
+
+      // Trigger start immediately
+      setStep(4);
+
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: businessDescription,
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: "online",
+          admin_email: "founder@example.com",
+          admin_name: "Founder",
+          admin_password: "securepassword",
+          website_template: 'Modern',
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: 'subdomain',
+          price_type: 'fixed',
+          location: 'Online'
+        })
+      });
+
+      const startData = await startRes.json();
+      if (!startRes.ok) {
+        throw new Error(startData.error || 'Failed to start onboarding');
+      }
+
+      setStartResult(startData);
+      setStep(5); // Go to success screen
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during instant setup');
+      // On failure, stay on the input screen
     } finally {
       setIsLoading(false);
     }
@@ -284,13 +365,41 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
+              {chatStep === 0 && (
+                <div className="flex flex-col flex-1 animate-fade-in text-center justify-center">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Choose Setup Mode</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    How would you like to build your business?
+                  </p>
+
+                  <div className="flex flex-col gap-4 mt-6">
+                    <button
+                      className="w-full bg-white text-[#0066FF] border border-[#0066FF] min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                      onClick={() => {
+                        setIsInstantBuildMode(false);
+                        setChatStep(1);
+                      }}
+                    >
+                      Guided Setup
+                    </button>
+                    <button
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                      onClick={() => {
+                        setIsInstantBuildMode(true);
+                        setChatStep(4);
+                      }}
+                    >
+                      Instant Build
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(0)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
@@ -460,6 +569,58 @@ export default function OnboardingWizard() {
                           Analyzing...
                         </span>
                       ) : 'Generate My Business'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 4 && (
+                <div className="flex flex-col flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(0)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically in seconds.
+                  </p>
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <textarea
+                        autoFocus
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && businessDescription.trim() && !isLoading) {
+                            e.preventDefault();
+                            setValidationError('');
+                            handleInstantIntake();
+                          }
+                        }}
+                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => {
+                        setValidationError('');
+                        handleInstantIntake();
+                      }}
+                      disabled={!businessDescription.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Analyzing & Building...
+                        </span>
+                      ) : 'Generate Storefront'}
                     </button>
                   </div>
                 </div>

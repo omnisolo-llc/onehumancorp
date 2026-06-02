@@ -10,7 +10,8 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      chatStep: 1,
+      chatStep: 0,
+      isInstantBuildMode: false,
       businessName: '',
       whatYouSell: '',
       location: '',
@@ -35,9 +36,58 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
-    expect(button).toBeDisabled();
+    expect(screen.getByText("Choose Setup Mode")).toBeInTheDocument();
+    const guidedButton = screen.getByRole('button', { name: /Guided Setup/i });
+    const instantButton = screen.getByRole('button', { name: /Instant Build/i });
+
+    expect(guidedButton).toBeInTheDocument();
+    expect(instantButton).toBeInTheDocument();
+  });
+
+  it('Handles instant build mode flow successfully', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock API success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Handyman',
+            business_name: 'Carlos Fixes',
+            categories: ['services'],
+            initial_products: [{ name: 'Repair', price: '100' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    const instantButton = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantButton);
+
+    const descriptionInput = await screen.findByPlaceholderText(/I bake custom vegan cakes for weddings/i);
+    await user.type(descriptionInput, 'I am a handyman in NYC{Enter}');
+
+    // Verify it jumps directly to start/live screen (Step 5)
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("Success!")).toBeInTheDocument();
+    });
+
+    const state = useOnboardingStore.getState();
+    expect(state.businessName).toBe('Carlos Fixes');
+    expect(state.businessType).toBe('Handyman');
+    expect(state.location).toBe('Online'); // Default
+    expect(state.websiteTemplate).toBe('Modern'); // Default
   });
 
   it('Handles enter key progression in chat steps', async () => {
@@ -61,8 +111,11 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    const guidedButton = screen.getByRole('button', { name: /Guided Setup/i });
+    await user.click(guidedButton);
+
     // Chat Step 1 - Use Enter Key
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery{Enter}');
 
     // Chat Step 2 - Use Enter Key
@@ -107,8 +160,11 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    const guidedButton = screen.getByRole('button', { name: /Guided Setup/i });
+    await user.click(guidedButton);
+
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
@@ -170,8 +226,11 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    const guidedButton = screen.getByRole('button', { name: /Guided Setup/i });
+    await user.click(guidedButton);
+
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
@@ -239,7 +298,7 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 1,
+        chatStep: 1, // Skip to step 1 to bypass the choose setup mode
         businessName: 'A',
         location: '',
         businessType: 'Online Store',
