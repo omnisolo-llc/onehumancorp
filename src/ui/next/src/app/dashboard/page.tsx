@@ -455,6 +455,9 @@ export default function Dashboard() {
         </div>
 
          <nav className="flex items-center gap-3">
+             <Link href="/financials" className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium hover:bg-green-200 transition-colors border border-green-200 shadow-sm flex items-center gap-1">
+               Financials
+             </Link>
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
              </Link>

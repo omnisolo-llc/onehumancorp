@@ -25,3 +25,6 @@ pub mod common {
 pub mod app {
     pub use app_proto::ohc::api::v1::*;
 }
+pub mod ledger {
+    pub use ledger_proto::ohc::ledger::*;
+}
