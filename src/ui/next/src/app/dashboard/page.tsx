@@ -87,6 +87,29 @@ export default function Dashboard() {
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
+  // Ledger State
+  const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+
+  useEffect(() => {
+    async function fetchLedger() {
+      try {
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        const res = await fetch(`/api/ledger/entries/${tenant}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLedgerEntries(Array.isArray(data) ? data : []);
+          const balance = (Array.isArray(data) ? data : []).reduce((acc: number, entry: any) => acc + (entry.credit || 0) - (entry.debit || 0), 0);
+          setTotalBalance(balance);
+        }
+      } catch (e) {
+        console.error("Failed to fetch ledger", e);
+      }
+    }
+    fetchLedger();
+  }, []);
+
+
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -502,6 +525,42 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+          {/* Financials Card */}
+          <div className="mac-glass-container rounded-2xl p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110 duration-500"></div>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Balance</h3>
+                <div className="text-4xl font-extrabold text-gray-900 font-outfit tracking-tight">${totalBalance.toFixed(2)}</div>
+              </div>
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-xl shadow-inner text-emerald-600">
+                💰
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recent Activity</h4>
+              {(!Array.isArray(ledgerEntries) || ledgerEntries.length === 0) ? (
+                <div className="text-sm text-gray-400">No recent transactions.</div>
+              ) : (
+                <div className="space-y-3">
+                  {(Array.isArray(ledgerEntries) ? ledgerEntries : []).slice(0, 3).map((entry, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white/50 p-2 rounded-lg backdrop-blur-sm border border-gray-100/50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{entry.entry_type === 'Revenue' ? '📈' : '📉'}</span>
+                        <span className="text-sm font-medium text-gray-700">{entry.entry_type}</span>
+                      </div>
+                      <span className={`text-sm font-bold ${entry.credit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
+                        {entry.credit > 0 ? '+' : ''}${entry.credit > 0 ? entry.credit.toFixed(2) : entry.debit?.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
                <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
                    <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
