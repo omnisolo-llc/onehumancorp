@@ -103,3 +103,4 @@ mod tests {
         assert_eq!(result.price, 11.0);
     }
 }
+// verified by miser
