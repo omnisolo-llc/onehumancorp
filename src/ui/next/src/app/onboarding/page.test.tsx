@@ -35,7 +35,10 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
+
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -66,6 +69,10 @@ describe('OnboardingWizard', () => {
     });
 
     render(<OnboardingWizard />);
+
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -130,6 +137,10 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
+
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
@@ -180,6 +191,10 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+        expect(screen.getByText("Style & Team")).toBeInTheDocument();
+    });
+
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
     await user.click(launchButton);
@@ -211,6 +226,10 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
+
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
     await user.click(nextButton);
@@ -236,6 +255,10 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
+    await waitFor(() => {
+        expect(screen.getByText("Review Details")).toBeInTheDocument();
+    });
+
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
     await user.click(continueButton);
@@ -252,6 +275,10 @@ describe('OnboardingWizard', () => {
     });
 
     render(<OnboardingWizard />);
+
+    await waitFor(() => {
+        expect(screen.getByText("Style & Team")).toBeInTheDocument();
+    });
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -322,6 +349,10 @@ describe('OnboardingWizard', () => {
     });
 
     render(<OnboardingWizard />);
+
+    await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Save Draft/i })).toBeInTheDocument();
+    });
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
