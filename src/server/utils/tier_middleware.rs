@@ -120,8 +120,8 @@ mod tests {
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
-                // assert!(res2.headers().contains_key("x-ratelimit-warning")); // Won't have headers if returned early
+                assert_eq!(res2.status(), StatusCode::OK);
+                assert!(res2.headers().contains_key("x-ratelimit-warning"));
             }
         }
     }
