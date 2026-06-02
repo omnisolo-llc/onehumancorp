@@ -551,8 +551,8 @@ export default function OnboardingWizard() {
                            setFirstProductPrice(e.target.value);
                            if (e.target.value.trim().length === 0) {
                               setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
-                           } else if (isNaN(Number(e.target.value))) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Must be a number.' }));
+                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
                            } else {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
@@ -570,6 +570,10 @@ export default function OnboardingWizard() {
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
+                      return;
+                    }
+                    if (Object.keys(validationErrors).length > 0) {
+                      setValidationError('Please fix the errors before continuing.');
                       return;
                     }
                     setValidationError('');
