@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::codex_runner::Runner;
 use crate::agent::AgentRunConfig;
+use crate::agent_protocol::AgentProtocolServer;
 
 /// JSON-RPC 2.0 Request
 #[derive(Debug, Deserialize)]
@@ -38,6 +39,7 @@ pub struct JsonRpcError {
 
 pub struct AppState {
     pub runner: Arc<Runner>,
+    pub protocol_server: Arc<AgentProtocolServer>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -151,10 +153,28 @@ async fn handle_rpc(
     }
 }
 
+async fn handle_protocol_create_task(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    req_body: String,
+) -> String {
+    state.protocol_server.create_task(&req_body).await
+}
+
+async fn handle_protocol_execute_step(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    axum::extract::Path(task_id): axum::extract::Path<String>,
+    req_body: String,
+) -> String {
+    state.protocol_server.execute_step(&task_id, &req_body).await
+}
+
 pub fn create_router(runner: Arc<Runner>) -> Router {
-    let state = Arc::new(AppState { runner });
+    let protocol_server = Arc::new(AgentProtocolServer::new(runner.clone()));
+    let state = Arc::new(AppState { runner, protocol_server });
     Router::new()
         .route("/rpc", post(handle_rpc))
+        .route("/ap/v1/agent/tasks", post(handle_protocol_create_task))
+        .route("/ap/v1/agent/tasks/:task_id/steps", post(handle_protocol_execute_step))
         .with_state(state)
 }
 
@@ -305,5 +325,69 @@ mod tests {
         assert_eq!(resp.jsonrpc, "2.0");
         assert!(resp.result.is_none());
         assert_eq!(resp.error.unwrap().code, -32601);
+    }
+}
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use axum::{body::Body, http::{Request, StatusCode}};
+    use tower::ServiceExt;
+    use std::sync::Arc;
+    use crate::llm::LlmClient;
+    use crate::agent::Agent;
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+
+    struct MockLlmClient;
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message::assistant("success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            })
+        }
+    }
+
+    async fn build_test_app() -> axum::Router {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        create_router(runner)
+    }
+
+    #[tokio::test]
+    async fn test_protocol_server_create_task() {
+        let app = build_test_app().await;
+        let req_body = serde_json::json!({
+            "input": "test task"
+        });
+        let response = app.oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/ap/v1/agent/tasks")
+                .header("Content-Type", "application/json")
+                .body(Body::from(req_body.to_string()))
+                .unwrap()
+        ).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_protocol_server_execute_step() {
+        let app = build_test_app().await;
+        let req_body = serde_json::json!({
+            "input": "test task step 1"
+        });
+        let response = app.oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/ap/v1/agent/tasks/task-123/steps")
+                .header("Content-Type", "application/json")
+                .body(Body::from(req_body.to_string()))
+                .unwrap()
+        ).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }
