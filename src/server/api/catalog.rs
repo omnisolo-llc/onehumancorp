@@ -9,6 +9,40 @@ use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::StatusCode;
 
+
+#[derive(Deserialize)]
+pub struct SubscribeRequest {
+    pub plan_id: String,
+    pub customer_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct ManageSubscriptionRequest {
+    pub subscription_id: String,
+    pub action: String, // "pause", "resume", "cancel"
+}
+
+#[derive(Serialize)]
+pub struct SubscriptionPlanItem {
+    pub id: String,
+    pub name: String,
+    pub price_cents: i64,
+    pub frequency: String,
+}
+
+#[derive(Serialize)]
+pub struct SubscriberItem {
+    pub id: String,
+    pub customer_id: String,
+    pub status: String,
+}
+
+#[derive(Serialize)]
+pub struct ListSubscriptionsResponse {
+    pub plans: Vec<SubscriptionPlanItem>,
+    pub subscribers: Vec<SubscriberItem>,
+}
+
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
     pub name: String,
@@ -127,8 +161,179 @@ async fn handle_create_product(
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
+
+async fn handle_checkout_subscription(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<SubscribeRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            ).into_response();
+        }
+    };
+
+    let subscription_id = uuid::Uuid::new_v4().to_string();
+    let current_time = chrono::Utc::now();
+    let end_time = current_time + chrono::Duration::days(30);
+
+    let insert_result = sqlx::query(
+        "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_end) VALUES ($1, $2, $3, $4, 'active', $5)"
+    )
+    .bind(&subscription_id)
+    .bind(&tenant_id)
+    .bind(&payload.customer_id)
+    .bind(&payload.plan_id)
+    .bind(end_time)
+    .execute(&mut *conn)
+    .await;
+
+    match insert_result {
+        Ok(_) => (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some("Subscribed successfully".to_string()) })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to create subscription: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to subscribe".to_string(),
+                }),
+            ).into_response()
+        }
+    }
+}
+
+async fn handle_manage_subscription(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_claims): Extension<::server_common::Claims>,
+    Json(payload): Json<ManageSubscriptionRequest>,
+) -> impl IntoResponse {
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            ).into_response();
+        }
+    };
+
+    let status = match payload.action.as_str() {
+        "pause" => "paused",
+        "resume" => "active",
+        "cancel" => "canceled",
+        _ => return (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "INVALID_ACTION".to_string(),
+                message: "Action must be pause, resume, or cancel".to_string(),
+            }),
+        ).into_response()
+    };
+
+    let tenant_id = _claims.organization_id.unwrap_or_else(|| "system".to_string());
+
+    let update_result = sqlx::query(
+        "UPDATE subscriptions SET status = $1 WHERE id = $2 AND tenant_id = $3"
+    )
+    .bind(status)
+    .bind(&payload.subscription_id)
+    .bind(&tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    match update_result {
+        Ok(_) => (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some("Subscription updated successfully".to_string()) })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to update subscription: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to update subscription".to_string(),
+                }),
+            ).into_response()
+        }
+    }
+}
+
+async fn handle_list_subscriptions(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            ).into_response();
+        }
+    };
+
+    let plans_result = sqlx::query(
+        "SELECT sp.id, p.title as name, sp.interval, sp.discount_percentage FROM subscription_plans sp JOIN products p ON sp.product_id = p.id WHERE sp.tenant_id = $1"
+    )
+    .bind(tenant_id.clone())
+    .fetch_all(&mut *conn)
+    .await;
+
+    use sqlx::Row;
+    let plans = match plans_result {
+        Ok(records) => records.into_iter().map(|r| SubscriptionPlanItem {
+            id: r.try_get("id").unwrap_or_default(),
+            name: r.try_get("name").unwrap_or_default(),
+            price_cents: 1999, // mock price based on original mock
+            frequency: r.try_get("interval").unwrap_or_default(),
+        }).collect(),
+        Err(_) => vec![],
+    };
+
+    let subscribers_result = sqlx::query(
+        "SELECT id, customer_id, status FROM subscriptions WHERE tenant_id = $1"
+    )
+    .bind(tenant_id)
+    .fetch_all(&mut *conn)
+    .await;
+
+    let subscribers = match subscribers_result {
+        Ok(records) => records.into_iter().map(|r| SubscriberItem {
+            id: r.try_get("id").unwrap_or_default(),
+            customer_id: r.try_get("customer_id").unwrap_or_default(),
+            status: r.try_get("status").unwrap_or_default(),
+        }).collect(),
+        Err(_) => vec![],
+    };
+
+    (StatusCode::OK, Json(ListSubscriptionsResponse { plans, subscribers })).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/subscribe", post(handle_checkout_subscription))
+        .route("/manage_subscription", post(handle_manage_subscription))
+        .route("/subscriptions", axum::routing::get(handle_list_subscriptions))
+
         .layer(Extension(hub))
 }

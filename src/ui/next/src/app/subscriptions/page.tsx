@@ -10,14 +10,26 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // In a real implementation this would fetch from the new endpoints
-    setPlans([
-      { id: 'plan_1', name: 'Monthly Coffee Bean', price_cents: 1999, frequency: 'monthly', cutoff_day: 5 }
-    ]);
-    setSubscribers([
-      { id: 'sub_1', customer_id: 'cust_1', status: 'ACTIVE' },
-      { id: 'sub_2', customer_id: 'cust_2', status: 'ACTIVE' }
-    ]);
+    const fetchSubscriptions = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/v1/catalog/subscriptions');
+        if (res.ok) {
+          const data = await res.json();
+          setPlans(data.plans || []);
+          setSubscribers(data.subscribers || []);
+        } else {
+          console.error("Failed to fetch subscriptions");
+        }
+      } catch (err) {
+        console.error("Error fetching subscriptions", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscriptions();
+
     setBatches([
       { id: 'batch_1', fulfillment_date: '2024-06-05', subscriber_count: 2, status: 'PENDING' }
     ]);

@@ -340,6 +340,26 @@ pub async fn stripe_webhook_handler(
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("customer")
                 .and_then(|id| id.as_str());
+            let subscription_id_opt = obj.get("subscription")
+                .and_then(|id| id.as_str());
+
+            if let Some(sub_id) = subscription_id_opt {
+                tracing::warn!("AI Finance Agent intercepted failed payment for subscription. Initiating dunning protocol (SMS/Email sequence) for customer");
+
+                let pool = webhook_state.db.pool.clone();
+                let sub_id_string = sub_id.to_string();
+
+                tokio::spawn(async move {
+                    let update_result = sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = $1")
+                        .bind(&sub_id_string)
+                        .execute(&pool)
+                        .await;
+
+                    if let Err(e) = update_result {
+                        tracing::error!("Failed to update subscription status to past_due: {}", e);
+                    }
+                });
+            }
 
             if let Some(_tenant_id) = tenant_id_opt {
                 // Trigger SMS notification
