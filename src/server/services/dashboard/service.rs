@@ -434,6 +434,12 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        let daily_briefing = if req.mobile_optimized {
+            format!("You had {} orders recently. Consider reviewing your inventory.", orders.len())
+        } else {
+            String::new()
+        };
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
@@ -443,6 +449,7 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            daily_briefing,
         }))
     }
 
@@ -659,6 +666,8 @@ mod tests {
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
+
+        assert_eq!(res_mobile.daily_briefing, "You had 1 orders recently. Consider reviewing your inventory.", "Mobile should have daily briefing");
     }
 
     #[tokio::test]

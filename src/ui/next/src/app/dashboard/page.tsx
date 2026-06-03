@@ -508,6 +508,16 @@ export default function Dashboard() {
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
+         {/* Daily Business Briefing */}
+         <section className="mb-6 animate-fade-in">
+           <div className="p-6 shadow-sm border rounded-2xl bg-indigo-50/50 flex flex-col gap-2">
+             <h2 className="text-xl font-semibold font-outfit text-indigo-900">Your Daily Briefing</h2>
+             <p className="text-gray-700 leading-relaxed">
+               You had {pendingOrders || 0} orders recently. Consider reviewing your inventory.
+             </p>
+           </div>
+         </section>
+
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
