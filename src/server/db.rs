@@ -1146,10 +1146,21 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
-                    .bind(threshold.to_rfc3339())
-                    .execute(sqlite_pool)
-                    .await?.rows_affected()
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(sqlite_pool).await?;
+                let mut total_affected = 0;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    let mut tx = sqlite_pool.begin().await?;
+                    // SQLite doesn't have RLS like Postgres, but we still scope the update query by tenant_id
+                    // Use datetime(?) so that SQLite parses the bound rfc3339 string as a native datetime object for correct comparison against its own default timestamps
+                    total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < datetime(?))) AND tenant_id = ?")
+                        .bind(threshold.to_rfc3339())
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await?.rows_affected();
+                    tx.commit().await?;
+                }
+                total_affected
             },
             DbStore::Postgres => {
                 let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
@@ -1815,5 +1826,76 @@ mod e2e_cleanup_stagnant_missions_tests {
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
             .bind(&test_tenant)
             .execute(&pool).await.expect("Database URL or operation failed in test");
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_sqlite() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Database operation failed in test");
+
+        // Create the required tables since the migrations directory path is tricky inside Bazel test sandboxes.
+        sqlx::query(
+            "CREATE TABLE tenants (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE agent_missions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                payload TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create tables for SQLite test");
+
+        // The `DB` struct still requires a PgPool to be initialized, but we will test the SQLite store path.
+        let fake_pg_pool = get_pool();
+
+        let db = DB {
+            store: DbStore::Sqlite(pool.clone()),
+            pool: fake_pg_pool,
+        };
+
+        // Use a unique tenant for this test
+        let test_tenant = format!("test_cleanup_stagnant_sqlite_{}", uuid::Uuid::new_v4());
+
+        // Insert the tenant
+        sqlx::query("INSERT INTO tenants (id, name, created_at) VALUES (?, 'Test Tenant SQLite', CURRENT_TIMESTAMP)")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database operation failed in test");
+
+        // 1. Stuck mission (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, ?)")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database operation failed in test");
+
+        // 2. Pending mission but updated recently (should NOT be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, ?)")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database operation failed in test");
+
+        // 3. Pending mission updated 2 hours ago (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', datetime('now', '-2 hours'), ?)")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database operation failed in test");
+
+        // Clean up missions older than 3600 seconds
+        let _affected = db.cleanup_stagnant_missions(3600).await.expect("Database operation failed in test");
+
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = ?").bind(&test_tenant).fetch_one(&pool).await.expect("Database operation failed in test").get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = ?").bind(&test_tenant).fetch_one(&pool).await.expect("Database operation failed in test").get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = ?").bind(&test_tenant).fetch_one(&pool).await.expect("Database operation failed in test").get("status");
+        assert_eq!(status_3, "FAILED");
     }
 }
