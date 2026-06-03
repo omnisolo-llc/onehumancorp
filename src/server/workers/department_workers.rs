@@ -25,7 +25,7 @@ impl OperationsWorker {
     }
 
     pub fn start(&self) {
-        let _db = self.db.clone();
+        let db = self.db.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
@@ -490,7 +490,7 @@ impl CustomerSuccessWorker {
     }
 
     pub fn start(&self) {
-        let _db = self.db.clone();
+        let db = self.db.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
@@ -809,7 +809,7 @@ impl PromoterWorker {
     }
 
     pub fn start(&self) {
-        let _db = self.db.clone();
+        let db = self.db.clone();
         let hub = self.hub.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
@@ -905,7 +905,7 @@ impl AdvisorWorker {
     }
 
     pub fn start(&self) {
-        let _db = self.db.clone();
+        let db = self.db.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
             loop {
@@ -1063,7 +1063,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_operations_worker_inventory_check() {
-        let _db = setup_test_db().await;
+        let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
             // Setup required tables if missing in the unit test db context
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
@@ -1109,7 +1109,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_operations_worker_predictive_inventory_check() {
-        let _db = setup_test_db().await;
+        let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
             // Setup required tables if missing
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
@@ -1162,7 +1162,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_customer_success_worker_draft_reply() {
-        let _db = setup_test_db().await;
+        let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
 
