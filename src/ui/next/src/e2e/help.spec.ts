@@ -2,13 +2,26 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Help Center', () => {
     test('renders help center and navigates to an article', async ({ page }) => {
+        // Intercept API call to return mock data
+        await page.route('/api/help', async route => {
+            const json = [
+                { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started" }
+            ];
+            await route.fulfill({ json });
+        });
+
+        await page.route('/api/videos', async route => {
+            const json = [];
+            await route.fulfill({ json });
+        });
+
         await page.goto('/help');
 
         // Verify Help Center title
         await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
 
         // Search for an article
-        const searchInput = page.getByPlaceholder('Search for help articles...');
+        const searchInput = page.getByPlaceholder('Search for help articles and videos...');
         await searchInput.fill('Getting Started');
 
         // Click on the article

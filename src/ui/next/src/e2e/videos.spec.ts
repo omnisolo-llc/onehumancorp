@@ -2,6 +2,15 @@ import { test, expect } from '@playwright/test';
 
 test.describe('In-App Video Tutorials', () => {
     test('renders videos tab, fetches videos, and opens/closes the modal player', async ({ page }) => {
+        // Intercept API call to return mock data
+        await page.route('/api/videos', async route => {
+            const json = [
+                { id: 1, title: 'How to set up your first store easily', duration: '2:15' },
+                { id: 2, title: 'Adding staff to your account', duration: '1:30' }
+            ];
+            await route.fulfill({ json });
+        });
+
         // Go to a page where HelpWidget is available (layout.tsx ensures it's on pages like dashboard)
         await page.goto('/dashboard'); // Use the dashboard or any public page where layout applies
 
@@ -20,7 +29,6 @@ test.describe('In-App Video Tutorials', () => {
         await videosTabButton.click();
 
         // Wait for the videos to be fetched and rendered
-        // The API returns 10 videos. We'll wait for at least one to show up.
         // The videos are rendered with titles, like 'How to set up your first store easily'
         const firstVideoTitle = page.locator('p', { hasText: 'How to set up your first store easily' });
         await expect(firstVideoTitle).toBeVisible();
