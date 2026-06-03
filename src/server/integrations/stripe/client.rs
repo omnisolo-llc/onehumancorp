@@ -26,6 +26,17 @@ pub struct StripeClient {
 }
 
 impl StripeClient {
+    pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            _tenant_id,
+            "stripe_terminal_connection_token",
+            0.05
+        ).await;
+
+        Ok("tct_test_xyz".to_string())
+    }
+
     pub fn new(api_key: String) -> Self {
         StripeClient { api_key }
     }

@@ -196,6 +196,96 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+"payment_intent.succeeded" => {
+            let obj = &payload.data.object;
+
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+
+            let is_terminal = obj.get("payment_method_details")
+                .and_then(|m| m.get("card_present"))
+                .is_some() || obj.get("transfer_data").is_some();
+
+            if is_terminal {
+                if let Some(tenant_id) = tenant_id_opt {
+                    let product_id = obj.get("metadata")
+                        .and_then(|m| m.get("product_id"))
+                        .and_then(|id| id.as_str())
+                        .unwrap_or("");
+                    let quantity: i32 = obj.get("metadata")
+                        .and_then(|m| m.get("quantity"))
+                        .and_then(|q| q.as_str())
+                        .and_then(|q| q.parse().ok())
+                        .unwrap_or(1);
+
+                    let order_id = obj.get("metadata")
+                        .and_then(|m| m.get("order_id"))
+                        .and_then(|id| id.as_str())
+                        .unwrap_or("");
+
+                    if !product_id.is_empty() {
+                        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                        if let Ok(mut conn) = webhook_state.rate_limiter.get_connection().await {
+                            let acquired: bool = redis::cmd("SET")
+                                .arg(&lock_key)
+                                .arg("1")
+                                .arg("NX")
+                                .arg("EX")
+                                .arg(10) // 10 seconds lock
+                                .query_async(&mut conn)
+                                .await
+                                .unwrap_or(false);
+
+                            if acquired {
+                                let mut tx = match webhook_state.db.pool.begin().await {
+                                    Ok(t) => t,
+                                    Err(e) => {
+                                        tracing::error!("Failed to begin transaction: {}", e);
+                                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                                    }
+                                };
+
+                                if let Err(e) = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&mut *tx)
+                                    .await {
+                                    tracing::error!("Failed to update inventory: {}", e);
+                                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                                }
+
+                                if !order_id.is_empty() {
+                                    if let Err(e) = sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1 AND tenant_id = $2")
+                                        .bind(order_id)
+                                        .bind(tenant_id)
+                                        .execute(&mut *tx)
+                                        .await {
+                                        tracing::error!("Failed to update order status: {}", e);
+                                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                                    }
+                                }
+
+                                if let Err(e) = tx.commit().await {
+                                    tracing::error!("Failed to commit transaction: {}", e);
+                                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                                }
+
+                                // Release lock
+                                let _: redis::RedisResult<()> = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await;
+
+                                // In a real app we'd publish an inventory mesh event here
+                            } else {
+                                tracing::warn!("Failed to acquire inventory lock for {}", product_id);
+                                return StatusCode::TOO_MANY_REQUESTS.into_response();
+                            }
+                        }
+                    }
+                }
+            }
+            StatusCode::OK.into_response()
+        },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("metadata")

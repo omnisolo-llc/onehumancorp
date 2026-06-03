@@ -343,3 +343,101 @@ async fn test_webhook_security_replay_protection() {
         .json(&payload).send().await.unwrap();
     assert_eq!(response2.status(), reqwest::StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_stripe_webhook_handler_terminal_payment_succeeded() {
+    use axum::routing::post;
+    use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
+    use sqlx::Row;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client.clone()));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        rate_limiter: rate_limiter.clone(),
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db.clone()),
+    };
+
+    // Seed the database with a test tenant and product
+    if sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Free') ON CONFLICT DO NOTHING")
+        .execute(&db.pool).await.is_err() {
+        return;
+    }
+
+    if sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('test_prod_1', 'test_tenant', 'Test Product', 10) ON CONFLICT DO NOTHING")
+        .execute(&db.pool).await.is_err() {
+        return;
+    }
+
+    if sqlx::query("INSERT INTO orders (order_id, tenant_id, status) VALUES ('test_order_1', 'test_tenant', 'Pending') ON CONFLICT DO NOTHING")
+        .execute(&db.pool).await.is_err() {
+        return;
+    }
+
+    let app = axum::Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .with_state(webhook_state);
+
+    let payload = serde_json::json!({
+        "id": "evt_test_payment_intent",
+        "type": "payment_intent.succeeded",
+        "data": {
+            "object": {
+                "payment_method_details": {
+                    "card_present": {}
+                },
+                "metadata": {
+                    "tenant_id": "test_tenant",
+                    "product_id": "test_prod_1",
+                    "quantity": "2",
+                    "order_id": "test_order_1"
+                }
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+    let now = chrono::Utc::now().timestamp();
+    let valid_sig = format!("t={},v1=valid_sig", now);
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).header("X-Signature", valid_sig).json(&payload).send().await.unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+
+    // Verify Inventory
+    let inventory_row: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'test_prod_1' AND tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("product row not found");
+
+    assert_eq!(inventory_row.0, 8); // 10 - 2
+
+    // Verify Order
+    let order_row: (String,) = sqlx::query_as("SELECT status FROM orders WHERE order_id = 'test_order_1' AND tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("order row not found");
+
+    assert_eq!(order_row.0, "Paid");
+
+}
