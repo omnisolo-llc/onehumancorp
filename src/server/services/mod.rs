@@ -9,6 +9,7 @@ pub mod chat;
 pub mod b2b;
 pub mod integration;
 pub mod ops;
+pub mod tax;
 pub mod mcp;
 pub mod org;
 pub mod scheduler;
