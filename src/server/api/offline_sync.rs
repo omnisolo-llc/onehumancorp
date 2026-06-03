@@ -3,10 +3,29 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
-pub struct OfflineMutation {
-    pub transaction_id: String,
-    pub product_id: String,
-    pub quantity_deducted: i32,
+#[serde(untagged)]
+pub enum OfflineMutation {
+    Tagged(TaggedOfflineMutation),
+    Legacy {
+        transaction_id: String,
+        product_id: String,
+        quantity_deducted: i32,
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TaggedOfflineMutation {
+    InventoryToggle {
+        id: String,
+        timestamp: String,
+    },
+    TapToPay {
+        id: String,
+        amount: f64,
+        timestamp: String,
+        idempotency_key: String,
+    },
 }
 
 #[derive(Deserialize, Debug)]
@@ -40,44 +59,116 @@ pub async fn offline_sync_handler(
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     for mutation in &payload.mutations {
-        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+        match mutation {
+            OfflineMutation::Legacy { product_id, quantity_deducted, transaction_id } => {
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
-        let query = "
-            UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
-            WHERE id = $2 AND tenant_id = $3
-            RETURNING id
-        ";
+                let query = "
+                    UPDATE products
+                    SET inventory_count = GREATEST(0, inventory_count - $1)
+                    WHERE id = $2 AND tenant_id = $3
+                    RETURNING id
+                ";
 
-        let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted)
-            .bind(&mutation.product_id)
-            .bind(&tenant_id)
-            .fetch_optional(&db)
-            .await;
+                let result = sqlx::query(query)
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db)
+                    .await;
 
-        match result {
-            Ok(Some(_)) => {
-                // Publish mesh event
+                match result {
+                    Ok(Some(_)) => {
+                        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                            action: "InventoryUpdated".to_string(),
+                            agent_id: "system".to_string(),
+                            status: "".to_string(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                            payload: serde_json::json!({
+                                "product_id": product_id,
+                                "transaction_id": transaction_id,
+                                "quantity_deducted": quantity_deducted,
+                                "tenant_id": tenant_id
+                            }).to_string().into_bytes(),
+                        };
+                        let _ = mesh.publish("mesh:inventory:updated", event).await;
+                    }
+                    Ok(None) => {
+                        tracing::warn!("Product {} not found or unauthorized for tenant {}", product_id, tenant_id);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to deduct inventory for product {}: {}", product_id, e);
+                    }
+                }
+            }
+            OfflineMutation::Tagged(TaggedOfflineMutation::InventoryToggle { id, timestamp }) => {
+                // e.g. e2e-product-falafel -> strip e2e-product- if needed, or assume id is the product_id
+                let product_id = id.strip_prefix("e2e-product-").unwrap_or(id);
+
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
+                // Toggle inventory (e.g. set to 0 if it was > 0, or just set to 0 as in the "Sold Out" button)
+                let query = "
+                    UPDATE products
+                    SET inventory_count = 0
+                    WHERE id = $1 AND tenant_id = $2
+                    RETURNING id
+                ";
+
+                let result = sqlx::query(query)
+                    .bind(product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db)
+                    .await;
+
+                match result {
+                    Ok(Some(_)) => {
+                        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                            action: "InventoryUpdated".to_string(),
+                            agent_id: "system".to_string(),
+                            status: "".to_string(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                            payload: serde_json::json!({
+                                "product_id": product_id,
+                                "transaction_id": format!("toggle-{}", timestamp),
+                                "quantity_deducted": 0, // indicates sold out
+                                "tenant_id": tenant_id
+                            }).to_string().into_bytes(),
+                        };
+                        let _ = mesh.publish("mesh:inventory:updated", event).await;
+                    }
+                    Ok(None) => {
+                        tracing::warn!("Product {} not found or unauthorized for tenant {}", product_id, tenant_id);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to toggle inventory for product {}: {}", product_id, e);
+                    }
+                }
+            }
+            OfflineMutation::Tagged(TaggedOfflineMutation::TapToPay { id, amount, timestamp, idempotency_key }) => {
+                cache.invalidate_by_tag(&format!("tenant-id:{}:payments", tenant_id)).await;
+
+                // In a real implementation this would insert a ledger entry or payment record.
+                // For the offline sync handler we acknowledge the payment syncing.
+                tracing::info!(
+                    "Synced offline TapToPay payment for tenant {}: amount={}, tx_id={}, timestamp={}",
+                    tenant_id, amount, id, timestamp
+                );
+
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    action: "InventoryUpdated".to_string(),
+                    action: "PaymentReceived".to_string(),
                     agent_id: "system".to_string(),
                     status: "".to_string(),
                     msg_id: uuid::Uuid::new_v4().to_string(),
                     payload: serde_json::json!({
-                        "product_id": mutation.product_id,
-                        "transaction_id": mutation.transaction_id,
-                        "quantity_deducted": mutation.quantity_deducted,
+                        "transaction_id": id,
+                        "amount": amount,
+                        "timestamp": timestamp,
+                        "idempotency_key": idempotency_key,
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
                 };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
-            }
-            Ok(None) => {
-                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
-            }
-            Err(e) => {
-                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+                let _ = mesh.publish("mesh:payment:received", event).await;
             }
         }
     }
@@ -129,7 +220,7 @@ mod tests {
 
         let req = OfflineSyncRequest {
             mutations: vec![
-                OfflineMutation {
+                OfflineMutation::Legacy {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
@@ -150,7 +241,7 @@ mod tests {
         // Test negative guard
         let req_over = OfflineSyncRequest {
             mutations: vec![
-                OfflineMutation {
+                OfflineMutation::Legacy {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
-import { OneTapReferral } from "../components/OneTapReferral";
+import { OneTapReferral } from "../../components/OneTapReferral";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
