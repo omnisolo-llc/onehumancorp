@@ -2,6 +2,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "gusto_payroll.rs",
         "autodream.rs",
         "billing_api.rs",
         "billing_webhook.rs",
@@ -28,6 +29,7 @@ rust_library(
     name = "server_api",
     srcs = [
         "bazel_lib.rs",
+        "gusto_payroll.rs",
         "autodream.rs",
         "billing_api.rs",
         "billing_webhook.rs",
@@ -64,6 +66,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server:server_lib",
+        "//src/server/integrations/gusto:server_integrations_gusto",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",

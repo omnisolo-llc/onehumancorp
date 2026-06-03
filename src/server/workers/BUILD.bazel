@@ -2,6 +2,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "gusto_payroll.rs",
         "agent_memory_pipeline.rs",
         "competitor_audit.rs",
         "department_workers.rs",
@@ -16,6 +17,7 @@ rust_library(
     name = "server_workers",
     srcs = [
         "bazel_lib.rs",
+        "gusto_payroll.rs",
         "agent_memory_pipeline.rs",
         "competitor_audit.rs",
         "department_workers.rs",
@@ -31,6 +33,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server:server_lib",
+        "//src/server/integrations/gusto:server_integrations_gusto",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
