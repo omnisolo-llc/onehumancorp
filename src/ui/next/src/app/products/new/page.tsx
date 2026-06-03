@@ -115,7 +115,7 @@ export default function AutoCatalogPage() {
         </h1>
       </div>
 
-      {!rawImage && !productData && (
+      {!loading && !productData && (
         <div className="flex-1 flex flex-col items-center justify-center">
           <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="text-4xl mb-2">📷</div>
@@ -136,7 +136,23 @@ export default function AutoCatalogPage() {
         </div>
       )}
 
-      {(rawImage || productData) && (
+      {loading && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-6">
+          <div className="w-full aspect-square bg-gray-200 rounded-2xl animate-pulse flex items-center justify-center">
+            <div className="text-4xl animate-bounce">✨</div>
+          </div>
+          <div className="w-full space-y-4">
+            <div className="h-6 bg-gray-200 rounded-md animate-pulse w-3/4"></div>
+            <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full"></div>
+            <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/3"></div>
+          </div>
+          <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">
+            AutoDream AI is analyzing your photo...
+          </p>
+        </div>
+      )}
+
+      {!loading && (
         <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
           <div className="w-full flex flex-col gap-4">
             <div className="w-full aspect-square bg-gray-200 rounded-2xl overflow-hidden relative shadow-md">
@@ -212,165 +228,147 @@ export default function AutoCatalogPage() {
             )}
           </div>
 
-          {productData && (
-            <div
-              className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
-              style={{
-                background: "rgba(255, 255, 255, 0.65)",
-                backdropFilter: "blur(30px) saturate(210%)",
-                border: "1px solid rgba(255, 255, 255, 0.4)",
-              }}
-            >
-              <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                <span>✨</span> AI Generated
-              </div>
-              <div>
+          {/* Glassmorphism Card */}
+          <div
+            className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
+            style={{
+              background: "rgba(255, 255, 255, 0.65)",
+              backdropFilter: "blur(30px) saturate(210%)",
+              border: "1px solid rgba(255, 255, 255, 0.4)",
+            }}
+          >
+            <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+              <span>✨</span> AI Generated
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Title
+              </label>
+              <input
+                type="text"
+                value={productData.title}
+                onChange={(e) =>
+                  setProductData({ ...productData, title: e.target.value })
+                }
+                className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Description
+              </label>
+              <textarea
+                value={productData.description}
+                onChange={(e) =>
+                  setProductData({
+                    ...productData,
+                    description: e.target.value,
+                  })
+                }
+                rows={4}
+                className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Title
+                  Price
                 </label>
-                <input
-                  type="text"
-                  value={productData.title}
-                  onChange={(e) =>
-                    setProductData({ ...productData, title: e.target.value })
-                  }
-                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={productData.description}
-                  onChange={(e) =>
-                    setProductData({
-                      ...productData,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={4}
-                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                    Price
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-gray-500 font-semibold">
-                      $
-                    </span>
-                    <input
-                      type="text"
-                      value={productData.price}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData,
-                          price: e.target.value,
-                        })
-                      }
-                      className="w-full bg-white/50 border border-white/60 rounded-[8px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                    Category
-                  </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500 font-semibold">
+                    $
+                  </span>
                   <input
                     type="text"
-                    value={productData.category}
+                    value={productData.price}
                     onChange={(e) =>
-                      setProductData({
-                        ...productData,
-                        category: e.target.value,
-                      })
+                      setProductData({ ...productData, price: e.target.value })
                     }
-                    className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full bg-white/50 border border-white/60 rounded-[8px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
               </div>
-              <div className="mt-4 border-t border-white/40 pt-4">
-                <label className="flex items-center cursor-pointer">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={productData?.isSubscription || false}
-                      onChange={(e) =>
-                        setProductData({
-                          ...productData!,
-                          isSubscription: e.target.checked,
-                        })
-                      }
-                    />
-                    <div
-                      className={`block w-10 h-6 rounded-full transition-colors ${productData?.isSubscription ? "bg-blue-500" : "bg-gray-300"}`}
-                    ></div>
-                    <div
-                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? "transform translate-x-4" : ""}`}
-                    ></div>
-                  </div>
-                  <div className="ml-3 text-gray-800 font-semibold text-sm">
-                    Offer as Subscription
-                  </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  Category
                 </label>
-
-                {productData?.isSubscription && (
-                  <div className="mt-4 flex gap-4 animate-fade-in-up">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Deliver every
-                      </label>
-                      <select
-                        value={productData.subscriptionInterval || "Month"}
-                        onChange={(e) =>
-                          setProductData({
-                            ...productData,
-                            subscriptionInterval: e.target.value,
-                          })
-                        }
-                        className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      >
-                        <option value="Week">Week</option>
-                        <option value="Month">Month</option>
-                        <option value="Year">Year</option>
-                      </select>
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                        Discount (%)
-                      </label>
-                      <input
-                        type="text"
-                        value={productData.subscriptionDiscount || "10"}
-                        onChange={(e) =>
-                          setProductData({
-                            ...productData,
-                            subscriptionDiscount: e.target.value,
-                          })
-                        }
-                        className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                )}
+                <input
+                  type="text"
+                  value={productData.category}
+                  onChange={(e) =>
+                    setProductData({ ...productData, category: e.target.value })
+                  }
+                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                />
               </div>
             </div>
-          )}
+            <div className="mt-4 border-t border-white/40 pt-4">
+              <label className="flex items-center cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={productData?.isSubscription || false}
+                    onChange={(e) =>
+                      setProductData({
+                        ...productData!,
+                        isSubscription: e.target.checked,
+                      })
+                    }
+                  />
+                  <div
+                    className={`block w-10 h-6 rounded-full transition-colors ${productData?.isSubscription ? "bg-blue-500" : "bg-gray-300"}`}
+                  ></div>
+                  <div
+                    className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? "transform translate-x-4" : ""}`}
+                  ></div>
+                </div>
+                <div className="ml-3 text-gray-800 font-semibold text-sm">
+                  Offer as Subscription
+                </div>
+              </label>
 
-          {loading && !productData && (
-            <div className="w-full space-y-4 mt-4">
-              <div className="h-6 bg-gray-200 rounded-md animate-pulse w-3/4"></div>
-              <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full"></div>
-              <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/3"></div>
-              <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">
-                AutoDream AI is analyzing your photo...
-              </p>
+              {productData?.isSubscription && (
+                <div className="mt-4 flex gap-4 animate-fade-in-up">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                      Deliver every
+                    </label>
+                    <select
+                      value={productData.subscriptionInterval || "Month"}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          subscriptionInterval: e.target.value,
+                        })
+                      }
+                      className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    >
+                      <option value="Week">Week</option>
+                      <option value="Month">Month</option>
+                      <option value="Year">Year</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                      Discount (%)
+                    </label>
+                    <input
+                      type="text"
+                      value={productData.subscriptionDiscount || "10"}
+                      onChange={(e) =>
+                        setProductData({
+                          ...productData,
+                          subscriptionDiscount: e.target.value,
+                        })
+                      }
+                      className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           <button
             onClick={handlePublish}
