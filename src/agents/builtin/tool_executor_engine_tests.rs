@@ -4,6 +4,13 @@ use tool_executor_engine::ToolExecutionEngine;
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use serde_json::json;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     #[tokio::test(flavor = "current_thread", start_paused = true)]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
@@ -36,13 +43,6 @@ mod tests {
         assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
-
-    use super::*;
-    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
-    use serde_json::json;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     struct DummyToolExecutor {
         result: Result<String, ToolError>,
