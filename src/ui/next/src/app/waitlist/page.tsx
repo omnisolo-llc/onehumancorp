@@ -1,19 +1,27 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function WaitlistPage() {
+import { Suspense } from 'react';
+
+function WaitlistContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [position, setPosition] = useState(0);
+  const [referralCode, setReferralCode] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
+
+    const ref = searchParams.get('ref');
 
     try {
       const response = await fetch('/api/v1/growth/waitlist', {
@@ -21,13 +29,16 @@ export default function WaitlistPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, referral_code: ref }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to join waitlist. Please try again.');
       }
 
+      const data = await response.json();
+      setPosition(data.position || 0);
+      setReferralCode(data.referral_code || '');
       setIsSuccess(true);
     } catch (error: any) {
       setErrorMessage(error.message || 'An error occurred.');
@@ -50,17 +61,54 @@ export default function WaitlistPage() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center w-full max-w-2xl mx-auto">
         {isSuccess ? (
-          <div className="w-full bg-white/65 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 p-8 flex flex-col items-center">
+          <div className="w-full bg-white/65 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 p-8 flex flex-col items-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mb-4 text-green-600">
-              ✓
+              🎉
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're on the list!</h2>
             <p className="text-gray-600 mb-6">
-              Thanks for joining. We'll let you know as soon as OneHumanCorp is ready for you.
+              You are <strong className="text-gray-900">#{position.toLocaleString()}</strong> in line.
             </p>
+
+            <div className="w-full p-6 bg-gray-50 border border-gray-100 rounded-xl mb-6">
+              <h3 className="font-semibold text-gray-800 mb-2">Skip the Line</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Share your unique link below. Each friend who joins moves you up 10 spots!
+              </p>
+
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-2 mb-4">
+                <input
+                  type="text"
+                  readOnly
+                  value={`https://ohc.app/waitlist?ref=${referralCode}`}
+                  className="flex-1 bg-transparent text-sm text-gray-600 outline-none px-2 font-mono"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://ohc.app/waitlist?ref=${referralCode}`);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-semibold hover:bg-indigo-100 transition-colors"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just joined the waitlist for OneHumanCorp! The AI platform for small business. Join here: https://ohc.app/waitlist?ref=${referralCode}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-black text-white rounded-xl font-medium shadow-sm hover:bg-gray-800 transition-all hover:-translate-y-0.5"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                Share on X
+              </a>
+            </div>
+
             <button
               onClick={() => setIsSuccess(false)}
-              className="px-6 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-black transition-colors"
+              className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
             >
               Sign up another email
             </button>
@@ -109,4 +157,12 @@ export default function WaitlistPage() {
       </main>
     </div>
   );
+}
+
+export default function WaitlistPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+            <WaitlistContent />
+        </Suspense>
+    );
 }

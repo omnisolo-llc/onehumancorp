@@ -129,6 +129,7 @@ rust_library(
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
+        "//src/server/domain:server_domain",
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
         "//src/server/services/docs:server_services_docs",

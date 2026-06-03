@@ -797,10 +797,15 @@ message WaitlistEntry {
   string id = 1;
   string email = 2;
   int64 created_at_unix = 3;
+  string referral_code = 4;
+  string referred_by = 5;
+  int32 referral_count = 6;
+  int32 position = 7;
 }
 
 message CreateWaitlistRequest {
   string email = 1;
+  string referral_code = 2;
 }
 
 message WaitlistResponse {

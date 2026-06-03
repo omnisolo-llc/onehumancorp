@@ -129,6 +129,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/waitlist", post(handle_waitlist_signup))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -223,6 +224,52 @@ pub struct TeamInvitesResponse {
 struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WaitlistSignupRequest {
+    pub email: String,
+    pub referral_code: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WaitlistSignupResponse {
+    pub id: String,
+    pub email: String,
+    pub position: i32,
+    pub referral_code: String,
+}
+
+async fn handle_waitlist_signup(
+    Extension(state): Extension<GrowthState>,
+    Json(payload): Json<WaitlistSignupRequest>,
+) -> Result<Json<WaitlistSignupResponse>, StatusCode> {
+    use crate::services::growth::service::MyGrowthService;
+    use ::server_ohc::orchestration::CreateWaitlistRequest;
+    use tonic::Request;
+
+    let growth_service = MyGrowthService::new(state.pool.clone(), state.hub.clone());
+
+    let grpc_req = Request::new(CreateWaitlistRequest {
+        email: payload.email,
+        referral_code: payload.referral_code.unwrap_or_default(),
+    });
+
+    match ::server_ohc::orchestration::growth_service_server::GrowthService::create_waitlist_entry(&growth_service, grpc_req).await {
+        Ok(res) => {
+            let entry = res.into_inner();
+            Ok(Json(WaitlistSignupResponse {
+                id: entry.id,
+                email: entry.email,
+                position: entry.position,
+                referral_code: entry.referral_code,
+            }))
+        }
+        Err(e) => {
+            tracing::error!("Waitlist signup failed: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn handle_social_post(

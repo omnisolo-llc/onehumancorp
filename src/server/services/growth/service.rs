@@ -564,13 +564,41 @@ impl GrowthService for MyGrowthService {
             return Err(Status::invalid_argument("email is required"));
         }
         
+        // Generate a random referral code
+        use rand::RngCore;
+        let mut rng = rand::thread_rng();
+        let bytes: [u8; 4] = rng.next_u32().to_le_bytes();
+        let my_referral_code = hex::encode(bytes);
+
+        let mut wl = self.waitlist.write().unwrap();
+
+        // Handle referral
+        let mut referred_by = String::new();
+        if !req.referral_code.is_empty() {
+            for entry in wl.iter_mut() {
+                if entry.referral_code == req.referral_code {
+                    entry.referral_count += 1;
+                    // Bump up the referrer's position slightly
+                    entry.position = std::cmp::max(1, entry.position - 10);
+                    referred_by = entry.id.clone();
+                    break;
+                }
+            }
+        }
+
+        // New position is at the end of the line
+        let base_position = wl.len() as i32 + 1000;
+
         let entry = WaitlistEntry {
             id: format!("wl-{}", Utc::now().timestamp()),
             email: req.email,
             created_at_unix: Utc::now().timestamp(),
+            referral_code: my_referral_code,
+            referred_by,
+            referral_count: 0,
+            position: base_position,
         };
         
-        let mut wl = self.waitlist.write().unwrap();
         wl.push(entry.clone());
         
         Ok(Response::new(entry))
