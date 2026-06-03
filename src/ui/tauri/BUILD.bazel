@@ -29,6 +29,51 @@ genrule(
 TMP_UI=$$(mktemp -d)
 cp -R src/ui/tauri/tauri-ui/* $$TMP_UI/
 cd $$TMP_UI
+cat << 'CONFIG_EOF' > vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: './index.html',
+        winBack: './win-back.html'
+      },
+      output: {
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`
+      }
+    }
+  }
+})
+CONFIG_EOF
+
+cat << 'CONFIG_EOF' > tailwind.config.js
+export default {
+  content: [
+    "./index.html",
+    "./win-back.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "../src/components/**/*.{js,ts,jsx,tsx}"
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+CONFIG_EOF
+
+cat << 'CONFIG_EOF' > postcss.config.js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+CONFIG_EOF
+
 npm install
 npm run build
 mkdir -p $(@D)/tauri-ui
