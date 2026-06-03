@@ -64,12 +64,7 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await expect(page.locator('pre')).toContainText('⚡ Powered by OHC');
 
     // 8. Test sending the campaign
-    // Use an evaluate click to bypass any weird z-index issues lingering
-    await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll('button'));
-        const sendBtn = btns.find(b => b.textContent && b.textContent.includes('Send to 34'));
-        if (sendBtn) sendBtn.click();
-    });
+    await page.getByRole('button', { name: 'Send to 34 Inactive Customers' }).click({ force: true });
 
     // Verify success message
     await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 5000 });
