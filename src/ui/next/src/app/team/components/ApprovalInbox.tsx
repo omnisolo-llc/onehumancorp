@@ -445,29 +445,17 @@ export default function ApprovalInbox({
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         <div className="bg-white p-2 rounded border border-blue-100">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-                            Suggested Price
-                          </span>
-                          <span className="font-semibold text-gray-800">
-                            ${req.payload.suggested_price}
-                          </span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Suggested Price</span>
+                          <span className="font-semibold text-gray-800">${req.payload.suggested_price}</span>
                         </div>
                         <div className="bg-white p-2 rounded border border-blue-100">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-                            Suggested Time
-                          </span>
-                          <span className="font-semibold text-gray-800">
-                            {req.payload.suggested_time}
-                          </span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Suggested Time</span>
+                          <span className="font-semibold text-gray-800">{req.payload.suggested_time}</span>
                         </div>
                       </div>
                       <div className="bg-white p-2 rounded border border-blue-100">
-                        <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">
-                          Scope of Work
-                        </span>
-                        <span className="text-xs text-gray-800">
-                          {req.payload.scope}
-                        </span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block mb-1">Scope of Work</span>
+                          <span className="text-xs text-gray-800">{req.payload.scope}</span>
                       </div>
                     </div>
                   )}
