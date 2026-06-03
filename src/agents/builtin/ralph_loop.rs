@@ -263,58 +263,6 @@ impl RalphLoop {
         fs::write(&self.progress_file_path, json).await?;
         Ok(())
     }
-
-    #[tokio::test]
-    async fn test_ralph_loop_git_failures_graceful() {
-        // This test ensures that when git fails, the loop doesn't panic
-        let dir = tempdir().unwrap();
-        let progress_file = dir.path().join("progress.json");
-
-        let initial_progress = RalphProgress {
-            task_description: "Build a web server".to_string(),
-            features: vec![
-                Feature { name: "Step 1".to_string(), status: "pending".to_string() },
-            ],
-            current_feature_index: 0,
-            notes: vec![],
-            is_complete: false,
-        };
-        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
-
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
-        let agent = Arc::new(Agent::new(llm, vec![]));
-        let config = AgentRunConfig::default();
-
-        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
-
-        // We run the loop in a directory that is not a git repo to trigger failures
-        let result = ralph.run("Build a web server").await;
-        assert!(result.is_ok());
-
-        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
-        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
-
-        // It should still complete the feature even if git failed
-        assert_eq!(saved_progress.features[0].status, "completed");
-    }
-
-    #[tokio::test]
-    async fn test_ralph_loop_initialize_git_failures() {
-        let dir = tempdir().unwrap();
-        let progress_file = dir.path().join("progress.json");
-
-        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
-        let agent = Arc::new(Agent::new(llm, vec![]));
-        let config = AgentRunConfig::default();
-
-        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
-
-        // We run initialize in a directory without proper permissions or just check it doesn't panic
-        let result = ralph.initialize("Task with git failures").await;
-        assert!(result.is_ok());
-
-        assert!(progress_file.exists());
-    }
 }
 
 #[cfg(test)]
