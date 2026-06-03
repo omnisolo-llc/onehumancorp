@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Autonomous Predictive Inventory E2E', () => {
-    test('Non-technical user should view AI restock alerts and stock status', async ({ page, authenticatedUser }) => {
+    test('Non-technical user should view AI restock alerts and stock status', async ({ page }) => {
         // Navigate using relative URL
         await page.goto('/inventory');
 
