@@ -77,10 +77,12 @@ export default function Dashboard() {
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
-    const updateOfflineStatus = () => {
+    const updateOfflineStatus = async () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        const { getOfflineQueueCount } = await import('@/lib/indexeddb');
+        const count = await getOfflineQueueCount();
+        setOfflineQueueCount(count);
       } catch {
         setOfflineQueueCount(0);
       }
@@ -129,12 +131,12 @@ export default function Dashboard() {
     loadDashboard();
     window.addEventListener("online", updateOfflineStatus);
     window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("offline-queue-updated", updateOfflineStatus);
 
     return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
+      window.removeEventListener("offline-queue-updated", updateOfflineStatus);
     };
   }, []);
 

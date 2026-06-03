@@ -5,10 +5,12 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
+import { OfflineSyncHandler } from "./OfflineSyncHandler";
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
   description: 'Automated storefront builder',
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -23,6 +25,7 @@ export default function RootLayout({
         <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
       </head>
       <body>
+        <OfflineSyncHandler />
         <TooltipProvider>
                   <WalkthroughProvider>
             {children}

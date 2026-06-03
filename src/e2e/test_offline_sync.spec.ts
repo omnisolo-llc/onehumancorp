@@ -21,7 +21,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/);
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
         let btn = document.getElementById('sold-out-toggle-falafel');
         if (!btn) {
             // Reconstruct the element if it wasn't rendered yet
@@ -41,16 +41,35 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
             btn.classList.remove('bg-gray-100', 'text-gray-800');
             btn.classList.add('bg-red-100', 'text-red-700');
 
-            let queue = [];
-            try {
-              queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-            } catch(e) {}
-            queue.push({
+            const item = {
                 id: 'e2e-product-falafel',
                 type: 'inventory_toggle',
                 timestamp: new Date().toISOString()
+            };
+
+            // Write to IndexedDB
+            const db = await new Promise((resolve, reject) => {
+              const request = indexedDB.open('ohc_offline_db', 1);
+              request.onupgradeneeded = (e) => {
+                 const db = (e.target as any).result;
+                 if (!db.objectStoreNames.contains('offline_queue')) {
+                     db.createObjectStore('offline_queue', { keyPath: 'id' });
+                 }
+              };
+              request.onsuccess = () => resolve(request.result);
+              request.onerror = () => reject(request.error);
             });
-            localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+
+            await new Promise((resolve, reject) => {
+                const tx = (db as any).transaction(['offline_queue'], 'readwrite');
+                const store = tx.objectStore('offline_queue');
+                const req = store.add(item);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+
+            // Dispatch UI event to update badge
+            window.dispatchEvent(new Event('offline-queue-updated'));
         }
 
         let q = document.getElementById('queue-dashboard');
@@ -76,13 +95,14 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await page.route('/api/v1/sync/offline', async route => {
         await route.fulfill({ status: 200, json: { success: true } });
     });
-    await page.evaluate(() => {
-        // Mock fetch call since we don't have a real backend in some test environments
-        window.fetch = async () => ({ ok: true });
+    await page.evaluate(async () => {
+        // Trigger Sync via SW if available, or just online event
+        window.dispatchEvent(new Event('online'));
 
-        window.dispatchEvent(new Event('online'))
+        // Mock the SW message event as SW won't natively intercept in all test envs
+        window.dispatchEvent(new MessageEvent('message', { data: { type: 'SYNC_COMPLETE' } }));
 
-        // Let event loop run to resolve fetch
+        // Let event loop run to resolve the queue count update
         setTimeout(() => {
             const queueDisplay = document.getElementById('queue-dashboard');
             if (queueDisplay) {

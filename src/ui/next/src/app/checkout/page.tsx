@@ -126,7 +126,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
-              onClick={() => {
+              onClick={async () => {
                 const amount = prompt("Enter amount to charge:");
                 if (!amount) return;
 
@@ -134,19 +134,29 @@ export default function CheckoutPage() {
                   alert(`Payment of ${amount} successful!`);
                   router.push('/dashboard');
                 } else {
-                  let queue = [];
-                  try {
-                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                  } catch (e) {}
+                  const { addToOfflineQueue } = await import('@/lib/indexeddb');
 
-                  queue.push({
-                    id: 'txn_' + Date.now(),
+                  const newItem = {
+                    id: 'txn_' + Date.now() + '_' + Math.random().toString(36).substring(7),
                     amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
-                  });
-                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                  };
+
+                  try {
+                      await addToOfflineQueue(newItem);
+                      // Trigger a sync registration if possible so it fires when online
+                      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                          const registration = await navigator.serviceWorker.ready;
+                          await (registration as any).sync.register('ohc-offline-sync');
+                      }
+                  } catch (e) {
+                      console.error("Failed to add to IndexedDB", e);
+                  }
+
+                  // Also emit event so UI can update badge
+                  window.dispatchEvent(new Event('offline-queue-updated'));
                   alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
                   router.push('/dashboard');
                 }
