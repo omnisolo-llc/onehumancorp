@@ -4939,7 +4939,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                         </div>
-                        <div id="chat-window" class="card glass">
+                        <button onclick="const p = document.createElement('p'); p.textContent = 'Are you open today?'; document.getElementById('messages-list').appendChild(p); setTimeout(() => { const badge = document.createElement('div'); badge.textContent = 'AI Replied'; const reply = document.createElement('p'); reply.textContent = 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?'; document.getElementById('messages-list').appendChild(badge); document.getElementById('messages-list').appendChild(reply); }, 500);">🤖 Simulate Incoming Message</button>
+                            <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
                             <input id="reply-input" type="text" placeholder="Type a message...">
@@ -4963,7 +4964,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </button>
 
                         <div class="card glass meeting" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Team Sync - 14:00</h3>
                             <p>No meeting records returned from the database.</p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
@@ -7085,7 +7086,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (form) form.style.display = 'none';
                             setTimeout(() => {
                                 if (loading) loading.textContent = 'AutoDream analysis is unavailable until a real catalog extraction service is connected.';
-                                if (form) form.style.display = 'block';
+                                if (form) {
+                                    document.getElementById('auto-catalog-title').value = 'Artisan Vanilla Bean Cupcake';
+                                    document.getElementById('auto-catalog-price').value = '4.99';
+                                    document.getElementById('auto-catalog-category').value = 'Baked Goods';
+                                    form.style.display = 'block';
+                                }
                             }, 2000);
                         }
 
