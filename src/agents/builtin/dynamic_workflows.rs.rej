@@ -1,0 +1,11 @@
+--- src/agents/builtin/dynamic_workflows.rs
++++ src/agents/builtin/dynamic_workflows.rs
+@@ -10,7 +10,7 @@
+ #[derive(Debug, Clone)]
+ pub struct DynamicWorkflow {
+-    script: String,
++    _script: String,
+ }
+
+ impl DynamicWorkflow {
+     pub fn new(script: &str) -> Self {

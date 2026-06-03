@@ -6,7 +6,7 @@
 /// - Up to 1,000 agents total per run.
 
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, Semaphore};
+use tokio::sync::{mpsc, Semaphore};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
@@ -78,7 +78,10 @@ impl DynamicWorkflow {
         while let Some(res) = rx.recv().await {
             match res {
                 Ok(r) => results.push(r),
-                Err(e) => return Err(e),
+                Err(e) => {
+                    for handle in &handles { handle.abort(); }
+                    return Err(e);
+                }
             }
         }
 
