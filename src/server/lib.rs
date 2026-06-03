@@ -7085,9 +7085,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (form) form.style.display = 'none';
                             setTimeout(() => {
                                 if (loading) loading.style.display = 'none';
-                                document.getElementById('auto-catalog-title').value = 'Artisan Vanilla Bean Cupcake';
-                                document.getElementById('auto-catalog-price').value = '4.99';
-                                document.getElementById('auto-catalog-category').value = 'Baked Goods';
+                                document.getElementById('auto-catalog-title').setAttribute('value', 'Artisan Vanilla Bean Cupcake');
+                                document.getElementById('auto-catalog-price').setAttribute('value', '4.99');
+                                document.getElementById('auto-catalog-category').setAttribute('value', 'Baked Goods');
                                 if (form) form.style.display = 'block';
                             }, 2000);
                         }
