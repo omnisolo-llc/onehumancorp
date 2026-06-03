@@ -43,14 +43,14 @@ impl MyAgentManagerService {
         let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
 
-        let mut final_meetings = Arc::unwrap_or_clone(meetings);
+        let mut final_meetings = (*meetings).clone();
         if mobile_optimized {
             for m in final_meetings.iter_mut() {
                 m.transcript.clear();
             }
         }
 
-        let final_agents = Arc::unwrap_or_clone(agents);
+        let final_agents = (*agents).clone();
 
         let mut agent_costs = Vec::new();
 
@@ -297,7 +297,6 @@ impl AgentManagerService for MyAgentManagerService {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-
         let mobile_optimized = request.metadata().get("x-mobile-optimized").map(|v| v.to_str().unwrap_or("false") == "true").unwrap_or(false);
         Ok(Response::new(self.get_snapshot(&org_id_req, mobile_optimized).await?))
     }
