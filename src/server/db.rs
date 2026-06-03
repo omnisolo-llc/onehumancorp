@@ -103,14 +103,14 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                tracing::error!("Failed to securely create DB directory: {}", e);
+                                tracing::warn!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                tracing::error!("Failed to create DB directory: {}", e);
+                                tracing::warn!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
@@ -126,7 +126,7 @@ impl DB {
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
-                            tracing::error!("Security error: DB path is a symlink. Aborting.");
+                            tracing::warn!("Security error: DB path is a symlink. Aborting.");
                             return Err("Security error: DB path is a symlink.".into());
                         }
                     }
@@ -143,7 +143,7 @@ impl DB {
                             if perms.mode() & 0o777 != 0o600 {
                                 perms.set_mode(0o600);
                                 if let Err(e) = file.set_permissions(perms) {
-                                    tracing::error!(
+                                    tracing::warn!(
                                         "Failed to securely update existing standalone database file permissions: {}",
                                         e
                                     );

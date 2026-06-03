@@ -195,9 +195,9 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread")]
-    async fn test_user_fixable() {
-        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
+    #[test]
+    fn test_user_fixable() {
+        temp_env::with_var("OHC_MOCK_USER_INPUT", Some("abort"), || {
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
@@ -214,18 +214,18 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
-        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
+        let res = tokio::runtime::Runtime::new().unwrap().block_on(ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2));
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::UserFixable(msg) => assert_eq!(msg, "User aborted. Original error: ask user"),
             _ => panic!("Expected UserFixable error"),
         }
+        });
     }
 
-    #[tokio::test(flavor = "current_thread")]
-    async fn test_user_fixable_resolve() {
-        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
+    #[test]
+    fn test_user_fixable_resolve() {
+        temp_env::with_var("OHC_MOCK_USER_INPUT", Some("here is the fix"), || {
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
@@ -242,10 +242,10 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
-        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
+        let res = tokio::runtime::Runtime::new().unwrap().block_on(ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2));
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "User provided input to resolve the issue: here is the fix");
+        });
     }
 
     #[tokio::test]
