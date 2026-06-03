@@ -803,7 +803,7 @@ pub async fn advisory_insights_handler(
             let result = match &db_org.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(tier, '') FROM tenants WHERE tenant_id = $1"
                     )
                     .bind(&tenant_id_org)
                     .fetch_optional(&db_org.pool)
@@ -811,7 +811,7 @@ pub async fn advisory_insights_handler(
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(tier, '') FROM tenants WHERE tenant_id = $1"
                     )
                     .bind(&tenant_id_org)
                     .fetch_optional(pool)
@@ -860,13 +860,13 @@ pub async fn advisory_insights_handler(
     let org_data = org_res.unwrap_or(Ok(None));
     let orders_data = active_orders_res.unwrap_or(Ok(0));
 
-    let (business_name, industry) = org_data
+    let (business_name, tier) = org_data
         .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+        .unwrap_or_else(|| ("A business".to_string(), "free".to_string()));
 
     let active_orders = orders_data.unwrap_or(0);
 
-    let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let prompt = format!("You are a business advisory agent. Business context: A business named {} on the {} tier. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", business_name, tier, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
@@ -924,24 +924,20 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    let (business_name, tier): (String, String) = sqlx::query_as(
+        "SELECT business_name, COALESCE(tier, '') FROM tenants WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_optional(&db.pool)
     .await
     .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    .unwrap_or_else(|| ("A business".to_string(), "free".to_string()));
 
     let customer_message = payload
         .customer_message
         .unwrap_or_else(|| "Do you have vegan options for birthday cakes?".to_string());
 
-    let business_context = if industry.is_empty() {
-        format!("A business named {}", business_name)
-    } else {
-        format!("A {} business named {}", industry, business_name)
-    };
+    let business_context = format!("A business named {} on the {} tier", business_name, tier);
 
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",

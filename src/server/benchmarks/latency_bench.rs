@@ -602,7 +602,7 @@ pub async fn bench_advisory_insights_latency() {
             let (_org_res, _active_orders_res) = tokio::join!(
                 tokio::spawn(async move {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT business_name, COALESCE(tier, '') FROM tenants WHERE tenant_id = $1"
                     )
                     .bind(&tenant_id_org)
                     .fetch_optional(&db_org.pool)
@@ -635,7 +635,7 @@ pub async fn bench_advisory_insights_latency() {
         .await
         .unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
 
     let mut fetch_times_sqlite = Vec::with_capacity(iterations);
@@ -647,7 +647,7 @@ pub async fn bench_advisory_insights_latency() {
         let (_org_res, _active_orders_res) = tokio::join!(
             async {
                 sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+                    "SELECT business_name, COALESCE(tier, '') FROM tenants WHERE tenant_id = ?"
                 )
                 .bind(&tenant_id)
                 .fetch_optional(&sqlite_pool)

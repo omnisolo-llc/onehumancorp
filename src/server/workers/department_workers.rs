@@ -591,33 +591,33 @@ impl CustomerSuccessWorker {
             let mut final_status = "COMPLETED";
 
             // Fetch business context
-            let (tenant_name, tenant_industry) = match &db.store {
+            let (tenant_name, tenant_tier) = match &db.store {
                 crate::db::DbStore::Postgres => {
-                    let row = sqlx::query("SELECT name, industry FROM tenants WHERE id = $1")
+                    let row = sqlx::query("SELECT business_name, tier FROM tenants WHERE tenant_id = $1")
                         .bind(&tenant_id)
                         .fetch_optional(&db.pool)
                         .await
                         .unwrap_or(None);
                     match row {
                         Some(r) => (
-                            r.try_get::<String, _>("name").unwrap_or_else(|_| "Your Business".to_string()),
-                            r.try_get::<String, _>("industry").unwrap_or_else(|_| "Business".to_string()),
+                            r.try_get::<String, _>("business_name").unwrap_or_else(|_| "Your Business".to_string()),
+                            r.try_get::<String, _>("tier").unwrap_or_else(|_| "free".to_string()),
                         ),
-                        None => ("Your Business".to_string(), "Business".to_string())
+                        None => ("Your Business".to_string(), "free".to_string())
                     }
                 },
                 crate::db::DbStore::Sqlite(pool) => {
-                    let row = sqlx::query("SELECT name, industry FROM tenants WHERE id = ?")
+                    let row = sqlx::query("SELECT business_name, tier FROM tenants WHERE tenant_id = ?")
                         .bind(&tenant_id)
                         .fetch_optional(pool)
                         .await
                         .unwrap_or(None);
                     match row {
                         Some(r) => (
-                            r.try_get::<String, _>("name").unwrap_or_else(|_| "Your Business".to_string()),
-                            r.try_get::<String, _>("industry").unwrap_or_else(|_| "Business".to_string()),
+                            r.try_get::<String, _>("business_name").unwrap_or_else(|_| "Your Business".to_string()),
+                            r.try_get::<String, _>("tier").unwrap_or_else(|_| "free".to_string()),
                         ),
-                        None => ("Your Business".to_string(), "Business".to_string())
+                        None => ("Your Business".to_string(), "free".to_string())
                     }
                 }
             };
@@ -631,7 +631,7 @@ impl CustomerSuccessWorker {
 
             if event_type == "CustomerMessageReceived" {
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
-                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
+                let prompt = format!("You are the customer success ambassador for '{}', a business on the '{}' tier. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_tier, customer_message);
 
                 let mut attempts = 0;
                 while attempts < MAX_RETRIES {
@@ -1164,10 +1164,10 @@ mod tests {
     async fn test_customer_success_worker_draft_reply() {
         let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT PRIMARY KEY, business_name TEXT, tier TEXT);").execute(pool).await;
 
             // Insert a tenant
-            sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant1', 'Maya Bakery', 'Bakery')")
+            sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('tenant1', 'Maya Bakery', 'premium')")
                 .execute(pool).await.unwrap();
 
             // Insert a task
