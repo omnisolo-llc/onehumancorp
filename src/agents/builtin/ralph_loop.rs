@@ -1,5 +1,6 @@
+use serde::{Serialize, Deserialize};
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
-use serde::{Deserialize, Serialize};
+
 use std::sync::Arc;
 use std::process::Command;
 use std::path::PathBuf;
