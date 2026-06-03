@@ -463,7 +463,7 @@ export default function Dashboard() {
         </div>
 
          <nav className="flex items-center gap-3">
-                          <Link href="/sales-acquisition" className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-md text-sm font-medium hover:bg-emerald-200 transition-colors border border-emerald-200 shadow-sm">
+             <Link href="/sales-acquisition" className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-md text-sm font-medium hover:bg-emerald-200 transition-colors border border-emerald-200 shadow-sm">
                Sales & Acquisition 💰
              </Link>
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
