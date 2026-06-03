@@ -704,7 +704,6 @@ mod tests {
         // Remove aggressive latency measurability checks which fail if simulated operations execute instantaneously
         // (< 1us which truncates to 0) in the test sandbox environment.
     }
-
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         use std::sync::Arc;
@@ -747,18 +746,13 @@ mod tests {
         let mesh = Arc::new(DropMesh);
         let service = Arc::new(TaskDecompositionService::new(db, mesh));
 
-        // Inject task
         sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
             .bind("timeout_task")
             .execute(&pool).await.unwrap();
 
-        // With mesh down, claiming a task should gracefully fail within a reasonable timeframe (retry logic is built into mesh/service, we ensure it exits without panic)
-        let _start = std::time::Instant::now();
-        let timeout_duration = std::time::Duration::from_millis(500); // Wait up to 500ms for graceful failure handling internally
-
+        let timeout_duration = std::time::Duration::from_millis(500);
         let result = tokio::time::timeout(timeout_duration, service.claim_task("agent_1")).await;
 
-        // Assert we actually get an explicit error (either timed out tokio wrapper, or internally gracefully handled error from retry exhaustion)
         assert!(result.is_err() || result.unwrap().is_err(), "Chaos resilience must enforce timeout and handle mesh failure gracefully");
     }
 
@@ -780,24 +774,36 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let _worker = CustomerSuccessWorker::new(db.clone());
+        // Initialize schema
+        sqlx::query(
+            "CREATE TABLE department_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                department TEXT,
+                event_type TEXT,
+                status TEXT,
+                payload TEXT,
+                locked_until TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );"
+        ).execute(&pool).await.unwrap();
 
-        // Call the private/public method that parses LLM logic or handles it
-        // Or if there's no easy way, test parsing the malformed payload in the same way worker does
-        let malformed_json = "{ \"incomplete\": \"json\"";
+        // Inject a task with malformed JSON payload
+        sqlx::query(
+            "INSERT INTO department_tasks (id, tenant_id, department, event_type, status, payload, created_at)
+             VALUES ('task1', 'tenant1', 'customer_success', 'OrderProcessed', 'PENDING', '{ \"incomplete\": \"json\"', CURRENT_TIMESTAMP)"
+        ).execute(&pool).await.unwrap();
 
-        #[derive(serde::Deserialize)]
-        struct Dummy { #[allow(dead_code)] val: String }
-        let res = serde_json::from_str::<Dummy>(malformed_json);
-
-        // Worker must gracefully handle this error instead of panicking
-        assert!(res.is_err());
+        // The worker uses serde_json::from_str internally, we expect it to unwrap_or(json!({})) instead of panicking
+        let task = CustomerSuccessWorker::poll(&db).await;
+        assert!(task.is_ok(), "Worker must gracefully handle malformed payload without panicking");
     }
 
     #[tokio::test]
     async fn test_ml_resilience_llm_api_unavailable() {
-        // We simulate the application layer logic handling API failures
-        // See: src/server/workers/department_workers.rs behavior when AI service is unavailable
+        use std::sync::Arc;
+        use crate::workers::department_workers::CustomerSuccessWorker;
 
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -807,24 +813,58 @@ mod tests {
             .await
             .unwrap();
 
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        // Initialize schema for the test
+        sqlx::query(
+            "CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);"
+        ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE shared_tasks (
                 id TEXT PRIMARY KEY,
                 organization_id TEXT NOT NULL,
                 title TEXT,
                 description TEXT,
-                status TEXT
+                status TEXT,
+                priority TEXT,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT
             );"
         ).execute(&pool).await.unwrap();
 
-        // Simulate API failure by manually triggering the fail-safe path of the worker
-        let task_res = sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ('task1', 'test_tenant', 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING')")
-            .execute(&pool)
-            .await;
+        sqlx::query(
+            "CREATE TABLE department_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                department TEXT,
+                event_type TEXT,
+                status TEXT,
+                payload TEXT,
+                locked_until TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );"
+        ).execute(&pool).await.unwrap();
 
-        assert!(task_res.is_ok(), "task insertion should succeed: {:?}", task_res.err());
+        sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('test_tenant', 'Test', 'Retail')").execute(&pool).await.unwrap();
 
-        // Validate fallback "AI Agent Paused" task was created
+        sqlx::query(
+            "INSERT INTO department_tasks (id, tenant_id, department, event_type, status, payload, created_at)
+             VALUES ('task1', 'test_tenant', 'customer_success', 'CustomerMessageReceived', 'PENDING', '{\"message\":\"hello\"}', CURRENT_TIMESTAMP)"
+        ).execute(&pool).await.unwrap();
+
+        // We do not set OHC_HUB_URL, meaning it will attempt to connect to the default (http://127.0.0.1:8081).
+        // Since we don't have a server running there, it will fail, triggering the MAX_RETRIES fallback path.
+
+        let task = CustomerSuccessWorker::poll(&db).await;
+        assert!(task.is_ok(), "Poll should complete successfully");
+
+        // Validate fallback "AI Agent Paused" task was created in shared_tasks
         let paused_task: Option<(String, String)> = sqlx::query_as("SELECT title, description FROM shared_tasks WHERE organization_id = 'test_tenant' AND title LIKE '%AI Agent Paused%'")
             .fetch_optional(&pool)
             .await
