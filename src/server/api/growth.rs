@@ -1211,7 +1211,6 @@ pub struct BannerToggleRequest {
 }
 
 pub async fn handle_toggle_banner(
-    Extension(_state): Extension<GrowthState>,
     Json(payload): Json<BannerToggleRequest>,
 ) -> impl IntoResponse {
     // In a real database we would update the settings for the tenant
@@ -1229,7 +1228,6 @@ pub struct BannerClickRequest {
 }
 
 pub async fn handle_click_banner(
-    Extension(_state): Extension<GrowthState>,
     Json(_payload): Json<BannerClickRequest>,
 ) -> impl IntoResponse {
     // In a real database we would increment a counter for the tenant
