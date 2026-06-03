@@ -36,7 +36,6 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     tenant_compute_costs: Mutex<HashMap<String, f64>>,
     tenant_network_costs: Mutex<HashMap<String, f64>>,
-    tenant_bandwidth_savings: Mutex<HashMap<String, f64>>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     tenant_revenues: Mutex<HashMap<String, f64>>,
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
@@ -72,7 +71,6 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             tenant_compute_costs: Mutex::new(HashMap::new()),
             tenant_network_costs: Mutex::new(HashMap::new()),
-            tenant_bandwidth_savings: Mutex::new(HashMap::new()),
             agent_revenues: Mutex::new(HashMap::new()),
             tenant_revenues: Mutex::new(HashMap::new()),
             tenant_payment_fees: Mutex::new(HashMap::new()),
@@ -229,7 +227,7 @@ impl CostAuditor {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
-            let roi = self.calculate_roi(*cost, *revenue);
+            let roi = calculator::calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
             result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
         }
@@ -283,10 +281,6 @@ impl CostAuditor {
         *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
-    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
-        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
-    }
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
@@ -375,7 +369,7 @@ impl CostAuditor {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
 
-            let roi = self.calculate_roi(*cost, *revenue);
+            let roi = calculator::calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
 
             let metrics_str = format!(" [ROI: {:.2}%, Efficiency: {:.2} tok/$]", roi, efficiency);
