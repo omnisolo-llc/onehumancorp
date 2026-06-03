@@ -655,7 +655,6 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = ohc_builtin_agent_tools::all_tools(
-            None,
             todos,
             task_store,
             mailbox,
@@ -666,7 +665,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool());
+        tools.push(crate::tools::create_skill::create_skill_tool(()));
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -917,7 +916,7 @@ impl AgentService for AgentServiceImpl {
                     }
                     Err(_) => {
                         let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
                              continue;

@@ -2,6 +2,7 @@ use std::str::FromStr;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DepartmentType {
     Operations,
     Marketing,
@@ -58,6 +59,7 @@ pub struct DepartmentEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ActionRisk {
     AutoExecute,
     DraftForReview,
@@ -96,6 +98,7 @@ pub struct ApprovalRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ApprovalStatus {
     PendingApproval,
     Approved,
@@ -113,27 +116,4 @@ pub struct TimelineEvent {
     pub content: String,
     pub metadata: Option<serde_json::Value>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Customer360 {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub mood: Option<String>,
-    pub preferences: Option<serde_json::Value>,
-    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoyaltyLedger {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    pub points_balance: i32,
-    pub tier_name: Option<String>,
-    pub last_updated: Option<chrono::DateTime<chrono::Utc>>,
 }

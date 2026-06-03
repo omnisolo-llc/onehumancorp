@@ -130,7 +130,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
             if db_url.starts_with("sqlite://") {
-                db_url.split('?').next().unwrap_or(db_url).to_string()
+                db_url.split('?').next().unwrap().to_string()
             } else {
                 tracing::info!("standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
                 default_sqlite_url
@@ -148,12 +148,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
                 base_sqlite_url.clone()
-            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
                 base_sqlite_url.clone()
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
             base_sqlite_url.clone()
         } else {
             base_sqlite_url

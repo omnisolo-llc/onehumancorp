@@ -17,7 +17,7 @@ The Chaos Injector (`lib/resilience/chaos/chaos.go`) is responsible for surfacin
 
 ## Interpreting Chaos Metrics
 
-The **Chaos Resilience** dashboard (`src/server/monitoring/grafana/dashboards/chaos_resilience.json`) visualizes the swarm's recovery capabilities. It is your primary lens into the swarm's health during chaos events.
+The **Chaos Resilience** dashboard (`monitoring/grafana/dashboards/chaos_resilience.json`) visualizes the swarm's recovery capabilities. It is your primary lens into the swarm's health during chaos events.
 
 ### Key Panels & Interpretation
 

@@ -1,35 +1,62 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-  const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
+function routeIntent(message: string) {
+  const lowerMsg = message.toLowerCase();
 
-  const authHeader = request.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId
+  if (lowerMsg.includes('quote') || lowerMsg.includes('lead') || lowerMsg.includes('sale')) {
+    return {
+      department_assigned: 'sales',
+      agent: 'The Salesperson',
+      description: `Drafted quote based on: "${message}"`
+    };
+  } else if (lowerMsg.includes('email') || lowerMsg.includes('post') || lowerMsg.includes('campaign') || lowerMsg.includes('newsletter') || lowerMsg.includes('marketing')) {
+    return {
+      department_assigned: 'marketing',
+      agent: 'The Promoter',
+      description: `Drafted marketing action based on: "${message}"`
+    };
+  } else if (lowerMsg.includes('refund') || lowerMsg.includes('account') || lowerMsg.includes('finance') || lowerMsg.includes('invoice')) {
+    return {
+      department_assigned: 'finance',
+      agent: 'The Accountant',
+      description: `Drafted finance action based on: "${message}"`
+    };
+  } else if (lowerMsg.includes('legal') || lowerMsg.includes('contract')) {
+    return {
+      department_assigned: 'legal',
+      agent: 'The Protector',
+      description: `Drafted legal action based on: "${message}"`
+    };
+  } else if (lowerMsg.includes('advisory') || lowerMsg.includes('advice') || lowerMsg.includes('insight')) {
+    return {
+      department_assigned: 'business_advisory',
+      agent: 'The Advisor',
+      description: `Drafted advisory insight based on: "${message}"`
+    };
+  } else if (lowerMsg.includes('customer') || lowerMsg.includes('support') || lowerMsg.includes('help') || lowerMsg.includes('dm')) {
+    return {
+      department_assigned: 'customer_success',
+      agent: 'The Ambassador',
+      description: `Drafted customer success action based on: "${message}"`
+    };
+  }
+
+  // Default to operations
+  return {
+    department_assigned: 'operations',
+    agent: 'The Manager',
+    description: `Drafted operations action based on: "${message}"`
   };
-  if (authHeader) {
-    headers['authorization'] = authHeader;
+}
+
+export async function POST(req: Request) {
+  const { message } = await req.json();
+
+  if (!message || typeof message !== 'string') {
+    return NextResponse.json({ error: 'Message is required' }, { status: 400 });
   }
 
-  try {
-    const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/agents/chat`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
+  const result = routeIntent(message);
 
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-
-    return NextResponse.json({ error: 'Failed to process chat request' }, { status: res.status });
-  } catch (e) {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
-  }
+  return NextResponse.json(result);
 }

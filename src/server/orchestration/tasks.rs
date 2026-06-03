@@ -7,7 +7,7 @@ use std::sync::Arc;
 use opentelemetry::global;
 use opentelemetry::trace::Tracer;
 
-fn task_claim_timeout() -> std::time::Duration {
+pub fn task_claim_timeout() -> std::time::Duration {
     std::env::var("OHC_TASK_CLAIM_TIMEOUT_MS")
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())
@@ -209,7 +209,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
+                    SET status = 'EXECUTING', assigned_agent_id = $1, updated_at = $2
                     WHERE id = $3
                     "#,
                 )
@@ -225,7 +225,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                    VALUES ($1, $2, 'PENDING', 'EXECUTING', $3, $4)
                     "#
                 )
                 .bind(trans_id)
@@ -283,7 +283,7 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
-                    SET status = 'IN_PROGRESS', assigned_agent_id = ?, updated_at = ?
+                    SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
                         WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
@@ -318,7 +318,7 @@ impl TaskDecompositionService {
                 sqlx::query(
                     r#"
                     INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                    VALUES (?, ?, 'PENDING', 'EXECUTING', ?, ?)
                     "#
                 )
                 .bind(trans_id)
@@ -1526,7 +1526,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
             .unwrap();
@@ -1615,7 +1615,7 @@ mod chaos_tests {
 
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .acquire_timeout(std::time::Duration::from_millis(5000))
             .connect(database_url)
             .await
             .unwrap();

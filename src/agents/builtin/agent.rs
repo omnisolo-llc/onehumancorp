@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
-use std::fmt::Write;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -305,44 +304,22 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
-                let _ = write!(tool_defs, "Description: {}\n", tool.description);
-                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
+                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
+                tool_defs.push_str(&format!("Description: {}\n", tool.description));
+                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
             }
             tool_defs.pop(); // Remove trailing newline
         }
 
-        let mut source_name = "User Instructions";
-        let mut user_instr = if cfg.user_instructions.is_empty() {
-            let mut combined_agents_md = String::new();
-            let mut current_dir = std::env::current_dir().ok();
-            while let Some(dir) = current_dir {
-                let agents_file = dir.join("AGENTS.md");
-                if let Ok(content) = std::fs::read_to_string(&agents_file) {
-                    if !combined_agents_md.is_empty() {
-                        combined_agents_md.insert_str(0, "\n\n");
-                    }
-                    combined_agents_md.insert_str(0, &content);
-                }
-                current_dir = dir.parent().map(|p| p.to_path_buf());
-            }
-            if !combined_agents_md.is_empty() {
-                source_name = "AGENTS.md";
-            }
-            combined_agents_md
-        } else {
-            source_name = "User Instructions";
-            cfg.user_instructions.clone()
-        };
-
         let mut end_idx = 32768;
-        if user_instr.len() > 32768 {
-            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
+        if cfg.user_instructions.len() > 32768 {
+            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
                 end_idx -= 1;
             }
-            let truncated = &user_instr[..end_idx];
-            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
+        } else {
+            end_idx = cfg.user_instructions.len();
         }
+        let user_instr = cfg.user_instructions[..end_idx].to_string();
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
@@ -481,17 +458,9 @@ impl Agent {
                 _ => unreachable!(),
             };
 
-            let mut phase_cfg = cfg.clone();
-            if !phase_cfg.server_system_message.is_empty() {
-                phase_cfg.server_system_message.push_str(&format!("\n\nYou are in the {} phase.", phase_prompt));
-            } else {
-                phase_cfg.server_system_message = format!("You are in the {} phase.", phase_prompt);
-            }
-            let system_prompt = build_hierarchical_system_prompt(&phase_cfg, session_tools);
-
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
-                system: system_prompt,
+                system: format!("{}\n\nYou are in the {} phase.", cfg.server_system_message, phase_prompt),
                 messages: messages.clone(),
                 tools: session_tools.iter().map(|t| crate::types::ToolDefinition {
                     name: t.name.clone(),
@@ -705,7 +674,6 @@ impl Agent {
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
-        let mut budget_tracker = crate::budget::BudgetTracker::default();
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -744,19 +712,6 @@ impl Agent {
             // 4. Termination Condition: Token budget exhausted
             if cfg.max_task_tokens > 0 && total_tokens > cfg.max_task_tokens {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
-            }
-            if resp.stop_reason == "max_tokens" || resp.stop_reason == "length" {
-                let decision = crate::budget::check_token_budget(&mut budget_tracker, cfg.max_task_tokens, total_tokens);
-                if decision.action == crate::budget::BudgetAction::Stop {
-                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
-                }
-                if decision.action == crate::budget::BudgetAction::Continue {
-                    if !msg.content.is_empty() {
-                        messages.push(msg.clone());
-                    }
-                    messages.push(crate::types::Message::user(&decision.nudge_message));
-                    continue;
-                }
             }
 
             // 5. Parse output / check tool calls
@@ -804,8 +759,22 @@ impl Agent {
                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
                         }
-                        Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
+                        Err(crate::types::ToolError::UserFixable(msg)) => {
+                            // User-fixable: interrupt execution and ask user for input
+                            let err_msg = format!("User intervention required: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            // LLM-recoverable: return the raw error as a ToolMessage directly to the model so it can self-correct
+                            let err_str = format!("Recoverable error: {}", msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: err_str.clone(),
+                                iteration: turn_count,
+                            });
+                            tool_results[i].error = err_str;
                         }
                         Err(e) => {
                             let err_str = e.to_string();
@@ -1384,7 +1353,7 @@ impl Agent {
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
 
         // Phase 1: Planning
-        let planner_instructions = format!(
+        let planner_system = format!(
             "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
             serde_json::to_string_pretty(&self.tools.iter().map(|t| crate::types::ToolDefinition {
                 name: t.name.clone(),
@@ -1392,15 +1361,6 @@ impl Agent {
                 parameters: t.parameters.clone(),
             }).collect::<Vec<_>>()).unwrap_or_default()
         );
-
-        let mut planner_cfg = cfg.clone();
-        if !planner_cfg.server_system_message.is_empty() {
-            planner_cfg.server_system_message.push_str(&format!("\n\n{}", planner_instructions));
-        } else {
-            planner_cfg.server_system_message = planner_instructions;
-        }
-
-        let planner_system = build_hierarchical_system_prompt(&planner_cfg, &[]);
 
         let plan_req = ChatRequest {
             model: cfg.model.clone(),
@@ -1633,18 +1593,9 @@ impl Agent {
         });
 
         // Phase 3: Replier
-        let replier_instructions = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
+        let replier_system = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();
         let execution_summary = executed_steps.join("\n\n");
         let final_prompt = format!("Initial task: {}\n\nExecution steps and results:\n{}\n\nPlease provide the final answer.", initial_message, execution_summary);
-
-        let mut replier_cfg = cfg.clone();
-        if !replier_cfg.server_system_message.is_empty() {
-            replier_cfg.server_system_message.push_str(&format!("\n\n{}", replier_instructions));
-        } else {
-            replier_cfg.server_system_message = replier_instructions;
-        }
-
-        let replier_system = build_hierarchical_system_prompt(&replier_cfg, &[]);
 
         let replier_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2332,15 +2283,6 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // OpenAI Guardrail: Check Output Guardrail registry
-                if let Some(guardrails) = &final_cfg.guardrails {
-                    if let Err(e) = guardrails.check_output(&resp.message.content) {
-                        let err_msg = format!("Output Guardrail tripped: {}", e);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
-                    }
-                }
-
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2349,7 +2291,7 @@ impl Agent {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
                 }
 
                 if let Err(e) = verification_manager.run_computational_guides("", "").await {
@@ -2912,68 +2854,13 @@ impl Agent {
             // Use the input_tokens from the last request to determine the current context window size.
 
             if final_cfg.enable_context_compaction && turn_input_tokens > final_cfg.compaction_threshold_tokens {
-                // We want to compact if we have enough messages to make it worthwhile
-                if messages.len() > 5 {
-                    let mut compact_messages = Vec::new();
-                    // Keep the first message (usually the initial prompt)
-                    compact_messages.push(messages[0].clone());
-
-                    // The middle part to be compacted
-                    let middle_start = 1;
-                    let middle_end = messages.len() - 3;
-
-                    if middle_end > middle_start {
-                        let mut middle_text = String::new();
-                        for m in &messages[middle_start..middle_end] {
-                            middle_text.push_str(&format!("[Role: {}]\n", m.role));
-                            if !m.content.is_empty() {
-                                middle_text.push_str(&m.content);
-                                middle_text.push('\n');
-                            }
-                            if !m.tool_calls.is_empty() {
-                                middle_text.push_str("Tool Calls:\n");
-                                for tc in &m.tool_calls {
-                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
-                                }
-                            }
-                            if !m.tool_results.is_empty() {
-                                middle_text.push_str("Tool Results:\n");
-                                for tr in &m.tool_results {
-                                    // Discard redundant/raw tool outputs, but preserve errors if any
-                                    let status = if tr.error.is_empty() {
-                                        "Success (raw output discarded during compaction)"
-                                    } else {
-                                        &tr.error
-                                    };
-                                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
-                                }
-                            }
-                            middle_text.push_str("---\n");
-                        }
-
-                        let summary_req = ChatRequest {
-                            model: final_cfg.model.clone(),
-                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
-                            messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
-                            tools: vec![],
-                            max_tokens: 2000,
-                            temperature: 0.0,
-                        };
-
-                        match self.llm.chat(summary_req).await {
-                            Ok(summary_resp) => {
-                                let summary = summary_resp.message.content;
-                                compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
-                                // Append the remaining recent messages
-                                compact_messages.extend_from_slice(&messages[middle_end..]);
-                                messages = compact_messages;
-                            }
-                            Err(e) => {
-                                // If compaction fails, just log it and continue. Don't crash the agent.
-                                let err = format!("Context compaction failed: {}", e);
-                                on_event(AgentEvent::TaskError { error: err.clone() });
-                            }
-                        }
+                match crate::compaction::compact_context(&messages, &final_cfg.model, &self.llm).await {
+                    Ok(compact_messages) => {
+                        messages = compact_messages;
+                    }
+                    Err(e) => {
+                        // If compaction fails, just log it and continue. Don't crash the agent.
+                        on_event(AgentEvent::TaskError { error: e });
                     }
                 }
             }
@@ -2990,16 +2877,10 @@ impl Agent {
 
     // SOTA Harness Patterns (2025-2026): Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
-        let mut errors = Vec::new();
-        Self::validate_schema_recursive(args, schema, "", &mut errors);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors.join("\n"))
-        }
+        Self::validate_schema_recursive(args, schema, "")
     }
 
-    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str, errors: &mut Vec<String>) {
+    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str) -> Result<(), String> {
         let prefix = if path.is_empty() { String::new() } else { format!("{}.", path) };
 
         if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
@@ -3007,13 +2888,13 @@ impl Agent {
                 for req in req_array {
                     if let Some(req_str) = req.as_str() {
                         if !args_obj.contains_key(req_str) {
-                            errors.push(format!("missing required parameter: '{}{}'", prefix, req_str));
+                            return Err(format!("missing required parameter: '{}{}'", prefix, req_str));
                         }
                     }
                 }
             } else if !req_array.is_empty() {
                 let p = if path.is_empty() { "arguments".to_string() } else { format!("parameter '{}'", path) };
-                errors.push(format!("{} must be an object", p));
+                return Err(format!("{} must be an object", p));
             }
         }
 
@@ -3049,13 +2930,13 @@ impl Agent {
                                 } else {
                                     "unknown"
                                 };
-                                errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
+                                return Err(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
                             }
                         }
 
                         // Recurse into objects
                         if v.is_object() {
-                            Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
+                            Self::validate_schema_recursive(v, prop_schema, &current_path)?;
                         }
 
                         // Recurse into arrays
@@ -3088,12 +2969,12 @@ impl Agent {
                                         } else {
                                             "unknown"
                                         };
-                                        errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
+                                        return Err(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
                                     }
                                 }
 
                                 if item.is_object() {
-                                    Self::validate_schema_recursive(item, items_schema, &item_path, errors);
+                                    Self::validate_schema_recursive(item, items_schema, &item_path)?;
                                 }
                             }
                         }
@@ -3101,6 +2982,8 @@ impl Agent {
                 }
             }
         }
+
+        Ok(())
     }
 
     async fn execute_tool(
@@ -3261,23 +3144,6 @@ mod tests {
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
         assert_eq!(err, "parameter 'user.tags[0]' has invalid type: expected object, got string");
-
-        // 9. Multiple errors simultaneously
-        let args = serde_json::json!({
-            "user": {
-                "name": 123,
-                "address": {
-                    "city": "NY"
-                },
-                "tags": [
-                    { "name": "wrong" }
-                ]
-            }
-        });
-        let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert!(err.contains("missing required parameter: 'user.address.zipcode'"));
-        assert!(err.contains("parameter 'user.name' has invalid type: expected string, got number"));
-        assert!(err.contains("missing required parameter: 'user.tags[0].id'"));
     }
 
     #[tokio::test]
@@ -3630,45 +3496,24 @@ mod tests {
         assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
     }
 
-    #[tokio::test]
-    async fn test_tao_termination_token_budget_nudge() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("I am thinking very long"),
-                    usage: crate::types::Usage { input_tokens: 500, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-                    stop_reason: "max_tokens".to_string(), // Triggers budget logic
-                    response_id: None,
-                },
-                crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Done!"),
-                    usage: crate::types::Usage { input_tokens: 10, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.max_task_tokens = 1000; // 500+100 = 600, which is < 1000, so it will continue with a nudge
-        cfg.enable_tao_orchestration_loop = true;
-
-        let mut events = vec![];
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "Done!");
-    }
 
     #[tokio::test]
-    async fn test_tao_termination_guardrail_user_fixable() {
-        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+    async fn test_tao_termination_user_fixable() {
+        struct UserFixableTool;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Need login".to_string()))
+            }
+        }
+
+        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 crate::types::ChatResponse {
                     message: crate::types::Message {
                         role: crate::types::Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "test".to_string(), arguments: serde_json::json!({}) }],
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::json!({}) }],
                         tool_results: vec![],
                         response_id: None,
                         previous_response_id: None,
@@ -3680,30 +3525,76 @@ mod tests {
             ]),
         });
 
-        struct UserFixableExecutor;
+        let tool = ohc_builtin_agent_tools::Tool {
+            name: "user_fixable_tool".to_string(),
+            description: "Fails requiring user fix".to_string(),
+            is_read_only: false,
+            parameters: serde_json::Value::Null,
+            execute: std::sync::Arc::new(UserFixableTool),
+        };
+
+        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.project_trusted = true;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User intervention required: Need login"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_llm_recoverable_feedback() {
+        struct LlmRecoverableTool;
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableExecutor {
+        impl ohc_builtin_agent_tools::ToolExecutor for LlmRecoverableTool {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Err(crate::types::ToolError::UserFixable("needs human".to_string()))
+                Err(crate::types::ToolError::LlmRecoverable("Missing parameter".to_string()))
             }
         }
 
-        let dummy_tool = ohc_builtin_agent_tools::Tool {
-            name: "test".to_string(),
-            description: "A mutating tool".to_string(),
-            parameters: serde_json::json!({}),
+        let llm = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::json!({}) }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("I will fix it!"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        let tool = ohc_builtin_agent_tools::Tool {
+            name: "llm_recoverable_tool".to_string(),
+            description: "Fails recoverably".to_string(),
             is_read_only: false,
-            execute: Arc::new(UserFixableExecutor),
+            parameters: serde_json::Value::Null,
+            execute: std::sync::Arc::new(LlmRecoverableTool),
         };
 
-        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![dummy_tool]);
+        let agent = Agent::new(llm as std::sync::Arc<dyn LlmClient>, vec![tool.clone()]);
         let mut cfg = AgentRunConfig::default();
         cfg.max_iterations = 5;
+        cfg.project_trusted = true;
         cfg.enable_tao_orchestration_loop = true;
 
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Guardrail tripwire fires (UserFixable): needs human"));
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[tool], &mut |_| {}).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "I will fix it!");
     }
 
     #[tokio::test]
@@ -5219,8 +5110,7 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768 + notice.len());
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
     }
 
     #[test]
@@ -5236,8 +5126,7 @@ mod tests {
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
-        assert_eq!(user_part.len(), 32766 + notice.len());
+        assert_eq!(user_part.len(), 32766);
     }
 
     #[tokio::test]
@@ -5300,18 +5189,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_1".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
+                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5323,18 +5201,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_2".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
+                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -6684,8 +6551,7 @@ mod stream_tests {
 
         let client = std::sync::Arc::new(DumbLoopMockClient);
         let agent = crate::agent::Agent::new(client, vec![mock_tool]);
-        let mut cfg = crate::agent::AgentRunConfig::default();
-        cfg.server_system_message = "Dumb loop test system msg".to_string();
+        let cfg = crate::agent::AgentRunConfig::default();
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };

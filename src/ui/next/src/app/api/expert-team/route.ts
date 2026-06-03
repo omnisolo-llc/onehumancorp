@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { FaultInjector } from '../../../lib/chaos';
 
 export async function POST(req: Request) {
   try {
-    await FaultInjector.applyFault('expert_team_api_start');
     const { task } = await req.json();
 
     if (!task) {
@@ -20,16 +18,12 @@ export async function POST(req: Request) {
     let resultText = "";
 
     try {
-      await FaultInjector.applyFault('expert_team_api_fetch_before');
-
       const backendRes = await fetch('http://127.0.0.1:8080', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rpcRequest),
         signal: AbortSignal.timeout(10000)
       });
-
-      await FaultInjector.applyFault('expert_team_api_fetch_after');
 
       const backendData = await backendRes.json();
 

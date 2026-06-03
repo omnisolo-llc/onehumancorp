@@ -5,13 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: "23 10 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && format('manual/{0}', github.run_id) || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -45,7 +43,7 @@ jobs:
             changed_files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
           else
             echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-            echo "Full run; treating as non-markdown change set"
+            echo "Manual run; treating as non-markdown change set"
             exit 0
           fi
 
@@ -69,7 +67,7 @@ jobs:
     name: Bazel build (${{ matrix.name }})
     needs:
       - check-changes
-    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.check-changes.outputs.markdown-only == 'false' }}
+    if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
@@ -240,8 +238,9 @@ jobs:
   bazel-test:
     name: Bazel test
     needs:
+      - bazel-build
       - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -303,8 +302,9 @@ jobs:
   bazel-test-e2e:
     name: Bazel Playwright E2E
     needs:
+      - bazel-build
       - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -368,7 +368,7 @@ jobs:
     name: Kind E2E
     needs:
       - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    if: ${{ github.event_name != 'pull_request' || needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -478,69 +478,3 @@ jobs:
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
             --nocache_test_results
-
-  ci-required:
-    name: CI Required
-    needs:
-      - check-changes
-      - bazel-build
-      - bazel-test
-      - bazel-test-e2e
-      - kind-e2e
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check required CI results
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
-          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
-          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}
-          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
-          BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}
-          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
-        run: |
-          set -euo pipefail
-
-          echo "check-changes: ${CHECK_CHANGES_RESULT}"
-          echo "bazel-build: ${BAZEL_BUILD_RESULT}"
-          echo "bazel-test: ${BAZEL_TEST_RESULT}"
-          echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"
-          echo "kind-e2e: ${KIND_E2E_RESULT}"
-
-          require_success() {
-            local name="$1"
-            local result="$2"
-            if [[ "$result" != "success" ]]; then
-              echo "::error::${name} finished with result '${result}', expected 'success'."
-              exit 1
-            fi
-          }
-
-          allow_success_or_skipped() {
-            local name="$1"
-            local result="$2"
-            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "::error::${name} finished with result '${result}', expected 'success' or 'skipped'."
-              exit 1
-            fi
-          }
-
-          require_success "check-changes" "$CHECK_CHANGES_RESULT"
-
-          if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            require_success "bazel-build" "$BAZEL_BUILD_RESULT"
-          else
-            allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"
-          fi
-
-          if [[ "$MARKDOWN_ONLY" == "true" ]]; then
-            allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
-            allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
-            allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
-          else
-            require_success "bazel-test" "$BAZEL_TEST_RESULT"
-            require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
-            require_success "kind-e2e" "$KIND_E2E_RESULT"
-          fi

@@ -6,7 +6,6 @@ use opentelemetry::global;
 use serde_json::{Map, Value};
 use sqlx::{PgPool, query};
 use std::sync::OnceLock;
-use regex::Regex;
 
 use opentelemetry::metrics::Histogram;
 
@@ -18,7 +17,6 @@ static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-static SANDBOX_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
@@ -56,16 +54,6 @@ pub fn get_error_signal_counter() -> &'static Counter<u64> {
         meter
             .u64_counter("ohc_error_signals_total")
             .with_description("Total number of error signals categorized")
-            .build()
-    })
-}
-
-pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
-    SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
-        let meter = global::meter("ohc.sandbox");
-        meter
-            .i64_up_down_counter("ohc_sandbox_violations_total")
-            .with_description("Total number of LocalSandbox policy violations")
             .build()
     })
 }
@@ -164,17 +152,6 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
             opentelemetry::KeyValue::new("role", role.to_string()),
             opentelemetry::KeyValue::new("model", model.to_string()),
             opentelemetry::KeyValue::new("type", token_type.to_string()),
-        ],
-    );
-}
-
-pub fn record_sandbox_violation(reason: &str, command: &str) {
-    let gauge = get_sandbox_violation_total();
-    gauge.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("reason", reason.to_string()),
-            opentelemetry::KeyValue::new("command", command.to_string()),
         ],
     );
 }
@@ -1025,29 +1002,12 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::String(s) => {
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
-            } else if is_pii_value_pattern(&s) {
-                Value::String("[REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
         }
         _ => val,
     }
-}
-
-
-pub fn is_pii_value_pattern(s: &str) -> bool {
-    static SSN_RE: OnceLock<Regex> = OnceLock::new();
-    static CC_RE: OnceLock<Regex> = OnceLock::new();
-    static API_KEY_RE: OnceLock<Regex> = OnceLock::new();
-    static PHONE_RE: OnceLock<Regex> = OnceLock::new();
-
-    let ssn_re = SSN_RE.get_or_init(|| Regex::new(r"^\d{3}-\d{2}-\d{4}$").unwrap());
-    let cc_re = CC_RE.get_or_init(|| Regex::new(r"^(\d{4}[- ]?){3,4}\d{1,4}$").unwrap());
-    let api_key_re = API_KEY_RE.get_or_init(|| Regex::new(r"^(sk-|ak-|tok_)[a-zA-Z0-9]{10,}").unwrap());
-    let phone_re = PHONE_RE.get_or_init(|| Regex::new(r"^\+?(\d{1,3})?[-. (]*\d{3}[-. )]*\d{3}[-. ]*\d{4}$").unwrap());
-
-    ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s)
 }
 
 pub fn is_sensitive_key(key: &str) -> bool {

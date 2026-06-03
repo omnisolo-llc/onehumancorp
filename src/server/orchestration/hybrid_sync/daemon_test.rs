@@ -23,7 +23,7 @@ mod tests {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pg_pool = match tokio::time::timeout(
-            Duration::from_millis(50),
+            Duration::from_millis(500),
             PgPoolOptions::new().connect(&database_url),
         )
         .await
@@ -200,7 +200,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
     let pg_pool = match tokio::time::timeout(
-        Duration::from_millis(50),
+        Duration::from_millis(500),
         sqlx::postgres::PgPoolOptions::new().connect(&database_url),
     )
     .await

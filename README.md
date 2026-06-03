@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
-## Getting Started (Day 1 Onboarding)
+## Getting Started (Day One Onboarding)
 
 To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
 
