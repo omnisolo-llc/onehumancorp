@@ -562,7 +562,7 @@ async fn http_metrics_handler(
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
-    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
+    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
         StatusCode::OK,
@@ -5430,7 +5430,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business Next</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">

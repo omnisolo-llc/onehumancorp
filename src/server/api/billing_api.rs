@@ -20,6 +20,8 @@ pub struct CostDashboardResponse {
     pub llm_cost: i64,
     pub storage_cost: i64,
     pub payment_fees: i64,
+    pub network_cost: i64,
+    pub bandwidth_savings: i64,
     pub period_start: String,
     pub period_end: String,
 }
@@ -107,7 +109,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
     };
 
     let now = chrono::Utc::now();
@@ -153,6 +155,8 @@ pub async fn cost_dashboard_handler(
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
+        network_cost: (network_cost_f64 * 100.0).round() as i64,
+        bandwidth_savings: 0, // Placeholder as there's no tracking for this right now. If there's tracking, we would fetch it from auditor.
         period_start,
         period_end,
     })
