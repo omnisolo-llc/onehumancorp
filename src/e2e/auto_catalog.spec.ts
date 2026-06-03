@@ -25,10 +25,10 @@ test.describe('Auto-Catalog flow', () => {
     await expect(page.getByText('AutoDream AI is analyzing your photo...')).toBeVisible();
 
     // Verify generated product data populates the form
-
-    await expect(page.locator('input').nth(1)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
-    await expect(page.locator('input').nth(2)).toHaveValue('4.99');
-    await expect(page.locator('input').nth(3)).toHaveValue('Baked Goods');
+    const generatedFields = page.locator('#auto-catalog-form input');
+    await expect(generatedFields.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
+    await expect(generatedFields.nth(1)).toHaveValue('4.99');
+    await expect(generatedFields.nth(2)).toHaveValue('Baked Goods');
 
     // Click Publish
     await page.getByRole('button', { name: 'Publish Product' }).click();
