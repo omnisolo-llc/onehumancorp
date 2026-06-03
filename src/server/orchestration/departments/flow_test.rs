@@ -308,4 +308,92 @@ mod tests {
 
         assert!(has_case_study_draft, "Marketing Agent should draft a case study when a job is completed with media.");
     }
+
+    #[tokio::test]
+    async fn test_inventory_status_changed_event() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        let marketing_agent = Arc::new(RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(orchestrator.clone())));
+
+        orchestrator.register_department(ops_agent).await;
+        orchestrator.register_department(marketing_agent).await;
+
+        let tenant_id = "test-tenant-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let _ = sqlx::query("DELETE FROM shared_tasks WHERE organization_id = $1")
+            .bind(&tenant_id)
+            .execute(&db.pool).await;
+
+        // Simulate an InventoryStatusChanged event with 0 quantity
+        let out_of_stock_event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "mesh:inventory:status_changed".to_string(),
+            payload: serde_json::json!({
+                "product_id": "test_product_1",
+                "new_quantity": 0
+            }),
+        };
+
+        orchestrator.dispatch_event(out_of_stock_event).await.unwrap();
+
+        // Simulate an InventoryStatusChanged event with low quantity (<5)
+        let low_stock_event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "mesh:inventory:status_changed".to_string(),
+            payload: serde_json::json!({
+                "product_id": "test_product_2",
+                "new_quantity": 3
+            }),
+        };
+
+        orchestrator.dispatch_event(low_stock_event).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+
+        let mut out_of_stock_ops = false;
+        let mut out_of_stock_marketing = false;
+        let mut low_stock_ops = false;
+
+        for req in pending {
+            if req.description.contains("Mark product test_product_1 out of stock") {
+                out_of_stock_ops = true;
+            } else if req.description.contains("Draft 'Sold Out! Pre-order now' social media campaign for product test_product_1") {
+                out_of_stock_marketing = true;
+            } else if req.description.contains("Draft review task to notify owner to prepare reorder for product test_product_2") {
+                low_stock_ops = true;
+            }
+        }
+
+        assert!(out_of_stock_ops, "Operations action for out of stock not found");
+        assert!(out_of_stock_marketing, "Marketing action for out of stock not found");
+        assert!(low_stock_ops, "Operations action for low stock not found");
+    }
 }

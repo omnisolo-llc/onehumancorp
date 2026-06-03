@@ -22,11 +22,39 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let config = self.get_config(&event.tenant_id);
+
+        if event.event_type == "mesh:inventory:status_changed" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let new_quantity = event.payload.get("new_quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+
+            if new_quantity == 0 {
+                let description = format!("Mark product {} out of stock", product_id);
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            } else if new_quantity < 5 {
+                let description = format!("Draft review task to notify owner to prepare reorder for product {}", product_id);
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            }
+            return Ok(());
+        }
+
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute
