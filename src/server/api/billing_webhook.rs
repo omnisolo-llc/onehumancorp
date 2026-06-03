@@ -293,6 +293,21 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+        "customer.subscription.created" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+
+            if let Some(tenant_id) = tenant_id_opt {
+                tokio::spawn(async move {
+                    tracing::info!("Created subscription for tenant {}", tenant_id);
+                });
+                StatusCode::OK.into_response()
+            } else {
+                StatusCode::BAD_REQUEST.into_response()
+            }
+        },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("metadata")
@@ -327,6 +342,27 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
+                // Also mark our internal subscription table
+                let sub_id_opt = obj.get("id").and_then(|id| id.as_str());
+                if let Some(sub_id) = sub_id_opt {
+                    let _res = match &webhook_state.db.store {
+                         DbStore::Sqlite(pool) => {
+                            sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = ?")
+                                .bind(sub_id)
+                                .execute(pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        DbStore::Postgres => {
+                            sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = $1")
+                                .bind(sub_id)
+                                .execute(&webhook_state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
+                    };
+                }
+
                 if let Err(_e) = res {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
@@ -342,9 +378,29 @@ pub async fn stripe_webhook_handler(
                 .and_then(|id| id.as_str());
 
             if let Some(_tenant_id) = tenant_id_opt {
+                let sub_id_opt = obj.get("subscription").and_then(|id| id.as_str());
+                if let Some(sub_id) = sub_id_opt {
+                    let _res = match &webhook_state.db.store {
+                         DbStore::Sqlite(pool) => {
+                            sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = ?")
+                                .bind(sub_id)
+                                .execute(pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        DbStore::Postgres => {
+                            sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = $1")
+                                .bind(sub_id)
+                                .execute(&webhook_state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
+                    };
+                }
+
                 // Trigger SMS notification
                 tokio::spawn(async move {
-                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
+                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your subscription. Please update your payment method via the magic link sent to your email.").await;
                 });
             }
             StatusCode::OK.into_response()

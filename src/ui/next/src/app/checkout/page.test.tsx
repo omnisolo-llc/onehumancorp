@@ -7,6 +7,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
+  useSearchParams: () => ({
+    get: vi.fn().mockReturnValue(null),
+  }),
 }));
 
 vi.mock('../../components/TooltipRegistry', () => ({
