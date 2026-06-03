@@ -1,4 +1,4 @@
-use crate::domain::subscription::SubscriptionPlan;
+use crate::domain::subscription::{SubscriptionPlan};
 use sqlx::PgPool as DbPool;
 use std::sync::Arc;
 use uuid::Uuid;
