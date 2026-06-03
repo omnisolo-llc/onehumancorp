@@ -1747,6 +1747,63 @@ mod e2e_cleanup_stagnant_missions_tests {
     use sqlx::Row;
 
     #[tokio::test]
+    async fn test_cleanup_stagnant_missions_sqlite() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to create memory DB for SQLite test");
+
+        sqlx::query(
+            "CREATE TABLE agent_missions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                updated_at DATETIME NOT NULL
+            )"
+        ).execute(&pool).await.expect("Failed to create table");
+
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = DB {
+            store: DbStore::Sqlite(pool.clone()),
+            pool: dummy_pool,
+        };
+
+        let now = chrono::Utc::now();
+        let two_hours_ago = now - chrono::Duration::hours(2);
+
+        // 1. Stuck mission
+        sqlx::query("INSERT INTO agent_missions (id, tenant_id, status, payload, updated_at) VALUES ('mission_1', 'tenant1', 'STUCK', '{}', ?)")
+            .bind(now.to_rfc3339())
+            .execute(&pool).await.unwrap();
+
+        // 2. Pending mission but updated recently
+        sqlx::query("INSERT INTO agent_missions (id, tenant_id, status, payload, updated_at) VALUES ('mission_2', 'tenant1', 'PENDING', '{}', ?)")
+            .bind(now.to_rfc3339())
+            .execute(&pool).await.unwrap();
+
+        // 3. Pending mission updated 2 hours ago
+        sqlx::query("INSERT INTO agent_missions (id, tenant_id, status, payload, updated_at) VALUES ('mission_3', 'tenant1', 'PENDING', '{}', ?)")
+            .bind(two_hours_ago.to_rfc3339())
+            .execute(&pool).await.unwrap();
+
+        let _affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1'")
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2'")
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3'")
+            .fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_3, "FAILED");
+    }
+    #[tokio::test]
     async fn test_cleanup_stagnant_missions_postgres() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
@@ -1815,5 +1872,91 @@ mod e2e_cleanup_stagnant_missions_tests {
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
             .bind(&test_tenant)
             .execute(&pool).await.expect("Database URL or operation failed in test");
+    }
+}
+
+#[cfg(test)]
+mod chaos_ohc_job_queue_tests {
+    use sqlx::Row;
+    use std::sync::Arc;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_chaos_ohc_job_queue_concurrent_access() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url)
+            .await
+            .expect("Database URL or operation failed in test");
+
+        let tenant_id = format!("tenant_chaos_{}", uuid::Uuid::new_v4());
+        let job_id = format!("job_{}", uuid::Uuid::new_v4());
+
+        // 1. Setup job queue
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, status, next_retry_at) VALUES ($1, $2, 'TEST_JOB', 'PENDING', CURRENT_TIMESTAMP)")
+            .bind(&job_id)
+            .bind(&tenant_id)
+            .execute(&pool).await.expect("Failed to insert job");
+
+        let pool_arc = Arc::new(pool);
+
+        let mut handles = vec![];
+
+        // Simulate 10 workers trying to acquire the same job using SKIP LOCKED
+        for _ in 0..10 {
+            let p = pool_arc.clone();
+            let tid = tenant_id.clone();
+
+            let h = tokio::spawn(async move {
+                let mut tx = p.begin().await.unwrap();
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tid).await.unwrap();
+
+                // Select and lock
+                let job_row = sqlx::query("SELECT id FROM ohc_job_queue WHERE status = 'PENDING' AND tenant_id = $1 AND next_retry_at <= CURRENT_TIMESTAMP FOR UPDATE SKIP LOCKED LIMIT 1")
+                    .bind(&tid)
+                    .fetch_optional(&mut *tx)
+                    .await.unwrap();
+
+                let mut acquired = false;
+                if let Some(row) = job_row {
+                    let j_id: String = row.get("id");
+
+                    // Mark as PROCESSING
+                    sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = $1")
+                        .bind(&j_id)
+                        .execute(&mut *tx)
+                        .await.unwrap();
+                    acquired = true;
+                }
+                tx.commit().await.unwrap();
+                acquired
+            });
+            handles.push(h);
+        }
+
+        let mut acquire_count = 0;
+        for h in handles {
+            if h.await.unwrap() {
+                acquire_count += 1;
+            }
+        }
+
+        // Under high concurrency, only EXACTLY ONE worker should acquire the job
+        assert_eq!(acquire_count, 1, "Exactly one worker should acquire the job under chaos conditions");
+
+        // Clean up
+        sqlx::query("DELETE FROM ohc_job_queue WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .execute(&*pool_arc).await.expect("Failed to cleanup job");
     }
 }
