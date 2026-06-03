@@ -1,0 +1,21 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_tax",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/domain:server_domain",
+        "//src/server/domain/repository:server_domain_repository",
+        "@crates//:chrono",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+)

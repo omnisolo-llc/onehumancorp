@@ -212,3 +212,27 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TaxJurisdiction {
+    pub id: String,
+    pub country_code: String,
+    pub state_code: Option<String>,
+    pub zip_code: Option<String>,
+    pub base_rate: f64,
+    pub rules: sqlx::types::Json<serde_json::Value>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TaxLedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub transaction_id: String,
+    pub jurisdiction_id: String,
+    pub taxable_amount: f64,
+    pub tax_amount: f64,
+    pub product_category: Option<String>,
+    pub collected_at: Option<DateTime<Utc>>,
+}
