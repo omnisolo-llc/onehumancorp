@@ -16,6 +16,12 @@ export default function SettingsPage() {
     new_order: false,
   });
 
+  const [deliverySettings, setDeliverySettings] = useState({
+    enabled: false,
+    radius_miles: 5.0,
+    flat_fee_cents: 850,
+  });
+
   const handleVerify = async () => {
     setIsVerifying(true);
     try {
@@ -175,6 +181,82 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="app-panel" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)' }}>
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title font-outfit">Local Delivery (DoorDash Drive)</div>
+              <div className="app-list-subtitle">Offer white-label delivery to your customers.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <div className="space-y-4">
+              <label className="flex items-center justify-between rounded-xl border border-gray-100 p-4 text-sm text-gray-700 bg-white/40">
+                <div className="flex flex-col">
+                  <span className="font-semibold">Enable DoorDash Drive</span>
+                  <span className="text-xs text-gray-500">Dashers will fulfill your local orders.</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={deliverySettings.enabled}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, enabled: e.target.checked })}
+                  className="w-5 h-5 rounded-md text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="app-metric-label">Delivery Radius (miles)</span>
+                  <input
+                    type="number"
+                    value={deliverySettings.radius_miles}
+                    onChange={(e) => setDeliverySettings({ ...deliverySettings, radius_miles: parseFloat(e.target.value) })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </label>
+                <label className="block">
+                  <span className="app-metric-label">Flat Fee (USD)</span>
+                  <input
+                    type="number"
+                    value={deliverySettings.flat_fee_cents / 100}
+                    onChange={(e) => setDeliverySettings({ ...deliverySettings, flat_fee_cents: Math.round(parseFloat(e.target.value) * 100) })}
+                    className="mt-2 w-full rounded-lg border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </label>
+              </div>
+
+              <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100/50 flex items-start gap-3">
+                 <div className="text-blue-500 mt-0.5">ℹ️</div>
+                 <p className="text-xs text-blue-700 leading-relaxed">
+                   DoorDash Drive charges a flat rate per delivery. You can choose to pass this fee to your customers or subsidize it.
+                 </p>
+              </div>
+
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/delivery/settings/org-1", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(deliverySettings),
+                    });
+                    if (res.ok) {
+                      alert('Delivery settings saved!');
+                    } else {
+                      alert('Failed to save settings');
+                    }
+                  } catch (e) {
+                    alert('Network error');
+                  }
+                }}
+                className="app-button primary w-full font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20"
+                type="button"
+              >
+                Save Delivery Config
+              </button>
             </div>
           </div>
         </section>

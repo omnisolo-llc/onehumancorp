@@ -14,5 +14,6 @@ pub mod growth;
 pub mod telemetry;
 pub mod syndication_handler;
 pub mod dynamic_workflows;
+pub mod delivery;
 
 pub mod catalog;

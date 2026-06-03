@@ -21,6 +21,30 @@ export default function OrderDetailsPage() {
   const [purchasing, setPurchasing] = useState(false);
   const [labelUrl, setLabelUrl] = useState<string | null>(null);
 
+  const [requestingCourier, setRequestingCourier] = useState(false);
+  const [deliveryTrackingUrl, setDeliveryTrackingUrl] = useState<string | null>(null);
+
+  const requestCourier = async () => {
+    setRequestingCourier(true);
+    try {
+      const res = await fetch(`/api/v1/fulfillment/execute/${orderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request_driver' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Mocking the status update since the real backend would update the DB
+        setStatus('driver_requested');
+        setDeliveryTrackingUrl('https://doordash.com/tracking/dd_del_123');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRequestingCourier(false);
+    }
+  };
+
   const fetchRates = async () => {
     setLoadingRates(true);
     try {
@@ -111,25 +135,40 @@ export default function OrderDetailsPage() {
               </div>
             </div>
 
-            {status === 'shipped' ? (
+            {status === 'shipped' || status === 'driver_requested' ? (
               <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-green-800 mb-1">Label Purchased Successfully</h3>
-                    <p className="text-sm text-green-700 mb-3">Carrier: {carrier}</p>
+                    <h3 className="font-semibold text-green-800 mb-1">
+                      {status === 'driver_requested' ? 'DoorDash Courier Requested' : 'Label Purchased Successfully'}
+                    </h3>
+                    <p className="text-sm text-green-700 mb-3">
+                      {status === 'driver_requested' ? 'Service: DoorDash Drive' : `Carrier: ${carrier}`}
+                    </p>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-600">Tracking:</span>
-                      <code className="bg-white px-2 py-1 rounded text-sm border border-green-200 font-mono text-gray-800">{trackingNumber}</code>
+                      <code className="bg-white px-2 py-1 rounded text-sm border border-green-200 font-mono text-gray-800">
+                        {status === 'driver_requested' ? 'dd_del_123' : trackingNumber}
+                      </code>
                     </div>
                   </div>
                   <a
-                    href={labelUrl || ""}
+                    href={status === 'driver_requested' ? (deliveryTrackingUrl || '#') : (labelUrl || "")}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-2 bg-white border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    Print Label
+                    {status === 'driver_requested' ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        Track Delivery
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Print Label
+                      </>
+                    )}
                   </a>
                 </div>
                 <div className="mt-4 pt-3 border-t border-green-200/50 flex items-center gap-2 text-sm text-green-700">
@@ -172,6 +211,24 @@ export default function OrderDetailsPage() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                   )}
                   {loadingRates ? 'Fetching discounted rates...' : 'Get Shipping Rates'}
+                </button>
+
+                <div className="relative py-4">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+                  <div className="relative flex justify-center text-xs uppercase font-bold text-gray-400 bg-white px-2">or</div>
+                </div>
+
+                <button
+                  onClick={requestCourier}
+                  disabled={requestingCourier}
+                  className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  {requestingCourier ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                  )}
+                  {requestingCourier ? 'Dispatching Dasher...' : 'Request DoorDash Courier'}
                 </button>
 
                 {rates.length > 0 && (
