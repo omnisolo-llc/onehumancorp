@@ -14,7 +14,7 @@ test.describe('Checkout Subscription Flow', () => {
 
   test('completes subscription payment successfully', async ({ page }) => {
     // Navigate to checkout with subscription flags
-    await page.goto('http://localhost:3000/checkout?isSubscription=true&planId=plan_test_123');
+    await page.goto('/checkout?isSubscription=true&planId=plan_test_123');
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
 
     // Test the Pay Now button
