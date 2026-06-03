@@ -48,8 +48,23 @@ export default function InboxPage() {
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
 
-  const generateDraft = () => {
-    setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
+  const generateDraft = async () => {
+    try {
+      const response = await fetch('/api/v1/ai/draft-reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-token'
+        },
+        body: JSON.stringify({
+          customer_message: 'Do you have vegan birthday cake options?'
+        })
+      });
+      const data = await response.json();
+      setReplyInput(data.output || 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
+    } catch (e) {
+      setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
+    }
   };
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
