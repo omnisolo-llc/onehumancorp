@@ -872,7 +872,7 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?").bind(threshold).fetch_all(sqlite_pool).await?;
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE strftime('%s', last_accessed) < strftime('%s', ?)").bind(threshold.to_rfc3339()).fetch_all(sqlite_pool).await?;
                 for row in rows {
                     let id: String = row.get("session_id");
                     let data: String = row.get("context_data");
@@ -891,8 +891,8 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?")
-                    .bind(threshold)
+                sqlx::query("DELETE FROM agent_session_data WHERE strftime('%s', last_accessed) < strftime('%s', ?)")
+                    .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?;
             }
@@ -1146,7 +1146,7 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND strftime('%s', updated_at) < strftime('%s', ?))")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -1815,5 +1815,69 @@ mod e2e_cleanup_stagnant_missions_tests {
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
             .bind(&test_tenant)
             .execute(&pool).await.expect("Database URL or operation failed in test");
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_sqlite() {
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let sqlite_pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to connect to in-memory SQLite");
+
+        // Setup schema
+        sqlx::query(
+            "CREATE TABLE agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT,
+                updated_at DATETIME NOT NULL,
+                tenant_id TEXT NOT NULL
+            );"
+        )
+        .execute(&sqlite_pool)
+        .await
+        .expect("Failed to create agent_missions table");
+
+        let db = DB {
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+            pool: get_pool(), // Dummy postgres pool, won't be used by Sqlite branch
+        };
+
+        let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());
+
+        // 1. Stuck mission (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, ?)")
+            .bind(&test_tenant)
+            .execute(&sqlite_pool).await.expect("Failed to insert mission_1");
+
+        // 2. Pending mission but updated recently (should NOT be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, ?)")
+            .bind(&test_tenant)
+            .execute(&sqlite_pool).await.expect("Failed to insert mission_2");
+
+        // 3. Pending mission updated 2 hours ago (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', datetime('now', '-2 hours'), ?)")
+            .bind(&test_tenant)
+            .execute(&sqlite_pool).await.expect("Failed to insert mission_3");
+
+        // Clean up missions older than 3600 seconds
+        let _affected = db.cleanup_stagnant_missions(3600).await.expect("Failed to cleanup stagnant missions in sqlite");
+
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = ?")
+            .bind(&test_tenant)
+            .fetch_one(&sqlite_pool).await.expect("Failed to fetch mission_1 status").get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = ?")
+            .bind(&test_tenant)
+            .fetch_one(&sqlite_pool).await.expect("Failed to fetch mission_2 status").get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = ?")
+            .bind(&test_tenant)
+            .fetch_one(&sqlite_pool).await.expect("Failed to fetch mission_3 status").get("status");
+        assert_eq!(status_3, "FAILED");
     }
 }
