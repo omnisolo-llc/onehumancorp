@@ -646,6 +646,7 @@ impl AgentServiceImpl {
 
     async fn build_tools(
         &self,
+        llm: Arc<dyn LlmClient>,
         toolset: Option<&ToolsetConfig>,
         department: &str,
         working_dir: Option<PathBuf>,
@@ -672,11 +673,13 @@ impl AgentServiceImpl {
 
         // Visual Workflow Tool Injection
         let visual_workflow_tool = crate::visual_workflow::visual_workflow_tool(
-            self.resolve_llm("", "", ""),
+            llm.clone(),
             tools.clone(),
             std::collections::HashMap::new(),
         );
         tools.push(visual_workflow_tool);
+
+
 
 
         if !department.is_empty() {
@@ -726,6 +729,7 @@ impl AgentServiceImpl {
         let observation_store = Arc::new(dashmap::DashMap::new());
         let tools = self
             .build_tools(
+                llm.clone(),
                 req.toolset_config.as_ref(),
                 &req.department,
                 Some(Self::workspace_path()),
@@ -794,6 +798,7 @@ impl AgentService for AgentServiceImpl {
         let observation_store = Arc::new(dashmap::DashMap::new());
         let tools = self
             .build_tools(
+                llm.clone(),
                 task_req.toolset_config.as_ref(),
                 &task_req.department,
                 Some(Self::workspace_path()),
@@ -1056,6 +1061,7 @@ impl AgentService for AgentServiceImpl {
             let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
             let tools = self
                 .build_tools(
+                    llm.clone(),
                     sub_req.toolset_config.as_ref(),
                     "",
                     working_dir,
