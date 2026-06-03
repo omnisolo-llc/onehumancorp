@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package ohc.tax.v1;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/tax/v1;taxv1";
+
+message CalculateTaxRequest {
+    string tenant_id = 1;
+    string buyer_location_code = 2; // Country/Region
+    string product_category = 3;
+    double taxable_amount = 4;
+}
+
+message CalculateTaxResponse {
+    double tax_amount = 1;
+    double tax_rate = 2;
+    string jurisdiction_id = 3;
+}
+
+message TaxLedgerEntry {
+    string id = 1;
+    string tenant_id = 2;
+    string order_id = 3;
+    string jurisdiction_id = 4;
+    double taxable_amount = 5;
+    double tax_amount = 6;
+    double tax_rate = 7;
+    string status = 8;
+    int64 created_at = 9;
+}
+
+message NexusThresholdAlert {
+    string tenant_id = 1;
+    string jurisdiction_id = 2;
+    double current_volume = 3;
+    double threshold_volume = 4;
+    string alert_message = 5;
+}
+
+service TaxEngineService {
+    rpc CalculateTax(CalculateTaxRequest) returns (CalculateTaxResponse);
+    rpc RecordTaxLedger(TaxLedgerEntry) returns (TaxLedgerEntry);
+    rpc GetNexusAlerts(NexusThresholdAlertRequest) returns (NexusThresholdAlertResponse);
+}
+
+message NexusThresholdAlertRequest {
+    string tenant_id = 1;
+}
+
+message NexusThresholdAlertResponse {
+    repeated NexusThresholdAlert alerts = 1;
+}

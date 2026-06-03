@@ -13,6 +13,7 @@ exports_files([
     "model.proto",
     "organization.proto",
     "skills.proto",
+    "tax.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -230,6 +231,21 @@ proto_library(
 proto_rust_library(
     name = "delivery",
     proto = ":delivery_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Tax Engine ─────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "tax_proto",
+    srcs = ["tax.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "tax",
+    proto = ":tax_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
