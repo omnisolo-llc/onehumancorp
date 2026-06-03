@@ -1,6 +1,5 @@
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::GetDashboardSnapshotRequest;
 use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
@@ -293,13 +292,14 @@ impl AgentManagerService for MyAgentManagerService {
 
     async fn get_dashboard_snapshot(
         &self,
-        request: Request<GetDashboardSnapshotRequest>,
+        request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
         let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
-        let req = request.into_inner();
-        Ok(Response::new(self.get_snapshot(&org_id_req, req.mobile_optimized).await?))
+
+        let mobile_optimized = request.metadata().get("x-mobile-optimized").map(|v| v.to_str().unwrap_or("false") == "true").unwrap_or(false);
+        Ok(Response::new(self.get_snapshot(&org_id_req, mobile_optimized).await?))
     }
 
     async fn restore_snapshot(
@@ -390,7 +390,7 @@ mod tests {
     async fn test_agent_get_dashboard_snapshot() {
         let service = setup_test_agent_manager_service().await;
 
-        let req = GetDashboardSnapshotRequest { mobile_optimized: false };
+        let req = EmptyRequest {};
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
         metadata.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());

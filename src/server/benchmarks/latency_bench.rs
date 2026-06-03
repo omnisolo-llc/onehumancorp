@@ -197,7 +197,7 @@ pub async fn bench_agent_snapshot() {
         let start = Instant::now();
 
         let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
-        let mut request = tonic::Request::new(::server_ohc::orchestration::GetDashboardSnapshotRequest { mobile_optimized: false });
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
             org_id: "system".to_string(),

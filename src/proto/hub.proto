@@ -1360,7 +1360,7 @@ service AgentManagerService {
   rpc ImportSkill(ImportSkillRequest) returns (SkillPack);
   
   rpc GetSnapshots(EmptyRequest) returns (SnapshotsResponse);
-  rpc GetDashboardSnapshot(GetDashboardSnapshotRequest) returns (DashboardSnapshot);
+  rpc GetDashboardSnapshot(EmptyRequest) returns (DashboardSnapshot);
   rpc CreateSnapshot(CreateSnapshotRequest) returns (OrgSnapshot);
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns (DashboardSnapshot);
 }
