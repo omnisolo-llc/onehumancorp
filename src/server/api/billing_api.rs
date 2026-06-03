@@ -131,7 +131,8 @@ pub async fn cost_dashboard_handler(
             auditor.get_tenant_revenue(&tenant_id_clone_2),
             auditor.get_tenant_payment_fees(&tenant_id_clone_2),
             auditor.get_tenant_compute_cost(&tenant_id_clone_2),
-            auditor.get_tenant_network_cost(&tenant_id_clone_2)
+            auditor.get_tenant_network_cost(&tenant_id_clone_2),
+            auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2)
         )
     });
 
@@ -142,7 +143,7 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
+    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
@@ -156,7 +157,7 @@ pub async fn cost_dashboard_handler(
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
-        bandwidth_savings: 0, // Placeholder as there's no tracking for this right now. If there's tracking, we would fetch it from auditor.
+        bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         period_start,
         period_end,
     })

@@ -1152,19 +1152,21 @@ impl HubService for MyHubService {
                 let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
                 let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
                 let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
-                (llm, rev, fees)
+                let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);
+                let network_cost = auditor.get_tenant_network_cost(&tenant_id_clone_2);
+                (llm, rev, fees, bw_savings, network_cost)
             }),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0));
+        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, bandwidth_savings_f64, network_cost_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
@@ -1174,6 +1176,8 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            bandwidth_savings: (bandwidth_savings_f64 * 100.0) as i64,
+            network_cost: (network_cost_f64 * 100.0) as i64,
         }))
     }
 
