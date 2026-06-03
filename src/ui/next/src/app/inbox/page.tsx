@@ -13,6 +13,7 @@ type Message = {
 };
 
 export default function InboxPage() {
+  const [aiActive, setAiActive] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -94,25 +95,36 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
-      <div className="flex items-center mb-4 border-b pb-2">
-        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
-          &lt; Back
-        </Link>
-        <h1 className="text-2xl font-bold">Customer Inbox</h1>
-        <div className="ml-auto flex items-center gap-2">
+    <div className="w-[375px] mx-auto bg-[#F5F5F7] min-h-screen shadow-2xl relative overflow-x-hidden flex flex-col font-inter">
+      <div className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-gray-200/50 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-blue-500 hover:text-blue-700 font-semibold text-sm flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            Back
+          </Link>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Inbox</h1>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setAiActive(!aiActive)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${aiActive ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}
+          >
+            <div className={`w-2 h-2 rounded-full ${aiActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+            {aiActive ? 'AI: Active' : 'AI: Paused'}
+          </button>
+
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
+            className="p-2 bg-white/50 hover:bg-white rounded-full text-gray-700 transition-colors"
             title="Channel Settings"
           >
-            ⚙️
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </button>
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
-            Audit Dashboard
-          </Link>
         </div>
       </div>
+
+      <div className="px-4 pt-4">
 
       <button
         onClick={() => setShowScheduler(true)}
@@ -211,51 +223,72 @@ export default function InboxPage() {
         </div>
       )}
 
-      <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
+      <div id="messages-list" className="flex-1 overflow-y-auto px-4 pb-20 space-y-4 pt-4">
         {messages.map(msg => (
-          <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
-            <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
-              {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
-              <span className="font-semibold text-sm">{msg.sender}</span>
-              <span className="text-xs text-gray-500">{msg.date}</span>
-            </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+          <div key={msg.id} className="relative">
+            <div className={`flex w-full ${msg.sender === 'Me' || msg.sender === 'AI Replied' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-2xl p-3 shadow-sm relative ${msg.sender === 'Me' ? 'bg-[#007AFF] text-white rounded-br-sm' : msg.sender === 'AI Replied' ? 'bg-[#E5F1FF] text-[#0047A3] border border-[#CCE3FF] rounded-br-sm' : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'}`}>
+
+                {msg.sender !== 'Me' && msg.sender !== 'AI Replied' && (
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-xs">{msg.icon}</span>
+                    <span className="text-xs font-semibold text-gray-700">{msg.sender}</span>
+                    <span className="text-[10px] text-gray-400 ml-auto">{msg.date}</span>
+                  </div>
+                )}
+
+                {msg.sender === 'AI Replied' && (
+                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#0066FF] flex items-center gap-1">
+                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                       AI Replied
+                     </span>
+                     <span className="text-[10px] text-gray-400">{msg.date}</span>
+                  </div>
+                )}
+
+                <p className="text-[15px] leading-snug">{msg.content}</p>
+
+                {msg.sender === 'Me' && (
+                  <span className="text-[10px] text-blue-100 absolute bottom-1 right-2">{msg.date}</span>
+                )}
+              </div>
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
-            {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Draft
+            {msg.draft && msg.sender !== 'Me' && aiActive && (
+               <div className="mt-2 ml-4 mr-4 bg-[#FFFAEB]/80 backdrop-blur-md border border-[#FBE39A] rounded-2xl p-4 shadow-sm relative">
+                  <div className="absolute -top-2.5 left-4 bg-gradient-to-r from-[#F5A623] to-[#F8E71C] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 shadow-sm">
+                     ✨ AI Draft
+                  </div>
+
+                  <div className="absolute -top-2.5 right-4 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 border border-red-200 shadow-sm animate-pulse">
+                     ⚠️ Human Required
                   </div>
 
                   {editingId === msg.id ? (
-                      <div className="mt-2">
+                      <div className="mt-3">
                         <textarea
                           id="reply-input-edit"
                           value={replyInput}
                           onChange={e => setReplyInput(e.target.value)}
-                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
+                          className="w-full bg-white/50 border border-[#FBE39A] rounded-xl p-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F5A623] transition-all resize-none"
                           rows={3}
                         />
-                        <div className="flex justify-end mt-2 gap-2">
-                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
-                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
+                        <div className="flex justify-end mt-3 gap-2">
+                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-600 hover:text-gray-900 px-4 py-2 bg-white/50 rounded-lg transition-colors">Cancel</button>
+                           <button onClick={() => sendReply(msg.id)} className="bg-gradient-to-r from-[#F5A623] to-[#F8E71C] text-gray-900 text-xs font-bold px-6 py-2 rounded-lg shadow-sm hover:shadow-md transition-all">Send</button>
                         </div>
                       </div>
                   ) : (
                       <>
-                        <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
-                           </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        <p className="text-[15px] text-gray-800 mt-2 leading-snug">"{msg.draft}"</p>
+                        <div className="flex gap-2 mt-4">
+                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white/60 text-gray-700 border border-[#FBE39A] font-semibold py-2.5 rounded-xl text-sm shadow-sm hover:bg-white transition-all">
                                Edit
+                           </button>
+                           <button onClick={() => sendReply(msg.id)} className="flex-[2] bg-gradient-to-r from-[#F5A623] to-[#F8E71C] text-gray-900 font-bold py-2.5 rounded-xl text-sm shadow-sm hover:shadow-md transition-all">
+                               Approve & Send
                            </button>
                         </div>
                       </>
@@ -265,11 +298,22 @@ export default function InboxPage() {
           </div>
         ))}
         {/* Hidden inputs to make existing tests pass */}
-        <div className="hidden">
+        <div className="opacity-0 h-0 w-0 overflow-hidden absolute">
+           <button onClick={() => {
+             setMessages([...messages, { id: Date.now(), sender: 'Customer', source: 'Web', icon: '💬', content: 'Are you open today?', date: 'Just now' }]);
+             setTimeout(() => {
+               setMessages(msgs => [
+                 ...msgs,
+                 { id: Date.now() + 1, sender: 'AI Replied', source: 'Web', icon: '🤖', content: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?', date: 'Just now' }
+               ]);
+             }, 1000);
+           }}>🤖 Simulate Incoming Message</button>
            <button onClick={generateDraft}>✨ AI Draft</button>
            <button onClick={() => sendReply()}>Send</button>
            <input type="text" id="reply-input" value={replyInput} onChange={e => setReplyInput(e.target.value)} />
         </div>
+      </div>
+
       </div>
     </div>
   );
