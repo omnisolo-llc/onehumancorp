@@ -6,11 +6,11 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     await page.goto('/dashboard');
 
     // Wait for the Milestone Growth Loop component to appear
-    await page.locator('text=Milestone Unlocked').first().waitFor();
+    await expect(page.locator('text=Milestone Unlocked').first()).toBeVisible({ timeout: 15000 });
 
     // Verify the share button is visible
     const shareBtn = page.locator('text=Share & Claim Reward');
-    await shareBtn.first().waitFor();
+    await expect(shareBtn.first()).toBeVisible();
 
     // Handle any window dialogs (e.g., window.alert for success message)
     page.on('dialog', async dialog => {
@@ -28,8 +28,6 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
 
     // Click the share button
     await shareBtn.first().click();
-
-    // Verify the reward text updates on the frontend
 
   });
 });

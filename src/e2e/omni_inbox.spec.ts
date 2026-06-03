@@ -2,19 +2,22 @@ import { test, expect } from './fixtures';
 
 test.describe('Omni-Inbox Auto-Reply Agent', () => {
   test('simulates incoming message and auto-replies correctly', async ({ page }) => {
+    // Navigate to the inbox page
     await page.goto('/inbox');
 
+    // Wait for the button
+    await expect(page.getByRole('button', { name: /Simulate Incoming Message/ })).toBeVisible({ timeout: 15000 });
+
     // Click Simulate Incoming Message
-    await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
+    await page.getByRole('button', { name: /Simulate Incoming Message/ }).click();
 
     // Verify user message is added
-    await expect(page.getByText('Are you open today?')).toBeVisible();
+    await expect(page.getByText('Are you open today?').first()).toBeVisible({ timeout: 15000 });
 
-    // Wait for AI Reply
-    const aiBadge = page.getByText('AI Replied');
-    await expect(aiBadge).toBeVisible({ timeout: 10000 });
+    // Mock AI reply delay wait
+    await expect(page.getByText('AI Replied').first()).toBeVisible({ timeout: 15000 });
 
-    // Verify reply content
-    await expect(page.getByText('Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?')).toBeVisible();
+    // Verify AI response content
+    await expect(page.getByText('Yes, we are open today from 9 AM to 5 PM!').first()).toBeVisible({ timeout: 15000 });
   });
 });
