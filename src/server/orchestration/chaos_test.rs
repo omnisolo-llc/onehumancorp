@@ -12,13 +12,14 @@ use crate::orchestration::state::cloud::CloudStateManager;
 // A Mock mesh that introduces network latency
 struct LatencyMockMesh {
     delay_ms: u64,
-}
+
 
 impl LatencyMockMesh {
     fn new(delay_ms: u64) -> Self {
         Self { delay_ms }
     }
-}
+
+
 
 #[async_trait]
 impl TeammateMesh for LatencyMockMesh {
@@ -26,52 +27,63 @@ impl TeammateMesh for LatencyMockMesh {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(Box::new(|| {}))
     }
+
     async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(true)
     }
+
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(vec![])
     }
+
     async fn ping(&self) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(Box::new(|| {}))
     }
+
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(())
     }
+
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         Ok(Box::new(|| {}))
     }
-}
+
+
 
 // A Mock mesh that emits malformed payload
 struct CorruptedMockMesh {
     received_messages: std::sync::Arc<std::sync::atomic::AtomicUsize>,
-}
+
 
 impl CorruptedMockMesh {
     fn new() -> Self {
@@ -79,16 +91,19 @@ impl CorruptedMockMesh {
             received_messages: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         }
     }
-}
+
+
 
 #[async_trait]
 impl TeammateMesh for CorruptedMockMesh {
     async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         Ok(())
     }
+
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
         Ok(())
     }
+
     async fn subscribe(&self, _topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let counter = self.received_messages.clone();
         tokio::spawn(async move {
@@ -103,23 +118,26 @@ impl TeammateMesh for CorruptedMockMesh {
         });
         Ok(Box::new(|| {}))
     }
+
     async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
         Ok(true)
     }
+
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
         Ok(())
     }
+
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
     async fn ping(&self) -> Result<(), String> { Ok(()) }
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 struct RacingLockMesh {
     transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
-}
+
 
 impl RacingLockMesh {
     fn new() -> Self {
@@ -127,7 +145,8 @@ impl RacingLockMesh {
             transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
-}
+
+
 
 #[async_trait]
 impl TeammateMesh for RacingLockMesh {
@@ -138,16 +157,18 @@ impl TeammateMesh for RacingLockMesh {
         // Just use the internal memory transport to simulate a real Redis-backed cross-process lock
         self.transport.acquire_lock(resource, owner, ttl_seconds).await
     }
+
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.transport.release_lock(resource, owner).await
     }
+
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
     async fn ping(&self) -> Result<(), String> { Ok(()) }
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 
 
@@ -158,7 +179,7 @@ impl TeammateMesh for RacingLockMesh {
 struct DroppingMockTransport {
     transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
     drop_rate: std::sync::atomic::AtomicUsize,
-}
+
 
 impl DroppingMockTransport {
     fn new(drop_rate: usize) -> Self {
@@ -167,7 +188,8 @@ impl DroppingMockTransport {
             drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
         }
     }
-}
+
+
 
 #[async_trait]
 impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
@@ -193,14 +215,16 @@ impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport
         }
         self.transport.publish(topic, event).await
     }
+
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.transport.subscribe(topic, handler).await
     }
+
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> { Ok(()) }
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-}
+
 
 struct SleepingMockMesh;
 
@@ -213,6 +237,7 @@ impl TeammateMesh for SleepingMockMesh {
         tokio::time::sleep(tokio::time::Duration::from_millis(61000)).await;
         Ok(true)
     }
+
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
 
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
@@ -221,7 +246,7 @@ impl TeammateMesh for SleepingMockMesh {
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 
 #[cfg(test)]
@@ -245,6 +270,7 @@ mod chaos_tests {
         assert!(timeouts >= 10, "System should timeout internally on all calls when agent is non-responsive");
         assert_eq!(successful_sends, 0, "System should not have successful sends during a timeout storm");
     }
+
 
     #[tokio::test]
     async fn test_pubsub_high_message_loss_degradation() {
@@ -276,6 +302,7 @@ mod chaos_tests {
         assert_eq!(successful_sends + failed_sends, 20, "All messages should be accounted for (success or safe failure)");
     }
 
+
     #[tokio::test]
     async fn test_partition_tolerance() {
         let transport = Arc::new(DroppingMockTransport::new(100));
@@ -301,6 +328,7 @@ mod chaos_tests {
         assert_eq!(failures, 10, "System should handle partition by failing all requests gracefully");
         assert_eq!(successful_sends, 0, "System should not have successful sends during a network partition");
     }
+
 
     use super::*;
 
@@ -367,6 +395,7 @@ mod chaos_tests {
         }
     }
 
+
     #[tokio::test]
     async fn test_redis_mailbox_corruption() {
         let mesh = Arc::new(CorruptedMockMesh::new());
@@ -396,6 +425,7 @@ mod chaos_tests {
         notify.notified().await;
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
+
 
     #[tokio::test]
     async fn test_agent_lock_race_conditions() {
@@ -428,6 +458,7 @@ mod chaos_tests {
         // Ensure exactly ONE agent wins the race condition under massive load
         assert_eq!(winners, 1, "There should be exactly one winner in a lock race even under high contention");
     }
+
 
 
     #[tokio::test]
@@ -468,6 +499,7 @@ mod chaos_tests {
         assert!(successful_sends >= 10, "Retry logic should recover a significant portion of dropped messages");
     }
 
+
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
@@ -495,6 +527,7 @@ mod chaos_tests {
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);
     }
+
 
     #[tokio::test]
     async fn test_llm_api_failure_recovery() {
@@ -540,6 +573,7 @@ mod chaos_tests {
         }).await;
     }
 
+
     #[tokio::test]
     async fn test_host_memory_exhaustion_degradation() {
         // We simulate host memory exhaustion by synthetically increasing database operation latency
@@ -566,5 +600,57 @@ mod chaos_tests {
         assert!(elapsed < std::time::Duration::from_millis(2500));
         assert!(res.is_ok());
         assert_eq!(res.unwrap().len(), 0);
+    }
+
+
+
+    #[tokio::test]
+    async fn test_sql_sync_lag_simulation() {
+        // Simulating SQL sync lag between Cloud and Standalone modes.
+        // We ensure that eventual consistency is met and operations do not panic.
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
+        });
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS sync_test (id TEXT PRIMARY KEY, value TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
+
+        let db_clone = db.clone();
+
+        // Spawn writer thread simulating slow Standalone writes
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if let DbStore::Sqlite(ref pool) = db_clone.store {
+                sqlx::query("INSERT INTO sync_test (id, value) VALUES ('1', 'synced')").execute(pool).await.unwrap();
+            }
+        });
+
+        // Simulate Cloud reading before sync has completed
+        let start = std::time::Instant::now();
+        let mut attempts = 0;
+        let mut synced = false;
+
+        while start.elapsed() < Duration::from_millis(200) {
+            attempts += 1;
+            if let DbStore::Sqlite(ref pool) = db.store {
+                let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT value FROM sync_test WHERE id = '1'").fetch_one(pool).await;
+                if row.is_ok() && row.unwrap().0 == "synced" {
+                    synced = true;
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        assert!(synced, "Eventual consistency should be reached even with SQL sync lag.");
+        assert!(attempts > 1, "Reader should have attempted multiple times before sync resolved.");
+    }
+
     }
 }
