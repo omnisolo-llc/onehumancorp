@@ -21,7 +21,7 @@ export default function CheckoutPage() {
     setIsCheckingDelivery(true);
 
     // Simulate checking if address is within radius
-    setTimeout(() => {
+    setTimeout(async () => {
       const res = await fetch("/api/doordash/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pickup_address: "store", dropoff_address: deliveryAddress }) });
       if (res.ok) {
         const data = await res.json();
