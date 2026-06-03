@@ -6,6 +6,7 @@ test.describe('Conversational Checkout & Instant Deposit Engine', () => {
     await page.goto('/inbox');
 
     // 2. Click Simulate Incoming Message
+    await page.waitForSelector('button:has-text("Simulate Incoming Message")');
     await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
 
     // 3. Verify Sales AI detects intent and generates checkout bubble (mocked via AI Replied)
