@@ -1,8 +1,8 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use crate::llm::LlmClient;
-use std::sync::Arc;
-use serde::Deserialize;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use serde::Deserialize;
+use std::sync::Arc;
 
 /// A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
@@ -73,24 +73,109 @@ impl VerificationManager {
 }
 
 /// An InferentialSensor that uses an LlmClient to act as a judge.
-pub struct PlaywrightVisualVerifier;
+pub struct PlaywrightVisualVerifier {
+    pub llm: Arc<dyn LlmClient>,
+    pub model: String,
+}
 
 #[async_trait::async_trait]
 impl VisualVerifier for PlaywrightVisualVerifier {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-        let output = std::process::Command::new("npx")
+        let id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let screenshot_path = format!("test_{}.png", id);
+
+        let output = tokio::process::Command::new("npx")
             .arg("playwright")
             .arg("screenshot")
             .arg(ui_state_path)
-            .arg("test.png")
+            .arg(&screenshot_path)
             .output()
+            .await
             .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
 
-        if output.status.success() {
-            Ok(())
-        } else {
+        if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}", stderr))
+            let _ = tokio::fs::remove_file(&screenshot_path).await;
+            return Err(format!("Visual check failed. Playwright error: {}", stderr));
+        }
+
+        let image_data = match tokio::fs::read(&screenshot_path).await {
+            Ok(data) => data,
+            Err(e) => {
+                let _ = tokio::fs::remove_file(&screenshot_path).await;
+                return Err(format!("Failed to read screenshot: {}", e));
+            }
+        };
+
+        // Clean up immediately after reading
+        let _ = tokio::fs::remove_file(&screenshot_path).await;
+
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+        let base64_image = STANDARD.encode(&image_data);
+
+        self.evaluate_screenshot(ui_state_path, &base64_image).await
+    }
+}
+
+impl PlaywrightVisualVerifier {
+    pub async fn evaluate_screenshot(
+        &self,
+        ui_state_path: &str,
+        base64_image: &str,
+    ) -> Result<(), String> {
+        let system_prompt = "You are an expert visual QA tester. Evaluate the following screenshot of a web application for visual correctness, layout issues, and adherence to standard UI/UX patterns. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.";
+
+        let req = ChatRequest {
+            model: self.model.clone(),
+            system: system_prompt.to_string(),
+            messages: vec![Message {
+                role: ohc_builtin_agent_core::types::Role::User,
+                content: format!(
+                    "<image>{}</image>
+Please verify this UI state: {}",
+                    base64_image, ui_state_path
+                ),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            }],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.0,
+        };
+
+        struct ParserAdapter {
+            llm: Arc<dyn LlmClient>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClientForParser for ParserAdapter {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
+            }
+        }
+        let parser_client = Arc::new(ParserAdapter {
+            llm: self.llm.clone(),
+        }) as Arc<dyn LlmClientForParser>;
+
+        match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
+            Ok(eval) => {
+                if eval.status.to_uppercase() == "REJECT" {
+                    Err(format!(
+                        "Reason: {}. Confidence: {:.2}",
+                        eval.reason, eval.confidence
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            Err(e) => Err(format!("LLM Error evaluating screenshot: {}", e)),
         }
     }
 }
@@ -122,16 +207,28 @@ impl InferentialSensor for LlmJudgeSensor {
             temperature: 0.0,
         };
 
-        struct ParserAdapter { llm: Arc<dyn LlmClient>, }
-#[async_trait::async_trait]
-impl LlmClientForParser for ParserAdapter {
-    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
-}
-let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+        struct ParserAdapter {
+            llm: Arc<dyn LlmClient>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClientForParser for ParserAdapter {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
+            }
+        }
+        let parser_client = Arc::new(ParserAdapter {
+            llm: self.llm.clone(),
+        }) as Arc<dyn LlmClientForParser>;
         match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
                 if eval.status.to_uppercase() == "REJECT" {
-                    Err(format!("Reason: {}. Confidence: {:.2}", eval.reason, eval.confidence))
+                    Err(format!(
+                        "Reason: {}. Confidence: {:.2}",
+                        eval.reason, eval.confidence
+                    ))
                 } else {
                     Ok(())
                 }
@@ -175,15 +272,71 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_playwright_visual_verifier() {
-        // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
-        // but test the struct initialization.
-        let verifier = PlaywrightVisualVerifier;
-        // Run against an invalid path, expecting an error
-        let res = verifier.verify_visual("invalid_path_123").await;
+    async fn test_playwright_visual_verifier_invalid_path() {
+        let verifier = PlaywrightVisualVerifier {
+            llm: Arc::new(MockLlmClient {
+                response_text:
+                    r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#
+                        .to_string(),
+            }),
+            model: "test".to_string(),
+        };
+        let res = verifier
+            .verify_visual("invalid_path_123_nonexistent_url")
+            .await;
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:"));
+    }
+
+    #[tokio::test]
+    async fn test_playwright_visual_verifier_evaluate_success() {
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#
+                .to_string(),
+        });
+        let verifier = PlaywrightVisualVerifier {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+        };
+        let res = verifier
+            .evaluate_screenshot("http://localhost", "base64data")
+            .await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_playwright_visual_verifier_evaluate_reject() {
+        let fail_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "REJECT", "reason": "Missing button", "confidence": 0.8}"#
+                .to_string(),
+        });
+        let verifier = PlaywrightVisualVerifier {
+            llm: fail_llm,
+            model: "test-model".to_string(),
+        };
+        let res = verifier
+            .evaluate_screenshot("http://localhost", "base64data")
+            .await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Reason: Missing button"));
+    }
+
+    #[tokio::test]
+    async fn test_playwright_visual_verifier_evaluate_error() {
+        // Test parsing failure or malformed JSON
+        let err_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"bad": json"#.to_string(),
+        });
+        let verifier = PlaywrightVisualVerifier {
+            llm: err_llm,
+            model: "test-model".to_string(),
+        };
+        let res = verifier
+            .evaluate_screenshot("http://localhost", "base64data")
+            .await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("LLM Error evaluating screenshot"));
     }
 
     struct MockLlmClient {
@@ -211,7 +364,9 @@ mod tests {
                 response_id: None,
                 previous_response_id: None,
             };
-            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+            Ok(ChatResponse {
+                response_id: Some("test".to_string()),
+                stop_reason: "".to_string(),
                 message: msg,
                 usage: Usage::default(),
             })
@@ -219,7 +374,10 @@ mod tests {
     }
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let tool_call = ohc_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
@@ -236,7 +394,9 @@ mod tests {
                 response_id: None,
                 previous_response_id: None,
             };
-            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+            Ok(ChatResponse {
+                response_id: Some("test".to_string()),
+                stop_reason: "".to_string(),
                 message: msg,
                 usage: Usage::default(),
             })
@@ -260,23 +420,46 @@ mod tests {
 
     #[tokio::test]
     async fn test_verification_manager_inferential() {
-        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() });
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#
+                .to_string(),
+        });
+        let judge = Arc::new(LlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+        });
 
         let mut manager = VerificationManager::new();
         manager.add_inferential(judge);
 
-        assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
+        assert!(
+            manager
+                .run_inferential_sensors("output", "task")
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
     async fn test_llm_judge_sensor() {
-        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() };
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#
+                .to_string(),
+        });
+        let judge = LlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+        };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
-        let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
+        let fail_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#
+                .to_string(),
+        });
+        let judge_fail = LlmJudgeSensor {
+            llm: fail_llm,
+            model: "test-model".to_string(),
+        };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));
