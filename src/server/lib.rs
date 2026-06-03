@@ -2988,7 +2988,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
             { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
             { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
             { "id": 4, "title": "Add a product", "duration": "1:05" },
