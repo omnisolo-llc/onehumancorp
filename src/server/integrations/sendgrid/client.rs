@@ -21,7 +21,7 @@ impl SendGridClient {
             }],
             "from": {"email": "no-reply@onehumancorp.com"},
             "subject": subject,
-            "content": [{"type": "text/plain", "value": body}]
+            "content": [{"type": "text/html", "value": body}]
         });
 
         let res = self.http_client.post(url)

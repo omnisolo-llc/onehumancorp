@@ -1,3 +1,4 @@
+use crate::builder::db::list_brand_toolboxes;
 use axum::{
     extract::{Path, Extension},
     response::{Html, IntoResponse, Response},
@@ -159,6 +160,32 @@ async fn regenerate_cache(
     cache_key: String,
     cache: Arc<HybridCache<String>>,
 ) -> Result<(String, Vec<String>), axum::http::StatusCode> {
+    // Fetch BrandToolbox
+    let toolboxes = list_brand_toolboxes(&pool, tenant_id).await.unwrap_or_default();
+    let brand_toolbox = toolboxes.first();
+
+    let mut primary_color = "#0071E3".to_string();
+    let mut secondary_color = "#f5f5f7".to_string();
+    let mut primary_font = "Inter".to_string();
+    let mut secondary_font = "Outfit".to_string();
+
+    if let Some(tb) = brand_toolbox {
+        if let Some(dna) = tb.toolbox.get("dna") {
+            if let Some(c) = dna.get("primary_color").and_then(|v| v.as_str()) {
+                primary_color = c.to_string();
+            }
+            if let Some(c) = dna.get("secondary_color").and_then(|v| v.as_str()) {
+                secondary_color = c.to_string();
+            }
+            if let Some(f) = dna.get("primary_font").and_then(|v| v.as_str()) {
+                primary_font = f.to_string();
+            }
+            if let Some(f) = dna.get("secondary_font").and_then(|v| v.as_str()) {
+                secondary_font = f.to_string();
+            }
+        }
+    }
+
     let site = match super::db::list_sites(&pool, tenant_id).await {
         Ok(sites) => sites.into_iter().find(|s| s.id == site_id),
         Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
@@ -198,36 +225,46 @@ async fn regenerate_cache(
     }
     html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
 
-    html.push_str(r#"
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
+    // We should load dynamic fonts from Google Fonts if needed.
+    // For simplicity, we just inject the CSS variables here.
+    html.push_str(&format!(r#"
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&family={}:wght@400;500;600;700&family={}:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: #1D1D1F; display: flex; flex-direction: column; align-items: center; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; }
-        @media (prefers-color-scheme: dark) { body { background: #000; color: #F5F5F7; } .glass-container { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); } }
-        .block { padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); }
-        .block:last-child { border-bottom: none; }
-        .hero-title { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; }
-        .hero-subtitle { font-size: 16px; color: #666; margin: 0; }
-        @media (prefers-color-scheme: dark) { .hero-subtitle { color: #aaa; } }
-        .product-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
-        @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); } }
-        .product-name { font-weight: 600; font-size: 16px; margin: 0; }
-        .product-price { font-weight: 700; color: #0071E3; font-size: 16px; }
-        .product-desc { font-size: 14px; color: #555; margin-top: 4px; }
-        @media (prefers-color-scheme: dark) { .product-desc { color: #999; } }
-        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-        .btn:active { transform: scale(0.96); }
-        .service-block h3 { margin: 0 0 16px 0; }
-        .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
-        @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
-        .author { font-weight: 600; font-size: 14px; }
+        :root {{
+            --primary-color: {};
+            --secondary-color: {};
+            --primary-font: '{}', sans-serif;
+            --secondary-font: '{}', sans-serif;
+        }}
+        body {{ font-family: var(--primary-font); margin: 0; padding: 0; background: var(--secondary-color); color: #1D1D1F; display: flex; flex-direction: column; align-items: center; }}
+        .font-outfit {{ font-family: var(--secondary-font); }}
+        .glass-container {{ width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; }}
+        @media (prefers-color-scheme: dark) {{ body {{ background: #000; color: #F5F5F7; }} .glass-container {{ background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }} }}
+        .block {{ padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); }}
+        .block:last-child {{ border-bottom: none; }}
+        .hero-title {{ font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: var(--primary-color); }}
+        .hero-subtitle {{ font-size: 16px; color: #666; margin: 0; }}
+        @media (prefers-color-scheme: dark) {{ .hero-subtitle {{ color: #aaa; }} }}
+        .product-grid {{ display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }}
+        .product-card {{ background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }}
+        @media (prefers-color-scheme: dark) {{ .product-card {{ background: rgba(50, 50, 55, 0.5); }} }}
+        .product-name {{ font-weight: 600; font-size: 16px; margin: 0; }}
+        .product-price {{ font-weight: 700; color: var(--primary-color); font-size: 16px; }}
+        .product-desc {{ font-size: 14px; color: #555; margin-top: 4px; }}
+        @media (prefers-color-scheme: dark) {{ .product-desc {{ color: #999; }} }}
+        .btn {{ background: var(--primary-color); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: var(--primary-font); }}
+        .btn:active {{ transform: scale(0.96); }}
+        .service-block h3 {{ margin: 0 0 16px 0; color: var(--primary-color); }}
+        .testimonial {{ font-style: italic; color: #555; margin-bottom: 8px; }}
+        @media (prefers-color-scheme: dark) {{ .testimonial {{ color: #bbb; }} }}
+        .author {{ font-weight: 600; font-size: 14px; }}
     </style>
     </head>
     <body>
     <div class="glass-container">
-    "#);
+    "#, primary_font.replace(" ", "+"), secondary_font.replace(" ", "+"), primary_color, secondary_color, primary_font, secondary_font));
+
 
     for block in blocks {
         html.push_str("<div class=\"block\">\n");

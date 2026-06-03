@@ -1,3 +1,4 @@
+use crate::builder::db::list_brand_toolboxes;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -68,9 +69,26 @@ async fn get_invoice(
     Path(id): Path<String>,
     axum::extract::Query(query): axum::extract::Query<GetInvoiceQuery>,
 ) -> impl IntoResponse {
-    let repo = LedgerRepository::new(state.db);
+    let repo = LedgerRepository::new(state.db.clone());
+
+    // Check format from Accept header
+    // Currently returns JSON. We can implement HTML rendering here later.
+
     match repo.get_invoice(&query.tenant_id, &id).await {
-        Ok(Some(invoice)) => (StatusCode::OK, Json(invoice)).into_response(),
+        Ok(Some(invoice)) => {
+            // Include brand toolbox in the response payload for the frontend to render
+            if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&query.tenant_id) {
+                 if let Ok(toolboxes) = list_brand_toolboxes(&state.db.pool, tenant_uuid).await {
+                     if let Some(tb) = toolboxes.first() {
+                         return (StatusCode::OK, Json(serde_json::json!({
+                             "invoice": invoice,
+                             "brand_dna": tb.toolbox.get("dna")
+                         }))).into_response();
+                     }
+                 }
+            }
+            (StatusCode::OK, Json(serde_json::json!({"invoice": invoice}))).into_response()
+        },
         Ok(None) => (StatusCode::NOT_FOUND, "Invoice not found").into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
