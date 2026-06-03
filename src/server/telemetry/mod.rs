@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 pub mod forecaster;
 
 pub use ::server_config as config;
