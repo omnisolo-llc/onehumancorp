@@ -61,13 +61,41 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+use std::collections::HashMap;
+use tokio::sync::RwLock;
+
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
+    pub tasks: Arc<RwLock<HashMap<String, Task>>>,
+    pub steps: Arc<RwLock<HashMap<String, Vec<Step>>>>,
 }
 
 impl AgentProtocolServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        Self { runner }
+        Self {
+            runner,
+            tasks: Arc::new(RwLock::new(HashMap::new())),
+            steps: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// GET /ap/v1/agent/tasks
+    pub async fn list_tasks(&self) -> String {
+        let tasks_read = self.tasks.read().await;
+        let tasks: Vec<Task> = tasks_read.values().cloned().collect();
+        serde_json::to_string(&tasks).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}
+    pub async fn get_task(&self, task_id: &str) -> String {
+        let tasks_read = self.tasks.read().await;
+        if let Some(task) = tasks_read.get(task_id) {
+            serde_json::to_string(task).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        } else {
+            serde_json::to_string(&ErrorResponse {
+                error: format!("Task {} not found", task_id),
+            }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        }
     }
 
     /// POST /ap/v1/agent/tasks
@@ -85,13 +113,39 @@ impl AgentProtocolServer {
         let task_id = uuid::Uuid::new_v4().to_string();
 
         let resp = Task {
-            task_id,
+            task_id: task_id.clone(),
             input: req.input,
             additional_input: req.additional_input,
             artifacts: vec![],
         };
 
+        let mut tasks_write = self.tasks.write().await;
+        tasks_write.insert(task_id, resp.clone());
+
         serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/steps
+    pub async fn list_steps(&self, task_id: &str) -> String {
+        let steps_read = self.steps.read().await;
+        if let Some(steps) = steps_read.get(task_id) {
+            serde_json::to_string(steps).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        } else {
+            serde_json::to_string(&Vec::<Step>::new()).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        }
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/steps/{step_id}
+    pub async fn get_step(&self, task_id: &str, step_id: &str) -> String {
+        let steps_read = self.steps.read().await;
+        if let Some(steps) = steps_read.get(task_id) {
+            if let Some(step) = steps.iter().find(|s| s.step_id == step_id) {
+                return serde_json::to_string(step).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+            }
+        }
+        serde_json::to_string(&ErrorResponse {
+            error: format!("Step {} not found for task {}", step_id, task_id),
+        }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
@@ -108,9 +162,9 @@ impl AgentProtocolServer {
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
         let _cfg = crate::agent::AgentRunConfig::default();
 
-        match self.runner.run_async(&initial_message).await {
+        let resp = match self.runner.run_async(&initial_message).await {
             Ok(result) => {
-                let resp = Step {
+                Step {
                     task_id: task_id.to_string(),
                     step_id: uuid::Uuid::new_v4().to_string(),
                     name: None,
@@ -119,11 +173,10 @@ impl AgentProtocolServer {
                     additional_output: None,
                     is_last: true,
                     artifacts: vec![],
-                };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                }
             }
             Err(e) => {
-                let resp = Step {
+                Step {
                     task_id: task_id.to_string(),
                     step_id: uuid::Uuid::new_v4().to_string(),
                     name: None,
@@ -132,10 +185,14 @@ impl AgentProtocolServer {
                     additional_output: None,
                     is_last: true,
                     artifacts: vec![],
-                };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                }
             }
-        }
+        };
+
+        let mut steps_write = self.steps.write().await;
+        steps_write.entry(task_id.to_string()).or_insert_with(Vec::new).push(resp.clone());
+
+        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 }
 
@@ -197,6 +254,57 @@ mod tests {
 
         let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
         assert_eq!(err_resp.error, "Invalid request");
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_get_task_and_steps() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        // Test create task
+        let req_json = r#"{"input": "get task test"}"#;
+        let resp_json = server.create_task(req_json).await;
+        let created_task: Task = serde_json::from_str(&resp_json).unwrap();
+
+        // Test list_tasks
+        let tasks_json = server.list_tasks().await;
+        let tasks: Vec<Task> = serde_json::from_str(&tasks_json).unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].task_id, created_task.task_id);
+
+        // Test get_task
+        let task_json = server.get_task(&created_task.task_id).await;
+        let fetched_task: Task = serde_json::from_str(&task_json).unwrap();
+        assert_eq!(fetched_task.task_id, created_task.task_id);
+        assert_eq!(fetched_task.input, "get task test");
+
+        // Test execute step
+        let step_req = r#"{"input": "step 1"}"#;
+        let step_resp_json = server.execute_step(&created_task.task_id, step_req).await;
+        let executed_step: Step = serde_json::from_str(&step_resp_json).unwrap();
+
+        // Test list_steps
+        let steps_json = server.list_steps(&created_task.task_id).await;
+        let steps: Vec<Step> = serde_json::from_str(&steps_json).unwrap();
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0].step_id, executed_step.step_id);
+
+        // Test get_step
+        let step_json = server.get_step(&created_task.task_id, &executed_step.step_id).await;
+        let fetched_step: Step = serde_json::from_str(&step_json).unwrap();
+        assert_eq!(fetched_step.step_id, executed_step.step_id);
+        assert_eq!(fetched_step.output.unwrap(), "agent protocol success");
+
+        // Test not found
+        let err_json = server.get_task("invalid").await;
+        let err_resp: ErrorResponse = serde_json::from_str(&err_json).unwrap();
+        assert_eq!(err_resp.error, "Task invalid not found");
+
+        let err_step_json = server.get_step(&created_task.task_id, "invalid").await;
+        let err_step_resp: ErrorResponse = serde_json::from_str(&err_step_json).unwrap();
+        assert_eq!(err_step_resp.error, format!("Step invalid not found for task {}", created_task.task_id));
     }
 
     #[tokio::test]
