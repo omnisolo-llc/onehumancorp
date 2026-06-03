@@ -1727,7 +1727,3 @@ message GenerateMeetingForBookingRequest {
 message GenerateMeetingForBookingResponse {
   string link = 1;
 }
-
-message GetDashboardSnapshotRequest {
-  bool mobile_optimized = 1;
-}
