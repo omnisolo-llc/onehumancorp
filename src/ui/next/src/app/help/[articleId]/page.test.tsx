@@ -1,48 +1,76 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HelpArticlePage from './page';
-import * as navigation from 'next/navigation';
+import userEvent from '@testing-library/user-event';
 
+// Mock next/navigation
+const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useParams: vi.fn(),
+  useRouter: () => ({
+    push: mockPush,
+  }),
+  useParams: () => ({
+    articleId: 'getting-started'
+  })
 }));
 
 describe('HelpArticlePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('renders loading state initially', () => {
-    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started' });
-    global.fetch = vi.fn(() => new Promise(() => {})); // Never resolves
-
-    render(<HelpArticlePage />);
-    expect(screen.getByText('Loading article...')).toBeInTheDocument();
-  });
-
-  it('renders article content on successful fetch', async () => {
-    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started' });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        title: 'Getting Started',
-        contentHtml: '<p>Welcome to OneHumanCorp!</p>'
+        title: "Getting Started with Your Store",
+        contentHtml: "<p>Welcome to OneHumanCorp!</p>"
       })
     });
+  });
 
+  it('renders loading state initially', async () => {
+    let resolvePromise: any;
+    const promise = new Promise(resolve => { resolvePromise = resolve; });
+    global.fetch = vi.fn().mockImplementation(() => promise);
+
+    render(<HelpArticlePage />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+    await act(async () => {
+      resolvePromise({
+        ok: true,
+        json: () => Promise.resolve({
+            title: "Getting Started with Your Store",
+            contentHtml: "<p>Welcome to OneHumanCorp!</p>"
+        })
+      });
+    });
+  });
+
+  it('renders article loaded from API', async () => {
     render(<HelpArticlePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
+      expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
   });
 
-  it('renders error state on failed fetch', async () => {
-    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'invalid-id' });
+  it('navigates back when clicking the back button', async () => {
+    const user = userEvent.setup();
+    render(<HelpArticlePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
+    });
+
+    const backButton = screen.getByRole('button', { name: /Back to Help Center/i });
+    await user.click(backButton);
+
+    expect(mockPush).toHaveBeenCalledWith('/help');
+  });
+
+  it('handles not found error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
     });
@@ -50,9 +78,8 @@ describe('HelpArticlePage', () => {
     render(<HelpArticlePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Oops!')).toBeInTheDocument();
+      expect(screen.getByText('Article Not Found')).toBeInTheDocument();
+      expect(screen.getByText("We couldn't find the article you're looking for.")).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Article not found')).toBeInTheDocument();
   });
 });

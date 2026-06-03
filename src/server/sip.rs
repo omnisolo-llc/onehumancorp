@@ -57,7 +57,7 @@ impl SipDB {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
-                    if !err_str.contains("deadlock detected") && !err_str.contains("database is locked") && !err_str.contains("database is busy") && !err_str.contains("sqlite_busy") {
+                    if !err_str.contains("deadlock detected") && !err_str.contains("database is locked") && !err_str.contains("database is busy") {
                         return Err(err);
                     }
                     attempt += 1;
@@ -136,7 +136,7 @@ impl SipDB {
                         }
                     }
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                    if err_str.contains("timeout") || err_str.contains("closed") {
                         retry = true;
                     }
 
@@ -198,7 +198,7 @@ impl SipDB {
                         }
                     }
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                    if err_str.contains("timeout") || err_str.contains("closed") {
                         retry = true;
                     }
 

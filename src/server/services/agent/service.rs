@@ -67,9 +67,9 @@ impl MyAgentManagerService {
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
-            meetings: Arc::unwrap_or_clone(meetings),
+            meetings: meetings.to_vec(),
             costs: Some(costs),
-            agents: Arc::unwrap_or_clone(agents),
+            agents: agents.to_vec(),
             statuses,
             task_queue: vec![],
             queue_length: 0,
@@ -307,7 +307,7 @@ mod tests {
     use super::*;
     use ::server_auth::orchestration::AuthInfo;
     use tonic::Request;
-
+    use uuid::Uuid;
 
     async fn setup_test_agent_manager_service() -> MyAgentManagerService {
         let database_url = "sqlite::memory:";

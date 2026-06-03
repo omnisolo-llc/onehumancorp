@@ -17,7 +17,6 @@ pub struct AuditEvent {
 
 pub struct ComputeEvent {
     pub agent_id: String,
-    pub tenant_id: String,
     pub compute_hours: f64,
     pub network_egress_bytes: i64,
 }
@@ -32,8 +31,6 @@ pub struct CostAuditor {
     storage_savings: Mutex<f64>,
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
-    tenant_compute_costs: Mutex<HashMap<String, f64>>,
-    tenant_network_costs: Mutex<HashMap<String, f64>>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     tenant_revenues: Mutex<HashMap<String, f64>>,
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
@@ -63,8 +60,6 @@ impl CostAuditor {
             storage_savings: Mutex::new(0.0),
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
-            tenant_compute_costs: Mutex::new(HashMap::new()),
-            tenant_network_costs: Mutex::new(HashMap::new()),
             agent_revenues: Mutex::new(HashMap::new()),
             tenant_revenues: Mutex::new(HashMap::new()),
             tenant_payment_fees: Mutex::new(HashMap::new()),
@@ -234,16 +229,6 @@ impl CostAuditor {
         *tenant_payment_fees.get(tenant_id).unwrap_or(&0.0)
     }
 
-    pub fn get_tenant_compute_cost(&self, tenant_id: &str) -> f64 {
-        let tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
-        *tenant_compute_costs.get(tenant_id).unwrap_or(&0.0)
-    }
-
-    pub fn get_tenant_network_cost(&self, tenant_id: &str) -> f64 {
-        let tenant_network_costs = self.tenant_network_costs.lock().unwrap();
-        *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
-    }
-
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
     }
@@ -288,18 +273,6 @@ impl CostAuditor {
         *total_cost += total;
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
-
-        let mut tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
-        let current_tenant_compute = tenant_compute_costs.entry(event.tenant_id.clone()).or_insert(0.0);
-        *current_tenant_compute += compute_cost;
-
-        let mut tenant_network_costs = self.tenant_network_costs.lock().unwrap();
-        let current_tenant_network = tenant_network_costs.entry(event.tenant_id.clone()).or_insert(0.0);
-        *current_tenant_network += network_cost;
-
-        let mut tenant_costs = self.tenant_costs.lock().unwrap();
-        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
-        *current_tenant_cost += total;
 
         let total_cents = (total * 100.0).round() as u64;
         self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);

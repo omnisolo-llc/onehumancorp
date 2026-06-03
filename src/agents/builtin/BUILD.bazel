@@ -54,7 +54,6 @@ rust_library(
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",
-        "plan_and_execute.rs",
 
         "harness.rs",
         "hibernation.rs",
@@ -80,7 +79,6 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "openhands.rs",
-        "goose/mod.rs",
         "guardrails/mod.rs",
         "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",
