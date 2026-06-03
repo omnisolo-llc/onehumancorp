@@ -48,6 +48,26 @@ export default function InboxPage() {
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
 
+
+  const simulateIncomingMessage = () => {
+    const newMessageId = Date.now();
+    setMessages(prev => [
+      ...prev,
+      {
+        id: newMessageId,
+        sender: 'Web Chat',
+        source: 'Web',
+        icon: '💬',
+        content: 'Are you open today?',
+        date: 'Just now'
+      }
+    ]);
+
+    setTimeout(() => {
+      setMessages(prev => [...prev, { id: Date.now(), sender: 'AI Replied', source: 'AI', icon: '🤖', content: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?', date: 'Just now' }]);
+    }, 200);
+  };
+
   const generateDraft = () => {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
@@ -119,6 +139,15 @@ export default function InboxPage() {
         className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors mb-4"
       >
         Schedule Outbound Post
+      </button>
+
+
+      <button
+        onClick={simulateIncomingMessage}
+        className="w-full bg-[#10b981] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#059669] transition-colors mb-4"
+        data-testid="simulate-message-btn"
+      >
+        🤖 Simulate Incoming Message
       </button>
 
       {/* Scheduler Modal */}
