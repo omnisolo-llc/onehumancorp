@@ -1,12 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Affiliate Hub Growth Loop', () => {
-  test('User can navigate to Affiliate Hub and generate an affiliate link', async ({ page }) => {
-    // 1. Log in and navigate to the Dashboard
-    await page.goto('/dashboard');
+  test('User can navigate to Affiliate Hub and generate an affiliate link', async ({ adminPage }) => {
+    const page = adminPage;
 
     // Check that we are on the dashboard
-    await expect(page.locator('h1').filter({ hasText: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // 2. Navigate to Affiliate & Partner Hub via the new card
     // The link is on the "Open Partner Hub" button
