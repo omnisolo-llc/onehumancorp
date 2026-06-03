@@ -179,10 +179,11 @@ trap cleanup EXIT
 echo "[playwright] Starting E2E infrastructure..."
 echo "[playwright] Pre-pulling docker images with retries..."
 for i in {1..5}; do docker pull public.ecr.aws/docker/library/postgres:16-alpine >/dev/null 2>&1 && docker tag public.ecr.aws/docker/library/postgres:16-alpine pgvector/pgvector:pg16 && break || sleep 5; done
-for i in {1..5}; do docker pull docker.io/valkey/valkey:8-alpine >/dev/null 2>&1 && break || sleep 5; done
+for i in {1..5}; do docker pull public.ecr.aws/docker/library/redis:alpine >/dev/null 2>&1 && docker tag public.ecr.aws/docker/library/redis:alpine valkey/valkey:8-alpine && break || sleep 5; done
 
-docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc docker.io/pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 docker.io/valkey/valkey:8-alpine
+docker rm -f "$POSTGRES_NAME" "$VALKEY_NAME" >/dev/null 2>&1 || true
+docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
+docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
 PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
 VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"

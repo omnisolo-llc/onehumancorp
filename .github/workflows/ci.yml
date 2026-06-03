@@ -358,8 +358,10 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          docker pull postgres:16-alpine || docker pull public.ecr.aws/docker/library/postgres:16-alpine
+          docker tag postgres:16-alpine pgvector/pgvector:pg16 || docker tag public.ecr.aws/docker/library/postgres:16-alpine pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine || docker pull public.ecr.aws/docker/library/redis:alpine
+          docker tag valkey/valkey:8-alpine valkey/valkey:8-alpine || docker tag public.ecr.aws/docker/library/redis:alpine valkey/valkey:8-alpine
 
       - name: Test Playwright E2E suite
         run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
@@ -506,6 +508,32 @@ jobs:
         run: |
           docker version
           docker info
+
+      - name: Restore Docker Compose image cache
+        uses: actions/cache@v5.0.5
+        with:
+          path: /tmp/ohc-docker-compose-images
+          key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-
+
+      - name: Load Docker Compose image cache
+        run: |
+          if [[ -f /tmp/ohc-docker-compose-images/images.tar ]]; then
+            docker load -i /tmp/ohc-docker-compose-images/images.tar
+          fi
+
+      - name: Pull Docker Compose images
+        run: |
+          docker pull postgres:16-alpine || docker pull public.ecr.aws/docker/library/postgres:16-alpine
+          docker tag postgres:16-alpine pgvector/pgvector:pg16 || docker tag public.ecr.aws/docker/library/postgres:16-alpine pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine || docker pull public.ecr.aws/docker/library/redis:alpine
+          docker tag valkey/valkey:8-alpine valkey/valkey:8-alpine || docker tag public.ecr.aws/docker/library/redis:alpine valkey/valkey:8-alpine
+          mkdir -p /tmp/ohc-docker-compose-images
+          docker save \
+            pgvector/pgvector:pg16 \
+            valkey/valkey:8-alpine \
+            -o /tmp/ohc-docker-compose-images/images.tar
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
