@@ -5,50 +5,69 @@ pub enum SubscriptionStatus {
     Active,
     Canceled,
     PastDue,
-    Unpaid,
-    Incomplete,
+    Paused,
+}
+
+impl Default for SubscriptionStatus {
+    fn default() -> Self {
+        Self::Active
+    }
+}
+
+impl AsRef<str> for SubscriptionStatus {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Active => "active",
+            Self::Canceled => "canceled",
+            Self::PastDue => "past_due",
+            Self::Paused => "paused",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionPlan {
     pub id: String,
     pub tenant_id: String,
-    pub name: String,
-    pub description: String,
-    pub amount: i64,
-    pub currency: String,
-    pub interval: String, // "day", "week", "month", "year"
-    pub active: bool,
+    pub product_id: String,
+    pub interval: String, // "weekly", "monthly", "yearly"
+    pub interval_count: i32,
+    pub status: String,
+    pub discount_percentage: i32,
     pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Subscriber {
+pub struct Subscription {
     pub id: String,
     pub tenant_id: String,
-    pub plan_id: String,
     pub customer_id: String,
-    pub stripe_subscription_id: String,
-    pub status: SubscriptionStatus,
+    pub plan_id: String,
+    pub status: String,
+    pub current_period_start: i64,
     pub current_period_end: i64,
+    pub cancel_at_period_end: bool,
+    pub canceled_at: Option<i64>,
     pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum FulfillmentStatus {
     Pending,
-    Processing,
-    Completed,
-    Failed,
+    LabelsPrinted,
+    Fulfilled,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FulfillmentBatch {
     pub id: String,
     pub tenant_id: String,
-    pub plan_id: String,
-    pub target_date: i64,
-    pub status: FulfillmentStatus,
-    pub label_url: Option<String>,
+    pub subscription_plan_id: String,
+    pub fulfillment_date: String,
+    pub subscriber_count: i32,
+    pub status: String,
     pub created_at: i64,
+    pub updated_at: i64,
 }

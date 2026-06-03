@@ -28,3 +28,12 @@ rust_library(
         "@crates//:sqlx",
     ],
 )
+
+rust_test(
+    name = "server_services_subscription_test",
+    crate = ":server_services_subscription",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
