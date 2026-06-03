@@ -1,0 +1,8 @@
+title: "Autonomous Omnichannel Pre-Order and Waitlist Engine"
+status: completed
+issue_category: research
+details:
+  - "Identified a gap in current SMB platforms regarding seamless, cross-channel (e.g. IG DM to Storefront) pre-order and waitlist management."
+  - "Designed a data model (WAITLIST_CAMPAIGN, PRE_ORDER_ENTRY) that enforces row-level security."
+  - "Outlined AI agent responsibilities (Promoter, Ambassador, Manager) to manage capacity constraints and final fulfillment autonomously."
+  - "Created an implementation prompt guiding engineering on building this capability with mobile-first constraints."
