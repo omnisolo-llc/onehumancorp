@@ -790,6 +790,24 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS users (
+                        id TEXT PRIMARY KEY,
+                        username TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        password_hash TEXT NOT NULL DEFAULT '',
+                        roles TEXT DEFAULT '[]',
+                        active BOOLEAN DEFAULT TRUE,
+                        tenant_id TEXT,
+                        oidc_subject TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS revoked_tokens (
+                        jti TEXT PRIMARY KEY,
+                        tenant_id TEXT DEFAULT 'system',
+                        expires_at TIMESTAMP NOT NULL
+                    );
+
                     CREATE TABLE IF NOT EXISTS interactions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
