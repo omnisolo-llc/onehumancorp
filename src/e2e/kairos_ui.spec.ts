@@ -34,7 +34,7 @@ test('autodream memory stats', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'AutoDream Memory' })).toBeVisible();
   await expect(page.getByText('Infinite Context')).toBeVisible();
-  // await expect(page.getByText('842.5 MB')).toBeVisible();
+  // // await expect(page.getByText('842.5 MB')).toBeVisible();
 });
 
 test('walkthrough tooltips appear', async ({ page }) => {

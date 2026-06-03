@@ -256,6 +256,92 @@ pub async fn stripe_webhook_handler(
                 }
 
                 // Update Database
+let presentment_amount = obj.get("amount_total").and_then(|v| v.as_i64()).unwrap_or(0);
+                let presentment_currency = obj.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_uppercase();
+
+                // Record cross-border transaction in ledger if Postgres
+                if let crate::db::DbStore::Postgres = &webhook_state.db.store {
+                    if presentment_amount > 0 {
+                        let final_rate = 1.0; // In a complete app, fetch fx rate or compute
+                        let settlement_amount = presentment_amount; // Dummy fallback for compilation
+                        let entry_id = uuid::Uuid::new_v4().to_string();
+                        let is_offline_sync = false;
+                        let safe_margin_absorbed = 0;
+
+                        if let Ok(mut tx) = webhook_state.db.pool.begin().await {
+                            let _ = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO ohc_multi_currency_ledger
+                                 (id, tenant_id, presentment_amount, presentment_currency, settlement_amount, settlement_currency, exchange_rate, is_offline_sync, safe_margin_absorbed)
+                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                            )
+                            .bind(&entry_id)
+                            .bind(tenant_id)
+                            .bind(presentment_amount)
+                            .bind(&presentment_currency)
+                            .bind(settlement_amount)
+                            .bind("USD")
+                            .bind(final_rate)
+                            .bind(is_offline_sync)
+                            .bind(safe_margin_absorbed)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to record multi-currency ledger transaction: {:?}", e);
+                            }
+
+                            if let Err(e) = tx.commit().await {
+                                tracing::error!("Failed to commit multi-currency ledger transaction: {:?}", e);
+                            }
+                        } else {
+                            tracing::error!("Failed to acquire DB connection for ledger transaction.");
+                        }
+                    }
+                }
+
+let presentment_amount = obj.get("amount_total").and_then(|v| v.as_i64()).unwrap_or(0);
+                let presentment_currency = obj.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_uppercase();
+
+                // Record cross-border transaction in ledger if Postgres
+                if let crate::db::DbStore::Postgres = &webhook_state.db.store {
+                    if presentment_amount > 0 {
+                        let final_rate = 1.0; // In a complete app, fetch fx rate or compute
+                        let settlement_amount = presentment_amount; // Dummy fallback for compilation
+                        let entry_id = uuid::Uuid::new_v4().to_string();
+                        let is_offline_sync = false;
+                        let safe_margin_absorbed = 0;
+
+                        if let Ok(mut tx) = webhook_state.db.pool.begin().await {
+                            let _ = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO ohc_multi_currency_ledger
+                                 (id, tenant_id, presentment_amount, presentment_currency, settlement_amount, settlement_currency, exchange_rate, is_offline_sync, safe_margin_absorbed)
+                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                            )
+                            .bind(&entry_id)
+                            .bind(tenant_id)
+                            .bind(presentment_amount)
+                            .bind(&presentment_currency)
+                            .bind(settlement_amount)
+                            .bind("USD")
+                            .bind(final_rate)
+                            .bind(is_offline_sync)
+                            .bind(safe_margin_absorbed)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to record multi-currency ledger transaction: {:?}", e);
+                            }
+
+                            if let Err(e) = tx.commit().await {
+                                tracing::error!("Failed to commit multi-currency ledger transaction: {:?}", e);
+                            }
+                        } else {
+                            tracing::error!("Failed to acquire DB connection for ledger transaction.");
+                        }
+                    }
+                }
+
                 let tier_string = match tier {
                     PlanTier::Free => "Free",
                     PlanTier::Starter => "Starter",

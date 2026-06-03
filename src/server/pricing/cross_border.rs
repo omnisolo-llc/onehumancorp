@@ -2,7 +2,8 @@ pub struct CrossBorderEngine;
 
 impl CrossBorderEngine {
     /// Detects currency based on IP address
-    pub fn detect_currency_from_ip(ip: &str) -> &'static str {
+    pub fn detect_currency_from_ip(ip_str: &str) -> &'static str {
+        let ip = ip_str.split(',').next().unwrap_or(ip_str).trim();
         if ip.starts_with("193.") || ip.starts_with("2.") || ip.starts_with("80.") || ip.starts_with("90.") {
             "EUR"
         } else if ip.starts_with("13.") || ip.starts_with("20.") {
@@ -28,7 +29,12 @@ impl CrossBorderEngine {
     /// e.g. 18.43 -> 18.99, 14.82 -> 14.99
     pub fn cosmetic_round(price: f64) -> f64 {
         let int_part = price.trunc();
-        int_part + 0.99
+        if (price - int_part) < 0.10 && int_part > 0.0 {
+            // e.g. 100.00 -> 99.99
+            int_part - 1.0 + 0.99
+        } else {
+            int_part + 0.99
+        }
     }
 }
 
@@ -54,6 +60,6 @@ mod tests {
     fn test_cosmetic_rounding() {
         assert_eq!(CrossBorderEngine::cosmetic_round(18.43), 18.99);
         assert_eq!(CrossBorderEngine::cosmetic_round(14.82), 14.99);
-        assert_eq!(CrossBorderEngine::cosmetic_round(100.0), 100.99);
+        assert_eq!(CrossBorderEngine::cosmetic_round(100.0), 99.99);
     }
 }

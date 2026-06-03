@@ -30,7 +30,7 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount: f64, currency: &str, lpms: Vec<&str>) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
@@ -39,14 +39,15 @@ impl StripeClient {
         ).await;
 
         // Use PaymentRouter to optimize method
-        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
+        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method_with_currency(amount, currency);
 
         match pm {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
             },
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
-                Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+                let lpms_str = lpms.join(",");
+                Ok(format!("https://checkout.stripe.com/c/pay/cs_test_...?lpms={}", lpms_str))
             },
             crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
                 // Return razorpay checkout dummy link here since routing was updated

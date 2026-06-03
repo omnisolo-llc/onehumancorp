@@ -1189,6 +1189,17 @@ impl HubService for MyHubService {
             .map(|a| a.org_id.clone())
             .filter(|id| !id.is_empty())
             .ok_or_else(|| tonic::Status::unauthenticated("Missing valid AuthInfo"))?;
+
+        let ip = request.metadata().get("x-forwarded-for")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("0.0.0.0");
+        let locale = request.metadata().get("accept-language")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("en-US");
+
+        let currency = crate::pricing::cross_border::CrossBorderEngine::detect_currency_from_ip(ip);
+        let lpms = crate::pricing::cross_border::CrossBorderEngine::get_available_lpms(locale);
+
         let req = request.into_inner();
 
         let stripe_key = std::env::var("STRIPE_API_KEY")
@@ -1197,12 +1208,20 @@ impl HubService for MyHubService {
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
         let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
-        let amount = match req.plan_id.as_str() {
+        let amount_raw = match req.plan_id.as_str() {
             "Starter" => 9.0,
             "Pro" => 29.0,
             "Business" => 79.0,
             _ => 0.0
         };
+
+        let converted_amount = match currency {
+            "EUR" => amount_raw * 0.92,
+            "GBP" => amount_raw * 0.79,
+            "CAD" => amount_raw * 1.35,
+            _ => amount_raw
+        };
+        let amount = crate::pricing::cross_border::CrossBorderEngine::cosmetic_round(converted_amount);
 
         let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
@@ -1217,7 +1236,7 @@ impl HubService for MyHubService {
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, currency, lpms).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
