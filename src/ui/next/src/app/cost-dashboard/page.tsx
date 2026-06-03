@@ -62,7 +62,9 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
-            period_start: startOfMonth.toLocaleDateString('en-CA'),
+                network_cost: 0,
+                bandwidth_savings: 0,
+                period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
       } finally {
