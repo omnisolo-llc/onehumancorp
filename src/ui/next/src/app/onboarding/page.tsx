@@ -88,7 +88,7 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-    fetch('/api/onboarding/state', {
+    fetch('/api/onboarding/draft', {
       headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
     })
     .then(res => res.json())
@@ -115,7 +115,7 @@ export default function OnboardingWizard() {
     .catch(err => console.error('Failed to load onboarding state', err));
   }, []);
 
-  // Sync state to backend
+  // Sync state to backend (Auto-Save mechanism)
   useEffect(() => {
     if (!isLoaded) return;
 
@@ -145,12 +145,12 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
-      fetch('/api/onboarding/state', {
+      fetch('/api/onboarding/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
-      }).catch(err => console.error('Failed to sync onboarding state', err));
-    }, 1000); // debounce 1s
+      }).catch(err => console.error('Failed to auto-save onboarding draft', err));
+    }, 1500); // debounce 1.5s for auto-save
 
     return () => clearTimeout(timer);
   }, [
@@ -684,6 +684,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
+                        inputMode="email"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
