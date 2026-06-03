@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
 import { AppShell } from '../components/AppShell';
 
@@ -58,6 +58,8 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
+  const [categoriesInput, setCategoriesInput] = useState(categories.join(', '));
+  const initializedRef = useRef(false);
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -142,6 +144,14 @@ export default function OnboardingWizard() {
     })
     .catch(err => console.error('Failed to load onboarding state', err));
   }, []);
+
+  // Initialize input when state loads from backend
+  useEffect(() => {
+    if (isLoaded && categories.length > 0 && !initializedRef.current) {
+      setCategoriesInput(categories.join(', '));
+      initializedRef.current = true;
+    }
+  }, [isLoaded, categories]);
 
   // Sync state to backend
   useEffect(() => {
@@ -304,7 +314,7 @@ export default function OnboardingWizard() {
       actions={[{ label: "Dashboard", href: "/dashboard" }]}
     >
       <div className="app-grid two">
-        <div id="setup-screen" className="app-panel w-full overflow-hidden flex flex-col min-h-[640px] relative">
+        <div id="setup-screen" className="app-panel w-full max-w-md mx-auto rounded-[16px] overflow-hidden flex flex-col min-h-[640px] relative">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
@@ -592,8 +602,13 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    value={categoriesInput}
+                    onChange={(e) => {
+                      setCategoriesInput(e.target.value);
+                    }}
+                    onBlur={(e) => {
+                      setCategories(e.target.value.split(',').map(c => c.trim()).filter(Boolean));
+                    }}
                     className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
