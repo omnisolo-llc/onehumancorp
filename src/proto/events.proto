@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package ohc.events.v1;
+
+option go_package = "github.com/onehumancorp/ohc/src/proto/events";
+
+import "google/protobuf/timestamp.proto";
+
+message Event {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+  string location = 7;
+  int32 capacity = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message Ticket {
+  string id = 1;
+  string tenant_id = 2;
+  string event_id = 3;
+  string customer_id = 4;
+  string qr_code_jwt = 5;
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_VALID = 1;
+    STATUS_CHECKED_IN = 2;
+    STATUS_VOID = 3;
+  }
+  Status status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message AttendeeCheckIn {
+  string id = 1;
+  string tenant_id = 2;
+  string event_id = 3;
+  string ticket_id = 4;
+  google.protobuf.Timestamp check_in_time = 5;
+  bool is_offline_sync = 6;
+}
+
+message GenerateTicketRequest {
+  string tenant_id = 1;
+  string event_id = 2;
+  string customer_id = 3;
+}
+
+message GenerateTicketResponse {
+  Ticket ticket = 1;
+}
+
+message SyncOfflineCheckInsRequest {
+  string tenant_id = 1;
+  repeated AttendeeCheckIn check_ins = 2;
+}
+
+message SyncOfflineCheckInsResponse {
+  int32 successfully_synced = 1;
+  int32 conflicts = 2;
+}
+
+service EventManagementService {
+  rpc GenerateTicket(GenerateTicketRequest) returns (GenerateTicketResponse);
+  rpc SyncOfflineCheckIns(SyncOfflineCheckInsRequest) returns (SyncOfflineCheckInsResponse);
+}
