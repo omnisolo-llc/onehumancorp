@@ -410,12 +410,16 @@ impl DashboardService for MyDashboardService {
                 });
             }
 
+            let cost_auditor = self.hub.get_cost_auditor();
+            let is_over_budget = cost_auditor.is_tenant_over_budget(&req.organization_id);
+
             final_cost_summary = Some(::server_ohc::billing::CostSummary {
                 organization_id: req.organization_id.clone(),
                 total_cost_usd: total_cost,
                 total_tokens: optimized_total_tokens,
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
+                is_over_budget,
             });
 
 
