@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 
-test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
+test.describe('Autonomous Supply Chain test.describe('Autonomous Supply Chain & Vendor Mesh', () => { Vendor Mesh', () => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/');
