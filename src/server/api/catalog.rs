@@ -124,6 +124,22 @@ async fn handle_create_product(
         }
     }
 
+    let event_payload = serde_json::json!({
+        "product_id": product_id,
+        "name": payload.name,
+        "organization_id": tenant_id,
+    });
+
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".to_string(),
+        action: "ProductCreated".to_string(),
+        status: "success".to_string(),
+        payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
