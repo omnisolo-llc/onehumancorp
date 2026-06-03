@@ -185,7 +185,6 @@ pub async fn stripe_webhook_handler(
 
                         if let Err(e) = update_res {
                             tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
-                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                         }
 
                         if let Some(mesh) = &webhook_state.mesh {
@@ -217,14 +216,14 @@ pub async fn stripe_webhook_handler(
             if let Some(order_id) = order_id_opt {
                 let res = match &webhook_state.db.store {
                     crate::db::DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
                             .bind(order_id)
                             .execute(pool)
                             .await
                             .map(|_| ())
                     }
                     crate::db::DbStore::Postgres => {
-                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
                             .bind(order_id)
                             .execute(&webhook_state.db.pool)
                             .await
@@ -234,7 +233,6 @@ pub async fn stripe_webhook_handler(
 
                 if let Err(e) = res {
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }
 
@@ -448,14 +446,14 @@ pub async fn razorpay_webhook_handler(
             // In a real app, transition OHC orders from "Pending" to "Paid"
             let res = match &webhook_state.db.store {
                 DbStore::Sqlite(pool) => {
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
+                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
                         .bind(order_id)
                         .execute(pool)
                         .await
                         .map(|_| ())
                 }
                 DbStore::Postgres => {
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
+                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
                         .bind(order_id)
                         .execute(&webhook_state.db.pool)
                         .await

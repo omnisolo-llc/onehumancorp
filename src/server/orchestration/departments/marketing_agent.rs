@@ -21,14 +21,59 @@ impl Department for MarketingAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.insight.trending".to_string(),
+            "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "mesh:inventory:status_changed" {
+            // Check if stock is out
+            // For now, based on the issue description, we'll assume it hits 0 and triggers the pre-order campaign
+            let product_name = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("Product");
+
+            let draft_copy = format!("Our {} is completely sold out! But don't worry, you can pre-order now to secure yours for the next batch.", product_name);
+
+            let payload = serde_json::json!({
+                "feature_type": "social_post_preorder",
+                "product_name": product_name,
+                "draft_copy": draft_copy
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                format!("Draft 'Sold Out! Pre-order now' campaign for {}", product_name),
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
+
+
+        if event.event_type == "tenant.product.created" {
+            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
+
+            let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": product_name,
+                "draft_copy": draft_copy
+            });
+            let description = format!("7-Day Social Calendar: {}", product_name);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");

@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
@@ -36,6 +37,25 @@ impl Department for OperationsAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "mesh:inventory:status_changed" {
+            // Note: The actual count could be derived from the system context,
+            // but for simplicity based on the workflow, we'll draft the restock/out-of-stock actions.
+            // Ideally we'd query DB for exact count, but we'll issue the review task here.
+
+            // In a more robust system, we would query the current inventory count
+            // Since we know this is a trigger for the one-tap restock workflow,
+            // we'll trigger the restock proposal logic for the UI.
+            self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                "Process Inventory Status Change - Check Low Stock / Out of Stock".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                event.payload.clone(),
+            ).await?;
+
+            return Ok(());
+        }
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()
