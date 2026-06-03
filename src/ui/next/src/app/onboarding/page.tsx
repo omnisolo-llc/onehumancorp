@@ -17,8 +17,6 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
-    adminEmail, setAdminEmail,
-    adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
@@ -52,8 +50,6 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
-        adminEmail,
-        adminPassword,
         aiAgents,
         aiAutoRespond
       };
@@ -105,8 +101,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
@@ -138,8 +132,6 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
-      adminEmail,
-      adminPassword,
       aiAgents,
       aiAutoRespond
     };
@@ -156,7 +148,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -223,9 +215,9 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: businessName + ' Admin',
-          admin_password: adminPassword || 'password123',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
@@ -673,32 +665,6 @@ export default function OnboardingWizard() {
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
-                      <input
-                        type="email"
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
-                      <input
-                        type="password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
                     </div>
                   </div>
                 </div>

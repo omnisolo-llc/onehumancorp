@@ -191,13 +191,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    // Fill in Account Setup fields
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    await user.type(emailInput, 'maya@example.com');
-
-    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passwordInput, 'mypassword123');
-
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
 
@@ -206,16 +199,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
     });
-
-    // Check that start API was called with the correct credentials
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_email":"maya@example.com"'),
-    }));
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_password":"mypassword123"'),
-    }));
   });
 
   it('Step 1: Handles intake API failure', async () => {

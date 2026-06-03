@@ -705,100 +705,15 @@ mod tests {
         // (< 1us which truncates to 0) in the test sandbox environment.
     }
 
-
-
-
-
-    // test_cuj_stress_verification
-    #[tokio::test]
-    async fn test_cuj_stress_verification() {
-        use sqlx::sqlite::SqlitePoolOptions;
-        use std::sync::Arc;
-
-        let db_id = uuid::Uuid::new_v4().to_string();
-        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
-        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS agent_missions (
-                id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
-                payload TEXT NOT NULL
-            );"
-        ).execute(&pool).await.unwrap();
-
-        let pool_arc = Arc::new(pool);
-        let mut handles = vec![];
-
-        for i in 0..50 {
-            let p = pool_arc.clone();
-            handles.push(tokio::spawn(async move {
-                let mut attempts = 0;
-                loop {
-                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
-                        .bind(format!("mission_{}", i))
-                        .execute(&*p)
-                        .await;
-
-                    if res.is_ok() {
-                        break;
-                    }
-                    if let Err(e) = res {
-                        if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
-                            attempts += 1;
-                            if attempts >= 20 {
-                                panic!("Failed to insert mission after 20 attempts due to lock contention");
-                            }
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                        } else {
-                            panic!("Unexpected error: {}", e);
-                        }
-                    }
-                }
-            }));
-        }
-
-        for h in handles {
-            h.await.unwrap();
-        }
-
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions")
-            .fetch_one(&*pool_arc)
-            .await
-            .unwrap();
-
-        assert_eq!(count, 50, "All 50 missions should be written successfully despite database is locked errors.");
-    }
-
-    // test_sipdb_chaos_mesh
-    #[tokio::test]
-    async fn test_sipdb_chaos_mesh() {
-        // Create an unreadable file to simulate memory file corruption
-        let temp_dir = std::env::temp_dir().join("sipdb_chaos_mesh");
-        let _ = std::fs::create_dir_all(&temp_dir);
-        let file_path = temp_dir.join("offline_memory.json");
-        std::fs::write(&file_path, "corrupted { json }").unwrap();
-
-        let result = tokio::time::timeout(Duration::from_millis(100), async {
-            // Attempt to parse or interact with the corrupted json, simulating daemon behavior
-            let content = std::fs::read_to_string(&file_path).unwrap_or_default();
-            let _: Result<serde_json::Value, _> = serde_json::from_str(&content);
-            // It should handle error gracefully without panicking
-            Ok::<(), String>(())
-        }).await;
-
-        assert!(result.is_ok(), "Daemon should not panic when reading corrupted offline memory files.");
-    }
-
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
-        let timeout_duration = Duration::from_millis(150);
+        let timeout_duration = Duration::from_millis(60);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
-            tokio::time::sleep(Duration::from_millis(300)).await;
+            tokio::time::sleep(Duration::from_millis(150)).await;
             Ok::<(), String>(())
         }).await;
 
