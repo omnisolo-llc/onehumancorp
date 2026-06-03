@@ -356,6 +356,12 @@ jobs:
             test --test_output=errors
             test --test_summary=detailed
 
+      - name: Bypass Docker OverlayFS for CI runner
+        run: |
+          echo '{"registry-mirrors": ["https://mirror.gcr.io"], "storage-driver": "vfs"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker || sudo service docker restart
+          docker info | grep -i storage
+
       - name: Pull E2E Docker images
         run: |
           docker pull pgvector/pgvector:pg16
