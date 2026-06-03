@@ -8,56 +8,46 @@ use ::server_ohc::app::dashboard_service_server::DashboardService;
 // AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us
 
-use crate::queue::{Job, MemoryTaskQueue, PostgresTaskQueue, TaskQueue};
-use chrono::Utc;
-use sqlx;
-use std::sync::Arc;
 use std::time::Instant;
+use std::sync::Arc;
+use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
+use chrono::Utc;
 use uuid::Uuid;
+use sqlx;
 
-pub async fn bench_queue_latency() {
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+pub async fn bench_queue_latency() -> Vec<(String, u128)> {
+    let mut results = Vec::new();
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
-        let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url)
-            .await;
+        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
-            bench_queue("AI Job Dispatch Latency Cloud Mode (Postgres)", pg_queue).await;
+            let res = bench_queue("AI Job Dispatch Latency Cloud Mode (Postgres)", pg_queue).await;
+            results.push(res);
         }
     }
 
     let mem_queue = Arc::new(MemoryTaskQueue::new());
-    bench_queue(
-        "AI Job Dispatch Latency Standalone Mode (Memory)",
-        mem_queue,
-    )
-    .await;
+    let res = bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
+    results.push(res);
+    results
 }
 
-pub async fn bench_db_query_time() {
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+pub async fn bench_db_query_time() -> Vec<(String, u128)> {
+    let mut results = Vec::new();
 
-    let iterations = 2;
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    let iterations: usize = 2;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
@@ -65,19 +55,13 @@ pub async fn bench_db_query_time() {
             pg_times.push(start.elapsed().as_micros());
         }
         pg_times.sort();
-        tracing::info!(
-            "Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us",
-            pg_times[iterations / 2],
-            pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-            pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-        );
+        let p95 = pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
+        tracing::info!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], p95, pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+        results.push(("Database Query Time Cloud Mode (Postgres)".to_string(), p95));
     }
 
     // Standalone Mode (SQLite)
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -85,181 +69,105 @@ pub async fn bench_db_query_time() {
         sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
-    tracing::info!(
-        "Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us",
-        sqlite_times[iterations / 2],
-        sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    let p95 = sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
+    tracing::info!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], p95, sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    results.push(("Database Query Time Standalone Mode (SQLite)".to_string(), p95));
+    results
 }
 
-pub async fn bench_api_response_time() {
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2;
+pub async fn bench_api_response_time() -> Vec<(String, u128)> {
+    let mut results = Vec::new();
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations: usize = 2;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let db_cloud = crate::db::DB {
-            pool: pg_pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        };
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(
-            Arc::new(db_cloud),
-            hub_cloud.clone(),
-        );
+        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
         let mut cloud_times = Vec::new();
         for _ in 0..iterations {
-            let req = ::server_ohc::app::GetDashboardRequest {
-                organization_id: "system".to_string(),
-                mobile_optimized: false,
-            };
+            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
             let mut request = tonic::Request::new(req);
-            request
-                .extensions_mut()
-                .insert(::server_auth::orchestration::AuthInfo {
-                    spiffe_id: "test".to_string(),
-                    org_id: "system".to_string(),
-                    agent_id: "test".to_string(),
-                });
+            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
             let start = Instant::now();
+
 
             let _ = dashboard_service_cloud.get_dashboard(request).await;
             cloud_times.push(start.elapsed().as_micros());
         }
         cloud_times.sort();
-        tracing::info!(
-            "API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us",
-            cloud_times[iterations / 2],
-            cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-            cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-        );
+        let p95 = cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
+        tracing::info!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], p95, cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+        results.push(("API Response Time Cloud Mode".to_string(), p95));
     }
 
     // Standalone setup
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
-    let _ = sqlx::query(
-        "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
-    )
-    .execute(&sqlite_pool)
-    .await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
     let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-    let db_standalone = crate::db::DB {
-        pool: fallback_pg,
-        store: crate::db::DbStore::Sqlite(sqlite_pool),
-    };
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
-    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(
-        Arc::new(db_standalone),
-        hub_standalone.clone(),
-    );
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest {
-            organization_id: "system".to_string(),
-            mobile_optimized: false,
-        };
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request = tonic::Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "system".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
+
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    tracing::info!(
-        "API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us",
-        standalone_times[iterations / 2],
-        standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    tracing::info!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 
     let mut standalone_mobile_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest {
-            organization_id: "system".to_string(),
-            mobile_optimized: true,
-        };
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
         let mut request = tonic::Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "system".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
         standalone_mobile_times.push(start.elapsed().as_micros());
     }
     standalone_mobile_times.sort();
-    tracing::info!(
-        "API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us",
-        standalone_mobile_times[iterations / 2],
-        standalone_mobile_times
-            [((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        standalone_mobile_times
-            [((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    let p95_mobile = standalone_mobile_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
+    tracing::info!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], p95_mobile, standalone_mobile_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    results.push(("API Response Time Standalone Mode (Mobile)".to_string(), p95_mobile));
+    results
 }
 
 pub async fn bench_agent_snapshot() {
     tracing::info!("Benchmarking Agent Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool),
-        }
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB {
-            pool: pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        }
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -268,11 +176,7 @@ pub async fn bench_agent_snapshot() {
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
-    hub.open_meeting(
-        meeting_id.clone(),
-        vec!["test_agent".to_string()],
-        "Agenda".to_string(),
-    );
+    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..50 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -308,99 +212,57 @@ pub async fn bench_agent_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let agent_service =
-            crate::services::agent::service::MyAgentManagerService::new(hub.clone());
+        let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-                org_id: "system".to_string(),
-                agent_id: "test".to_string(),
-            });
-        request.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
 
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-        let _res = agent_service
-            .get_dashboard_snapshot(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap().into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    tracing::info!(
-        "Agent Snapshot Fetch: p50: {} us, p95: {} us, p99: {} us",
-        fetch_times[iterations / 2],
-        fetch_times[(iterations as f32 * 0.95) as usize],
-        fetch_times[(iterations as f32 * 0.99) as usize]
-    );
+    tracing::info!("Agent Snapshot Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {
     tracing::info!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         // Run minimal migrations for benchmark
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool),
-        }
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB {
-            pool: pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        }
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2;
+    let iterations: usize = 2;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
-    hub.open_meeting(
-        meeting_id.clone(),
-        vec!["test_agent".to_string()],
-        "Agenda".to_string(),
-    );
+    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..5 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -436,105 +298,61 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let req_desktop = ::server_ohc::app::GetDashboardRequest {
-            organization_id: "system".to_string(),
-            mobile_optimized: false,
-        };
+        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
         let db_arc = std::sync::Arc::new(db.clone());
-        let dashboard_service =
-            crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-                org_id: "system".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
 
-        let _res_desktop = dashboard_service
-            .get_dashboard(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    tracing::info!(
-        "Parallel Fetch: p50: {} us, p95: {} us, p99: {} us",
-        fetch_times[iterations / 2],
-        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 
-    let req_mobile = ::server_ohc::app::GetDashboardRequest {
-        organization_id: "system".to_string(),
-        mobile_optimized: true,
-    };
-    let req_desktop = ::server_ohc::app::GetDashboardRequest {
-        organization_id: "system".to_string(),
-        mobile_optimized: false,
-    };
+    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+
 
     let db_arc = std::sync::Arc::new(db.clone());
-    let dashboard_service =
-        crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
-    req_mobile_t
-        .extensions_mut()
-        .insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
+    req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+        org_id: "system".to_string(),
+        agent_id: "test".to_string(),
+    });
     let mut req_desktop_t = tonic::Request::new(req_desktop);
-    req_desktop_t
-        .extensions_mut()
-        .insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
+    req_desktop_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+        org_id: "system".to_string(),
+        agent_id: "test".to_string(),
+    });
 
-    let res_mobile = dashboard_service
-        .get_dashboard(req_mobile_t)
-        .await
-        .unwrap()
-        .into_inner();
-    let res_desktop = dashboard_service
-        .get_dashboard(req_desktop_t)
-        .await
-        .unwrap()
-        .into_inner();
+
+    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
+    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
 
     if !res_mobile.meetings.is_empty() {
-        assert_eq!(
-            res_mobile.meetings[0].transcript.len(),
-            0,
-            "Mobile payload optimization should clear transcripts"
-        );
-        assert!(
-            res_desktop.meetings[0].transcript.len() > 0,
-            "Desktop payload should contain transcripts"
-        );
+        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
+        assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
 
-    tracing::info!(
-        "Parallel Fetch: p50: {} us, p95: {} us, p99: {} us",
-        fetch_times[iterations / 2],
-        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 }
 
-pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
+pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) -> (String, u128) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = 2;
+    let iterations: usize = 2;
 
     let run_id = Uuid::new_v4().to_string();
 
@@ -582,88 +400,36 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     enqueue_times.sort();
     dequeue_times.sort();
 
-    let enq_p50 = if iterations > 0 {
-        enqueue_times[iterations / 2]
-    } else {
-        0
-    };
-    let enq_p95 = if iterations > 0 {
-        enqueue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))]
-    } else {
-        0
-    };
-    let enq_p99 = if iterations > 0 {
-        enqueue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    } else {
-        0
-    };
+    let enq_p50 = if iterations > 0 { enqueue_times[iterations / 2] } else { 0 };
+    let enq_p95 = if iterations > 0 { enqueue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))] } else { 0 };
+    let enq_p99 = if iterations > 0 { enqueue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))] } else { 0 };
 
-    let deq_p50 = if iterations > 0 {
-        dequeue_times[iterations / 2]
-    } else {
-        0
-    };
-    let deq_p95 = if iterations > 0 {
-        dequeue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))]
-    } else {
-        0
-    };
-    let deq_p99 = if iterations > 0 {
-        dequeue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    } else {
-        0
-    };
+    let deq_p50 = if iterations > 0 { dequeue_times[iterations / 2] } else { 0 };
+    let deq_p95 = if iterations > 0 { dequeue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))] } else { 0 };
+    let deq_p99 = if iterations > 0 { dequeue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))] } else { 0 };
 
-    tracing::info!(
-        "{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us",
-        name,
-        enq_p50,
-        enq_p95,
-        enq_p99
-    );
-    tracing::info!(
-        "{}: Dequeue p50: {} us, p95: {} us, p99: {} us",
-        name,
-        deq_p50,
-        deq_p95,
-        deq_p99
-    );
+    tracing::info!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    (name.to_string(), enq_p95 + deq_p95)
 }
 
 #[cfg(test)]
 pub async fn bench_get_analytics() {
     tracing::info!("Benchmarking MyOrgService get_analytics...");
 
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool),
-        }
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB {
-            pool: pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        }
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -683,41 +449,24 @@ pub async fn bench_get_analytics() {
     }
 
     let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
-    hub.open_meeting(
-        meeting_id.clone(),
-        vec!["agent-0".to_string()],
-        "Agenda".to_string(),
-    );
+    hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
     let iterations = 5;
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-    request_cold.metadata_mut().insert(
-        "x-spiffe-id",
-        format!("spiffe://onehumancorp.io/{}/test", org_id)
-            .parse()
-            .unwrap(),
-    );
+    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
     let start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
     let _ = org_service.get_analytics(request_cold).await;
-    tracing::info!(
-        "get_analytics Cold Start: {} us",
-        start_cold.elapsed().as_micros()
-    );
+    tracing::info!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
 
     // Warm runs (hot start, hits hybrid cache)
     let mut fetch_times = Vec::new();
     for _ in 0..iterations {
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request.metadata_mut().insert(
-            "x-spiffe-id",
-            format!("spiffe://onehumancorp.io/{}/test", org_id)
-                .parse()
-                .unwrap(),
-        );
+        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
 
         let start = std::time::Instant::now();
         let _ = org_service.get_analytics(request).await;
@@ -725,8 +474,7 @@ pub async fn bench_get_analytics() {
     }
 
     fetch_times.sort();
-    tracing::info!(
-        "get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+    tracing::info!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
         fetch_times[iterations / 2],
         fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
@@ -776,20 +524,9 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url =
-            std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if database_url.starts_with("postgres") {
-            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new()
-                .after_release(|conn, _meta| {
-                    Box::pin(async move {
-                        use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
-                        Ok(true)
-                    })
-                })
-                .connect(&database_url)
-                .await
-            {
+            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
             }
@@ -804,17 +541,10 @@ mod tests {
         let result = tokio::time::timeout(timeout_duration, async {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
-        })
-        .await;
+        }).await;
 
-        assert!(
-            result.is_err(),
-            "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure"
-        );
-        assert!(
-            start.elapsed() >= timeout_duration,
-            "Timeout enforcement should take at least the configured duration"
-        );
+        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 
     #[tokio::test]
@@ -825,11 +555,11 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
             "data"
         };
-        let result =
-            tokio::time::timeout(std::time::Duration::from_millis(2000), slow_network).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(2000), slow_network).await;
         assert!(result.is_err());
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
+
 
     #[tokio::test]
     async fn test_bench_get_analytics() {
@@ -841,37 +571,50 @@ mod tests {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
     }
+
+
 }
 
 pub async fn bench_hybrid_latency() {
     tracing::info!("--- Running Hybrid Latency Benchmark ---");
 
+    let mut all_results = Vec::new();
+
     tracing::info!("1. Database Query Time");
-    bench_db_query_time().await;
+    all_results.extend(bench_db_query_time().await);
 
     tracing::info!("2. AI Job Dispatch Latency");
-    bench_queue_latency().await;
+    all_results.extend(bench_queue_latency().await);
 
     tracing::info!("3. API Response Time (Dashboard Snapshot)");
-    bench_api_response_time().await;
+    all_results.extend(bench_api_response_time().await);
+
+    let mut cloud_ops: Vec<_> = all_results.iter().filter(|(n, _)| n.contains("Cloud")).collect();
+    let mut standalone_ops: Vec<_> = all_results.iter().filter(|(n, _)| n.contains("Standalone")).collect();
+
+    cloud_ops.sort_by(|a, b| b.1.cmp(&a.1));
+    standalone_ops.sort_by(|a, b| b.1.cmp(&a.1));
+
+    tracing::info!("--- Top 3 Slowest Operations (Cloud Mode) ---");
+    for (i, (name, p95)) in cloud_ops.iter().take(3).enumerate() {
+        tracing::info!("{}. {}: {} us (p95)", i + 1, name, p95);
+    }
+
+    tracing::info!("--- Top 3 Slowest Operations (Standalone Mode) ---");
+    for (i, (name, p95)) in standalone_ops.iter().take(3).enumerate() {
+        tracing::info!("{}. {}: {} us (p95)", i + 1, name, p95);
+    }
 
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
 
 pub async fn bench_advisory_insights_latency() {
-    let database_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2; // Few iterations due to Minimax API
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations: usize = 2; // Few iterations due to Minimax API
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&database_url)
-            .await
-            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let db = std::sync::Arc::new(crate::db::DB {
-            pool: pg_pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        });
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
         let _store = std::sync::Arc::new(::server_auth::Store::new());
 
         let mut fetch_times = Vec::new();
@@ -894,7 +637,7 @@ pub async fn bench_advisory_insights_latency() {
             let (_org_res, _active_orders_res) = tokio::join!(
                 tokio::spawn(async move {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1",
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
                     .bind(&tenant_id_org)
                     .fetch_optional(&db_org.pool)
@@ -914,8 +657,7 @@ pub async fn bench_advisory_insights_latency() {
         }
 
         fetch_times.sort();
-        tracing::info!(
-            "Advisory Insights (Parallel): p50: {} us, p95: {} us, p99: {} us",
+        tracing::info!("Advisory Insights (Parallel): p50: {} us, p95: {} us, p99: {} us",
             fetch_times[iterations / 2],
             fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
             fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
@@ -928,14 +670,8 @@ pub async fn bench_advisory_insights_latency() {
         .await
         .unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)")
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)")
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
 
     let mut fetch_times_sqlite = Vec::with_capacity(iterations);
     let tenant_id = "system".to_string();
@@ -946,7 +682,7 @@ pub async fn bench_advisory_insights_latency() {
         let (_org_res, _active_orders_res) = tokio::join!(
             async {
                 sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?",
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
                 )
                 .bind(&tenant_id)
                 .fetch_optional(&sqlite_pool)
@@ -955,7 +691,7 @@ pub async fn bench_advisory_insights_latency() {
             },
             async {
                 sqlx::query_scalar::<_, i64>(
-                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'",
+                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
                 )
                 .bind(&tenant_id)
                 .fetch_one(&sqlite_pool)
