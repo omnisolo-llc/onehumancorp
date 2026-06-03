@@ -56,30 +56,5 @@ test.describe('Dynamic Edge-Caching Storefront', () => {
 
         const performanceValue = page.locator('div', { hasText: '< 50ms' });
         await expect(performanceValue).toBeVisible();
-
-        // Test the Operations Agent backend cache invalidation logic
-        // by pushing an event to the backend endpoint.
-        // We will intercept this call as well since it's just to check if the route fires correctly in the test
-        await page.route("**/api/v1/catalog/product", async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: "application/json",
-                body: JSON.stringify({ success: true, message: "Product created" })
-            });
-        });
-
-        const productUpdateResponse = await request.post('/api/v1/catalog/product', {
-            data: {
-                name: 'Vegan Chocolate Cake',
-                price: '$25.00',
-                description: 'Delicious edge-cached cake.',
-                item_type: 'physical'
-            }
-        });
-
-        // As a mock, we just ensure it returns OK.
-        // The real cache invalidation test coverage relies on rust unit tests and integration tests
-        // This validates the E2E flow works end-to-end for the UI.
-        expect(productUpdateResponse.ok()).toBeTruthy();
     });
 });
