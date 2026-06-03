@@ -23,7 +23,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn().mockImplementation((url: string) => {
+    global.fetch = vi.fn().mockImplementation((url) => {
         return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     }) as any;
   });
@@ -138,6 +138,226 @@ describe('OnboardingWizard', () => {
     expect(instantLaunchBtn).toBeDisabled();
   });
 
+
+  it('Handles enter key progression in chat steps', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    const detailedSetupBtn = screen.getByRole('button', { name: /Detailed Setup/i });
+    await user.click(detailedSetupBtn);
+
+    // Chat Step 1 - Use Enter Key
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Maya Bakery{Enter}');
+
+    // Chat Step 2 - Use Enter Key
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
+    await user.type(sellInput, 'Cakes{Enter}');
+
+    // Chat Step 3 - Use Enter Key
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
+    await user.type(locInput, 'NY{Enter}');
+
+    // Verify it transitions to Step 2: Review Details by triggering handleIntake
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+    });
+  });
+
+  it('Handles multi-step successful onboarding flow', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    const detailedSetupBtn = screen.getByRole('button', { name: /Detailed Setup/i });
+    await user.click(detailedSetupBtn);
+
+    // Chat Step 1
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Maya Bakery');
+
+    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn1);
+
+    // Chat Step 2
+    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await user.type(sellInput, 'Cakes');
+
+    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn2);
+
+    // Chat Step 3
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    await user.type(locInput, 'NY');
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    expect(button).not.toBeDisabled();
+
+    // Step 1: Intake
+    await user.click(button);
+
+    // Verify it transitions to Step 2: Review Details
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+    });
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    await user.click(continueButton);
+
+    // Verify it transitions to Step 3: Style & Team
+    await waitFor(() => {
+      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+      expect(screen.getByText("Website Template")).toBeInTheDocument();
+    });
+
+    // Fill in Account Setup fields
+    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
+    await user.type(emailInput, 'maya@example.com');
+
+    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
+    await user.type(passwordInput, 'mypassword123');
+
+    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    await user.click(launchButton);
+
+    // Verify it transitions to Step 5 (Live Screen) on success
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+    });
+
+    // Check that start API was called with the correct credentials
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"admin_email":"maya@example.com"'),
+    }));
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"admin_password":"mypassword123"'),
+    }));
+  });
+
+  it('Step 1: Handles intake API failure', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake failure
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    const detailedSetupBtn = screen.getByRole('button', { name: /Detailed Setup/i });
+    await user.click(detailedSetupBtn);
+
+    // Chat Step 1
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Maya Bakery');
+
+    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn1);
+
+    // Chat Step 2
+    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await user.type(sellInput, 'Cakes');
+
+    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn2);
+
+    // Chat Step 3
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    await user.type(locInput, 'NY');
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
+
+    await user.click(button);
+
+    // Verify error appears and step goes back to 1
+    await waitFor(() => {
+      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
+      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('Step 3: Handles start API failure and returns to Step 3', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const user = userEvent.setup({ delay: null });
+
+    // Set initial state to Step 3 to test start API directly
+    act(() => {
+      useOnboardingStore.setState({ step: 3 });
+    });
+
+    // Mock start failure
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
+        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+
+    await user.click(launchButton);
+
+    // Verify error appears and step goes back to 3
+    await waitFor(() => {
+      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
+      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('Step 2: Displays validation error when product price is invalid', async () => {
     const user = userEvent.setup({ delay: null });
 
@@ -229,13 +449,14 @@ describe('OnboardingWizard', () => {
     await user.click(salesAgent);
 
     // Toggle auto respond
-    await user.click(screen.getByText('Allow AI to Auto-Respond'));
+    await user.click(toggle);
 
-    // Check that states updated.
-    const state = useOnboardingStore.getState();
-    expect(state.domainChoice).toBe('custom');
-    expect(state.aiAgents).toContain('Sales Agent');
-    expect(state.aiAutoRespond).toBe(false);
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAutoRespond).toBe(false);
+      expect(state.domainChoice).toBe('custom');
+    });
   });
 
   it('Step 5: Shows Live Screen with correct links', async () => {

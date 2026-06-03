@@ -120,7 +120,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && chatStep === 1 && !businessName) return;
+    if (step === 1 && !businessDescription && !businessName) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
