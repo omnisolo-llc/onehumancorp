@@ -262,6 +262,7 @@ pub mod autodream_pipeline;
 pub mod tasks;
 pub mod settings;
 pub mod scheduler;
+pub mod middleware;
 pub mod msgbus;
 pub mod pipeline;
 pub use ::server_oidc as oidc;
