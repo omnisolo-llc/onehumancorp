@@ -3,6 +3,8 @@ use ::server_ohc::app::*;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
+
+use tokio;
 use std::sync::OnceLock;
 
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
@@ -496,10 +498,10 @@ impl DashboardService for MyDashboardService {
 
     async fn get_video_tutorials(
         &self,
-        _request: Request<GetVideoTutorialsRequest>,
-    ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
+        _request: Request<::server_ohc::app::GetVideoTutorialsRequest>,
+    ) -> Result<Response<::server_ohc::app::GetVideoTutorialsResponse>, Status> {
         let videos = vec![
-            VideoMetadata {
+            ::server_ohc::app::VideoMetadata {
                 title: "How to add your first product".to_string(),
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
                 duration_sec: 60,
@@ -507,7 +509,7 @@ impl DashboardService for MyDashboardService {
                 thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg"
                     .to_string(),
             },
-            VideoMetadata {
+            ::server_ohc::app::VideoMetadata {
                 title: "Setting up AI Helpers".to_string(),
                 description: "Learn how to let AI handle your customer emails and social media."
                     .to_string(),
@@ -518,13 +520,13 @@ impl DashboardService for MyDashboardService {
             },
         ];
 
-        Ok(Response::new(GetVideoTutorialsResponse { videos }))
+        Ok(Response::new(::server_ohc::app::GetVideoTutorialsResponse { videos }))
     }
 
     async fn update_onboarding_state(
         &self,
-        request: Request<UpdateOnboardingStateRequest>,
-    ) -> Result<Response<UpdateOnboardingStateResponse>, Status> {
+        request: Request<::server_ohc::app::UpdateOnboardingStateRequest>,
+    ) -> Result<Response<::server_ohc::app::UpdateOnboardingStateResponse>, Status> {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -557,16 +559,16 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
+            Ok(Ok(_)) => Ok(Response::new(::server_ohc::app::UpdateOnboardingStateResponse { success: true })),
             Ok(Err(e)) => {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                Ok(Response::new(::server_ohc::app::UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                Ok(Response::new(::server_ohc::app::UpdateOnboardingStateResponse { success: true }))
             }
         }
     }
@@ -600,7 +602,7 @@ mod tests {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let (tx, _rx) = tokio::sync::mpsc::channel::<serde_json::Value>(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
         // Add agents
