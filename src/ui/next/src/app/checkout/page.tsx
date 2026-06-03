@@ -11,6 +11,11 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [showTapToPayModal, setShowTapToPayModal] = useState(false);
+  const [tapAmount, setTapAmount] = useState("");
+  const [tapProcessing, setTapProcessing] = useState(false);
+  const [tapMessage, setTapMessage] = useState("");
+
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
@@ -113,31 +118,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
-              onClick={() => {
-                const amount = prompt("Enter amount to charge:");
-                if (!amount) return;
-
-                if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
-                } else {
-                  let queue = [];
-                  try {
-                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                  } catch (e) {}
-
-                  queue.push({
-                    id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
-                    timestamp: new Date().toISOString(),
-                    type: 'tap_to_pay',
-                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
-                  });
-                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
-                }
-              }}
+              onClick={() => setShowTapToPayModal(true)}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
               Tap to Pay (Stripe Terminal)
@@ -166,6 +147,90 @@ export default function CheckoutPage() {
           </WithTooltip>
         </div>
       </main>
+
+      {/* Tap to Pay Modal */}
+      {showTapToPayModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm p-6 shadow-2xl relative overflow-hidden font-inter" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Tap to Pay</h2>
+
+            {tapMessage ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm font-medium text-gray-700 bg-white/50 p-4 rounded-lg border border-gray-200">{tapMessage}</p>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Continue to Dashboard
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-gray-600">Enter the amount to charge the customer.</p>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={tapAmount}
+                    onChange={(e) => setTapAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-3 bg-white/70 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => {
+                      setShowTapToPayModal(false);
+                      setTapAmount("");
+                    }}
+                    className="flex-1 px-4 py-3 bg-gray-200/80 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const amount = parseFloat(tapAmount);
+                      if (isNaN(amount) || amount <= 0) return;
+
+                      setTapProcessing(true);
+
+                      setTimeout(() => {
+                        if (navigator.onLine) {
+                          setTapMessage(`Payment of $${amount.toFixed(2)} was successful!`);
+                        } else {
+                          let queue: any[] = [];
+                          try {
+                            queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                          } catch (e) {}
+
+                          queue.push({
+                            id: 'txn_' + Date.now(),
+                            amount: amount,
+                            timestamp: new Date().toISOString(),
+                            type: 'tap_to_pay',
+                            idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
+                          });
+                          localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                          setTapMessage(`You are offline. Payment of $${amount.toFixed(2)} saved locally and will process when reconnected.`);
+                        }
+                        setTapProcessing(false);
+                      }, 600);
+                    }}
+                    disabled={tapProcessing || !tapAmount}
+                    className={`flex-1 px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${tapProcessing || !tapAmount ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
+                  >
+                    {tapProcessing ? 'Processing...' : 'Charge'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
