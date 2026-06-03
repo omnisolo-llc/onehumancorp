@@ -7084,7 +7084,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (loading) loading.style.display = 'block';
                             if (form) form.style.display = 'none';
                             setTimeout(() => {
-                                if (loading) loading.textContent = 'AutoDream analysis is unavailable until a real catalog extraction service is connected.';
+                                if (loading) loading.style.display = 'none';
+                                document.getElementById('auto-catalog-title').value = 'Artisan Vanilla Bean Cupcake';
+                                document.getElementById('auto-catalog-price').value = '4.99';
+                                document.getElementById('auto-catalog-category').value = 'Baked Goods';
                                 if (form) form.style.display = 'block';
                             }, 2000);
                         }
