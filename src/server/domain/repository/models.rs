@@ -212,3 +212,26 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TaxJurisdiction {
+    pub id: String,
+    pub country_code: String,
+    pub region_code: Option<String>,
+    pub tax_rate: rust_decimal::Decimal,
+    pub description: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TaxLedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub transaction_id: String,
+    pub jurisdiction_id: String,
+    pub taxable_amount_cents: i64,
+    pub tax_rate: rust_decimal::Decimal,
+    pub tax_collected_cents: i64,
+    pub created_at: Option<DateTime<Utc>>,
+}
