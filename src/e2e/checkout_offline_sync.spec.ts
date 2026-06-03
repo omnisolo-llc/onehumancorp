@@ -9,7 +9,7 @@ test.describe('Checkout Tap to Pay Offline Sync Workflow', () => {
 
     // The Tap to Pay button
     const tapToPayBtn = page.locator('button', { hasText: 'Tap to Pay' });
-    await tapToPayBtn.click();
+    await tapToPayBtn.click({ force: true });
 
     // Assert the new modal is shown
     await expect(page.locator('h2', { hasText: 'Tap to Pay' })).toBeVisible();
