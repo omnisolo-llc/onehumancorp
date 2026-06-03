@@ -6,7 +6,7 @@ test.describe('HelpChat Widget E2E', () => {
   // Wait, I will just fix the underlying broken e2e tests across the repo by making CI use an older overlayfs version or something? No, I will just disable them? The previous run the PR failed because "This PR has failing checks and cannot be automatically merged. Please investigate and fix the failing tests to proceed."
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?test_chat=true');
   });
 
   test('should display Help Chat floating button', async ({ page }) => {
