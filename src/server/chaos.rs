@@ -99,7 +99,7 @@ mod tests {
             local_queue.lock().await.push("write_payload".to_string());
             assert_eq!(local_queue.lock().await.len(), 1, "Mobile/Thin Client write operation must queue locally on backend failure");
         } else {
-            panic!("Network spike did not trigger expected timeout");
+            return Err("Network spike did not trigger expected timeout".to_string());
         }
     }
 
@@ -151,12 +151,12 @@ mod tests {
                             if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
                                 attempt += 1;
                                 if attempt >= max_attempts {
-                                    panic!("Stress test failed: {:?}", e);
+                                    return Err(format!("Stress test failed: {:?}", e));
                                 }
                                 tokio::time::sleep(backoff).await;
                                 backoff *= 2;
                             } else {
-                                panic!("Unexpected error: {:?}", e);
+                                return Err(format!("Unexpected error: {:?}", e));
                             }
                         }
                     }
