@@ -54,7 +54,7 @@ describe('HelpCenterPage', () => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
+    const searchInput = screen.getByPlaceholderText('Search for help articles...');
     await user.type(searchInput, 'products');
 
     await waitFor(() => {
@@ -71,7 +71,7 @@ describe('HelpCenterPage', () => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
+    const searchInput = screen.getByPlaceholderText('Search for help articles...');
     await user.type(searchInput, 'nonexistentxyz123');
 
     await waitFor(() => {

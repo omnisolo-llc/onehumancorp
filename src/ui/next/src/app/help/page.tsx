@@ -37,7 +37,7 @@ export default function HelpCenterPage() {
         <div className="mb-10 w-full sm:w-3/4 mx-auto">
           <input
             type="text"
-            placeholder="Search for help articles and videos..."
+            placeholder="Search for help articles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full p-4 rounded-2xl border border-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 backdrop-blur-[20px] saturate-200 bg-white/70 hover:bg-white/80 min-h-[44px] text-base placeholder:text-gray-500 transition-all"

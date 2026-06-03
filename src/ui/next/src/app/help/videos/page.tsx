@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { VideoTutorialList } from '@/components/VideoTutorialList';
+import { VideoTutorialList } from '../../../components/VideoTutorialList';
 
 export default function VideoTutorialsPage() {
   return (
