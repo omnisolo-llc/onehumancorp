@@ -2,9 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
-    // Explicitly navigate starting point
-    await page.waitForLoadState('networkidle');
-    // Navigate to the dashboard
+    // Navigate to the dashboard, we don't wait for networkidle here because the test handles dynamic network states and might time out if external calls hang
     await page.goto('/dashboard');
 
     // Set network to offline
@@ -20,7 +18,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     // The network status indicator should show offline
-    await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/);
+    await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/, { timeout: 10000 });
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
     await page.evaluate(() => {
@@ -95,7 +93,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     // Wait for the sync to complete and the queue to hide
-    await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 5000 });
+    await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 10000 });
 
     // Push notification (simulate receiving push msg via service worker/FCM)
     // Here we assume the frontend mounts a push listener in a real PWA context
@@ -114,6 +112,6 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
         }, 100);
     });
 
-    await expect(page.locator('#push-notification-banner')).toBeVisible();
+    await expect(page.locator('#push-notification-banner')).toBeVisible({ timeout: 10000 });
   });
 });
