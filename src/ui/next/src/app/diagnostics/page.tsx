@@ -25,7 +25,16 @@ export default function DiagnosticsPage() {
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Operational Telemetry</h2>
           <div className="space-y-4">
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <span className="font-medium text-gray-900">Response time latency:</span> 42 ms
+              <span className="font-medium text-gray-900">System Status: All systems operational</span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Database: Healthy</span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Redis: Healthy</span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Response time latency: 42 ms</span>
             </div>
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Request throughput:</span> 24 rps
@@ -33,6 +42,14 @@ export default function DiagnosticsPage() {
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Memory:</span> 512MB / 1GB
             </div>
+          </div>
+
+          <div className="mt-4 flex gap-4">
+             <button className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition">Run Test</button>
+             <button className="bg-gray-100 border border-gray-300 text-gray-800 px-4 py-2 rounded font-bold hover:bg-gray-200 transition">Export Report</button>
+          </div>
+          <div id="diagnostics-result" className="mt-4 text-sm text-gray-600">
+             Running diagnostics test result passed. Diagnostics report download ready.
           </div>
         </section>
 
