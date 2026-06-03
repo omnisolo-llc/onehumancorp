@@ -816,16 +816,68 @@ impl PromoterWorker {
 
         // Handle product creation for social auto-posting
 
+        let db_clone = db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
+                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("New Product");
+
                             if let Some(product_id) = payload_json.get("product_id").and_then(|p| p.as_str()) {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
+                            }
+
+                            if event.action == "ProductCreated" {
+                                let description = format!("Draft Instagram post for {}", product_name);
+                                let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+                                let payload = serde_json::json!({
+                                    "feature_type": "social_post",
+                                    "product_name": product_name,
+                                    "draft_copy": draft_copy,
+                                    "image_url": ""
+                                });
+
+                                let req_id = uuid::Uuid::new_v4().to_string();
+                                let now = chrono::Utc::now();
+
+                                match &db_clone.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                                        )
+                                        .bind(&req_id)
+                                        .bind(org_id)
+                                        .bind("marketing")
+                                        .bind(&description)
+                                        .bind("PENDING")
+                                        .bind("LOW")
+                                        .bind(payload)
+                                        .bind(now)
+                                        .bind(now)
+                                        .execute(&db_clone.pool)
+                                        .await;
+                                    }
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(&req_id)
+                                        .bind(org_id)
+                                        .bind("marketing")
+                                        .bind(&description)
+                                        .bind("PENDING")
+                                        .bind("LOW")
+                                        .bind(payload.to_string())
+                                        .bind(now)
+                                        .bind(now)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
                             }
                         }
                     }
