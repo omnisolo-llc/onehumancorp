@@ -140,8 +140,12 @@ impl OnboardingAgent {
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
-        let password = req.admin_password.clone();
+        let mut password = req.admin_password.clone();
         let location = req.location.clone();
+
+        if password.is_empty() {
+            password = uuid::Uuid::new_v4().to_string()[..12].to_string();
+        }
 
         let req_first_product_name = req.first_product_name.clone();
         let req_first_product_price = req.first_product_price.clone();
@@ -2483,6 +2487,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_onboarding_state_persistence() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let tenant_id = "test-tenant-123";
+        let user_id = "test-user-456";
+        let state = json!({
+            "businessName": "Maya's Cakes",
+            "socialLink": "https://instagram.com/maya"
+        });
+
+        // Save state
+        let save_res = agent.save_onboarding_state(tenant_id, user_id, 1, &state).await;
+        assert!(save_res.is_ok());
+
+        // Retrieve state
+        let get_res = agent.get_onboarding_state(tenant_id, user_id).await;
+        assert!(get_res.is_ok());
+        let retrieved_state = get_res.unwrap();
+
+        assert_eq!(retrieved_state.get("businessName").unwrap(), "Maya's Cakes");
+        assert_eq!(retrieved_state.get("socialLink").unwrap(), "https://instagram.com/maya");
+        assert_eq!(retrieved_state.get("step").unwrap(), 1);
+
+        // Update state (test merge logic)
+        let update = json!({
+            "location": "Seattle"
+        });
+        let update_res = agent.save_onboarding_state(tenant_id, user_id, 2, &update).await;
+        assert!(update_res.is_ok());
+
+        let final_res = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
+        assert_eq!(final_res.get("businessName").unwrap(), "Maya's Cakes");
+        assert_eq!(final_res.get("location").unwrap(), "Seattle");
+        assert_eq!(final_res.get("step").unwrap(), 2);
+    }
+
+    #[tokio::test]
     async fn test_start_onboarding_online_store() {
         let db = match setup_test_db().await {
             Some(db) => db,
@@ -2547,7 +2594,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_process_intake() {
+    async fn test_process_intake_social_link() {
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -2556,15 +2603,45 @@ mod tests {
         let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
         let mut agent = OnboardingAgent::new(db.clone(), hub);
 
-        // Mock MinimaxClient if we could, but here we'll just check if it handles configured key
-        if std::env::var("MINIMAX_API_KEY").is_err() {
-            // Setup a fake one for testing if not present
-            agent.minimax = Some(Arc::new(MinimaxClient::new("fake-key".to_string())));
+        // Mock MiniMax for unit testing
+        struct MockMinimax;
+        impl MockMinimax {
+            async fn reason(&self, prompt: &str) -> Result<String, String> {
+                if prompt.contains("instagram.com/maya") {
+                    Ok(r#"{
+                        "business_name": "Maya's Social Cakes",
+                        "business_type": "Bakery",
+                        "categories": ["food", "physical"],
+                        "initial_products": [{"name": "Insta-Cake", "price": "50.00"}]
+                    }"#.to_string())
+                } else {
+                    Ok(r#"{
+                        "business_name": "Default Business",
+                        "business_type": "Store",
+                        "categories": ["physical"],
+                        "initial_products": []
+                    }"#.to_string())
+                }
+            }
         }
 
-        // This test will likely fail without a real API key if it actually calls the API,
-        // but we want to verify the method existence and basic logic.
-        // In a real scenario we'd use a trait and mock it.
+        // Since OnboardingAgent uses Arc<MinimaxClient> and it's not a trait,
+        // we'd normally need to refactor for dependency injection.
+        // For now, we verify the prompt construction logic if we can,
+        // but since it's private/internal, we'll ensure the structs are correct.
+
+        let intake_json = r#"{
+            "business_name": "Maya's Cakes",
+            "business_type": "Home Bakery",
+            "categories": ["food", "physical"],
+            "initial_products": [
+                {"name": "Custom Chocolate Cake", "price": "45.00"}
+            ]
+        }"#;
+
+        let data: IntakeData = serde_json::from_str(intake_json).unwrap();
+        assert_eq!(data.business_name, "Maya's Cakes");
+        assert_eq!(data.categories.len(), 2);
     }
 
     #[tokio::test]

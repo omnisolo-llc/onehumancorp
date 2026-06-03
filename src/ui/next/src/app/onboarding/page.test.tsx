@@ -36,7 +36,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getByRole('button', { name: /Continue/i });
     expect(button).toBeDisabled();
   });
 
@@ -99,7 +99,7 @@ describe('OnboardingWizard', () => {
     // Test validation with missing data
     await user.clear(sellInput);
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole('button', { name: /Continue/i });
 
     // Verify the button is disabled when empty
     expect(nextBtn2).toBeDisabled();
@@ -156,14 +156,14 @@ describe('OnboardingWizard', () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole('button', { name: /Continue/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole('button', { name: /Continue/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
@@ -236,14 +236,14 @@ describe('OnboardingWizard', () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn1 = screen.getByRole('button', { name: /Continue/i });
     await user.click(nextBtn1);
 
     // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await user.type(sellInput, 'Cakes');
 
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn2 = screen.getByRole('button', { name: /Continue/i });
     await user.click(nextBtn2);
 
     // Chat Step 3
@@ -313,7 +313,7 @@ describe('OnboardingWizard', () => {
 
     render(<OnboardingWizard />);
 
-    const nextButton = screen.getByRole('button', { name: /Next/i });
+    const nextButton = screen.getByRole('button', { name: /Continue/i });
 
     await user.click(nextButton);
 
