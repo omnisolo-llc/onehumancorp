@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ml_resilience",
+    srcs = ["ml_resilience.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/pkg/ml_resilience",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "ml_resilience_test",
+    srcs = ["ml_resilience_test.go"],
+    embed = [":ml_resilience"],
+)
