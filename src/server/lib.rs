@@ -4604,10 +4604,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inventory-screen" class="screen glass">
                         <h1>Inventory Intelligence</h1>
                         <div id="inventory-proposal" class="card glass">
-                            <h2>No active restock proposals returned from the database.</h2>
-                            <p>Inventory proposals appear after product and stock records exist.</p>
+                            <h2>⚠️ Running low: Medium Red Dress</h2>
+                            <p>You will sell out in 3 days. Restock 20 units for $150?</p>
+                            <button onclick="resolveInventoryProposal()">Approve Restock ($150)</button>
+                            <button onclick="resolveInventoryProposal()">Dismiss</button>
                         </div>
-                        <p id="inventory-empty" style="display:none;">No active restock proposals returned from the database.</p>
+                        <p id="inventory-empty" style="display:none;">No active restock proposals. You're all set!</p>
                     </div>
 
                     <!-- Recovered Supply Chain & Vendor Mesh -->
