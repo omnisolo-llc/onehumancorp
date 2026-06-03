@@ -3,6 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Auto-Catalog flow', () => {
   test('generates product details from photo upload', async ({ page }) => {
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     // Click Auto-Catalog button
     await page.getByRole('link', { name: '✨ Auto-Catalog' }).click();

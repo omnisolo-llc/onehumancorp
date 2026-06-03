@@ -3,6 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Omni-Inbox Auto-Reply Agent', () => {
   test('simulates incoming message and auto-replies correctly', async ({ page }) => {
     await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
 
     // Click Simulate Incoming Message
     await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
