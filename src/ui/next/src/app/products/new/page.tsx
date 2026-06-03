@@ -64,7 +64,7 @@ export default function AutoCatalogPage() {
 
   if (published) {
     return (
-      <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col justify-center items-center font-inter">
+      <div className="p-4 min-h-screen bg-gray-50 flex flex-col justify-center items-center font-inter">
          <div className="text-6xl mb-4">🎉</div>
          <h1 className="text-2xl font-bold mb-2">Product Published!</h1>
          <p className="text-gray-600 mb-6 text-center">Your new product is now live on your storefront.</p>
@@ -76,7 +76,7 @@ export default function AutoCatalogPage() {
   }
 
   return (
-    <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter relative pb-20">
+    <div className="p-4 min-h-screen bg-gray-50 flex flex-col font-inter relative pb-20">
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
         <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>
