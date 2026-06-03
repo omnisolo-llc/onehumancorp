@@ -339,11 +339,7 @@ impl DashboardService for MyDashboardService {
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
-                };
+                let name = a.name.clone();
 
                 ::server_ohc::agent::Agent {
                     id: a.id.clone(),
@@ -365,37 +361,7 @@ impl DashboardService for MyDashboardService {
                 .map(|(status, count)| StatusCount { status, count })
                 .collect();
 
-            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-            let mut original_prompts_len = 0;
-            let mut compressed_prompts_len = 0;
-
-            for agent in &_filtered_agents {
-                let prompt = &agent.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-
-                    compressed_prompts_len += compressed.len();
-                }
-            }
-
-            if let Some(ref o) = org {
-                let prompt = &o.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-                    compressed_prompts_len += compressed.len();
-                }
-            }
-
-            let mut optimized_total_tokens = total_tokens;
-            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
-                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
-                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
-            }
+            let optimized_total_tokens = total_tokens;
 
             let mut agent_summaries = Vec::new();
             for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
@@ -642,7 +608,6 @@ mod tests {
         });
 
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");
@@ -674,31 +639,13 @@ mod tests {
         });
 
         let res_desktop = service.get_dashboard(request_desktop).await.unwrap().into_inner();
-        assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
+        assert!(res_desktop.agents[0].name.len() > 0, "Desktop should preserve agent names");
         if !res_desktop.meetings.is_empty() {
             assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
         }
     }
 
-    #[tokio::test]
-    async fn test_dashboard_ai_token_efficiency() {
-        let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
-        let mut request = Request::new(req);
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
 
-        let res = service.get_dashboard(request).await.unwrap().into_inner();
-        let cost_summary = res.cost_summary.unwrap();
-        // Since original text is long with stop words ("a", "is", "and", "about", "of"),
-        // the tokens should be mathematically reduced (compressed < original).
-        // The mock might return 0 total_tokens, so we just verify it doesn't crash and returns the struct.
-        // If cost auditor returned > 0 tokens, we would see compression.
-        assert_eq!(cost_summary.organization_id, "system");
-    }
 
     #[tokio::test]
     async fn test_dashboard_caching() {
