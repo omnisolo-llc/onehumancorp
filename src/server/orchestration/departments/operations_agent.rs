@@ -22,10 +22,39 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.inventory.status_changed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.inventory.status_changed" {
+            let inventory_count = event.payload.get("inventory_count").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let risk = ActionRisk::AutoExecute;
+
+            if inventory_count == 0 {
+                let description = "Mark product out of stock".to_string();
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    description,
+                    event.tenant_id.clone(),
+                    risk,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            } else if inventory_count < 5 {
+                let description = format!("Draft a review task to notify the owner to prepare a reorder. Current stock: {}", inventory_count);
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            }
+
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
