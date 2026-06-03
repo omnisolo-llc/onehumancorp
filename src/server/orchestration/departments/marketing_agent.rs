@@ -22,13 +22,56 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.job.completed".to_string(),
+            "tenant.product.created".to_string(),
         ]
     }
+
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
+        if event.event_type == "tenant.product.created" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let product_info = self.orchestrator.get_product(&event.tenant_id, product_id).await?;
+
+            let (title, desc) = if let Some((t, d)) = product_info {
+                (t, d)
+            } else {
+                (
+                    event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product").to_string(),
+                    event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("Check out our newest arrival!").to_string()
+                )
+            };
+
+            let prompt = format!("Draft an engaging, brief Instagram-ready caption (with hashtags) for a new product we just launched. Product name: {}. Description: {}.", title, desc);
+
+            let mut draft_caption = format!("We just added {} to our catalog! 🚀 Check it out today.", title);
+
+            let llm = crate::minimax::LocalLLMClient::new();
+            if let Ok(generated) = llm.reason(&prompt).await {
+                draft_caption = generated;
+            }
+
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": title,
+                "draft_copy": draft_caption,
+                "media_url": event.payload.get("media_url").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+
+            let description = format!("Draft social media post for new product: {}", title);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
+
         if event.event_type == "tenant.job.completed" {
+
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
             let media = event.payload.get("media").and_then(|v| v.as_array());
 

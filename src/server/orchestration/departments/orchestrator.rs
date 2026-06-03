@@ -1066,6 +1066,40 @@ impl DepartmentOrchestrator {
             }
         }
     }
+
+    pub async fn get_product(&self, tenant_id: &str, product_id: &str) -> Result<Option<(String, String)>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT title, description FROM products WHERE tenant_id = $1 AND id = $2")
+                    .bind(tenant_id)
+                    .bind(product_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("title"), r.get("description"))))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT title, description FROM products WHERE tenant_id = ? AND id = ?")
+                    .bind(tenant_id)
+                    .bind(product_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("title"), r.get("description"))))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
 }
 
 
