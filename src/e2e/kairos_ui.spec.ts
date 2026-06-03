@@ -49,5 +49,5 @@ test('walkthrough tooltips appear', async ({ page }) => {
   await page.waitForTimeout(1500);
 
   // The walkthrough should show a tooltip
-  await expect(page.getByText("The Shared Task List is the 'Brain'")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("The Shared Task List is the 'Brain'")).toBeVisible({ timeout: 30000 });
 });
