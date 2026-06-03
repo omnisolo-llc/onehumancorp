@@ -1,26 +1,21 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::sync::Arc;
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-use serde::Deserialize;
-use tracing::info;
-
-#[derive(Deserialize)]
-pub struct QrGenerateArgs {
-    pub content: String,
-    pub label: Option<String>,
-}
+use super::{Tool, ToolExecutor};
 
 pub struct QrGenerateExecutor;
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
-    async fn execute_typed(
+impl ToolExecutor for QrGenerateExecutor {
+    async fn execute(
         &self,
-        args: QrGenerateArgs,
+        args: Value,
     ) -> Result<String, ToolError> {
-        let content = args.content;
-        let label = args.label.unwrap_or_else(|| "QR Code".to_string());
+        let content = args["content"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("qr_generate: content is required".to_string()))?;
+
+        let label = args["label"].as_str().unwrap_or("QR Code");
 
         // Functional QR generation using qrcode crate.
         info!("Generating QR code for content: {} with label: {}", content, label);
@@ -28,7 +23,7 @@ impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
         use qrcode::QrCode;
 
         let code = QrCode::new(content.as_bytes())
-            .map_err(|e| ToolError::LlmRecoverable(format!("failed to generate QR code: {}", e)))?;
+            .map_err(|e| format!("failed to generate QR code: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Render the bits into a string.
         let image_str = code.render::<char>()
@@ -36,11 +31,9 @@ impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
             .module_dimensions(1, 1)
             .build();
 
-        let message = format!("QR code for '{}' has been generated.", content);
-
         Ok(json!({
             "status": "success",
-            "message": message,
+            "message": format!("QR code for '{}' has been generated.", content),
             "label": label,
             "ascii_art": image_str
         }).to_string())
@@ -66,6 +59,8 @@ pub fn qr_generate_tool() -> Tool {
             },
             "required": ["content"]
         }),
-        execute: Arc::new(PydanticAdapter::new(QrGenerateExecutor)),
+        execute: Arc::new(QrGenerateExecutor),
     }
 }
+
+use tracing::info;

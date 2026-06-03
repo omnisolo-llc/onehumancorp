@@ -27,56 +27,24 @@ impl SipDB {
     }
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
-        let mut attempt = 0;
-        let max_attempts = 3;
-        let mut backoff = std::time::Duration::from_millis(50);
+        let mut tx = self.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
-        loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+        sqlx::query(
+            "UPDATE agent_missions
+             SET status = 'blocked',
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2 AND tenant_id = $3"
+        )
+        .bind(blockers)
+        .bind(mission_id)
+        .bind(&self.org_id)
+        .execute(&mut *tx)
+        .await?;
 
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2 AND tenant_id = $3"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .bind(&self.org_id)
-                .execute(&mut *tx)
-                .await?;
-
-                tx.commit().await?;
-                Ok::<(), sqlx::Error>(())
-            }).await;
-
-            match res {
-                Ok(Ok(_)) => return Ok(()),
-                Ok(Err(err)) => {
-                    let err_str = err.to_string().to_lowercase();
-                    if !err_str.contains("deadlock detected") && !err_str.contains("database is locked") && !err_str.contains("database is busy") && !err_str.contains("sqlite_busy") {
-                        return Err(err);
-                    }
-                    attempt += 1;
-                    if attempt >= max_attempts {
-                        return Err(err);
-                    }
-                    tokio::time::sleep(backoff).await;
-                    backoff *= 2;
-                }
-                Err(_) => {
-                    attempt += 1;
-                    if attempt >= max_attempts {
-                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "handoff_mission timed out")));
-                    }
-                    tokio::time::sleep(backoff).await;
-                    backoff *= 2;
-                }
-            }
-        }
+        tx.commit().await?;
+        Ok(())
     }
 
     pub fn with_context_root(mut self, root: String) -> Self {
@@ -93,7 +61,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = async {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
@@ -123,11 +91,11 @@ impl SipDB {
 
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
-            }).await;
+            }.await;
             
             match res {
-                Ok(Ok(_)) => return Ok(()),
-                Ok(Err(err)) => {
+                Ok(_) => return Ok(()),
+                Err(err) => {
                     let mut retry = false;
                     if let Some(db_err) = err.as_database_error() {
                         let code = db_err.code();
@@ -136,7 +104,7 @@ impl SipDB {
                         }
                     }
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                    if err_str.contains("timeout") || err_str.contains("closed") {
                         retry = true;
                     }
 
@@ -152,14 +120,6 @@ impl SipDB {
                     } else {
                         return Err(err);
                     }
-                }
-                Err(timeout_err) => {
-                    attempt += 1;
-                    if attempt >= max_attempts {
-                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
-                    }
-                    tokio::time::sleep(backoff).await;
-                    backoff *= 2;
                 }
             }
         }
@@ -198,7 +158,7 @@ impl SipDB {
                         }
                     }
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                    if err_str.contains("timeout") || err_str.contains("closed") {
                         retry = true;
                     }
 

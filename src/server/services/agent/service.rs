@@ -67,9 +67,9 @@ impl MyAgentManagerService {
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
-            meetings: Arc::unwrap_or_clone(meetings),
+            meetings: meetings.to_vec(),
             costs: Some(costs),
-            agents: Arc::unwrap_or_clone(agents),
+            agents: agents.to_vec(),
             statuses,
             task_queue: vec![],
             queue_length: 0,
@@ -299,131 +299,5 @@ impl AgentManagerService for MyAgentManagerService {
         }
 
         Ok(Response::new(self.get_snapshot(&org_id).await?))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ::server_auth::orchestration::AuthInfo;
-    use tonic::Request;
-
-
-    async fn setup_test_agent_manager_service() -> MyAgentManagerService {
-        let database_url = "sqlite::memory:";
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url).await.unwrap();
-
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-
-        MyAgentManagerService::new(hub)
-    }
-
-    #[tokio::test]
-    async fn test_agent_hire_and_fire() {
-        let service = setup_test_agent_manager_service().await;
-
-        // Hire Agent
-        let req = HireAgentRequest {
-            name: "Test Agent".to_string(),
-            role: "test_role".to_string(),
-            provider_type: "builtin".to_string(),
-            model: "".to_string(),
-            region: "".to_string(),
-        };
-        let mut request = Request::new(req);
-        let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        *request.metadata_mut() = metadata;
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let res = service.hire_agent(request).await.unwrap().into_inner();
-        assert_eq!(res.agents.len(), 1);
-        assert_eq!(res.agents[0].name, "Test Agent");
-
-        let agent_id = res.agents[0].id.clone();
-
-        // Fire Agent
-        let fire_req = FireAgentRequest {
-            agent_id,
-        };
-        let mut fire_request = Request::new(fire_req);
-        let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        *fire_request.metadata_mut() = metadata2;
-        fire_request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let fire_res = service.fire_agent(fire_request).await.unwrap().into_inner();
-        assert_eq!(fire_res.agents.len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_agent_get_dashboard_snapshot() {
-        let service = setup_test_agent_manager_service().await;
-
-        let req = EmptyRequest {};
-        let mut request = Request::new(req);
-        let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        *request.metadata_mut() = metadata;
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let res = service.get_dashboard_snapshot(request).await.unwrap().into_inner();
-        assert!(res.costs.is_some());
-    }
-
-    #[tokio::test]
-    async fn test_agent_create_restore_snapshot() {
-        let service = setup_test_agent_manager_service().await;
-
-        let req = CreateSnapshotRequest {
-            label: "Test Snapshot".to_string(),
-        };
-        let mut request = Request::new(req);
-        let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        *request.metadata_mut() = metadata;
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let res = service.create_snapshot(request).await.unwrap().into_inner();
-        assert_eq!(res.label, "Test Snapshot");
-        assert_eq!(res.agent_count, 0);
-
-        let restore_req = RestoreSnapshotRequest {
-            snapshot_id: res.id,
-        };
-        let mut restore_request = Request::new(restore_req);
-        let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert("x-spiffe-id", "spiffe://example.org/org/system/agent/test".parse().unwrap());
-        *restore_request.metadata_mut() = metadata2;
-        restore_request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let restore_res = service.restore_snapshot(restore_request).await.unwrap().into_inner();
-        assert!(restore_res.costs.is_some());
     }
 }

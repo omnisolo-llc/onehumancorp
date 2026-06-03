@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentRunConfig};
-use crate::types::Message;
+use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
@@ -15,7 +15,7 @@ use tokio::fs;
 pub enum ClaudeSubagentMode {
     Fork,
     Teammate { mailbox_dir: PathBuf },
-    Worktree { base_repo_path: PathBuf, branch_name: String, auto_cleanup: bool, auto_merge_on_success: bool },
+    Worktree { base_repo_path: PathBuf, branch_name: String },
 }
 
 pub struct ClaudeSubagentSpawner {
@@ -71,7 +71,7 @@ impl ClaudeSubagentSpawner {
                 fs::write(&out_mbox, &result).await?;
                 Ok(result)
             }
-            ClaudeSubagentMode::Worktree { base_repo_path, branch_name, auto_cleanup, auto_merge_on_success } => {
+            ClaudeSubagentMode::Worktree { base_repo_path, branch_name } => {
                 // Worktree: spawns its own git worktree with an isolated branch
                 let worktree_dir = base_repo_path.parent().unwrap_or(Path::new("/tmp")).join(format!("worktree_{}", branch_name));
 
@@ -80,7 +80,7 @@ impl ClaudeSubagentSpawner {
                     .arg("worktree")
                     .arg("add")
                     .arg("-b")
-                    .arg(&branch_name)
+                    .arg(branch_name)
                     .arg(&worktree_dir)
                     .current_dir(base_repo_path)
                     .output()
@@ -97,50 +97,11 @@ impl ClaudeSubagentSpawner {
                     worktree_dir.display()
                 ));
                 sub_config.developer_instructions = worktree_instructions;
-                sub_config.project_trusted = true; // Typically worktrees require trust to commit.
 
                 let result = self.execute_and_summarize(task, &sub_config).await?;
 
-                if *auto_merge_on_success {
-                    // Merge branch into main repo
-                    let merge_output = Command::new("git")
-                        .arg("merge")
-                        .arg(&branch_name)
-                        .current_dir(base_repo_path)
-                        .output()
-                        .await?;
-                    if !merge_output.status.success() {
-                        return Err(format!("Failed to merge worktree branch: {}", String::from_utf8_lossy(&merge_output.stderr)).into());
-                    }
-                }
-
-                if *auto_cleanup {
-                    // Cleanup worktree
-                    let cleanup_output = Command::new("git")
-                        .arg("worktree")
-                        .arg("remove")
-                        .arg("--force")
-                        .arg(&worktree_dir)
-                        .current_dir(base_repo_path)
-                        .output()
-                        .await?;
-                    if !cleanup_output.status.success() {
-                        return Err(format!("Failed to cleanup worktree: {}", String::from_utf8_lossy(&cleanup_output.stderr)).into());
-                    }
-
-                    if *auto_merge_on_success {
-                        let branch_del_output = Command::new("git")
-                            .arg("branch")
-                            .arg("-D")
-                            .arg(&branch_name)
-                            .current_dir(base_repo_path)
-                            .output()
-                            .await?;
-                        if !branch_del_output.status.success() {
-                            tracing::warn!("Failed to delete worktree branch after cleanup: {}", String::from_utf8_lossy(&branch_del_output.stderr));
-                        }
-                    }
-                }
+                // Cleanup worktree (optional, but good practice to remove after completion or leave for parent to merge)
+                // For now, we leave it for the parent to review/merge, just like real Worktree agents.
 
                 Ok(result)
             }
@@ -254,7 +215,7 @@ impl ClaudeSubagentSpawner {
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let mailbox_dir = dir.path().join("mailboxes");
 
         let spawner = ClaudeSubagentSpawner::new(
@@ -291,7 +252,7 @@ impl ClaudeSubagentSpawner {
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
         // Create a dummy git repo
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempdir().unwrap();
         let repo_dir = dir.path().join("test_repo");
         fs::create_dir_all(&repo_dir).await.unwrap();
 
@@ -308,8 +269,6 @@ impl ClaudeSubagentSpawner {
             ClaudeSubagentMode::Worktree {
                 base_repo_path: repo_dir.clone(),
                 branch_name: "subagent-branch".to_string(),
-                auto_cleanup: false,
-                auto_merge_on_success: false,
             },
         );
 
@@ -322,58 +281,5 @@ impl ClaudeSubagentSpawner {
         let worktree_dir = dir.path().join("worktree_subagent-branch");
         assert!(worktree_dir.exists());
         assert!(worktree_dir.join("test.txt").exists());
-    }
-    #[tokio::test]
-    async fn test_claude_subagent_worktree_cleanup_and_merge() {
-        let parent_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec![
-                "Condensed summary of worktree".to_string()
-            ]),
-        });
-        let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
-
-        let sub_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec![
-                "Long raw output from worktree...".to_string()
-            ]),
-        });
-        let subagent = Arc::new(Agent::new(sub_client, vec![]));
-
-        // Create a dummy git repo
-        let dir = tempfile::tempdir().unwrap();
-        let repo_dir = dir.path().join("test_repo");
-        fs::create_dir_all(&repo_dir).await.unwrap();
-
-        Command::new("git").arg("init").current_dir(&repo_dir).output().await.unwrap();
-        fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
-        Command::new("git").arg("add").arg(".").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("config").arg("user.email").arg("test@test.com").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
-
-        let spawner = ClaudeSubagentSpawner::new(
-            parent_agent,
-            subagent,
-            ClaudeSubagentMode::Worktree {
-                base_repo_path: repo_dir.clone(),
-                branch_name: "subagent-branch-auto".to_string(),
-                auto_cleanup: true,
-                auto_merge_on_success: true,
-            },
-        );
-
-        let config = AgentRunConfig::default();
-        let result = spawner.run_subagent("Do task", &[], &config).await.unwrap();
-
-        assert_eq!(result, "Condensed summary of worktree");
-
-        // Verify worktree was created and cleaned up
-        let worktree_dir = dir.path().join("worktree_subagent-branch-auto");
-        assert!(!worktree_dir.exists());
-
-        // Ensure branch is deleted
-        let branch_check = Command::new("git").arg("branch").current_dir(&repo_dir).output().await.unwrap();
-        let branches = String::from_utf8_lossy(&branch_check.stdout);
-        assert!(!branches.contains("subagent-branch-auto"));
     }
 }

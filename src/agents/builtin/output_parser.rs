@@ -29,7 +29,7 @@ impl<T> StructuredOutputParser<T> {
 
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        let _completion = msg.content.clone();
+        let completion = msg.content.clone();
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {
@@ -51,8 +51,48 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
         }
 
-        // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+        // Fallback: extract JSON from raw text
+        let mut json_str = completion.trim();
+        let obj_start = json_str.find('{');
+        let arr_start = json_str.find('[');
+
+        let start_idx = match (obj_start, arr_start) {
+            (Some(o), Some(a)) => std::cmp::min(o, a),
+            (Some(o), None) => o,
+            (None, Some(a)) => a,
+            (None, None) => 0,
+        };
+
+        if start_idx > 0 {
+            json_str = &json_str[start_idx..];
+        }
+
+        let obj_end = json_str.rfind('}');
+        let arr_end = json_str.rfind(']');
+
+        let end_idx = match (obj_end, arr_end) {
+            (Some(o), Some(a)) => std::cmp::max(o, a),
+            (Some(o), None) => o,
+            (None, Some(a)) => a,
+            (None, None) => json_str.len().saturating_sub(1),
+        };
+
+        if end_idx < json_str.len() {
+            json_str = &json_str[..=end_idx];
+        }
+
+        if json_str.is_empty() {
+            json_str = "null"; // If empty, fall back to null to trigger serde error
+        }
+
+        match serde_json::from_str::<T>(json_str) {
+            Ok(parsed) => Ok(parsed),
+            Err(e) => {
+                Err(format!(
+                    "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                ))
+            }
+        }
     }
 }
 
@@ -128,7 +168,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     } else {
                         current_req.messages.push(msg.clone());
                         let error_context = format!(
-                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
+                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease output valid JSON that matches the required schema.",
                             msg.content, parse_error_msg
                         );
                         current_req.messages.push(Message::user(error_context));
@@ -227,26 +267,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_structured_output_markdown_wrapper_fallback() {
-        // Now, raw text fails first, then we retry and hopefully get a tool call
+    async fn test_parse_structured_output_markdown_wrapper() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```"),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_markdown_tool_call"}})),
+                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```")
             ]),
         });
 
         let req = create_test_req();
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_markdown_tool_call");
+        assert_eq!(result.result, "success_markdown");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_success() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![create_text_resp(r#"{"result": "success"}"#)]),
+        });
+
+        let req = create_test_req();
+        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        assert_eq!(result.result, "success");
     }
 
     #[tokio::test]
     async fn test_parse_structured_output_retry_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("invalid plain text json"),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success after retry"}})),
+                create_text_resp("invalid json"),
+                create_text_resp(r#"{"result": "success after retry"}"#)
             ]),
         });
 
@@ -260,8 +309,8 @@ mod tests {
     async fn test_parse_structured_output_failure() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("invalid plain text"),
-                create_text_resp("still invalid plain text"),
+                create_text_resp("invalid json"),
+                create_text_resp("still invalid"),
             ]),
         });
 
@@ -269,7 +318,7 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Expected native tool_calls API object"));
+            assert!(msg.contains("Failed to parse output as valid JSON"));
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
@@ -327,7 +376,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
                 create_text_resp("this is completely { malformed JSON ["),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "recovered"}}))
+                create_text_resp(r#"{"result": "recovered"}"#)
             ]),
         });
 

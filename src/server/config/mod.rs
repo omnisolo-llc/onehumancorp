@@ -102,17 +102,7 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
     } else {
         std::path::PathBuf::from(".ohc")
     };
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt;
-        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = std::fs::create_dir_all(&dir);
-    }
-
+    let _ = std::fs::create_dir_all(&dir);
     dir
 }
 

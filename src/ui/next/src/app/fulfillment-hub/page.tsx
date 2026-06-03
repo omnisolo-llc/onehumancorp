@@ -133,19 +133,11 @@ export default function FulfillmentHub() {
                           </div>
                           {order.fulfillment_mode === 'LocalDelivery' && (
                             <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {order.status === 'DriverRequested' ? 'Driver Arriving in 5 mins' : 'ETA: 5 mins'}
+                              ETA: 5 mins
                             </span>
                           )}
                         </div>
                         <div className="mt-4">
-                           {order.fulfillment_mode === 'LocalDelivery' && order.status !== 'DriverRequested' ? (
-                             <button
-                                onClick={() => handleAction(order.id, 'request_driver')}
-                                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm mb-2"
-                              >
-                                Request Driver (DoorDash)
-                              </button>
-                           ) : null}
                            <button
                               onClick={() => handleAction(order.id, 'hand_off')}
                               className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"

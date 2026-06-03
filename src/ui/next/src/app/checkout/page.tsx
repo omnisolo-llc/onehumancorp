@@ -11,23 +11,6 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
-  const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
-
-  const checkDeliveryEligibility = async () => {
-    if (!deliveryAddress) return;
-    setIsCheckingDelivery(true);
-
-    // Simulate checking if address is within radius
-    setTimeout(() => {
-      // Mock DoorDash Drive API call
-      setDeliveryFee(8.50); // Flat fee from DoorDash
-      setIsCheckingDelivery(false);
-    }, 800);
-  };
-
   const handlePayment = async () => {
     setIsProcessing(true);
 
@@ -60,46 +43,10 @@ export default function CheckoutPage() {
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-          <h2 className="text-lg font-semibold text-gray-900">Local Delivery</h2>
-          <p className="text-sm text-gray-600">Enter your address to see if we can deliver to you via DoorDash Drive (flat fee).</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter delivery address..."
-              value={deliveryAddress}
-              onChange={(e) => setDeliveryAddress(e.target.value)}
-              className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-            />
-            <button
-              onClick={checkDeliveryEligibility}
-              disabled={isCheckingDelivery || !deliveryAddress}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-50 text-sm whitespace-nowrap"
-            >
-              {isCheckingDelivery ? 'Checking...' : 'Check'}
-            </button>
-          </div>
-          {deliveryFee !== null && (
-            <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between">
-              <span className="text-sm text-indigo-900 font-medium flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                Delivery Available!
-              </span>
-              <span className="text-sm font-bold text-indigo-900">+${deliveryFee.toFixed(2)}</span>
-            </div>
-          )}
-        </div>
-
-        <p className="text-gray-700 font-medium">Payment Details</p>
+        <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
-          {deliveryFee !== null && (
-            <div className="flex justify-between py-2 border-b border-gray-200">
-               <span className="text-sm text-gray-600">Delivery Fee</span>
-               <span className="text-sm font-medium text-gray-900">${deliveryFee.toFixed(2)}</span>
-            </div>
-          )}
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
@@ -215,7 +162,7 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -224,7 +171,7 @@ export default function CheckoutPage() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"

@@ -12,19 +12,18 @@ export default function ChangelogPage() {
         "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
         "### 🛠️ Improvements",
         "- Faster loading times for product images.",
-        "- Simplified checkout process for your customers.",
-        "This is a plain paragraph test line."
+        "- Simplified checkout process for your customers."
       ]
     }
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[20px] saturate-200">
+    <div className="min-h-screen bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">Release Notes & Changelog</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center">Release Notes & Changelog</h1>
         <div className="space-y-8">
           {sections.map((section, idx) => (
-            <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/60 transition-all">
+            <div key={idx} className="bg-white/80 backdrop-blur-[20px] saturate-200 p-6 rounded-xl shadow-sm border border-gray-100/50 transition-all">
               <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">{section.version}</h2>
               <div className="space-y-2">
                 {section.contentLines.map((line, lidx) => {
