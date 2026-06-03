@@ -66,6 +66,15 @@ mod tests {
     }
 
     #[test]
+    fn test_optimize_payment_method_boundary() {
+        // Amount: $50.00
+        // Card fee: 50 * 0.029 + 0.30 = 1.75
+        // ACH fee: 50 * 0.008 = 0.40
+        assert_eq!(PaymentRouter::optimize_payment_method(50.0), PaymentMethod::Ach);
+        assert_eq!(PaymentRouter::optimize_payment_method(49.99), PaymentMethod::CreditCard);
+    }
+
+    #[test]
     fn test_optimize_payment_method_large_amount() {
         // Amount: $1000.00
         // Card fee: $29.00 + $0.30 = $29.30

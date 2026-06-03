@@ -317,3 +317,261 @@ mod tests {
         assert!(BookingService::prevent_double_booking(&existing, &overlapping_slot).is_err());
     }
 }
+use tonic::{Request, Response, Status};
+use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+use ::server_ohc::app::{
+    CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
+    ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
+    ConversationalCheckoutSession,
+};
+
+pub struct NativeBookingService {
+    pub redis_client: Option<redis::Client>,
+}
+
+#[tonic::async_trait]
+impl BookingEngineService for NativeBookingService {
+    async fn check_availability(
+        &self,
+        request: Request<CheckAvailabilityRequest>,
+    ) -> Result<Response<CheckAvailabilityResponse>, Status> {
+        let req = request.into_inner();
+        let tenant_id = req.tenant_id;
+        let _product_id = req.product_id;
+        let date_str = req.date;
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Simplified query: find bookings overlapping with this date
+        // In reality, you'd check specific business hours. We'll return dummy slots filtered by DB.
+        let rows = sqlx::query(
+            "SELECT start_time, end_time FROM bookings WHERE tenant_id = $1 AND start_time::date = $2::date"
+        )
+        .bind(&tenant_id)
+        .bind(&date_str)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let _ = tx.commit().await;
+
+        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
+            let st: Option<DateTime<Utc>> = row.get("start_time");
+            let et: Option<DateTime<Utc>> = row.get("end_time");
+            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
+        }).collect();
+
+        // Let's generate slots from 9 AM to 5 PM
+        let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+            .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
+
+        let mut available_slots = vec![];
+        for hour in 9..17 {
+            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
+            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
+            let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
+            let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
+
+            let mut overlap = false;
+            for (est, eet) in &existing_slots {
+                if st < *eet && et > *est {
+                    overlap = true;
+                    break;
+                }
+            }
+
+            if !overlap {
+                available_slots.push(TimeSlot {
+                    start_time: st.to_rfc3339(),
+                    end_time: et.to_rfc3339(),
+                });
+            }
+        }
+
+        Ok(Response::new(CheckAvailabilityResponse { available_slots }))
+    }
+
+    async fn reserve_time_slot(
+        &self,
+        request: Request<ReserveTimeSlotRequest>,
+    ) -> Result<Response<ReserveTimeSlotResponse>, Status> {
+        let req = request.into_inner();
+        let tenant_id = req.tenant_id;
+        let customer_id = req.customer_id;
+        let product_id = req.product_id;
+        let start_time_str = req.start_time;
+        let end_time_str = req.end_time;
+
+        let start_time = DateTime::parse_from_rfc3339(&start_time_str)
+            .map_err(|_| Status::invalid_argument("Invalid start_time RFC3339 format"))?
+            .with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339(&end_time_str)
+            .map_err(|_| Status::invalid_argument("Invalid end_time RFC3339 format"))?
+            .with_timezone(&Utc);
+
+        // Redis Lock
+        let lock_key = format!("ohc:lock:{}:timeslot:{}", tenant_id, start_time.timestamp());
+        if let Some(client) = &self.redis_client {
+            let mut conn = client.get_multiplexed_async_connection().await
+                .map_err(|e| Status::internal(format!("Redis conn failed: {}", e)))?;
+            let acquired: bool = redis::cmd("SET")
+                .arg(&lock_key)
+                .arg("1")
+                .arg("EX")
+                .arg(60) // 60s TTL
+                .arg("NX")
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(false);
+
+            if !acquired {
+                return Err(Status::already_exists("Time slot is currently being locked by another request"));
+            }
+        }
+
+        // DB check inside transaction
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Check overlaps
+        let overlap_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND start_time < $3 AND end_time > $2"
+        )
+        .bind(&tenant_id)
+        .bind(&start_time)
+        .bind(&end_time)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        if overlap_count > 0 {
+            let _ = tx.rollback().await;
+            return Err(Status::already_exists("Time slot already booked"));
+        }
+
+        let booking_id = Uuid::new_v4().to_string();
+
+        sqlx::query(
+            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+             VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+        )
+        .bind(&booking_id)
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .bind(&product_id)
+        .bind(start_time)
+        .bind(end_time)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Generate dummy stripe link
+        let deposit_stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id.replace("-", ""));
+
+        Ok(Response::new(ReserveTimeSlotResponse {
+            booking_id,
+            deposit_stripe_link,
+        }))
+    }
+
+    async fn create_conversational_checkout(
+        &self,
+        request: Request<CreateConversationalCheckoutRequest>,
+    ) -> Result<Response<ConversationalCheckoutSession>, Status> {
+        let req = request.into_inner();
+        let session_id = Uuid::new_v4().to_string();
+        let expires_at = Utc::now() + chrono::Duration::minutes(15);
+
+        let inventory_lock_id = format!("ohc:lock:{}:inventory:{}:{}", req.tenant_id, req.product_id, session_id);
+
+        if let Some(client) = &self.redis_client {
+            let mut conn = client.get_multiplexed_async_connection().await
+                .map_err(|e| Status::internal(format!("Redis conn failed: {}", e)))?;
+            let _acquired: bool = redis::cmd("SET")
+                .arg(&inventory_lock_id)
+                .arg("1")
+                .arg("EX")
+                .arg(900) // 15 min TTL
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(false);
+        }
+
+        let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
+
+        Ok(Response::new(ConversationalCheckoutSession {
+            session_id,
+            tenant_id: req.tenant_id,
+            customer_id: req.customer_id,
+            amount_cents: req.amount_cents,
+            inventory_lock_id,
+            checkout_url,
+            status: "pending".to_string(),
+            expires_at_unix: expires_at.timestamp(),
+        }))
+    }
+}
+
+
+#[cfg(test)]
+mod native_booking_tests {
+    use super::*;
+    use tonic::Request;
+    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+    use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+
+    #[tokio::test]
+    async fn test_native_booking_invalid_timeslot_format() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(ReserveTimeSlotRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            product_id: "p1".to_string(),
+            start_time: "invalid_time".to_string(),
+            end_time: "invalid_time".to_string(),
+        });
+        let res = svc.reserve_time_slot(req).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn test_native_check_availability_invalid_date() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
+            tenant_id: "t1".to_string(),
+            product_id: "p1".to_string(),
+            date: "invalid-date".to_string(),
+        });
+        let res = svc.check_availability(req).await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_native_create_conversational_checkout() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(CreateConversationalCheckoutRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            amount_cents: 1000,
+            product_id: "p1".to_string(),
+        });
+        let res = svc.create_conversational_checkout(req).await;
+        assert!(res.is_ok());
+        let session = res.unwrap().into_inner();
+        assert_eq!(session.tenant_id, "t1");
+        assert_eq!(session.customer_id, "c1");
+        assert_eq!(session.amount_cents, 1000);
+        assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
+        assert_eq!(session.status, "pending");
+    }
+}

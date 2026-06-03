@@ -114,6 +114,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let labels_json: String = row.get("labels_json");
         let redacted: Value = serde_json::from_str(&labels_json).unwrap();
 
@@ -153,6 +154,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let value: f32 = row.get("value");
         assert_eq!(value, 15000.0);
 
@@ -178,6 +180,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let value: f32 = row.get("value");
         assert_eq!(value, 1.5);
 
@@ -205,6 +208,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let value: f32 = row.get("value");
         assert_eq!(value, 0.5);
 
@@ -231,6 +235,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let value: f32 = row.get("value");
         assert_eq!(value, 125.0);
 
@@ -262,6 +267,7 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
+        let _ = pool;
         let count: i64 = row.get(0);
                 assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
             });
@@ -339,6 +345,7 @@ async fn test_record_queue_length_with_deployment_mode() {
         .unwrap();
 
     use sqlx::Row;
+        let _ = pool;
     let labels_json: String = row.get("labels_json");
     let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
     assert!(parsed.get("deployment_mode").is_some());
@@ -452,6 +459,59 @@ fn test_redact_interface_pii_malicious_payloads() {
 }
 
 #[test]
+fn test_redact_interface_pii_edge_cases() {
+    let payload_mixed_array = serde_json::json!({
+        "mixed_array": [
+            "safe_string",
+            123,
+            { "email": "should_be_redacted@test.com", "safe_field": "ok" },
+            ["another_safe", { "password": "super_secret" }]
+        ],
+        "non_sensitive_parent": {
+            "userEmail": "camelCase@test.com",
+            "CREDIT_CARD": "1234",
+            "secret_token_123": "token"
+        }
+    });
+
+    let redacted_mixed = ::server_telemetry::redact_interface_pii(payload_mixed_array);
+    assert_eq!(redacted_mixed["mixed_array"][0], "safe_string");
+    assert_eq!(redacted_mixed["mixed_array"][1], 123);
+    assert_eq!(redacted_mixed["mixed_array"][2]["email"], "[REDACTED]");
+    assert_eq!(redacted_mixed["mixed_array"][2]["safe_field"], "ok");
+    assert_eq!(redacted_mixed["mixed_array"][3][0], "another_safe");
+    assert_eq!(redacted_mixed["mixed_array"][3][1]["password"], "[REDACTED]");
+
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["userEmail"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["CREDIT_CARD"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["secret_token_123"], "[REDACTED]");
+}
+
+#[test]
+fn test_redact_interface_pii_highly_nested() {
+    let payload = serde_json::json!({
+        "level1": {
+            "level2": {
+                "level3": {
+                    "level4": {
+                        "level5": {
+                            "level6": {
+                                "secret_token": "token123",
+                                "safe_value": 42
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["secret_token"], "[REDACTED]");
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["safe_value"], 42);
+}
+
+#[test]
 fn test_harness_telemetry_recording() {
     // This test ensures the metric recording logic runs without panicking.
     // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
@@ -472,4 +532,46 @@ fn test_record_postgres_lock_contention() {
 fn test_record_llm_network_latency() {
     // This test verifies that the metric recording logic for llm network latency runs without panicking.
     ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
+}
+
+
+#[test]
+fn test_value_based_pii_redaction() {
+    let payload = serde_json::json!({
+        "safe_field_1": "123-45-6789", // SSN pattern
+        "safe_field_2": "4111-1111-1111-1111", // CC pattern
+        "safe_field_3": "sk-1234567890abcdefg", // API key pattern
+        "safe_field_4": "+1 (555) 123-4567", // Phone pattern
+        "safe_field_5": "just a normal string",
+        "nested": {
+            "safe_field_6": "ak-abcdefghijklmnopqrstuvwxyz"
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["safe_field_1"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_2"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_3"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_4"], "[REDACTED]");
+    assert_eq!(redacted["safe_field_5"], "just a normal string");
+    assert_eq!(redacted["nested"]["safe_field_6"], "[REDACTED]");
+}
+
+#[test]
+fn test_redact_interface_pii_with_empty_objects() {
+    let payload = serde_json::json!({
+        "empty_obj": {},
+        "empty_arr": [],
+        "nested": {
+            "empty": {},
+            "secret": "password"
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+    assert_eq!(redacted["empty_obj"], serde_json::json!({}));
+    assert_eq!(redacted["empty_arr"], serde_json::json!([]));
+    assert_eq!(redacted["nested"]["empty"], serde_json::json!({}));
+    assert_eq!(redacted["nested"]["secret"], "[REDACTED]");
 }

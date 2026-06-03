@@ -48,7 +48,19 @@ fn escape_html(s: &str) -> String {
      .replace("'", "&#x27;")
 }
 
-pub async fn handle_edge_request(
+pub struct StorefrontRouter;
+
+impl StorefrontRouter {
+    pub async fn handle_edge_request(
+        Extension(state): Extension<Arc<EdgeWorkerState>>,
+        Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+        headers: axum::http::HeaderMap,
+    ) -> Result<Response<Body>, axum::http::StatusCode> {
+        handle_edge_request_impl(Extension(state), Path((tenant_id_str, site_id_str)), headers).await
+    }
+}
+
+pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
     headers: axum::http::HeaderMap,
@@ -62,6 +74,10 @@ pub async fn handle_edge_request(
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         let mut response = Html(cached_html).into_response();
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
         response.headers_mut().insert(
             CACHE_CONTROL,
             "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
@@ -102,6 +118,10 @@ pub async fn handle_edge_request(
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
             let mut response = Html(cached_html).into_response();
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
             response.headers_mut().insert(
                 CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
@@ -117,9 +137,14 @@ pub async fn handle_edge_request(
         ongoing.lock().await.remove(&cache_key);
     }
 
-    let (html, _tags) = result?;
+    let (html, tags) = result?;
 
     let mut response = Html(html).into_response();
+    if !tags.is_empty() {
+        if let Ok(cache_tag) = tags.join(", ").parse() {
+            response.headers_mut().insert("Cache-Tag", cache_tag);
+        }
+    }
     response.headers_mut().insert(
         CACHE_CONTROL,
         "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
