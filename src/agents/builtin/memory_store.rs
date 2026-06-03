@@ -368,7 +368,10 @@ impl VectorRepository {
         Ok(results)
     }
 
-pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+    /// Prunes stale context to prevent unbounded memory growth.
+    /// It deletes records older than `older_than` where `owner_override = FALSE`,
+    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
+    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
