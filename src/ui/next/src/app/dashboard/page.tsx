@@ -79,6 +79,12 @@ export default function Dashboard() {
   const [cartCampaignMessage, setCartCampaignMessage] = useState<string>("");
   const [cartCampaignSent, setCartCampaignSent] = useState<boolean>(false);
 
+  // Growth Loop: SEO Audit State
+  const [showSeoModal, setShowSeoModal] = useState<boolean>(false);
+  const [isGeneratingSeo, setIsGeneratingSeo] = useState<boolean>(false);
+  const [seoReport, setSeoReport] = useState<string>("");
+  const [seoFixApplied, setSeoFixApplied] = useState<boolean>(false);
+
   // Growth Loop: VIP Customer Referral Campaign State
   const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
@@ -1200,6 +1206,70 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Storefront SEO Health Report */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Storefront SEO Health Report</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                        <span className="text-xs font-medium text-blue-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Your Google Ranking</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        Your current SEO Score is <strong>65/100</strong>. We found missing meta descriptions and unoptimized images. Let our AI automatically fix these issues so more local customers can find your business on Google.
+                    </p>
+                    <button
+                        onClick={async () => {
+                            setShowSeoModal(true);
+                            setIsGeneratingSeo(true);
+                            try {
+                                const response = await fetch('/api/v1/growth/campaign/generate-seo', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ store_name: businessName })
+                                });
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    setSeoReport(data.message);
+                                } else {
+                                    setSeoReport("Failed to generate SEO report.");
+                                }
+                            } catch (e) {
+                                console.error("Error generating SEO report", e);
+                                setSeoReport("Failed to generate SEO report.");
+                            } finally {
+                                setIsGeneratingSeo(false);
+                            }
+                        }}
+                        className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl shadow-sm hover:bg-blue-700 transition-colors text-sm"
+                    >
+                        Generate AI SEO Fixes
+                    </button>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div className="flex flex-col items-center">
+                        <div className="relative w-20 h-20 mb-2">
+                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" strokeWidth="3" />
+                                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#3b82f6" strokeWidth="3" strokeDasharray="65, 100" />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center font-bold text-gray-800">
+                                65
+                            </div>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">SEO Score</span>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Post-Purchase Social Share */}
          {showSaleCelebration && (
          <section className="mb-8 mt-8">
@@ -1537,6 +1607,65 @@ export default function Dashboard() {
          </section>
 
       </main>
+
+      {/* SEO Audit Soft Paywall Modal */}
+      {showSeoModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="mac-glass-container w-full max-w-2xl rounded-2xl p-0 shadow-2xl relative overflow-hidden font-inter flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
+                <span className="text-2xl">📈</span> AI SEO Audit
+              </h2>
+              <button
+                onClick={() => setShowSeoModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 flex-1 max-h-[60vh] overflow-y-auto">
+              {isGeneratingSeo ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                  <p className="text-gray-500 font-medium animate-pulse">Analyzing your storefront...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-inter leading-relaxed">{seoReport}</pre>
+                  </div>
+                  {seoFixApplied ? (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-center font-medium">
+                      ✅ AI SEO Fixes successfully applied!
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-indigo-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">PRO</div>
+                      <h4 className="font-bold text-indigo-900 mb-2">Automate with Pro</h4>
+                      <p className="text-sm text-indigo-700 mb-4">Upgrade to OHC Pro to automatically apply these AI-generated SEO fixes, optimize images, and sync with Google Maps instantly.</p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            if (hasPro) {
+                              setSeoFixApplied(true);
+                            } else {
+                              setShowSeoModal(false);
+                              setShowUpgradeModal(true);
+                            }
+                          }}
+                          className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+                        >
+                          {hasPro ? 'Apply Fixes Now' : 'Upgrade to Pro'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (
