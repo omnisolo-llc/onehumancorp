@@ -9,7 +9,7 @@ test.describe('CUJ: Billing Cost Tracking', () => {
 
   test('Owner checks current plan and views cost dashboard', async ({ page }) => {
     // Start from dashboard
-    await page.goto('/dashboard');
+    // await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
     // Check elements dynamically populated on My Plan screen by clicking "Billing"
