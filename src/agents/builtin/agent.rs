@@ -2097,7 +2097,7 @@ impl Agent {
                 }
             }
 
-            // Architectural Decision 7: Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+            // Architectural Decision 7: Architectural Decision 7: Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
             if final_cfg.harness_thickness == crate::harness_thickness::HarnessThickness::Thin {
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
             }
