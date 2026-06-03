@@ -3,7 +3,11 @@ import { test, expect } from './fixtures';
 test.describe('Viral Trial Extension Flow', () => {
   test('user shares on Twitter to extend trial by 7 days', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.waitForURL('**/dashboard');
 
     // Make sure we are on the dashboard
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
