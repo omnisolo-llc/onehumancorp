@@ -158,3 +158,10 @@ ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+VALUES
+('e2e-approval-casestudy', 'e2e-tenant', 'marketing', 'Case Study Draft | Payload: {"feature_type": "case_study", "service_name": "Web Design", "media_url": "https://example.com/image.jpg", "generated_description": "Great project."}', 'PENDING', 'LOW', '{"feature_type": "case_study", "service_name": "Web Design", "media_url": "https://example.com/image.jpg", "generated_description": "Great project."}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
