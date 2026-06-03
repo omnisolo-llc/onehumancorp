@@ -82,6 +82,20 @@ export default function SettingsPage() {
           <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">Back to Dashboard</Link>
         </div>
 
+        {/* Sales & Acquisition */}
+        <section className="mb-8 border-b pb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold mb-2 text-gray-800">Sales & Acquisition</h2>
+              <p className="text-sm text-gray-500">Configure autonomous quoting, CRM settings, and booking workflows.</p>
+            </div>
+            <Link href="/settings/sales-acquisition" className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-xl shadow-sm transition-all flex items-center gap-2">
+              Configure
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </Link>
+          </div>
+        </section>
+
         {/* General Notifications */}
         <section className="mb-8 border-b pb-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">General Notifications</h2>

@@ -10,18 +10,22 @@ export default function Booking() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulating form submission
-    await fetch("/api/v1/booking/request", {
+    const res = await fetch("/api/v1/booking/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description,
-        fileName: file?.name,
+        file_name: file?.name,
         timestamp: new Date().toISOString()
       }),
     });
 
-    setSubmitted(true);
+    if (res.ok) {
+        const data = await res.json();
+        setSubmitted(true);
+    } else {
+        alert("Failed to submit request");
+    }
   };
 
   if (submitted) {

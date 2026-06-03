@@ -147,11 +147,21 @@ export default function Dashboard() {
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
-        const res = await fetch('/api/agents/approvals');
-        const data = await res.json();
-        if (data && data.pending_approvals) {
-          setApprovals(data.pending_approvals);
+        const [approvalsRes, activityRes] = await Promise.all([
+          fetch('/api/agents/approvals'),
+          fetch('/api/agents/approvals/activity')
+        ]);
+        const approvalsData = await approvalsRes.json();
+        const activityData = await activityRes.json();
+
+        let allItems = [];
+        if (approvalsData && approvalsData.pending_approvals) {
+          allItems = [...allItems, ...approvalsData.pending_approvals];
         }
+        if (activityData && activityData.pending_approvals) {
+          allItems = [...allItems, ...activityData.pending_approvals];
+        }
+        setApprovals(allItems);
       } catch (e) {
         console.error("Failed to fetch approvals", e);
       }

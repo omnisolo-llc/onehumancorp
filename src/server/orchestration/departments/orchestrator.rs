@@ -763,6 +763,18 @@ impl DepartmentOrchestrator {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 
+
+    pub async fn get_department_config(&self, tenant_id: &str, department: &str) -> Result<Option<crate::orchestration::departments::types::DepartmentConfig>, String> {
+        let deps = self.departments.read().await;
+        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+        if let Some(dep_lock) = deps.get(&dep_type) {
+            let dep = dep_lock.read().await;
+            Ok(dep.get_config(tenant_id))
+        } else {
+            Err("Department not found".to_string())
+        }
+    }
+
     pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
         let deps = self.departments.read().await;
         let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
