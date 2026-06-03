@@ -39,12 +39,19 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
-  string daily_briefing = 9;
 }
 
 message GetDashboardRequest {
   string organization_id = 1;
   bool mobile_optimized = 2;
+}
+
+message GetDailyBriefingRequest {
+  string organization_id = 1;
+}
+
+message GetDailyBriefingResponse {
+  string briefing_text = 1;
 }
 
 // B2B Collaboration messages
@@ -118,6 +125,7 @@ message PipelinePromoteRequest {
 
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
+  rpc GetDailyBriefing(GetDailyBriefingRequest) returns (GetDailyBriefingResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);

@@ -283,17 +283,17 @@ export default function Dashboard() {
                 setPendingOrders(metricsData.pending_orders);
             }
 
-            // Also fetch dashboard snapshot for briefing
+            // Fetch dashboard briefing asynchronously to avoid blocking main dashboard payload
             try {
-                const snapRes = await fetch('/api/v1/dashboard', {
+                const snapRes = await fetch('/api/v1/dashboard/briefing', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ organization_id: tenant, mobile_optimized: true })
+                    body: JSON.stringify({ organization_id: tenant })
                 });
                 if (snapRes.ok) {
                     const snapData = await snapRes.json();
-                    if (snapData.daily_briefing) {
-                        setDailyBriefing(snapData.daily_briefing);
+                    if (snapData.briefing_text) {
+                        setDailyBriefing(snapData.briefing_text);
                     }
                 }
             } catch (e) {}

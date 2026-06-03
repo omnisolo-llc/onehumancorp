@@ -2550,6 +2550,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             dynamic_workflow_state_dir,
         ),
     );
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
+    let dashboard_service_for_axum = dashboard_service.clone();
+
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -2907,6 +2910,40 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
+        .route(
+            "/api/v1/dashboard/briefing",
+            axum::routing::post({
+                let dashboard_service = dashboard_service_for_axum.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move {
+                    use tonic::Request;
+                    use ::server_ohc::app::dashboard_service_server::DashboardService;
+
+                    // Parse SPIFFE ID to enforce authentication
+                    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                    let (auth_tenant_id, agent_id) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+                    if auth_tenant_id.is_empty() || (auth_tenant_id != "system" && auth_tenant_id != payload.tenant_id) {
+                        return axum::response::IntoResponse::into_response(axum::http::StatusCode::UNAUTHORIZED);
+                    }
+
+                    let mut req = Request::new(::server_ohc::app::GetDailyBriefingRequest {
+                        organization_id: payload.tenant_id.clone(),
+                    });
+                    req.extensions_mut().insert(crate::auth::orchestration::AuthInfo {
+                        spiffe_id: spiffe_id_str.to_string(),
+                        org_id: auth_tenant_id,
+                        agent_id,
+                    });
+
+                    match dashboard_service.get_daily_briefing(req).await {
+                        Ok(res) => axum::response::IntoResponse::into_response(axum::Json(serde_json::json!({
+                            "briefing_text": res.into_inner().briefing_text
+                        }))),
+                        Err(_) => axum::response::IntoResponse::into_response(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+                    }
+                }
+            }),
+        )
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -3133,7 +3170,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     tracing::info!("Server listening on {}", addr);
 
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
@@ -3941,6 +3977,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
                         <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
+
+                        <div class="card glass" id="daily-business-briefing" style="display: none;">
+                            <h2>Your Daily Briefing</h2>
+                            <p id="daily-business-briefing-text"></p>
+                        </div>
 
                         <div class="card glass" id="legacy-hybrid-landing-coverage">
                             <h2>OneHumanCorp</h2>
@@ -7193,6 +7234,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }).then(res => res.json())
                                 ])
                                 .then(([metricsData]) => {
+
+                                    fetch('/api/v1/dashboard/briefing', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ organization_id: tenant })
+                                    })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.briefing_text) {
+                                            const b = document.getElementById('daily-business-briefing');
+                                            if (b) {
+                                              b.style.display = 'block';
+                                              document.getElementById('daily-business-briefing-text').innerText = data.briefing_text;
+                                            }
+                                        }
+                                    }).catch(e => console.error("Briefing failed", e));
                                     const salesEl = document.getElementById('todays-sales');
                                     if (salesEl) salesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
 

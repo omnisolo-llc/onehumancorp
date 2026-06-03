@@ -11,6 +11,7 @@ static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organi
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
+#[derive(Clone)]
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
@@ -434,24 +435,6 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-        let mut daily_briefing = String::new();
-        if req.mobile_optimized {
-            let active_customers = 5; // A mocked active customer metric
-            let prompt = format!("I am a small business owner. Today I had {} active customers, and currently have {} pending orders. Please write a short (2-3 sentences max) daily briefing to encourage me and suggest an action in simple plain language.", active_customers, orders.len());
-
-            // Try fetching from LLM async
-            if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
-                let client = crate::minimax::MinimaxClient::new(api_key);
-                if let Ok(response) = client.reason(&prompt).await {
-                    daily_briefing = response;
-                }
-            }
-
-            if daily_briefing.is_empty() {
-                daily_briefing = format!("You had {} orders recently. Consider reviewing your inventory.", orders.len());
-            }
-        }
-
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
@@ -461,7 +444,54 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
-            daily_briefing,
+        }))
+    }
+
+    async fn get_daily_briefing(
+        &self,
+        request: Request<::server_ohc::app::GetDailyBriefingRequest>,
+    ) -> Result<Response<::server_ohc::app::GetDailyBriefingResponse>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
+
+        let req = request.into_inner();
+        let org_id = req.organization_id;
+
+        if ::server_config::get().multitenant && org_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
+        }
+        if auth_info.org_id != "system" && auth_info.org_id != org_id {
+            return Err(Status::permission_denied(
+                "You do not have permission to view this organization's data.",
+            ));
+        }
+
+        // Aggregate necessary metrics quickly
+        let orders = self.fetch_orders(org_id.clone(), true).await.unwrap_or_default();
+        let pending_orders = orders.len();
+        let active_customers = 5; // A mocked active customer metric for the briefing
+
+        let prompt = format!("I am a small business owner. Today I had {} active customers, and currently have {} pending orders. Please write a short (2-3 sentences max) daily briefing to encourage me and suggest an action in simple plain language.", active_customers, pending_orders);
+
+        let mut daily_briefing = format!("You had {} pending orders recently. Consider reviewing your inventory.", pending_orders);
+
+        // Try fetching from LLM async (use tokio timeout to prevent blocking thread forever on bad networks)
+        if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+            if api_key != "fake" && !api_key.is_empty() {
+                let client = crate::minimax::MinimaxClient::new(api_key);
+                if let Ok(Ok(response)) = tokio::time::timeout(std::time::Duration::from_secs(15), client.reason(&prompt)).await {
+                    daily_briefing = response;
+                }
+            }
+        }
+
+        Ok(Response::new(::server_ohc::app::GetDailyBriefingResponse {
+            briefing_text: daily_briefing,
         }))
     }
 
@@ -678,8 +708,24 @@ mod tests {
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
+    }
 
-        assert!(!res_mobile.daily_briefing.is_empty(), "Mobile should have daily briefing");
+    #[tokio::test]
+    async fn test_get_daily_briefing() {
+        let service = setup_test_dashboard_service().await;
+
+        let req = ::server_ohc::app::GetDailyBriefingRequest { organization_id: "system".to_string() };
+        let mut request = Request::new(req);
+        request.extensions_mut().insert(AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = service.get_daily_briefing(request).await;
+        assert!(res.is_ok());
+        let res_inner = res.unwrap().into_inner();
+        assert!(!res_inner.briefing_text.is_empty(), "Briefing text should not be empty");
     }
 
     #[tokio::test]
