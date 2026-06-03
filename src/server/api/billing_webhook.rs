@@ -17,6 +17,7 @@ pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub mesh: Option<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -185,6 +186,21 @@ pub async fn stripe_webhook_handler(
                         if let Err(e) = update_res {
                             tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
                             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                        }
+
+                        if let Some(mesh) = &webhook_state.mesh {
+                            let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                action: "InventoryStatusChanged".to_string(),
+                                agent_id: "system".to_string(),
+                                status: "".to_string(),
+                                msg_id: uuid::Uuid::new_v4().to_string(),
+                                payload: serde_json::json!({
+                                    "product_id": product_id,
+                                    "quantity_deducted": quantity,
+                                    "tenant_id": tenant_id
+                                }).to_string().into_bytes(),
+                            };
+                            let _ = mesh.publish("mesh:inventory:status_changed", event).await;
                         }
                     } else {
                         tracing::warn!("Failed to acquire inventory lock for product {} on POS transaction", product_id);

@@ -71,7 +71,12 @@ pub async fn offline_sync_handler(
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
                 };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
+                let _ = mesh.publish("mesh:inventory:updated", event.clone()).await;
+
+                let mut status_changed_event = event;
+                status_changed_event.action = "InventoryStatusChanged".to_string();
+                status_changed_event.msg_id = uuid::Uuid::new_v4().to_string();
+                let _ = mesh.publish("mesh:inventory:status_changed", status_changed_event).await;
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);

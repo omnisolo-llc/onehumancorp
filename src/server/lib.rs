@@ -2435,6 +2435,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: db.clone(),
+        mesh: Some(mesh_transport.clone()),
     };
 
     let webhook_router = axum::Router::new()
