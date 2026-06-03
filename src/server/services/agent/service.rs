@@ -73,7 +73,7 @@ impl MyAgentManagerService {
         };
 
         let mut status_map = std::collections::HashMap::new();
-        for a in agents.iter() {
+        for a in final_agents.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
