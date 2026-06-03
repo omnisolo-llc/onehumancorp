@@ -224,6 +224,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "ruflo_plugins",
     "observability",
     "output_parser",
+    "ralph_loop",
     "pubsub",
     "tools_gating",
     "registry",
