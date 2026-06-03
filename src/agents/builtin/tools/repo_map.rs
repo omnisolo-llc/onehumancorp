@@ -204,4 +204,131 @@ mod tests {
         assert!(!result.contains(".git"));
         assert!(!result.contains("target"));
     }
+
+    #[tokio::test]
+    async fn test_repomap_path_traversal() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        let outside_dir = tempdir().unwrap();
+        let outside_root = outside_dir.path();
+        fs::write(outside_root.join("secret.txt"), "super secret").unwrap();
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+        let result = executor.execute(json!({
+            "path": outside_root.to_string_lossy().to_string()
+        })).await;
+
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Path Traversal Denied"));
+            }
+            _ => panic!("Expected LlmRecoverable error for path traversal"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_repomap_missing_file() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+        let result = executor.execute(json!({
+            "path": "does_not_exist_folder"
+        })).await;
+
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Path does not exist"));
+            }
+            _ => panic!("Expected LlmRecoverable error for missing path"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_repomap_empty_directory() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+        let result = executor.execute(json!({})).await.unwrap();
+
+        assert!(result.contains("Empty or access denied"));
+    }
+
+    #[tokio::test]
+    async fn test_repomap_limit_signatures() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+
+        let mut content = String::new();
+        for i in 0..15 {
+            content.push_str(&format!("pub fn func_{}() {{}}\n", i));
+        }
+
+        fs::write(root.join("many_funcs.rs"), content).unwrap();
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+        let result = executor.execute(json!({})).await.unwrap();
+
+        assert!(result.contains("📄 many_funcs.rs"));
+        assert!(result.contains("│ pub fn func_0() {}"));
+        assert!(result.contains("│ pub fn func_9() {}"));
+        assert!(!result.contains("│ pub fn func_10() {}"));
+        assert!(result.contains("│ ... (5 more)"));
+    }
+
+    #[test]
+    fn test_extract_signatures_rust() {
+        let content = "
+pub fn my_func() {}
+pub(crate) struct MyStruct;
+enum MyEnum {}
+async fn async_func() {}
+pub async trait MyTrait {}
+        ";
+        let sigs = RepoMapExecutor::extract_signatures(content, "rs");
+        assert_eq!(sigs.len(), 5);
+        assert_eq!(sigs[0], "pub fn my_func() {}");
+        assert_eq!(sigs[1], "pub(crate) struct MyStruct;");
+        assert_eq!(sigs[2], "enum MyEnum {}");
+        assert_eq!(sigs[3], "async fn async_func() {}");
+        assert_eq!(sigs[4], "pub async trait MyTrait {}");
+    }
+
+    #[test]
+    fn test_extract_signatures_python() {
+        let content = "
+def my_func():
+class MyClass:
+async def async_func():
+        ";
+        let sigs = RepoMapExecutor::extract_signatures(content, "py");
+        assert_eq!(sigs.len(), 3);
+        assert_eq!(sigs[0], "def my_func():");
+        assert_eq!(sigs[1], "class MyClass:");
+        assert_eq!(sigs[2], "async def async_func():");
+    }
+
+    #[test]
+    fn test_extract_signatures_typescript() {
+        let content = "
+function myFunc() {}
+export class MyClass {}
+export interface MyInterface {}
+type MyType = string;
+export const MY_CONST = 1;
+async function asyncFunc() {}
+        ";
+        let sigs = RepoMapExecutor::extract_signatures(content, "ts");
+        assert_eq!(sigs.len(), 6);
+        assert_eq!(sigs[0], "function myFunc() {}");
+        assert_eq!(sigs[1], "export class MyClass {}");
+        assert_eq!(sigs[2], "export interface MyInterface {}");
+        assert_eq!(sigs[3], "type MyType = string;");
+        assert_eq!(sigs[4], "export const MY_CONST = 1;");
+        assert_eq!(sigs[5], "async function asyncFunc() {}");
+    }
 }
