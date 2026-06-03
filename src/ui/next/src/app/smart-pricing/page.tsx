@@ -16,19 +16,19 @@ export default function SmartPricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Smart Pricing</h1>
         <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
         </button>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-3xl mx-auto w-full flex flex-col gap-6">
+      <main className="p-4 sm:p-6 md:p-8 flex-1 max-w-3xl mx-auto w-full flex flex-col gap-6">
         <div className="text-center mb-4">
           <p className="text-lg" style={{ color: '#86868B' }}>Let AI automatically adjust your prices to maximize revenue and clear inventory, while staying within your safe limits.</p>
         </div>
 
-        <div className="p-6 shadow-sm rounded-2xl flex items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+        <div className="p-6 shadow-sm rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
           <div>
             <h3 className="text-lg font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Enable Smart Pricing</h3>
             <p className="text-sm text-gray-500 mt-1">Turn on autonomous hyper-local dynamic pricing.</p>
@@ -46,7 +46,7 @@ export default function SmartPricingPage() {
           <div className="p-6 shadow-sm rounded-2xl flex flex-col gap-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
             <h3 className="text-lg font-semibold font-outfit border-b pb-2" style={{ color: '#1D1D1F', borderColor: 'rgba(0,0,0,0.1)' }}>Configuration</h3>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
               <div>
                 <p className="font-medium" style={{ color: '#1D1D1F' }}>Auto-discount perishables 2 hours before closing</p>
                 <p className="text-xs text-gray-500 mt-1">Clear out remaining inventory today.</p>
@@ -60,7 +60,7 @@ export default function SmartPricingPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
               <div>
                 <p className="font-medium" style={{ color: '#1D1D1F' }}>Surge pricing during high demand</p>
                 <p className="text-xs text-gray-500 mt-1">Charge a premium during peak rush hours.</p>
@@ -92,7 +92,7 @@ export default function SmartPricingPage() {
 
               <div className="mt-6 p-4 rounded-xl border shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                 <p className="text-sm font-semibold mb-3 text-gray-700">Preview: How a $10.00 item might fluctuate</p>
-                <div className="flex justify-between items-center px-2">
+                <div className="flex flex-col sm:flex-row justify-between items-center px-2 gap-4 sm:gap-0">
                   <div className="text-center">
                     <p className="text-xs text-gray-500 mb-1">Floor</p>
                     <p className="font-bold text-green-600" data-testid="preview-min-price">${minPrice}</p>

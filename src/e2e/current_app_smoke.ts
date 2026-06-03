@@ -4,7 +4,7 @@ export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
     test.setTimeout(60000);
 
-    try {
+
         await page.goto('/dashboard');
         await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
         await expect(page.locator('h2', { hasText: 'Business Snapshot' }).first()).toBeVisible({ timeout: 5000 });
@@ -23,9 +23,6 @@ export function currentAppSmoke(label: string) {
 
         await page.goto('/storefront-builder');
         await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
-    } catch(err) {
-        console.log("smoke test skipped because local server flaked")
-    }
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
