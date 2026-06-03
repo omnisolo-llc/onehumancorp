@@ -35,6 +35,7 @@ pub struct ErrorResponse {
 
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(mesh): Extension<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<CreateProductRequest>,
 ) -> impl IntoResponse {
@@ -102,6 +103,20 @@ async fn handle_create_product(
         ).into_response();
     }
 
+    // Publish mesh event
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        action: "ProductCreated".to_string(),
+        agent_id: "system".to_string(),
+        status: "".to_string(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+        payload: serde_json::json!({
+            "name": payload.name,
+            "description": payload.description,
+            "tenant_id": tenant_id
+        }).to_string().into_bytes(),
+    };
+    let _ = mesh.publish("mesh:product:created", event).await;
+
     if payload.is_subscription.unwrap_or(false) {
         let plan_id = uuid::Uuid::new_v4().to_string();
         let interval = payload.subscription_interval.unwrap_or_else(|| "Monthly".to_string()).to_lowercase();
@@ -127,8 +142,9 @@ async fn handle_create_product(
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>, mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
         .layer(Extension(hub))
+        .layer(Extension(mesh))
 }

@@ -22,11 +22,59 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.job.completed".to_string(),
+            "tenant.product.created".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "tenant.product.created" {
+            let name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let description_text = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+
+            let description = format!("Draft social media post for new product: {}", name);
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": name,
+                "description": description_text,
+                "llm_prompt": format!("Generate an Instagram-ready caption and hashtags for a new product. Product Name: {}. Description: {}.", name, description_text)
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.inventory.updated" {
+            let quantity_deducted = event.payload.get("quantity_deducted").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            if quantity_deducted < 0 {
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let description = format!("Draft social media post for restocked item: {}", product_id);
+                let payload = serde_json::json!({
+                    "feature_type": "social_post",
+                    "event": "restock",
+                    "product_id": product_id,
+                    "llm_prompt": format!("Generate an Instagram-ready caption and hashtags announcing that our product (ID: {}) is back in stock!", product_id)
+                });
+
+                return self.orchestrator.execute_action(
+                    DepartmentType::Marketing,
+                    description,
+                    event.tenant_id.clone(),
+                    risk,
+                    payload,
+                ).await.map(|_| ());
+            } else {
+                return Ok(());
+            }
+        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
