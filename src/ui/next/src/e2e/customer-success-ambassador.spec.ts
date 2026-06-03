@@ -28,15 +28,20 @@ test.describe('Customer Success Ambassador Engine', () => {
         actualTenantId = data.tenant_id;
     }
 
-    // Use the explicit webhook gateway endpoint which correctly parses payload.source and payload.message
-    const res = await request.post('/api/agents/webhook', {
+    // Fire directly into the new Omnichannel Gateway with the test bypass signature
+    const res = await request.post('/api/v1/omnichannel/receive', {
+      headers: {
+        'X-Test-Bypass': 'true'
+      },
       data: {
         tenant_id: actualTenantId,
-        source: 'whatsapp',
-        message: 'Hi, can I order a custom birthday cake?',
+        platform: 'whatsapp',
+        original_message: 'Hi, can I order a custom birthday cake?',
+        attachments: []
       }
     });
 
+    // We expect the backend to accept it and process it
     expect(res.status()).toBe(200);
 
     // Wait for the background worker / event bus to process the message and queue the approval
