@@ -3417,6 +3417,7 @@ async fn create_ui_bom_item_handler(
             { "id": 9, "title": "View analytics", "duration": "0:45" },
             { "id": 10, "title": "Update your profile", "duration": "0:55" }
         ])) }))
+        .route("/api/v1/pricing/localize/:target_currency", axum::routing::post({ let pool = db.pool.clone(); move |axum::extract::Path(target_currency): axum::extract::Path<String>, axum::Json(payload): axum::Json<api::localization::PriceRequest>| api::localization::localize_price(axum::extract::State(pool), axum::extract::Path(target_currency), axum::Json(payload)) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
                 ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
