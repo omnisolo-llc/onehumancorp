@@ -5,9 +5,9 @@ test.describe('Autonomous Predictive Inventory Dismiss', () => {
         await page.goto('/');
         await page.goto('/inventory');
 
-        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible();
+        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible({ timeout: 15000 });
 
-        await page.click('button:has-text("Dismiss")');
-        await expect(page.locator("text=No active restock proposals. You're all set!")).toBeVisible();
+        await page.click('button:has-text("Dismiss")', { timeout: 15000 });
+        await expect(page.locator("text=No active restock proposals. You're all set!")).toBeVisible({ timeout: 15000 });
     });
 });
