@@ -5,6 +5,7 @@ use std::sync::Arc;
 #[derive(Deserialize, Debug)]
 pub struct OfflineMutation {
     pub transaction_id: String,
+    pub timestamp: String,
     pub product_id: String,
     pub quantity_deducted: i32,
 }
@@ -42,14 +43,46 @@ pub async fn offline_sync_handler(
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
+        // Insert into ledger to prevent double processing of same transaction_id
+        let insert_ledger = "
+            INSERT INTO offline_sync_ledger (transaction_id, tenant_id, product_id, quantity_deducted)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (transaction_id) DO NOTHING
+            RETURNING transaction_id
+        ";
+        let ledger_result = sqlx::query(insert_ledger)
+            .bind(&mutation.transaction_id)
+            .bind(&tenant_id)
+            .bind(&mutation.product_id)
+            .bind(mutation.quantity_deducted)
+            .fetch_optional(&db)
+            .await;
+
+        match ledger_result {
+            Ok(Some(_)) => {
+                // Successfully inserted, proceed
+            }
+            Ok(None) => {
+                tracing::info!("Transaction {} already processed for tenant {}", mutation.transaction_id, tenant_id);
+                continue;
+            }
+            Err(e) => {
+                tracing::error!("Database error checking ledger for transaction {}: {}", mutation.transaction_id, e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(OfflineSyncResponse { success: false }),
+                ).into_response();
+            }
+        }
+
         let query = "
             UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
+            SET inventory_count = inventory_count - $1
             WHERE id = $2 AND tenant_id = $3
-            RETURNING id
+            RETURNING id, inventory_count
         ";
 
-        let result = sqlx::query(query)
+        let result: Result<Option<(String, i32)>, sqlx::Error> = sqlx::query_as(query)
             .bind(mutation.quantity_deducted)
             .bind(&mutation.product_id)
             .bind(&tenant_id)
@@ -57,7 +90,26 @@ pub async fn offline_sync_handler(
             .await;
 
         match result {
-            Ok(Some(_)) => {
+            Ok(Some((_, new_inventory))) => {
+                if new_inventory < 0 {
+                    // Anomaly detected
+                    let anomaly_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                        action: "InventoryAnomaly".to_string(),
+                        agent_id: "system".to_string(),
+                        status: "".to_string(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                        payload: serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "transaction_id": mutation.transaction_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "new_inventory": new_inventory,
+                            "timestamp": mutation.timestamp,
+                            "tenant_id": tenant_id
+                        }).to_string().into_bytes(),
+                    };
+                    let _ = mesh.publish("mesh:inventory:anomaly", anomaly_event).await;
+                }
+
                 // Publish mesh event
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
                     action: "InventoryUpdated".to_string(),
@@ -67,6 +119,7 @@ pub async fn offline_sync_handler(
                     payload: serde_json::json!({
                         "product_id": mutation.product_id,
                         "transaction_id": mutation.transaction_id,
+                        "timestamp": mutation.timestamp,
                         "quantity_deducted": mutation.quantity_deducted,
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
@@ -119,6 +172,8 @@ mod tests {
         let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
 
         // Setup test data
+        sqlx::query("CREATE TABLE IF NOT EXISTS offline_sync_ledger (transaction_id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, quantity_deducted INT);")
+            .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-offline-1', 'tenant-offline', 'Test Prod', 5) ON CONFLICT DO NOTHING")
@@ -131,6 +186,7 @@ mod tests {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx1".to_string(),
+                    timestamp: "2024-01-01T00:00:00Z".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
                 },
@@ -147,22 +203,42 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 2); // 5 - 3 = 2
 
-        // Test negative guard
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx2".to_string(),
+                    timestamp: "2024-01-01T00:00:00Z".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
                 },
             ],
         };
 
-        let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
+        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
 
         let count2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
             .fetch_one(&pool).await.unwrap();
-        assert_eq!(count2.0, 0); // GREATEST(0, 2 - 10) = 0
+        assert_eq!(count2.0, -8); // 2 - 10 = -8
+
+        // Test idempotency
+        let req_idempotent = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx2".to_string(),
+                    timestamp: "2024-01-01T00:00:00Z".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 5,
+                },
+            ],
+        };
+
+        let response_idempotent = offline_sync_handler(state, headers, Json(req_idempotent)).await.into_response();
+        assert_eq!(response_idempotent.status(), StatusCode::OK);
+
+        let count_idempotent: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_idempotent.0, -8); // unchanged since tx2 already processed
+
     }
 }
