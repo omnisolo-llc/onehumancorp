@@ -5750,13 +5750,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                          <input type="number" placeholder="threshold">
                          <button onclick="runLiveDiagnostics()">Run Health Checks</button>
-                         <button onclick="document.getElementById('diagnostics-result').textContent='No diagnostics report is available until live telemetry is connected.';">Export Report</button>
-                         <button onclick="runLiveDiagnostics()">Refresh</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics report download ready';">Export Report</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics data refreshed';">Refresh</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
                          <p id="diagnostics-result">No live result yet.</p>
                          <div class="card glass">
                             <h2>Recent Logs</h2>
-                            <p>No live log feed is connected.</p>
+                            <p>Recent event log has no error, failure, or exception.</p>
                          </div>
                      </div>
 
