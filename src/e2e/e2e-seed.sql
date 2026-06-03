@@ -114,17 +114,15 @@ SET customer_id = EXCLUDED.customer_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload)
+INSERT INTO shared_tasks (id, organization_id, title, description, status, assigned_agent_id)
 VALUES
-  ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops', 'P1', '{"source":"database_seed"}'),
-  ('e2e-task-social', 'e2e-tenant', 'Draft weekly promotion', 'Create a promotion for vegan celebration cakes.', 'PENDING', 'e2e-agent-marketing', 'P2', '{"source":"database_seed"}')
+  ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops'),
+  ('e2e-task-social', 'e2e-tenant', 'Draft weekly promotion', 'Create a promotion for vegan celebration cakes.', 'PENDING', 'e2e-agent-marketing')
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
     status = EXCLUDED.status,
-    agent_id = EXCLUDED.agent_id,
-    priority = EXCLUDED.priority,
-    payload = EXCLUDED.payload,
+    assigned_agent_id = EXCLUDED.assigned_agent_id,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO meeting_rooms (id, tenant_id, agenda, participants)
