@@ -93,6 +93,28 @@ export default function InboxPage() {
     setShowScheduler(false);
   };
 
+  const simulateIncomingMessage = async () => {
+    const newMessage: Message = {
+      id: Date.now(),
+      sender: 'SMS User',
+      source: 'SMS',
+      icon: '📱',
+      content: 'Are you open today?',
+      date: 'Just now'
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    try {
+      const res = await fetch('/api/inbox/webhook', { method: 'POST', body: JSON.stringify({ message: 'Are you open today?' }) });
+      const data = await res.json();
+      if (data.reply) {
+        setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'AI', source: 'System', icon: '🤖', content: data.reply, date: 'Just now' }]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -113,6 +135,18 @@ export default function InboxPage() {
           </Link>
         </div>
       </div>
+
+      {process.env.NODE_ENV === 'development' && (
+        <div className="flex gap-2 mb-4 flex-col">
+          {/* TODO: Follow-up issue: Integrate backend gRPC and INBOX_ROUTER for real AI orchestration instead of mocking */}
+          <button
+            onClick={simulateIncomingMessage}
+            className="w-full bg-[#34C759] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#2eaa4e] transition-colors"
+          >
+            🤖 Simulate Incoming Message
+          </button>
+        </div>
+      )}
 
       <button
         onClick={() => setShowScheduler(true)}
@@ -218,8 +252,13 @@ export default function InboxPage() {
               {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
+              {msg.sender === 'AI' && (
+                <span className="ml-2 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  AI Replied
+                </span>
+              )}
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
+            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' || msg.sender === 'AI' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
 
