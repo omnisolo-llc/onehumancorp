@@ -192,6 +192,12 @@ export default function TeamPage() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(inviteLink);
+                  const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "team-default" : "team-default";
+                  fetch("/api/v1/growth/team-invites", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ team_id: tenantId, inviter_id: tenantId, invitee_id: "pending" })
+                  }).catch(console.error);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}
