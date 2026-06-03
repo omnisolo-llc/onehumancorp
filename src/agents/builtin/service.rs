@@ -670,6 +670,15 @@ impl AgentServiceImpl {
         // Add create_skill tool
         tools.push(crate::tools::create_skill::create_skill_tool());
 
+        // Visual Workflow Tool Injection
+        let visual_workflow_tool = crate::visual_workflow::visual_workflow_tool(
+            self.resolve_llm("", "", ""),
+            tools.clone(),
+            std::collections::HashMap::new(),
+        );
+        tools.push(visual_workflow_tool);
+
+
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
                 let dep_cfg = get_department_config(dep);

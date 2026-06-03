@@ -182,6 +182,78 @@ impl WorkflowExecutor {
     }
 }
 
+
+use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+use ohc_builtin_agent_core::types::ToolError;
+use serde_json::json;
+
+pub struct VisualWorkflowToolExecutor {
+    pub llm: Arc<dyn crate::llm::LlmClient>,
+    pub tools: Vec<Tool>,
+    pub sub_agents: std::collections::HashMap<String, Arc<Agent>>,
+}
+
+#[async_trait::async_trait]
+impl ToolExecutor for VisualWorkflowToolExecutor {
+    async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
+        let graph_json = args.get("graph_json").and_then(|v| v.as_str()).unwrap_or("{}");
+        let initial_inputs_value = args.get("initial_inputs").cloned().unwrap_or(json!({}));
+
+        let graph: WorkflowGraph = match serde_json::from_str(graph_json) {
+            Ok(g) => g,
+            Err(e) => return Err(ToolError::LlmRecoverable(format!("Failed to parse graph JSON: {}", e))),
+        };
+
+        let mut initial_inputs = std::collections::HashMap::new();
+        if let Some(obj) = initial_inputs_value.as_object() {
+            for (k, v) in obj {
+                initial_inputs.insert(k.clone(), v.as_str().unwrap_or("").to_string());
+            }
+        }
+
+        let config = AgentRunConfig::default();
+
+        let agent = Arc::new(Agent::new(self.llm.clone(), self.tools.clone()));
+
+        let executor = WorkflowExecutor::new(
+            graph,
+            agent,
+            self.tools.clone(),
+            self.sub_agents.clone(),
+            config,
+        );
+
+        match executor.execute(initial_inputs).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(ToolError::Transient(e)),
+        }
+    }
+}
+
+pub fn visual_workflow_tool(llm: Arc<dyn crate::llm::LlmClient>, tools: Vec<Tool>, sub_agents: std::collections::HashMap<String, Arc<Agent>>) -> Tool {
+    Tool {
+        name: "execute_visual_workflow".to_string(),
+        description: "Executes a block-based visual workflow orchestration. Provide the workflow graph as JSON, along with any initial inputs. This allows for no-code or dynamic assembly of complex agentic flows. (AutoGPT Block-based visual workflow)".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "graph_json": {
+                    "type": "string",
+                    "description": "The JSON string representation of the WorkflowGraph."
+                },
+                "initial_inputs": {
+                    "type": "object",
+                    "description": "A key-value map of strings representing the initial state/inputs for the workflow.",
+                    "additionalProperties": { "type": "string" }
+                }
+            },
+            "required": ["graph_json"]
+        }),
+        execute: Arc::new(VisualWorkflowToolExecutor { llm, tools, sub_agents }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +454,31 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_tool_execution() {
+        let llm = Arc::new(MockVisualLlmClient);
+        let tool = crate::visual_workflow::visual_workflow_tool(llm, vec![], std::collections::HashMap::new());
+
+        let graph_json = serde_json::json!({
+            "nodes": [
+                { "id": "in", "node_type": { "type": "Input", "name": "var" } },
+                { "id": "llm1", "node_type": { "type": "Llm", "prompt_template": "hello {{in}}" } },
+                { "id": "out", "node_type": { "type": "Output" } }
+            ],
+            "edges": [
+                { "source": "in", "target": "llm1" },
+                { "source": "llm1", "target": "out" }
+            ]
+        }).to_string();
+
+        let args = serde_json::json!({
+            "graph_json": graph_json,
+            "initial_inputs": { "in": "world" }
+        });
+
+        let result = tool.execute.execute(args).await.unwrap();
+        assert_eq!(result, "Processed: hello world");
     }
 }
