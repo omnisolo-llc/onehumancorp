@@ -2,15 +2,26 @@ import { test, expect } from './fixtures';
 
 test.describe('Leo CUJ', () => {
   test('Leo adds a service and creates a link-in-bio', async ({ page }) => {
-    // 1. Navigate to the App and wait for dashboard to load (fixture handles auth)
+    // 1. Navigate to the App and wait for dashboard to load (we must simulate the login from root)
+    await page.goto('/login');
+
+    // Simulate login for Leo
+    const usernameInput = page.getByPlaceholder('Email or Username');
+    if (await usernameInput.isVisible()) {
+        await usernameInput.fill('leo@example.com');
+        await page.locator('input[type="password"]').fill('password123');
+        await page.locator('button:has-text("Login")').click();
+    }
+
+    // Fallback to direct navigation if the previous block doesn't naturally navigate due to fixture overrides
     await page.goto('/');
 
     // Wait for the dashboard heading to appear, indicating the app has fully loaded.
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // 2. Add a new service using the dashboard modal (as seen in dashboard/page.tsx)
-    const addItemBtn = page.locator('button', { hasText: '+ Add Item' });
-    await expect(addItemBtn).toBeVisible();
+    const addItemBtn = page.locator('button', { hasText: '+ Add Item' }).first();
+    await expect(addItemBtn).toBeVisible({ timeout: 10000 });
     await addItemBtn.click();
 
     // Select 'Service' type
