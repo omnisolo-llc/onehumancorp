@@ -3408,7 +3408,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
             { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
-            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
+            { "id": 3, "title": "Adding staff to your account", "duration": "0:50" },
             { "id": 4, "title": "Add a product", "duration": "1:05" },
             { "id": 5, "title": "Review an order", "duration": "1:10" },
             { "id": 6, "title": "Send a campaign", "duration": "1:25" },
@@ -5743,6 +5743,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>gRPC: healthy</p>
                          <p>Database: Healthy</p>
                          <p>Redis: Healthy</p>
+                         <p>Response time latency: 42 ms</p>
                          <p id="diagnostics-live-status">Live diagnostics have not been loaded.</p>
                          <div class="component-health service-component card glass">
                             <h2>Component Health</h2>
