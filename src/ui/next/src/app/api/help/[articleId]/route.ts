@@ -126,8 +126,8 @@ const articles: Record<string, { title: string, contentHtml: string }> = {
   }
 };
 
-export async function GET(req: Request, { params }: { params: { articleId: string } }) {
-  const articleData = articles[params.articleId];
+export async function GET(req: Request, context: { params: Promise<{ articleId: string }> }) {
+  const articleData = articles[(await context.params).articleId];
 
   if (articleData) {
     return NextResponse.json(articleData);

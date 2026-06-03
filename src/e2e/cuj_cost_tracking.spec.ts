@@ -28,7 +28,7 @@ test.describe('CUJ: Billing Cost Tracking', () => {
 
     // Verify Cost Dashboard Screen
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Cost Transparency Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Business Advisory Dashboard' })).toBeVisible();
 
     // Verify dynamic metrics are populated
     await expect(page.locator('#cost-dashboard-period')).toContainText('Period:');

@@ -1469,6 +1469,12 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Link href="/smart-pricing" className="p-4 bg-indigo-50 hover:bg-indigo-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors border border-indigo-100">
+                  <div className="w-10 h-10 bg-indigo-200 rounded-full flex items-center justify-center text-xl shadow-inner">
+                    📈
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-900 text-center leading-tight">Configure Smart Pricing</span>
+                </Link>
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
@@ -1567,6 +1573,12 @@ export default function Dashboard() {
 
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
+                <Link href="/smart-pricing" className="p-4 bg-indigo-50 hover:bg-indigo-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors border border-indigo-100">
+                  <div className="w-10 h-10 bg-indigo-200 rounded-full flex items-center justify-center text-xl shadow-inner">
+                    📈
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-900 text-center leading-tight">Configure Smart Pricing</span>
+                </Link>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(`Just hit an amazing milestone: ${currentMilestone.title} on my new store! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
@@ -2314,6 +2326,12 @@ export default function Dashboard() {
 
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
+                <Link href="/smart-pricing" className="p-4 bg-indigo-50 hover:bg-indigo-100 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors border border-indigo-100">
+                  <div className="w-10 h-10 bg-indigo-200 rounded-full flex items-center justify-center text-xl shadow-inner">
+                    📈
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-900 text-center leading-tight">Configure Smart Pricing</span>
+                </Link>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
