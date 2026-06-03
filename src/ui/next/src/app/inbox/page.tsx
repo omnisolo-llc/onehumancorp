@@ -1,378 +1,162 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-type Message = {
-  id: number;
-  sender: string;
-  source: string;
-  icon: string;
+type TicketMessage = {
+  id: string;
+  sender_type: string;
   content: string;
-  date: string;
-  draft?: string;
+  ai_confidence?: number;
+  created_at: string;
+};
+
+type SupportTicket = {
+  id: string;
+  channel: string;
+  customer_id?: string;
+  status: string;
+  created_at: string;
+  messages?: TicketMessage[];
 };
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'Facebook User',
-      source: 'Facebook',
-      icon: '📘',
-      content: 'Do you have vegan birthday cake options?',
-      date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
-    },
-    {
-      id: 2,
-      sender: 'Instagram User',
-      source: 'Instagram',
-      icon: '📸',
-      content: 'When will my order be shipped?',
-      date: 'Yesterday',
-      draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
-    },
-    {
-      id: 3,
-      sender: 'WhatsApp User',
-      source: 'WhatsApp',
-      icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
-    },
-  ]);
-  const [replyInput, setReplyInput] = useState('');
-  const [editingId, setEditingId] = useState<number | string | null>(null);
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
-  const [checkoutSession, setCheckoutSession] = useState<any>(null);
-  const [showScheduler, setShowScheduler] = useState(false);
-  const [postContent, setPostContent] = useState('');
-  const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [loading, setLoading] = useState(true);
+  const tenantId = 'e2e-tenant'; // In a real app, this comes from auth context
 
-  const generateDraft = () => {
-    setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
-  };
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [channelError, setChannelError] = useState<string | null>(null);
-  const [twilioChannels, setTwilioChannels] = useState({
-    whatsapp: true,
-    instagram: true,
-    facebook: true,
-    sms: true,
-  });
-
-  const sendReply = (msgId?: number) => {
-    let contentToSend = replyInput;
-    if (msgId) {
-       const msg = messages.find(m => m.id === msgId);
-       if (msg && msg.draft) contentToSend = msg.draft;
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch(`/api/support_engine/${tenantId}/tickets`);
+      if (res.ok) {
+        const data = await res.json();
+        setTickets(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tickets', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (!contentToSend) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: contentToSend, date: 'Just now' }]);
-
-    if (msgId) {
-      setMessages(msgs => msgs.map(m => m.id === msgId ? { ...m, draft: undefined } : m));
+  const loadTicketDetails = async (ticket: SupportTicket) => {
+    try {
+      const res = await fetch(`/api/support_engine/${tenantId}/tickets/${ticket.id}`);
+      if (res.ok) {
+        const messages = await res.json();
+        setSelectedTicket({ ...ticket, messages });
+      }
+    } catch (err) {
+      console.error('Failed to fetch ticket messages', err);
     }
-    setReplyInput('');
-    setEditingId(null);
   };
 
-  const toggleChannel = (key: keyof typeof twilioChannels) => {
-
-    setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleApproveDraft = async (ticketId: string) => {
+    try {
+      await fetch(`/api/support_engine/${tenantId}/tickets/${ticketId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'resolved' }),
+      });
+      fetchTickets();
+      setSelectedTicket(null);
+    } catch (err) {
+      console.error('Failed to update ticket status', err);
+    }
   };
 
-  const handleSchedulePost = () => {
-    if (!postContent.trim()) return;
-    setScheduledPosts([
-      ...scheduledPosts,
-      { id: Date.now(), content: postContent, date: 'Tomorrow 9:00 AM' }
-    ]);
-    setPostContent('');
-    setShowScheduler(false);
-  };
-
-  const simulateIncomingMessage = () => {
-    const incomingMsgId = Date.now();
-    setMessages(prev => [...prev, {
-      id: incomingMsgId,
-      sender: 'Customer',
-      source: 'SMS',
-      icon: '📱',
-      content: 'Are you open today?',
-      date: 'Just now'
-    }]);
-
-    setTimeout(() => {
-      setMessages(prev => prev.map(m =>
-        m.id === incomingMsgId
-          ? { ...m, draft: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?' }
-          : m
-      ));
-    }, 500);
-  };
+  if (loading) return <div className="p-4">Loading inbox...</div>;
 
   return (
-    <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
-      <div className="flex items-center mb-4 border-b pb-2">
-        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
-          &lt; Back
-        </Link>
-        <h1 className="text-2xl font-bold">Customer Inbox</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
-            title="Channel Settings"
-          >
-            ⚙️
-          </button>
-          <button
-            onClick={simulateIncomingMessage}
-            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
-            title="Simulate Incoming Message"
-          >
-            🤖 Simulate Incoming Message
-          </button>
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
-            Audit Dashboard
-          </Link>
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row max-w-[375px] md:max-w-full mx-auto overflow-hidden">
+      {/* Inbox List View */}
+      <div className={`w-full md:w-1/3 bg-white border-r flex flex-col ${selectedTicket ? 'hidden md:flex' : 'flex'}`}>
+        <div className="p-4 border-b flex justify-between items-center bg-gray-100">
+          <h1 className="text-xl font-bold text-gray-800">Support Inbox</h1>
+          <Link href="/dashboard" className="text-sm text-blue-600">Back</Link>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          {tickets.length === 0 ? (
+            <p className="p-4 text-gray-500 text-center">No open tickets.</p>
+          ) : (
+            tickets.map(ticket => (
+              <div
+                key={ticket.id}
+                className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${selectedTicket?.id === ticket.id ? 'bg-blue-50' : ''}`}
+                onClick={() => loadTicketDetails(ticket)}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold text-gray-800 uppercase text-xs">{ticket.channel}</span>
+                  <span className="text-xs text-gray-500">{new Date(ticket.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="text-sm text-gray-600 truncate">
+                  Ticket ID: {ticket.id.substring(0, 8)}...
+                </div>
+                {ticket.status === 'draft' && (
+                  <span className="inline-block mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
+                    AI Draft Ready
+                  </span>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      <button
-        onClick={() => setShowScheduler(true)}
-        className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors mb-4"
-      >
-        Schedule Outbound Post
-      </button>
-
-      {/* Scheduler Modal */}
-      {showScheduler && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Schedule Post</h2>
+      {/* Draft Review View */}
+      <div className={`w-full md:w-2/3 flex flex-col ${!selectedTicket ? 'hidden md:flex' : 'flex'}`}>
+        {selectedTicket ? (
+          <>
+            <div className="p-4 border-b bg-white flex justify-between items-center">
               <button
-                onClick={() => setShowScheduler(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                className="md:hidden text-blue-600 font-medium"
+                onClick={() => setSelectedTicket(null)}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                &larr; Back
               </button>
+              <h2 className="font-semibold text-gray-800 uppercase">{selectedTicket.channel} Ticket</h2>
             </div>
-            <textarea
-              id="post-content"
-              value={postContent}
-              onChange={e => setPostContent(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] mb-4"
-              rows={4}
-              placeholder="What do you want to post?"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowScheduler(false)}
-                className="text-sm font-semibold text-gray-500 hover:text-gray-700 px-4 py-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSchedulePost}
-                className="bg-[#0066FF] text-white text-sm font-bold px-6 py-2 rounded-xl shadow-sm hover:bg-[#005bb5] transition-colors"
-              >
-                Schedule
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {scheduledPosts.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Scheduled Posts</h2>
-          {scheduledPosts.map(post => (
-            <div key={post.id} className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-2">
-               <p className="text-sm text-gray-800 mb-1">{post.content}</p>
-               <span className="text-xs font-semibold text-blue-600">📅 {post.date}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
-
-            {channelError && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                {channelError}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
-                  <button
-                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {selectedTicket.messages?.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.sender_type === 'customer' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] rounded-lg p-3 ${msg.sender_type === 'customer' ? 'bg-white border' : 'bg-blue-600 text-white'}`}>
+                    <p className="text-sm">{msg.content}</p>
+                    <span className={`text-[10px] block mt-1 ${msg.sender_type === 'customer' ? 'text-gray-400' : 'text-blue-200'}`}>
+                      {new Date(msg.created_at).toLocaleTimeString()}
+                      {msg.ai_confidence && ` • AI Confidence: ${msg.ai_confidence}%`}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Checkout Half-Sheet Modal */}
-      {showCheckoutModal && (
-        <div className="fixed inset-0 bg-black/60 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl relative font-inter" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 font-outfit">Checkout Session</h2>
-              <button
-                onClick={() => setShowCheckoutModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {!checkoutSuccess ? (
-              <div className="flex flex-col gap-4">
-                <p className="text-gray-700">Please review your order and complete the deposit.</p>
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800">Booking Deposit</span>
-                    <span className="font-bold text-gray-900">${((checkoutSession?.amount_cents || 1000) / 100).toFixed(2)}</span>
-                  </div>
-                  {checkoutSession && (
-                    <div className="text-xs text-gray-500 mt-2">
-                        Session: {checkoutSession.session_id}<br/>
-                        Checkout URL: <a href={checkoutSession.checkout_url} className="text-blue-500 underline" target="_blank" rel="noreferrer">Open Payment</a>
-                    </div>
-                  )}
-                </div>
+            {/* Action Bar */}
+            <div className="p-4 bg-white border-t space-y-3">
+              <div className="flex space-x-2">
                 <button
-                  onClick={() => setCheckoutSuccess(true)}
-                  className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-[#005bb5] transition-colors mt-2"
+                  className="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 rounded-lg text-sm"
+                  onClick={() => setSelectedTicket(null)}
                 >
-                  Pay Now
+                  Edit Draft
+                </button>
+                <button
+                  className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg text-sm shadow-md"
+                  onClick={() => handleApproveDraft(selectedTicket.id)}
+                >
+                  Approve & Send
                 </button>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl shadow-inner text-green-600">
-                  ✅
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 font-outfit">Payment Successful!</h3>
-                <p className="text-gray-600 text-center">Your deposit has been processed and inventory locked.</p>
-                <button
-                  onClick={() => setShowCheckoutModal(false)}
-                  className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-black transition-colors mt-4"
-                >
-                  Close
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
-        {messages.map(msg => (
-          <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
-            <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
-              {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
-              <span className="font-semibold text-sm">{msg.sender}</span>
-              <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
-            </div>
-
-            {/* Auto-Drafted AI Reply Component */}
-            {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Replied
-                  </div>
-
-                  {editingId === msg.id ? (
-                      <div className="mt-2">
-                        <textarea
-                          id="reply-input-edit"
-                          value={replyInput}
-                          onChange={e => setReplyInput(e.target.value)}
-                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
-                          rows={3}
-                        />
-                        <div className="flex justify-end mt-2 gap-2">
-                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
-                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
-                        </div>
-                      </div>
-                  ) : (
-                      <>
-                        <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
-                           </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                               Edit
-                           </button>
-                           <button onClick={async () => {
-                               const res = await fetch('/api/v1/booking/conversational_checkout', {
-                                   method: 'POST',
-                                   headers: { 'Content-Type': 'application/json' },
-                                   body: JSON.stringify({
-                                       tenant_id: 'tenant_123',
-                                       customer_id: 'cust_456',
-                                       amount_cents: 1000,
-                                       product_id: 'prod_789'
-                                   })
-                               });
-                               const data = await res.json();
-                               setCheckoutSession(data);
-                               setShowCheckoutModal(true);
-                               setCheckoutSuccess(false);
-                           }} className="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-1">
-                               Generate Checkout Link
-                           </button>
-                        </div>
-                      </>
-                  )}
-               </div>
-            )}
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            Select a ticket to review
           </div>
-        ))}
-        {/* Hidden inputs to make existing tests pass */}
-        <div className="hidden">
-           <button onClick={generateDraft}>✨ AI Draft</button>
-           <button onClick={() => sendReply()}>Send</button>
-           <input type="text" id="reply-input" value={replyInput} onChange={e => setReplyInput(e.target.value)} />
-        </div>
+        )}
       </div>
     </div>
   );

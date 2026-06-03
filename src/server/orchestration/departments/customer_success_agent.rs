@@ -160,3 +160,53 @@ impl BaseAgent for CustomerSuccessAgent {
         Ok(())
     }
 }
+
+impl CustomerSuccessAgent {
+    pub async fn process_support_ticket(
+        &self,
+        tenant_id: &str,
+        ticket_id: &str,
+        content: &str,
+    ) -> Result<(), String> {
+        let event = DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            event_type: "tenant.message.received".to_string(),
+            payload: serde_json::json!({
+                "ticket_id": ticket_id,
+                "content": content,
+            }),
+        };
+
+        // Emit an event that the message was received
+        self.orchestrator.dispatch_event(event).await?;
+
+        // In a real system, this would call the primary LLM provider (e.g., Gemini Pro)
+        // to evaluate the message and determine confidence.
+        // For now, we simulate sending a draft response back to the ticket repository.
+        let simulated_confidence = 85.0; // Medium Confidence
+        let simulated_draft = format!("Simulated AI Draft Response to: {}", content);
+
+        let risk = if simulated_confidence > 90.0 {
+            ActionRisk::AutoExecute
+        } else {
+            ActionRisk::DraftForReview
+        };
+
+        // Instead of calling trigger_agent which doesn't exist, execute action
+        self.orchestrator.execute_action(
+            DepartmentType::CustomerSuccess,
+            format!("Respond to support ticket {}", ticket_id),
+            tenant_id.to_string(),
+            risk,
+            serde_json::json!({
+                "action": "draft_support_response",
+                "ticket_id": ticket_id,
+                "draft": simulated_draft,
+                "confidence": simulated_confidence,
+            }),
+        ).await?;
+
+        Ok(())
+    }
+}
