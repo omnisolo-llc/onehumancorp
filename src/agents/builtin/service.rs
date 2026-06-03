@@ -597,6 +597,7 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+                enable_actor_model_message_passing: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
@@ -884,6 +885,11 @@ impl AgentService for AgentServiceImpl {
                         content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
                         ..Default::default()
                     },
+                    AgentEvent::GuardrailTripped { reason } => RunTaskEvent {
+                        r#type: EventType::TaskError as i32,
+                        content: format!("Guardrail Tripped: {}", reason),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
@@ -1023,6 +1029,7 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+                enable_actor_model_message_passing: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,

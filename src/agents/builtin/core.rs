@@ -10,3 +10,4 @@ pub mod output_parser;
 pub mod hnsw_memory;
 pub mod code_native;
 pub mod acon_context;
+pub mod dynamic_workflows;
