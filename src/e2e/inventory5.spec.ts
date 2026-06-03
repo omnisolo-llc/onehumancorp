@@ -1,7 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Autonomous Predictive Inventory E2E', () => {
-    test('Non-technical user should view AI restock alerts and stock status', async ({ page }) => {
+    test('Non-technical user should view AI restock alerts and stock status', async ({ page, adminUser }) => {
+        // Authenticate using the robust fixture explicitly instead of implicitly relying on page default login
+        // wait for the fixture's implicit login
+        await page.waitForLoadState('networkidle');
+
         // Navigate using relative URL
         await page.goto('/inventory');
 
