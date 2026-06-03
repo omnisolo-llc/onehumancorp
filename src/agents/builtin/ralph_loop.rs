@@ -48,12 +48,13 @@ impl RalphLoop {
     }
 
     /// Run the full Ralph Loop
-    pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Phase 1: Initializer
-        let mut progress = self.initialize(initial_task).await?;
-        
-        // Phase 2: Coding Agent Loop
-        while !progress.is_complete {
+    pub fn run<'a>(&'a self, initial_task: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
+        Box::pin(async move {
+            // Phase 1: Initializer
+            let mut progress = self.initialize(initial_task).await?;
+
+            // Phase 2: Coding Agent Loop
+            while !progress.is_complete {
             if progress.current_feature_index >= progress.features.len() {
                 progress.is_complete = true;
                 self.save_progress(&progress).await?;
