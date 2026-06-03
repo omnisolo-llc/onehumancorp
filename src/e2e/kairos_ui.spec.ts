@@ -15,7 +15,7 @@ test('shared task list loads', async ({ page }) => {
   await page.goto('/kairos');
 
   await expect(page.getByRole('heading', { name: 'Shared Task List' })).toBeVisible();
-  await expect(page.getByText('Inventory Reorder Strategy')).toBeVisible();
+  await expect(page.getByText('Live orchestration tasks only')).toBeVisible();
 });
 
 test('teammate mesh nodes are visible', async ({ page }) => {
@@ -44,5 +44,5 @@ test('walkthrough tooltips appear', async ({ page }) => {
   await page.waitForTimeout(1500);
 
   // The walkthrough should show a tooltip
-  await expect(page.getByText("The Shared Task List is the 'Brain'")).toBeVisible();
+  await expect(page.getByText("Shared tasks appear here when the orchestration")).toBeVisible();
 });
