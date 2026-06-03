@@ -3135,118 +3135,27 @@ impl Agent {
 
     // SOTA Harness Patterns (2025-2026): Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
-        let mut errors = Vec::new();
-        Self::validate_schema_recursive(args, schema, "", &mut errors);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors.join("\n"))
+        let compiled = match jsonschema::JSONSchema::options().compile(schema) {
+            Ok(c) => c,
+            Err(e) => return Err(format!("Invalid JSON schema provided for tool: {}", e)),
+        };
+
+        if let Err(errors) = compiled.validate(args) {
+            let mut err_msgs = Vec::new();
+            for error in errors {
+                let path = error.instance_path.to_string();
+                let path_display = if path.is_empty() || path == "/" {
+                    "arguments".to_string()
+                } else {
+                    format!("parameter '{}'", path.strip_prefix('/').unwrap_or(&path).replace("/", "."))
+                };
+                err_msgs.push(format!("{}: {}", path_display, error));
+            }
+            return Err(err_msgs.join("\n"));
         }
+        Ok(())
     }
 
-    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str, errors: &mut Vec<String>) {
-        let prefix = if path.is_empty() { String::new() } else { format!("{}.", path) };
-
-        if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
-            if let Some(args_obj) = args.as_object() {
-                for req in req_array {
-                    if let Some(req_str) = req.as_str() {
-                        if !args_obj.contains_key(req_str) {
-                            errors.push(format!("missing required parameter: '{}{}'", prefix, req_str));
-                        }
-                    }
-                }
-            } else if !req_array.is_empty() {
-                let p = if path.is_empty() { "arguments".to_string() } else { format!("parameter '{}'", path) };
-                errors.push(format!("{} must be an object", p));
-            }
-        }
-
-        if let Some(props) = schema.get("properties").and_then(|v| v.as_object()) {
-            if let Some(args_obj) = args.as_object() {
-                for (k, v) in args_obj {
-                    if let Some(prop_schema) = props.get(k) {
-                        let current_path = format!("{}{}", prefix, k);
-
-                        // Validate type
-                        if let Some(expected_type) = prop_schema.get("type").and_then(|t| t.as_str()) {
-                            let type_matches = match expected_type {
-                                "string" => v.is_string(),
-                                "number" | "integer" => v.is_number(),
-                                "boolean" => v.is_boolean(),
-                                "object" => v.is_object(),
-                                "array" => v.is_array(),
-                                _ => true, // Unknown type, skip validation for now
-                            };
-                            if !type_matches {
-                                let actual_type = if v.is_string() {
-                                    "string"
-                                } else if v.is_number() {
-                                    "number"
-                                } else if v.is_boolean() {
-                                    "boolean"
-                                } else if v.is_object() {
-                                    "object"
-                                } else if v.is_array() {
-                                    "array"
-                                } else if v.is_null() {
-                                    "null"
-                                } else {
-                                    "unknown"
-                                };
-                                errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
-                            }
-                        }
-
-                        // Recurse into objects
-                        if v.is_object() {
-                            Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
-                        }
-
-                        // Recurse into arrays
-                        if let (Some(arr), Some(items_schema)) = (v.as_array(), prop_schema.get("items")) {
-                            for (i, item) in arr.iter().enumerate() {
-                                let item_path = format!("{}[{}]", current_path, i);
-
-                                if let Some(expected_type) = items_schema.get("type").and_then(|t| t.as_str()) {
-                                    let type_matches = match expected_type {
-                                        "string" => item.is_string(),
-                                        "number" | "integer" => item.is_number(),
-                                        "boolean" => item.is_boolean(),
-                                        "object" => item.is_object(),
-                                        "array" => item.is_array(),
-                                        _ => true,
-                                    };
-                                    if !type_matches {
-                                        let actual_type = if item.is_string() {
-                                            "string"
-                                        } else if item.is_number() {
-                                            "number"
-                                        } else if item.is_boolean() {
-                                            "boolean"
-                                        } else if item.is_object() {
-                                            "object"
-                                        } else if item.is_array() {
-                                            "array"
-                                        } else if item.is_null() {
-                                            "null"
-                                        } else {
-                                            "unknown"
-                                        };
-                                        errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
-                                    }
-                                }
-
-                                if item.is_object() {
-                                    Self::validate_schema_recursive(item, items_schema, &item_path, errors);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     async fn execute_tool(
         &self,
@@ -3330,7 +3239,7 @@ mod tests {
         // 1. Missing top-level
         let args = serde_json::json!({});
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "missing required parameter: 'user'");
+        assert!(err.contains("arguments: \"user\" is a required property"));
 
         // 2. Missing nested required field
         let args = serde_json::json!({
@@ -3339,7 +3248,7 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "missing required parameter: 'user.address'");
+        assert!(err.contains("parameter 'user': \"address\" is a required property"));
 
         // 3. Deeply nested missing field
         let args = serde_json::json!({
@@ -3350,14 +3259,14 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "missing required parameter: 'user.address.zipcode'");
+        assert!(err.contains("parameter 'user.address': \"zipcode\" is a required property"));
 
         // 4. Type mismatch at top level
         let args = serde_json::json!({
             "user": "I am not an object"
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "parameter 'user' has invalid type: expected object, got string");
+        assert!(err.contains("parameter 'user'"));
 
         // 5. Type mismatch in nested field
         let args = serde_json::json!({
@@ -3368,7 +3277,7 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "parameter 'user.address.zipcode' has invalid type: expected string, got number");
+        assert!(err.contains("parameter 'user.address.zipcode'"));
 
         // 6. Array items missing required field
         let args = serde_json::json!({
@@ -3381,7 +3290,7 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "missing required parameter: 'user.tags[1].id'");
+        assert!(err.contains("parameter 'user.tags.1': \"id\" is a required property"));
 
         // 7. Array items type mismatch
         let args = serde_json::json!({
@@ -3393,7 +3302,7 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "parameter 'user.tags[0].id' has invalid type: expected string, got number");
+        assert!(err.contains("parameter 'user.tags.0.id'"));
 
         // 8. Array items object itself has wrong type
         let args = serde_json::json!({
@@ -3405,7 +3314,7 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert_eq!(err, "parameter 'user.tags[0]' has invalid type: expected object, got string");
+        assert!(err.contains("parameter 'user.tags.0'"));
 
         // 9. Multiple errors simultaneously
         let args = serde_json::json!({
@@ -3420,9 +3329,9 @@ mod tests {
             }
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
-        assert!(err.contains("missing required parameter: 'user.address.zipcode'"));
-        assert!(err.contains("parameter 'user.name' has invalid type: expected string, got number"));
-        assert!(err.contains("missing required parameter: 'user.tags[0].id'"));
+        assert!(err.contains("parameter 'user.address': \"zipcode\" is a required property"));
+        assert!(err.contains("parameter 'user.name': 123 is not of type \"string\""));
+        assert!(err.contains("parameter 'user.tags.0': \"id\" is a required property"));
     }
 
     #[tokio::test]
