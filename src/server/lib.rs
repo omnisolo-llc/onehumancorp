@@ -2496,6 +2496,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
+        .nest("/api/v1/sales", api::sales::quote_api::router())
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
