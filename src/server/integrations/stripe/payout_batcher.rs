@@ -1,5 +1,7 @@
-use redis::{AsyncCommands, Client};
+use sqlx::{PgPool, Row};
 use std::sync::Arc;
+use uuid::Uuid;
+use serde_json::json;
 
 /// 💰 Miser Cost Analysis:
 /// Stripe charges a flat fee of $0.25 plus 0.25% for instant payouts,
@@ -15,35 +17,97 @@ use std::sync::Arc;
 /// - Total savings = $24.75 per 100 transactions!
 
 pub struct PayoutBatcher {
-    redis_client: Option<Arc<Client>>,
+    pool: Option<Arc<PgPool>>,
     batch_threshold_cents: i64,
 }
 
 impl PayoutBatcher {
-    pub fn new(redis_url: Option<String>, batch_threshold_cents: i64) -> Self {
-        let redis_client = if let Some(url) = redis_url {
-            Client::open(url).ok().map(Arc::new)
-        } else {
-            None
-        };
+    pub fn new(pool: Option<Arc<PgPool>>, batch_threshold_cents: i64) -> Self {
         PayoutBatcher {
-            redis_client,
+            pool,
             batch_threshold_cents,
         }
+    }
+
+    async fn append_ledger_entry_tx(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, account_id: &str, amount_cents: i64) -> Result<(), String> {
+        let entry_id = Uuid::new_v4().to_string();
+        let payload = json!({ "amount": amount_cents });
+
+        sqlx::query(
+            "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change, created_at)
+             VALUES ($1, $2, 'Finance', 'PayoutBatchEvent', $3, CURRENT_TIMESTAMP)"
+        )
+        .bind(&entry_id)
+        .bind(account_id)
+        .bind(&payload)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    async fn get_pending_balance_tx(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, account_id: &str) -> Result<i64, String> {
+        let row = sqlx::query(
+            "SELECT COALESCE(CAST(SUM(CAST(state_change->>'amount' AS BIGINT)) AS BIGINT), 0) as balance
+             FROM ohc_universal_ledger
+             WHERE tenant_id = $1 AND action_type = 'PayoutBatchEvent'"
+        )
+        .bind(account_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let balance: i64 = row.get("balance");
+        Ok(balance)
+    }
+
+    pub async fn get_pending_balance(&self, account_id: &str) -> Result<i64, String> {
+        if let Some(pool) = &self.pool {
+            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+
+            let balance = Self::get_pending_balance_tx(&mut tx, account_id).await?;
+            tx.commit().await.map_err(|e| e.to_string())?;
+            Ok(balance)
+        } else {
+            Ok(0)
+        }
+    }
+
+    fn hash_account_id(account_id: &str) -> i64 {
+        // Use a stable, deterministic hash algorithm (djb2) to avoid cross-version hash drift.
+        let mut hash: i64 = 5381;
+        for c in account_id.bytes() {
+            hash = ((hash << 5).wrapping_add(hash)).wrapping_add(c as i64);
+        }
+        hash
     }
 
     /// Records a pending payout for a connected account.
     /// Returns Some(amount_to_payout_in_cents) if the threshold is reached and we should execute the payout.
     pub async fn record_payout(&self, account_id: &str, amount_cents: i64) -> Result<Option<i64>, String> {
-        if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
-            let key = format!("stripe_payout_batch:{}", account_id);
-            let current_balance: i64 = conn.incr(&key, amount_cents).await.map_err(|e| e.to_string())?;
+        if let Some(pool) = &self.pool {
+            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+
+            let lock_id = Self::hash_account_id(account_id);
+            sqlx::query("SELECT pg_advisory_xact_lock($1)")
+                .bind(lock_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            Self::append_ledger_entry_tx(&mut tx, account_id, amount_cents).await?;
+            let current_balance = Self::get_pending_balance_tx(&mut tx, account_id).await?;
 
             if current_balance >= self.batch_threshold_cents {
-                let _ : () = conn.del(&key).await.unwrap_or(());
+                // Clear the balance by appending a negative event
+                Self::append_ledger_entry_tx(&mut tx, account_id, -current_balance).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(Some(current_balance))
             } else {
+                tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(None)
             }
         } else {
@@ -52,28 +116,25 @@ impl PayoutBatcher {
         }
     }
 
-    pub async fn get_pending_balance(&self, account_id: &str) -> Result<i64, String> {
-        if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
-            let key = format!("stripe_payout_batch:{}", account_id);
-            let balance: Option<i64> = conn.get(&key).await.ok();
-            Ok(balance.unwrap_or(0))
-        } else {
-            Ok(0)
-        }
-    }
-
     pub async fn force_payout(&self, account_id: &str) -> Result<Option<i64>, String> {
-        if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
-            let key = format!("stripe_payout_batch:{}", account_id);
-            let balance: Option<i64> = conn.get(&key).await.ok();
-            if let Some(b) = balance {
-                if b > 0 {
-                    let _ : () = conn.del(&key).await.unwrap_or(());
-                    return Ok(Some(b));
-                }
+        if let Some(pool) = &self.pool {
+            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+
+            let lock_id = Self::hash_account_id(account_id);
+            sqlx::query("SELECT pg_advisory_xact_lock($1)")
+                .bind(lock_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let current_balance = Self::get_pending_balance_tx(&mut tx, account_id).await?;
+            if current_balance > 0 {
+                Self::append_ledger_entry_tx(&mut tx, account_id, -current_balance).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+                return Ok(Some(current_balance));
             }
+            tx.commit().await.map_err(|e| e.to_string())?;
             Ok(None)
         } else {
             Ok(None)
@@ -86,28 +147,39 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_record_payout_no_redis() {
+    async fn test_record_payout_no_pool() {
         let batcher = PayoutBatcher::new(None, 10000);
-        // With no redis, it falls back to immediate payout
+        // With no pool, it falls back to immediate payout
         let result = batcher.record_payout("acct_1", 2000).await.unwrap();
         assert_eq!(result, Some(2000));
+
+        let pending = batcher.get_pending_balance("acct_1").await.unwrap();
+        assert_eq!(pending, 0);
+
+        let force_result = batcher.force_payout("acct_1").await.unwrap();
+        assert_eq!(force_result, None);
     }
 
     #[tokio::test]
-    async fn test_record_payout_with_redis() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            let batcher = PayoutBatcher::new(Some(redis_url), 10000); // $100 threshold
-
-            // clear state
-            let _ = batcher.force_payout("acct_2").await;
-
-            assert_eq!(batcher.record_payout("acct_2", 2000).await.unwrap(), None);
-            assert_eq!(batcher.record_payout("acct_2", 3000).await.unwrap(), None);
-            assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 5000);
-
-            // Reaches threshold
-            assert_eq!(batcher.record_payout("acct_2", 6000).await.unwrap(), Some(11000));
-            assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
+    async fn test_record_payout_with_pool() {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        if sqlx::PgPool::connect(&db_url).await.is_err() {
+            println!("Skipping test due to no postgres");
+            return;
         }
+
+        let pool = crate::db::get_pool();
+        let batcher = PayoutBatcher::new(Some(Arc::new(pool)), 10000); // $100 threshold
+
+        // clear state
+        let _ = batcher.force_payout("acct_2").await;
+
+        assert_eq!(batcher.record_payout("acct_2", 2000).await.unwrap(), None);
+        assert_eq!(batcher.record_payout("acct_2", 3000).await.unwrap(), None);
+        assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 5000);
+
+        // Reaches threshold
+        assert_eq!(batcher.record_payout("acct_2", 6000).await.unwrap(), Some(11000));
+        assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
     }
 }

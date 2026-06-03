@@ -22,12 +22,12 @@ impl TaskQueue for PgTaskQueue {
 
         let mut current_depths = std::collections::HashMap::new();
 
-        let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
+        let mut query_str = String::from("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) VALUES ");
         let mut values = Vec::new();
 
         for i in 0..jobs.len() {
             let base = i * 6;
-            values.push(format!("(${}, ${}, ${}, ${}, 'QUEUED', ${}, ${})", base + 1, base + 2, base + 3, base + 4, base + 5, base + 6));
+            values.push(format!("(${}, ${}, ${}, ${}, 'PENDING', ${}, ${})", base + 1, base + 2, base + 3, base + 4, base + 5, base + 6));
         }
         query_str.push_str(&values.join(", "));
 
@@ -40,7 +40,7 @@ impl TaskQueue for PgTaskQueue {
 
         let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
         if !tenants_vec.is_empty() {
-            if let Ok(rows) = sqlx::query("SELECT organization_id, COUNT(*) FROM sub_agent_jobs WHERE organization_id = ANY($1) AND status = 'QUEUED' GROUP BY organization_id")
+            if let Ok(rows) = sqlx::query("SELECT tenant_id, COUNT(*) FROM ohc_job_queue WHERE tenant_id = ANY($1) AND status = 'PENDING' GROUP BY tenant_id")
                 .bind(&tenants_vec)
                 .fetch_all(&mut *tx)
                 .await
@@ -57,10 +57,10 @@ impl TaskQueue for PgTaskQueue {
         for job in jobs {
             let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
 
-            let mut run_after = job.run_after;
+            let mut next_retry_at = job.next_retry_at;
             if depth > bursts_threshold {
                 let delay_seconds = (depth - bursts_threshold) * 5;
-                run_after = run_after + chrono::Duration::seconds(delay_seconds);
+                next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
             }
             *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
 
@@ -68,9 +68,9 @@ impl TaskQueue for PgTaskQueue {
             query = query
                 .bind(job.id)
                 .bind(job.parent_task_id)
-                .bind(job.agent_role)
+                .bind(job.job_type)
                 .bind(payload_json)
-                .bind(run_after)
+                .bind(next_retry_at)
                 .bind(job.tenant_id);
         }
 
@@ -83,28 +83,28 @@ impl TaskQueue for PgTaskQueue {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = $1 AND status = 'PENDING'")
             .bind(&job.tenant_id)
             .fetch_one(&*self.pool)
             .await
             .unwrap_or((0,));
 
-        let mut run_after = job.run_after;
+        let mut next_retry_at = job.next_retry_at;
         let bursts_threshold = 10;
         if count_row.0 > bursts_threshold {
             let delay_seconds = (count_row.0 - bursts_threshold) * 5;
-            run_after = run_after + chrono::Duration::seconds(delay_seconds);
+            next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
         }
 
         sqlx::query(
-            "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
-             VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
+            "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)
+             VALUES ($1, $2, $3, $4, 'PENDING', $5, $6)"
         )
         .bind(&job.id)
         .bind(&job.parent_task_id)
-        .bind(&job.agent_role)
+        .bind(&job.job_type)
         .bind(payload_json)
-        .bind(run_after)
+        .bind(next_retry_at)
         .bind(&job.tenant_id)
         .execute(&*self.pool)
         .await
@@ -122,14 +122,14 @@ impl TaskQueue for PgTaskQueue {
 
         let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE sub_agent_jobs SET status = 'RUNNING', updated_at = CURRENT_TIMESTAMP
+            "UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
              WHERE id = (
-                 SELECT id FROM sub_agent_jobs
-                 WHERE status = 'QUEUED' AND run_after <= CURRENT_TIMESTAMP AND agent_role IN ({})
-                 ORDER BY run_after ASC, created_at ASC
+                 SELECT id FROM ohc_job_queue
+                 WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
+                 ORDER BY next_retry_at ASC, created_at ASC
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED
-             ) RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at, organization_id",
+             ) RETURNING id, parent_task_id, job_type, payload, status, retry_count, max_retries, next_retry_at, locked_until, created_at, updated_at, tenant_id",
             role_placeholders
         );
 
@@ -157,16 +157,16 @@ impl TaskQueue for PgTaskQueue {
             let job = Job {
                 id: row.get("id"),
                 parent_task_id: row.try_get("parent_task_id").unwrap_or_default(),
-                agent_role: row.try_get("agent_role").unwrap_or_default(),
+                job_type: row.try_get("job_type").unwrap_or_default(),
                 payload: payload_str,
                 status: row.try_get("status").unwrap_or_default(),
-                attempts: row.try_get("attempts").unwrap_or(0),
-                max_attempts: row.try_get("max_attempts").unwrap_or(3),
-                run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
+                retry_count: row.try_get("retry_count").unwrap_or(0),
+                max_retries: row.try_get("max_retries").unwrap_or(3),
+                next_retry_at: row.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at,
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
-                tenant_id: row.try_get("organization_id").unwrap_or_default(),
+                tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
             tx.commit().await.map_err(|e| e.to_string())?;
@@ -178,7 +178,7 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, run_after")
+        let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, next_retry_at")
             .bind(job_id)
             .fetch_optional(&*self.pool)
             .await
@@ -188,8 +188,8 @@ impl TaskQueue for PgTaskQueue {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             use sqlx::Row;
             let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
-            let run_after: chrono::DateTime<chrono::Utc> = r.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now());
-            let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
+            let next_retry_at: chrono::DateTime<chrono::Utc> = r.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now());
+            let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
         Ok(())
@@ -198,20 +198,20 @@ impl TaskQueue for PgTaskQueue {
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT attempts, max_attempts FROM sub_agent_jobs WHERE id = $1 FOR UPDATE")
+        let row = sqlx::query("SELECT retry_count, max_retries FROM ohc_job_queue WHERE id = $1 FOR UPDATE")
             .bind(job_id)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
-            let current_attempts: i32 = r.try_get("attempts").unwrap_or(0);
-            let max_attempts: i32 = r.try_get("max_attempts").unwrap_or(3);
-            let next_attempt = current_attempts + 1;
+            let current_retry_count: i32 = r.try_get("retry_count").unwrap_or(0);
+            let max_retries: i32 = r.try_get("max_retries").unwrap_or(3);
+            let next_attempt = current_retry_count + 1;
 
-            if next_attempt >= max_attempts {
+            if next_attempt >= max_retries {
                 // Poison pill
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'FAILED', attempts = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                     .bind(next_attempt)
                     .bind(job_id)
                     .execute(&mut *tx)
@@ -220,10 +220,10 @@ impl TaskQueue for PgTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_run_after = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
+                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_attempt)
-                    .bind(new_run_after)
+                    .bind(new_next_retry_at)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await

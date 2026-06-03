@@ -5,6 +5,8 @@ use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
 use std::time::Instant;
 
+/// RedisMeshTransport uses Redis Pub/Sub for Teammate Mesh APIs.
+/// It wraps RedisPubSubTransport to add OpenTelemetry tracking metrics.
 pub struct RedisMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
     publish_counter: Counter<u64>,
@@ -67,6 +69,9 @@ impl MeshTransport for RedisMeshTransport {
     }
 }
 
+/// MemoryMeshTransport uses in-process DashMap broadcasting for Teammate Mesh APIs.
+/// This is primarily utilized when the application runs in Standalone (offline) mode.
+/// It wraps InProcessTransport to add OpenTelemetry tracking metrics.
 pub struct MemoryMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
     publish_counter: Counter<u64>,

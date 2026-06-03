@@ -99,7 +99,7 @@ export function DraggableBlock({
 export function QRCode({ value }: { value: string }) {
   return (
     <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 rounded-[16px] shadow-sm border border-white/50 dark:border-white/10 inline-block">
-      <svg className="w-32 h-32 rounded-[12px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="w-32 h-32 rounded-[8px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" rx="12" fill="white" className="dark:fill-[#1D1D1F]"/>
         <rect x="10" y="10" width="20" height="20" fill="black"/>
         <rect x="15" y="15" width="10" height="10" fill="white"/>
@@ -198,7 +198,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             Share
           </a>
           <a
-            href={`ohc://join?ref=${props.tenantId || 'storefront'}-referral`}
+            href={`https://ohc.store/join?ref=${props.tenantId || 'storefront'}-referral`}
             className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
@@ -231,7 +231,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
-          href={`ohc://join?ref=${tenantId}`}
+          href={`https://ohc.store/join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
           <span className="font-inter">⚡ Powered by</span>

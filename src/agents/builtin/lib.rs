@@ -29,6 +29,8 @@ pub mod observability;
 pub mod verification_loops;
 pub mod agent;
 pub mod tools_gating;
+pub mod human_in_loop;
+
 pub mod service;
 pub mod departments;
 pub mod guardrails;
@@ -39,6 +41,8 @@ pub mod autogen;
 pub mod ralph_loop;
 pub mod ruflo;
 pub mod openhands;
+pub mod goose;
+
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
@@ -62,11 +66,11 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
-pub mod visual_orchestration;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;
+pub mod plan_and_execute;
 
 pub mod tool_executor_engine;
 pub mod ruflo_plugins;
@@ -132,10 +136,14 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     let mut parent_context_file = None;
     let mut worktree = None;
     let mut mailbox = None;
+    let mut ralph_loop = false;
 
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
+            "--ralph-loop" => {
+                ralph_loop = true;
+            }
             "--task" => {
                 if i + 1 < args.len() {
                     task = Some(args[i + 1].clone());
@@ -190,7 +198,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     let auth = auth::auth_mode_from_env();
 
-    let mut svc_impl = service::AgentServiceImpl::new(agent_id.clone(), cfg, auth);
+    let mut svc_impl = service::AgentServiceImpl::new(agent_id.clone(), cfg.clone(), auth);
     svc_impl.init_memory().await;
 
     if let Some(t) = task {
@@ -203,27 +211,41 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             String::new()
         };
 
-        let req = proto::agent_service::SubAgentRequest {
-            task: t,
-            working_dir,
-            parent_context_json,
-            ..Default::default()
-        };
+        if ralph_loop {
+            let req = proto::agent_service::RunTaskRequest {
+                task_id: uuid::Uuid::new_v4().hyphenated().to_string(),
+                task: t,
+                llm_provider: cfg.llm_provider.clone(),
+                model: cfg.model.clone(),
+                llm_endpoint: cfg.llm_endpoint.clone(),
+                department: "ralph".to_string(),
+                ..Default::default()
+            };
+            svc_impl.run_ralph_loop(req).await;
+            return Ok(());
+        } else {
+            let req = proto::agent_service::SubAgentRequest {
+                task: t,
+                working_dir,
+                parent_context_json,
+                ..Default::default()
+            };
 
-        match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
-            Ok(resp) => {
-                let inner = resp.into_inner();
-                if !inner.error.is_empty() {
-                    eprintln!("{}", inner.error);
-                    std::process::exit(1);
-                } else {
-                    println!("{}", inner.result);
-                    return Ok(());
+            match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                Ok(resp) => {
+                    let inner = resp.into_inner();
+                    if !inner.error.is_empty() {
+                        tracing::error!("{}", inner.error);
+                        std::process::exit(1);
+                    } else {
+                        tracing::info!("{}", inner.result);
+                        return Ok(());
+                    }
                 }
-            }
-            Err(e) => {
-                eprintln!("Subagent dispatch error: {}", e);
-                std::process::exit(1);
+                Err(e) => {
+                    tracing::error!("Subagent dispatch error: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
     }
@@ -265,5 +287,3 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-pub mod compaction;

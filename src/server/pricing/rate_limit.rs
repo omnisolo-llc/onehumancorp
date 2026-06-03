@@ -74,8 +74,25 @@ impl PlanTier {
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
-}
 
+    pub fn base_price(&self) -> f64 {
+        match self {
+            PlanTier::Free => 0.0,
+            PlanTier::Starter => 29.0,
+            PlanTier::Pro => 79.0,
+            PlanTier::Business => 299.0,
+        }
+    }
+
+    pub fn get_prompt_cache_ttl(&self) -> std::time::Duration {
+        match self {
+            PlanTier::Free => std::time::Duration::from_secs(60 * 60), // 1 hour
+            PlanTier::Starter => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
+            PlanTier::Pro => std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 days
+            PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct RateLimitStatus {
     pub is_allowed: bool,
@@ -99,7 +116,7 @@ impl RedisRateLimiter {
         self
     }
 
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?;
@@ -172,7 +189,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
@@ -193,7 +210,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
@@ -233,7 +250,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
@@ -280,7 +297,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
@@ -338,7 +355,7 @@ impl RedisRateLimiter {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit allows request
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
@@ -390,6 +407,11 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+
+        assert_eq!(PlanTier::Free.base_price(), 0.0);
+        assert_eq!(PlanTier::Starter.base_price(), 29.0);
+        assert_eq!(PlanTier::Pro.base_price(), 79.0);
+        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[tokio::test]

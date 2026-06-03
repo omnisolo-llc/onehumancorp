@@ -98,7 +98,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         is_standalone = true;
     }
 
-    if is_standalone {
+    if is_standalone && config.mode != "thin_client" {
         config.telemetry_enabled = telemetry_enabled;
     } else {
         config.telemetry_enabled = true;

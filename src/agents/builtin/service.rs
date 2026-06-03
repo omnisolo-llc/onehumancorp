@@ -572,6 +572,7 @@ impl AgentServiceImpl {
             acon_config: None,
             enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
+            enable_gpt_researcher: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
@@ -596,6 +597,7 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+                enable_actor_model_message_passing: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
@@ -655,6 +657,7 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = ohc_builtin_agent_tools::all_tools(
+            None,
             todos,
             task_store,
             mailbox,
@@ -665,7 +668,7 @@ impl AgentServiceImpl {
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
+        tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -882,6 +885,11 @@ impl AgentService for AgentServiceImpl {
                         content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
                         ..Default::default()
                     },
+                    AgentEvent::GuardrailTripped { reason } => RunTaskEvent {
+                        r#type: EventType::TaskError as i32,
+                        content: format!("Guardrail Tripped: {}", reason),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
@@ -916,7 +924,7 @@ impl AgentService for AgentServiceImpl {
                     }
                     Err(_) => {
                         let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
                              continue;
@@ -992,6 +1000,7 @@ impl AgentService for AgentServiceImpl {
             acon_config: None,
             enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
+            enable_gpt_researcher: false,
                 enable_observation_masking: true,
                 observation_masking_threshold: 3,
                 observation_masking_size_limit: 512,
@@ -1020,6 +1029,7 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+                enable_actor_model_message_passing: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,

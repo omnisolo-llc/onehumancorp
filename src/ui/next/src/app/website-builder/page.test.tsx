@@ -29,6 +29,9 @@ vi.mock('../builder/components', () => ({
   )
 }));
 
+
+import { useWebsiteBuilderStore } from './store';
+
 describe('WebsiteBuilderPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
@@ -37,7 +40,27 @@ describe('WebsiteBuilderPage', () => {
     }));
     localStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Reset zustand store state
+    useWebsiteBuilderStore.setState({
+      wizardStep: 0,
+      businessName: '',
+      businessType: '',
+      hasPhysicalProducts: false,
+      hasDigitalProducts: false,
+      productName: '',
+      productPrice: '',
+      paymentMethod: '',
+      userName: '',
+      userEmail: '',
+      userPassword: '',
+      template: '',
+      bio: '',
+      domainChoice: 'subdomain',
+      aiAgents: [],
+      aiAutoRespond: false,
+    });
   });
+
 
   afterEach(() => {
     vi.resetAllMocks();
@@ -57,7 +80,7 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     // Step 0
-    fireEvent.click(screen.getByText('Start My Business Next'));
+    fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
     fireEvent.click(screen.getByText('Online Store'));

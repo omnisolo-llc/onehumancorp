@@ -8,6 +8,8 @@ export default function AgentsPage() {
   const [feed, setFeed] = useState<any[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [workflowName, setWorkflowName] = useState('Branch review');

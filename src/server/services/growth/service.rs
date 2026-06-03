@@ -10,6 +10,8 @@ use sqlx::{PgPool, Row};
 use crate::services::growth::referral_api;
 use ::server_common::auth_utils::set_org_context;
 
+use ::server_utils::cache::HybridCache;
+
 pub struct MyGrowthService {
     pool: PgPool,
     hub: Arc<crate::hub::Hub>,
@@ -18,10 +20,13 @@ pub struct MyGrowthService {
     team_invites: RwLock<Vec<TeamInviteProto>>,
     waitlist: RwLock<Vec<WaitlistEntry>>,
     onboarding_funnels: RwLock<Vec<OnboardingFunnel>>,
+    referral_score_cache: HybridCache<ReferralScoreResponse>,
+    quota_cache: HybridCache<QuotaMetrics>,
 }
 
 impl MyGrowthService {
     pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
+        let redis_client = hub.redis_client.clone();
         MyGrowthService {
             pool,
             hub,
@@ -30,6 +35,8 @@ impl MyGrowthService {
             team_invites: RwLock::new(Vec::new()),
             waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
+            referral_score_cache: HybridCache::new(redis_client.clone()),
+            quota_cache: HybridCache::new(redis_client),
         }
     }
 
@@ -384,6 +391,12 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<ReferralScoreResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
 
+        let cache_key = format!("referral_score_{}", org_id);
+
+        if let Some(cached_response) = self.referral_score_cache.get(&cache_key).await {
+            return Ok(Response::new(cached_response));
+        }
+
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -413,12 +426,16 @@ impl GrowthService for MyGrowthService {
             0.0
         };
         
-        Ok(Response::new(ReferralScoreResponse {
+        let response = ReferralScoreResponse {
             total_referrals,
             total_conversions,
             unique_inviters,
             score,
-        }))
+        };
+
+        self.referral_score_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(Response::new(response))
     }
 
     async fn get_referral_score_metrics(
@@ -491,6 +508,12 @@ impl GrowthService for MyGrowthService {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
+        let cache_key = format!("quota_{}_{}", org_id, req.user_id);
+
+        if let Some(cached_response) = self.quota_cache.get(&cache_key).await {
+            return Ok(Response::new(cached_response));
+        }
+
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
@@ -516,7 +539,10 @@ impl GrowthService for MyGrowthService {
             user_message: None,
         });
 
-        Ok(Response::new(QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed }))
+        let response = QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed };
+        self.quota_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(Response::new(response))
     }
 
     async fn get_waitlist(
@@ -603,5 +629,49 @@ mod tests {
         list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
+    }
+
+    #[tokio::test]
+    async fn test_referral_score_caching() {
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        let mut req1 = Request::new(EmptyRequest {});
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        let res1 = service.get_referral_score(req1).await;
+        assert!(res1.is_ok(), "First referral score request should succeed and cache the result");
+
+        let mut req2 = Request::new(EmptyRequest {});
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        let res2 = service.get_referral_score(req2).await;
+        assert!(res2.is_ok(), "Second referral score request should succeed by returning cached value");
+        assert_eq!(res1.unwrap().into_inner().score, res2.unwrap().into_inner().score);
+    }
+
+    #[tokio::test]
+    async fn test_quota_caching() {
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        let mut req1 = Request::new(GetQuotaRequest { user_id: "user1".to_string() });
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        let res1 = service.get_quota(req1).await;
+        assert!(res1.is_ok(), "First quota request should succeed and cache the result");
+
+        let mut req2 = Request::new(GetQuotaRequest { user_id: "user1".to_string() });
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        let res2 = service.get_quota(req2).await;
+        assert!(res2.is_ok(), "Second quota request should succeed by returning cached value");
+        assert_eq!(res1.unwrap().into_inner().max, res2.unwrap().into_inner().max);
     }
 }

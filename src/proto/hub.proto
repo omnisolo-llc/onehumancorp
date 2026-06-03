@@ -282,6 +282,15 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+  rpc CreateTerminalConnectionToken(CreateTerminalTokenRequest) returns (CreateTerminalTokenResponse);
+}
+
+message CreateTerminalTokenRequest {
+}
+
+message CreateTerminalTokenResponse {
+  bool success = 1;
+  string token = 2;
 }
 
 message StartOnboardingRequest {
@@ -298,6 +307,7 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+  string location = 14;
 }
 
 message StartOnboardingResponse {
@@ -1649,6 +1659,8 @@ message CostDashboardResponse {
   int64 payment_fees = 5;
   string period_start = 6;
   string period_end = 7;
+  int64 bandwidth_savings = 8;
+  int64 network_cost = 9;
 }
 
 message SelectPlanRequest {

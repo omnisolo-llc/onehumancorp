@@ -102,7 +102,17 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
     } else {
         std::path::PathBuf::from(".ohc")
     };
-    let _ = std::fs::create_dir_all(&dir);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = std::fs::create_dir_all(&dir);
+    }
+
     dir
 }
 
@@ -130,7 +140,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
             if db_url.starts_with("sqlite://") {
-                db_url.split('?').next().unwrap().to_string()
+                db_url.split('?').next().unwrap_or(db_url).to_string()
             } else {
                 tracing::info!("standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
                 default_sqlite_url

@@ -100,10 +100,30 @@ pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i6
 }
 
 pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+    if original_bytes < 0 || compressed_bytes < 0 {
+        return 0.0;
+    }
     let saved_bytes = (original_bytes - compressed_bytes) as f64;
     let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
     let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
     let savings = saved_gb * config.cost_per_gb_month;
+    (savings * 10000.0).round() / 10000.0
+}
+
+
+pub fn calculate_bandwidth_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_bandwidth_savings(original_bytes, compressed_bytes, config);
+    (cost * 100.0).round() as i64
+}
+
+pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+    if original_bytes < 0 || compressed_bytes < 0 {
+        return 0.0;
+    }
+    let saved_bytes = (original_bytes - compressed_bytes) as f64;
+    let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
+    let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
+    let savings = saved_gb * config.cost_per_network_gb;
     (savings * 10000.0).round() / 10000.0
 }
 
@@ -113,6 +133,9 @@ pub fn calculate_compute_cost_cents(hours: f64, config: &CostConfig) -> i64 {
 }
 
 pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
+    if hours < 0.0 {
+        return 0.0;
+    }
     let cost = hours * config.cost_per_compute_hour;
     (cost * 10000.0).round() / 10000.0
 }
@@ -123,20 +146,23 @@ pub fn calculate_network_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
 }
 
 pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
+    if bytes < 0 {
+        return 0.0;
+    }
     let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let cost = gb * config.cost_per_network_gb;
     (cost * 10000.0).round() / 10000.0
 }
 
 pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
-    if cost == 0.0 {
+    if cost <= 0.0 {
         return 0.0;
     }
     (revenue - cost) / cost * 100.0
 }
 
 pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
-    if cost == 0.0 {
+    if cost <= 0.0 {
         return 0.0;
     }
     (output_tokens as f64) / cost
@@ -195,6 +221,12 @@ mod tests {
 
         let efficiency = calculate_efficiency(cost, output_tokens);
         assert_eq!(efficiency, 0.0);
+
+        let roi_neg = calculate_roi(-10.0, 100.0);
+        assert_eq!(roi_neg, 0.0);
+
+        let efficiency_neg = calculate_efficiency(-10.0, 1000);
+        assert_eq!(efficiency_neg, 0.0);
     }
 
     #[test]
@@ -210,6 +242,28 @@ mod tests {
 
         let cost = calculate_cost_with_config(1000, 500, 200, 100, &config);
         assert_eq!(cost, 1.899);
+
+        let cost_cents = calculate_cost_with_config_cents(1000, 500, 200, 100, &config);
+        assert_eq!(cost_cents, 190);
+    }
+
+    #[test]
+    fn test_calculate_bandwidth_savings() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.50,
+            ..Default::default()
+        };
+
+        let original = 2 * 1024 * 1024 * 1024; // 2GB
+        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let savings = calculate_bandwidth_savings(original, compressed, &config);
+        assert_eq!(savings, 0.50);
+
+        let savings_cents = calculate_bandwidth_savings_cents(original, compressed, &config);
+        assert_eq!(savings_cents, 50);
+
+        assert_eq!(calculate_bandwidth_savings(-1, 100, &config), 0.0);
+        assert_eq!(calculate_bandwidth_savings(100, -1, &config), 0.0);
     }
 
     #[test]
@@ -223,6 +277,12 @@ mod tests {
         let compressed = 1 * 1024 * 1024 * 1024; // 1GB
         let savings = calculate_storage_savings(original, compressed, &config);
         assert_eq!(savings, 0.10);
+
+        let savings_cents = calculate_storage_savings_cents(original, compressed, &config);
+        assert_eq!(savings_cents, 10);
+
+        assert_eq!(calculate_storage_savings(-1, 100, &config), 0.0);
+        assert_eq!(calculate_storage_savings(100, -1, &config), 0.0);
     }
 
     #[test]
@@ -236,6 +296,41 @@ mod tests {
 
         let efficiency = calculate_efficiency(cost, output_tokens);
         assert_eq!(efficiency, 25.0); // 250 / 10
+    }
+
+    #[test]
+    fn test_calculate_compute_cost() {
+        let config = CostConfig {
+            cost_per_compute_hour: 2.0,
+            ..Default::default()
+        };
+
+        assert_eq!(calculate_compute_cost(5.0, &config), 10.0);
+        assert_eq!(calculate_compute_cost_cents(5.0, &config), 1000);
+
+        assert_eq!(calculate_compute_cost(-5.0, &config), 0.0);
+        assert_eq!(calculate_compute_cost_cents(-5.0, &config), 0);
+    }
+
+    #[test]
+    fn test_calculate_network_cost() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.50,
+            ..Default::default()
+        };
+
+        let bytes: i64 = 10 * 1024 * 1024 * 1024; // 10 GB
+        assert_eq!(calculate_network_cost(bytes, &config), 5.0);
+        assert_eq!(calculate_network_cost_cents(bytes, &config), 500);
+
+        let bytes_neg: i64 = -10;
+        assert_eq!(calculate_network_cost(bytes_neg, &config), 0.0);
+        assert_eq!(calculate_network_cost_cents(bytes_neg, &config), 0);
+
+        // Check small bytes
+        let small_bytes: i64 = 1024 * 1024; // 1 MB
+        let cost = calculate_network_cost(small_bytes, &config);
+        assert!(cost > 0.0 && cost < 0.01);
     }
 
     #[test]

@@ -1,41 +1,116 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
-  const [bio, setBio] = useState("");
+
+  const {
+    wizardStep, setWizardStep,
+    businessName, setBusinessName,
+    businessType, setBusinessType,
+    hasPhysicalProducts, setHasPhysicalProducts,
+    hasDigitalProducts, setHasDigitalProducts,
+    productName, setProductName,
+    productPrice, setProductPrice,
+    paymentMethod, setPaymentMethod,
+    userName, setUserName,
+    userEmail, setUserEmail,
+    userPassword, setUserPassword,
+    template, setTemplate,
+    bio, setBio,
+    domainChoice, setDomainChoice,
+    aiAgents, setAiAgents,
+    aiAutoRespond, setAiAutoRespond
+  } = useWebsiteBuilderStore();
+
+
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
-  const [wizardStep, setWizardStep] = useState<number | string>(0);
+
   const [liveUrl, setLiveUrl] = useState("");
 
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
+  const [saveMessage, setSaveMessage] = useState("");
 
-  // Wizard state bindings
-  const [businessName, setBusinessName] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [hasPhysicalProducts, setHasPhysicalProducts] = useState(false);
-  const [hasDigitalProducts, setHasDigitalProducts] = useState(false);
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [template, setTemplate] = useState("");
+  useEffect(() => {
+    // Load from backend for cross-device resume
+    const loadSavedState = async () => {
+      try {
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenant,
+            'x-user-id': user
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0 && data.wizardState) {
+            useWebsiteBuilderStore.setState(data.wizardState);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load saved state', e);
+      }
+    };
+    loadSavedState();
+  }, []);
+
+  const handleSaveDraft = async () => {
+    setStatus("generating"); // Just show some loading state or disable button
+    try {
+      const state = useWebsiteBuilderStore.getState();
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const res = await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenant,
+          'x-user-id': user
+        },
+        body: JSON.stringify({
+          wizardState: state
+        })
+      });
+
+      if (res.ok) {
+        setSaveMessage("Draft Saved!");
+        setTimeout(() => setSaveMessage(""), 3000);
+      }
+    } catch (e) {
+      console.error('Failed to save draft', e);
+    } finally {
+      setStatus("idle");
+    }
+  };
+
+
+
+
+
+
+
+
+
+
+
+
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
 
-    const savedBio = localStorage.getItem("ohc_builder_bio");
-    if (savedBio) setBio(savedBio);
 
     const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
     if (savedStatus) setStatus(savedStatus);
@@ -53,14 +128,36 @@ export default function WebsiteBuilderPage() {
     if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
 
+
+  // Sync full state to backend
   useEffect(() => {
-    // Only save to server if there's actual state to save that deviates from idle
-    if (status !== 'idle' || bio !== '' || blocks.length > 0) {
+    // Only save if there's actual state
+    if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
       const userId = localStorage.getItem('user_id') || 'test-user';
 
+      const wizardState = {
+        step: wizardStep,
+        businessName,
+        businessType,
+        hasPhysicalProducts,
+        hasDigitalProducts,
+        productName,
+        productPrice,
+        paymentMethod,
+        userName,
+        userEmail,
+        userPassword,
+        template,
+        bio,
+        domainChoice,
+        aiAgents,
+        aiAutoRespond
+      };
+
       const payload = {
-        builderState: { bio, blocks, status }
+        builderState: { bio, blocks, status },
+        wizardState
       };
 
       const timer = setTimeout(() => {
@@ -73,7 +170,9 @@ export default function WebsiteBuilderPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [bio, blocks, status]);
+  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+
+
 
   // Read state from server on mount
   useEffect(() => {
@@ -89,14 +188,29 @@ export default function WebsiteBuilderPage() {
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
         if (data.builderState.status) setStatus(data.builderState.status);
       }
+      if (data && data.wizardState) {
+        if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
+        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
+        if (data.wizardState.productName) setProductName(data.wizardState.productName);
+        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
+        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
+        if (data.wizardState.userName) setUserName(data.wizardState.userName);
+        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
+        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
+        if (data.wizardState.template) setTemplate(data.wizardState.template);
+        if (data.wizardState.bio) setBio(data.wizardState.bio);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      }
     })
     .catch(err => console.error('Failed to load builder state', err));
   }, []);
 
-  const updateBio = (newBio: string) => {
-    setBio(newBio);
-    localStorage.setItem("ohc_builder_bio", newBio);
-  };
+
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
@@ -183,7 +297,7 @@ export default function WebsiteBuilderPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        updateStatus("live");
+        setStatus("live");
         const url = `https://${data.domain || 'myshop'}.ohc.store`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
@@ -196,18 +310,63 @@ export default function WebsiteBuilderPage() {
   };
 
   if (status === "idle") {
+    const handleBack = () => {
+      if (wizardStep === 1) setWizardStep(0);
+      else if (wizardStep === 2) setWizardStep(1);
+      else if (wizardStep === 3) setWizardStep(2);
+      else if (wizardStep === 4) setWizardStep(3);
+      else if (wizardStep === 5) setWizardStep(4);
+      else if (wizardStep === 6) setWizardStep(5);
+      else if (wizardStep === 7) setWizardStep(6);
+      else if (wizardStep === '7.5') setWizardStep(7);
+      else if (wizardStep === 8) setWizardStep('7.5');
+      else if (wizardStep === '8.5') setWizardStep(8);
+      else if (wizardStep === 9) setWizardStep('8.5');
+      else if (wizardStep === 'instant-build') setWizardStep(0);
+    };
+
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      {/* Background Glows for Premium Aesthetic */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+
         <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
-          <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
-            <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
+            {wizardStep !== 0 && (
+              <button
+                onClick={handleBack}
+                className="absolute top-6 left-8 text-[#0071E3] font-medium text-sm hover:underline transition-all z-10 flex items-center gap-1 bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                Back
+              </button>
+            )}
+
+
+            <div className="absolute top-6 right-8 flex items-center gap-4 z-10">
+              {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in">{saveMessage}</span>}
+              {wizardStep !== 0 && wizardStep !== 'instant-build' && (
+                <button
+                  onClick={handleSaveDraft}
+                  className="text-[#0071E3] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                >
+                  Save Draft
+                </button>
+              )}
+            </div>
+
+            <div className={`animate-fade-in ${wizardStep !== 0 ? 'mt-10' : 'mt-4'}`} style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+
 
               {wizardStep === 0 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Your business, live in minutes.</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
+                  <h2 className="text-xl font-semibold font-outfit text-gray-800 dark:text-[#e5e5e7] mb-2">Your business, live in minutes.</h2>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
-                    Review and add any extra details to help our AI generate the perfect store.
+                    Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
                   </p>
 
                   <div className="flex flex-col gap-4">
@@ -215,7 +374,7 @@ export default function WebsiteBuilderPage() {
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
-                      Start My Business Next
+                      Start My Business
                     </button>
 
                     <button
@@ -262,14 +421,15 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7]"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
-                      onChange={(e) => updateBio(e.target.value)}
+                      onChange={(e) => setBio(e.target.value)}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      disabled={!businessName.trim()}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(3)}
                     >
                       Next
@@ -331,7 +491,8 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setProductPrice(e.target.value)}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      disabled={!productName.trim() || !productPrice.trim()}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(5)}
                     >
                       Next
@@ -389,7 +550,8 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
@@ -517,7 +679,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
@@ -528,7 +690,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center mac-glass-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -542,27 +704,19 @@ export default function WebsiteBuilderPage() {
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <button
-              className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-              onClick={() => window.location.href = '/dashboard'}
-            >
-              Launch My Business
-            </button>
-            <button
-              className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
-              style={{ borderRadius: '8px' }}
-            >
-              View Welcome Checklist
-            </button>
-          </div>
+          <button
+            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
+            style={{ borderRadius: '8px' }}
+          >
+            View Welcome Checklist
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>

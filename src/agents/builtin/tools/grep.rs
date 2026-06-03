@@ -41,9 +41,9 @@ impl ToolExecutor for GrepExecutor {
 
         // Just-in-Time (JIT) Retrieval Mechanic:
         // Limit output
-        if results.len() > 500 {
-            results.truncate(500);
-            results.push("... (truncated)".to_string());
+        if results.len() > 100 {
+            results.truncate(100);
+            results.push("... (truncated to 100 results to save context. Please refine your regex pattern, specify a more restrictive include filter, or use glob/find to narrow the search.)".to_string());
         }
 
         Ok(results.join("\n"))
@@ -88,7 +88,7 @@ async fn search_directory(
                     }
                     if re.is_match(&line_buffer) {
                         results.push(format!("{}:{}:{}", path.display(), line_num, line_buffer.trim_end_matches('\n').trim_end_matches('\r')));
-                        if results.len() >= 500 {
+                        if results.len() >= 100 {
                             return Ok(());
                         }
                     }

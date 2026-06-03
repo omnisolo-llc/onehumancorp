@@ -54,6 +54,7 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setWebsiteTemplate('Classic');
     useOnboardingStore.getState().setFirstProductName('Coffee');
     useOnboardingStore.getState().setFirstProductPrice('5.00');
+    useOnboardingStore.getState().setDomainChoice('custom');
 
     const state = useOnboardingStore.getState();
     expect(state.businessName).toBe('Test Business');
@@ -62,6 +63,7 @@ describe('useOnboardingStore', () => {
     expect(state.websiteTemplate).toBe('Classic');
     expect(state.firstProductName).toBe('Coffee');
     expect(state.firstProductPrice).toBe('5.00');
+    expect(state.domainChoice).toBe('custom');
   });
 
   it('should persist state to localStorage', () => {

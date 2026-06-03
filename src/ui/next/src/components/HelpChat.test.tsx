@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -22,7 +23,7 @@ describe('HelpChat Component', () => {
     const button = screen.getByText('Ask anything').closest('button');
     fireEvent.click(button!);
 
-    expect(screen.getByText('Help Agent')).toBeInTheDocument();
+    expect(screen.getByText('Ask AI Help')).toBeInTheDocument();
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Ask me anything...')).toBeInTheDocument();
   });

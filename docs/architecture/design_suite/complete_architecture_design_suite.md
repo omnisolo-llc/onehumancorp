@@ -106,7 +106,7 @@ erDiagram
 - AI agents MUST be scoped to the `tenant_id` they operate under.
 
 ### Implementation Prompt
-Update the Go backend schema and repository layer to enforce `tenant_id` presence on all core entities. Configure PostgreSQL Row Level Security (RLS) policies for these tables. Add E2E tests proving cross-tenant data access is blocked.
+Update the Rust backend schema and repository layer to enforce `tenant_id` presence on all core entities. Configure PostgreSQL Row Level Security (RLS) policies for these tables. Add E2E tests proving cross-tenant data access is blocked.
 
 ### Priority: P0 | Scope: Medium
 
@@ -235,6 +235,6 @@ A clear, transparent pricing tier system is required to monetize the platform wh
 - The UI intercepts this response and displays a contextual, plain-language upgrade prompt (e.g., "You've reached your 10 product limit. Upgrade to Starter to add unlimited products!").
 
 ### Implementation Prompt
-Implement the `TierService` middleware in the Go backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
+Implement the `TierService` middleware in the Rust backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
 
 ### Priority: P1 | Scope: Medium

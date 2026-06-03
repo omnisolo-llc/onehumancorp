@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::billing::*;
-use ::server_ohc::billing::billing_service_server::BillingService;
+use crate::proto::billing::*;
+use crate::proto::billing::billing_service_server::BillingService;
 use crate::services::billing::auditor::{CostAuditor, AuditEvent};
 use std::sync::Arc;
 

@@ -1,10 +1,11 @@
+import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 global.fetch = vi.fn().mockImplementation((url) => {
-    if (url === '/api/tooltips') {
+    if (url === '/api/tooltips' || url.toString().includes('/api/tooltips')) {
         return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
     }
     return Promise.resolve({ ok: true, json: async () => ({}) });

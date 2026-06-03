@@ -86,16 +86,16 @@ export default function MyPlanPage() {
       <main id="my-plan-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '24px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
-                    <p id="my-plan-name" className="text-3xl font-bold font-outfit text-gray-900">Plan: {planData?.current_plan}</p>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill</h2>
-                    <p id="my-plan-next-bill" className="text-3xl font-bold font-outfit text-gray-900">Estimated Next Bill: ${planData?.next_bill_estimated.toFixed(2)}</p>
+                    <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
                     <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
@@ -106,7 +106,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Usage Section */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '24px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Your Current Usage</h2>
 
             <div className="space-y-6">
