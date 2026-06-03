@@ -190,7 +190,6 @@ mod tests {
     use ohc_builtin_agent_tools::ToolExecutor;
     use ohc_builtin_agent_core::types::{ChatResponse, Role, ToolCall, Usage};
 
-
     struct MockPlannerLlm {
         plan_json: String,
     }

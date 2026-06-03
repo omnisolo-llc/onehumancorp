@@ -186,20 +186,14 @@ impl OnboardingAgent {
                 ("The Scout", "tenant.seo.optimized"),
             ];
 
-            let start_events = std::time::Instant::now();
-            let mut topic_futures = vec![];
             for (agent_role, topic) in event_topics {
-                let query = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
-                    .bind(org_id_clone3.to_string())
+                let _ = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                    .bind(&org_id_clone3)
                     .bind(agent_role)
-                    .bind(topic);
-                let pool = pool.clone();
-                topic_futures.push(tokio::spawn(async move {
-                    let _ = query.execute(&pool).await;
-                }));
+                    .bind(topic)
+                    .execute(&pool)
+                    .await;
             }
-            futures::future::join_all(topic_futures).await;
-            tracing::info!("publish_events_future event_topics inserts took: {} us", start_events.elapsed().as_micros());
 
             // Trigger KAIROS Orchestration for initial artifacts
             let storefront_event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -2438,29 +2432,20 @@ impl OnboardingAgent {
             ("Discovery & SEO", "The Scout", "Discovery"),
         ];
 
-        let start_seed = std::time::Instant::now();
-        let mut futures = vec![];
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            let query = sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)
                 .bind(name)
                 .bind(role)
-                .bind(org_id.to_string())
+                .bind(org_id)
                 .bind("IDLE")
                 .bind("builtin")
-                .bind(true);
-
-            let pool = self.db.pool.clone();
-            futures.push(tokio::spawn(async move {
-                query.execute(&pool).await.map_err(|e| e.to_string())
-            }));
+                .bind(true)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
         }
-
-        for f in futures {
-            f.await.map_err(|e| e.to_string())??;
-        }
-        tracing::info!("seed_default_agents inserts took: {} us", start_seed.elapsed().as_micros());
 
         Ok(())
     }
