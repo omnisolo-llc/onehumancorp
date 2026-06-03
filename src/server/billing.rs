@@ -41,6 +41,12 @@ impl Tracker {
         self.auditor = Some(auditor);
     }
 
+    pub async fn track_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
+        if let Some(auditor) = &self.auditor {
+            auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
+        }
+    }
+
     pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
         if let Some(auditor) = &self.auditor {
             if let Some(aid) = agent_id {

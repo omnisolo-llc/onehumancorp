@@ -110,6 +110,9 @@ impl Provider for LocalProvider {
         let mut key_str = key.to_string();
         let mut final_data = data.to_vec();
 
+        let t_id = key.split('/').next().unwrap_or("default");
+        let mut compression_stats = None;
+
         // Auto-optimization for images: Resize and convert to WebP
         let extension = Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
         let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
@@ -119,6 +122,7 @@ impl Provider for LocalProvider {
                     final_data = optimized_data;
                     key_str = ::server_pricing::compression::get_optimized_key(key);
                     let compressed_size = final_data.len();
+                    compression_stats = Some((original_size as i64, compressed_size as i64));
                     tracing::info!(
                         key = %key_str,
                         original = original_size,
@@ -137,13 +141,16 @@ impl Provider for LocalProvider {
             data.len()
         };
 
+        if let Some((orig, comp)) = compression_stats {
+            self.tracker.track_bandwidth_compression(t_id, orig, comp).await;
+        }
+
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
         // Quota Enforcement
-        let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
             if status.soft_limit_reached {
