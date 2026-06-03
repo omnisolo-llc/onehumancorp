@@ -2,6 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
+    // Explicitly navigate starting point
+    await page.waitForLoadState('networkidle');
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
