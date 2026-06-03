@@ -120,12 +120,12 @@ impl TaskQueue for PgTaskQueue {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
+        let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 2)).collect::<Vec<_>>().join(",");
         let query_str = format!(
             "UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
              WHERE id = (
                  SELECT id FROM ohc_job_queue
-                 WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
+                 WHERE status = 'PENDING' AND next_retry_at <= $1 AND job_type IN ({})
                  ORDER BY next_retry_at ASC, created_at ASC
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED
@@ -133,7 +133,7 @@ impl TaskQueue for PgTaskQueue {
             role_placeholders
         );
 
-        let mut query = sqlx::query(&query_str);
+        let mut query = sqlx::query(&query_str).bind(chrono::Utc::now());
         for role in &roles {
             query = query.bind(role);
         }
@@ -178,8 +178,9 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, next_retry_at")
+        let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = $2 WHERE id = $1 RETURNING updated_at, next_retry_at")
             .bind(job_id)
+            .bind(chrono::Utc::now())
             .fetch_optional(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -211,20 +212,23 @@ impl TaskQueue for PgTaskQueue {
 
             if next_attempt >= max_retries {
                 // Poison pill
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = $3 WHERE id = $2")
                     .bind(next_attempt)
                     .bind(job_id)
+                    .bind(chrono::Utc::now())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
-                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                let now = chrono::Utc::now();
+                let new_next_retry_at = now + chrono::Duration::seconds(backoff_seconds as i64);
+                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = $4 WHERE id = $3")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)
                     .bind(job_id)
+                    .bind(now)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;

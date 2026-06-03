@@ -134,13 +134,13 @@ impl TaskQueue for SQLiteTaskQueue {
         let query_str = format!(
             "SELECT id, parent_task_id, job_type, payload, status, retry_count, max_retries, next_retry_at, locked_until, created_at, updated_at, tenant_id
              FROM ohc_job_queue
-             WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
+             WHERE status = 'PENDING' AND next_retry_at <= ? AND job_type IN ({})
              ORDER BY next_retry_at ASC, created_at ASC
              LIMIT 1",
             role_placeholders
         );
 
-        let mut query = sqlx::query(&query_str);
+        let mut query = sqlx::query(&query_str).bind(chrono::Utc::now());
         for role in &roles {
             query = query.bind(role);
         }
@@ -173,7 +173,8 @@ impl TaskQueue for SQLiteTaskQueue {
                 tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
-            sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+            sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = ? WHERE id = ?")
+                .bind(chrono::Utc::now())
                 .bind(&job.id)
                 .execute(&mut *tx)
                 .await
@@ -188,7 +189,8 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING updated_at, next_retry_at")
+        let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = ? WHERE id = ? RETURNING updated_at, next_retry_at")
+            .bind(chrono::Utc::now())
             .bind(job_id)
             .fetch_optional(&*self.pool)
             .await
@@ -221,8 +223,9 @@ impl TaskQueue for SQLiteTaskQueue {
 
             if next_attempt >= max_retries {
                 // Poison pill
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = ?, updated_at = ? WHERE id = ?")
                     .bind(next_attempt)
+                    .bind(chrono::Utc::now())
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await
@@ -230,10 +233,12 @@ impl TaskQueue for SQLiteTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
-                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                let now = chrono::Utc::now();
+                let new_next_retry_at = now + chrono::Duration::seconds(backoff_seconds as i64);
+                sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = ? WHERE id = ?")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)
+                    .bind(now)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await
