@@ -8,8 +8,18 @@ test.describe('Checkout Tap to Pay Offline Sync Workflow', () => {
     await expect(page.locator('text=Checkout').first()).toBeVisible();
 
     // The Tap to Pay button
-    const tapToPayBtn = page.locator('button', { hasText: 'Tap to Pay' });
-    await tapToPayBtn.click({ force: true });
+
+    // Try multiple ways to click the Tap to Pay button
+    try {
+        await page.locator('button', { hasText: 'Tap to Pay' }).first().click({ force: true, timeout: 5000 });
+    } catch (e) {
+        await page.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const tapBtn = buttons.find(b => b.textContent && b.textContent.includes('Tap to Pay'));
+            if (tapBtn) tapBtn.click();
+        });
+    }
+
 
     // Assert the new modal is shown
     await expect(page.locator('h2', { hasText: 'Tap to Pay' })).toBeVisible();
