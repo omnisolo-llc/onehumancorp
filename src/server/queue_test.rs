@@ -5,7 +5,7 @@ mod tests {
     use sqlx::Executor;
 
     #[tokio::test]
-    async fn test_sub_agent_queue_isolation() {
+    async fn test_ohc_job_queue_isolation() {
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
             let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .connect_lazy(&db_url)

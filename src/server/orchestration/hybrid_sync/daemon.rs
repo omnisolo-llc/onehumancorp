@@ -311,7 +311,7 @@ impl HybridSyncDaemon {
                 continue;
             }
 
-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, 'system', NULL, $2, 'QUEUED', $3, $3, $3)")
+            let res = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, parent_task_id, payload, status, next_retry_at, created_at, updated_at, job_type) VALUES ($1, 'system', NULL, $2::jsonb, 'PENDING', $3, $3, $3, 'default')")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)

@@ -339,7 +339,7 @@ async fn test_record_queue_length_with_deployment_mode() {
     let res = ::server_telemetry::record_queue_length(&pool, 5).await;
     assert!(res.is_ok());
 
-    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_job_queue_length' ORDER BY timestamp DESC LIMIT 1")
         .fetch_one(&pool)
         .await
         .unwrap();
