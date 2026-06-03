@@ -98,22 +98,37 @@ export default function InboxPage() {
 
   const simulateIncomingMessage = () => {
     const incomingMsgId = Date.now();
+    const incomingMessage = 'Are you open today?';
     setMessages(prev => [...prev, {
       id: incomingMsgId,
       sender: 'Customer',
       source: 'SMS',
       icon: '📱',
-      content: 'Are you open today?',
+      content: incomingMessage,
       date: 'Just now'
     }]);
 
-    setTimeout(() => {
-      setMessages(prev => prev.map(m =>
-        m.id === incomingMsgId
-          ? { ...m, draft: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?' }
-          : m
-      ));
-    }, 500);
+    if (aiAutoReply) {
+      setTimeout(async () => {
+        try {
+          const res = await fetch('/api/v1/inbox/auto_reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: incomingMessage })
+          });
+          const data = await res.json();
+          if (data.success && data.draft_reply) {
+            setMessages(prev => prev.map(m =>
+              m.id === incomingMsgId
+                ? { ...m, draft: data.draft_reply }
+                : m
+            ));
+          }
+        } catch (e) {
+          console.error("Auto-reply failed:", e);
+        }
+      }, 500);
+    }
   };
 
   return (
@@ -225,6 +240,17 @@ export default function InboxPage() {
             )}
 
             <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100/50 bg-white/40 backdrop-blur-[20px] saturate-[200%]">
+                <span className="text-sm font-bold text-gray-900">AI Auto-Reply</span>
+                <button
+                  data-testid="auto-responder-toggle"
+                  onClick={() => setAiAutoReply(!aiAutoReply)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${aiAutoReply ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${aiAutoReply ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <div className="h-px bg-gray-100 my-2"></div>
               {Object.entries(twilioChannels).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
                   <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
