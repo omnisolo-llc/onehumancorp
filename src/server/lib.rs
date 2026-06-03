@@ -3384,6 +3384,37 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
+        .route("/api/changelog", axum::routing::get(|| async {
+            let content = std::fs::read_to_string("CHANGELOG.md")
+                .or_else(|_| std::fs::read_to_string("RELEASE_NOTES.md"))
+                .unwrap_or_else(|_| "## v1.0.0\n\n- Initial release.".to_string());
+
+            let mut sections = Vec::new();
+            let mut current_version = String::new();
+            let mut current_lines = Vec::new();
+
+            for line in content.lines() {
+                if line.starts_with("## ") {
+                    if !current_version.is_empty() {
+                        sections.push(serde_json::json!({
+                            "version": current_version,
+                            "contentLines": current_lines
+                        }));
+                    }
+                    current_version = line.replace("## ", "").trim().to_string();
+                    current_lines = Vec::new();
+                } else if !current_version.is_empty() && !line.trim().is_empty() {
+                    current_lines.push(line.trim().to_string());
+                }
+            }
+            if !current_version.is_empty() {
+                sections.push(serde_json::json!({
+                    "version": current_version,
+                    "contentLines": current_lines
+                }));
+            }
+            axum::Json(serde_json::Value::Array(sections))
+        }))
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
             { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
