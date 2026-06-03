@@ -434,11 +434,23 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-        let daily_briefing = if req.mobile_optimized {
-            format!("You had {} orders recently. Consider reviewing your inventory.", orders.len())
-        } else {
-            String::new()
-        };
+        let mut daily_briefing = String::new();
+        if req.mobile_optimized {
+            let active_customers = 5; // A mocked active customer metric
+            let prompt = format!("I am a small business owner. Today I had {} active customers, and currently have {} pending orders. Please write a short (2-3 sentences max) daily briefing to encourage me and suggest an action in simple plain language.", active_customers, orders.len());
+
+            // Try fetching from LLM async
+            if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                let client = crate::minimax::MinimaxClient::new(api_key);
+                if let Ok(response) = client.reason(&prompt).await {
+                    daily_briefing = response;
+                }
+            }
+
+            if daily_briefing.is_empty() {
+                daily_briefing = format!("You had {} orders recently. Consider reviewing your inventory.", orders.len());
+            }
+        }
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
@@ -667,7 +679,7 @@ mod tests {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
 
-        assert_eq!(res_mobile.daily_briefing, "You had 1 orders recently. Consider reviewing your inventory.", "Mobile should have daily briefing");
+        assert!(!res_mobile.daily_briefing.is_empty(), "Mobile should have daily briefing");
     }
 
     #[tokio::test]
