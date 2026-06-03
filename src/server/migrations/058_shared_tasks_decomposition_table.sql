@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks_decomposition ADD COLUMN IF NOT EXISTS organization_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_shared_tasks_decomposition_org_id ON shared_tasks_decomposition(organization_id);
+
 ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
 CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true));
