@@ -502,6 +502,7 @@ impl DB {
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
+                        preferred_language TEXT DEFAULT 'en',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -533,6 +534,7 @@ impl DB {
                         phone TEXT,
                         name TEXT,
                         preferences TEXT DEFAULT '{}',
+                        preferred_language TEXT DEFAULT 'en',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -785,6 +787,7 @@ impl DB {
                         tenant_id TEXT,
                         source TEXT,
                         content TEXT,
+                        original_content TEXT,
                         draft_reply TEXT,
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

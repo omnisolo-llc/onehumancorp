@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 type Message = {
@@ -8,40 +8,54 @@ type Message = {
   source: string;
   icon: string;
   content: string;
+  original_content?: string;
   date: string;
   draft?: string;
+  showOriginal?: boolean;
 };
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'Facebook User',
-      source: 'Facebook',
-      icon: '📘',
-      content: 'Do you have vegan birthday cake options?',
-      date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
-    },
-    {
-      id: 2,
-      sender: 'Instagram User',
-      source: 'Instagram',
-      icon: '📸',
-      content: 'When will my order be shipped?',
-      date: 'Yesterday',
-      draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
-    },
-    {
-      id: 3,
-      sender: 'WhatsApp User',
-      source: 'WhatsApp',
-      icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const toggleOriginal = (id: number) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === id) {
+        return { ...msg, showOriginal: !msg.showOriginal };
+      }
+      return msg;
+    }));
+  };
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const token = localStorage.getItem('auth_token') || 'test-token';
+        const res = await fetch('/api/inbox/messages', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const formattedMessages = data.map((msg: any) => ({
+            id: msg.id,
+            sender: msg.source + ' User',
+            source: msg.source,
+            icon: msg.source === 'Instagram' ? '📸' : msg.source === 'WhatsApp' ? '💬' : '📘',
+            content: msg.content,
+            original_content: msg.original_content,
+            date: msg.created_at,
+            draft: msg.draft_reply,
+            showOriginal: false,
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (e) {
+        console.error('Failed to fetch messages', e);
+      }
+    };
+    fetchMessages();
+  }, []);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -305,7 +319,16 @@ export default function InboxPage() {
               <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
             <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+              <p className="text-sm text-gray-800 leading-relaxed">
+                {msg.showOriginal ? (msg.original_content || msg.content) : msg.content}
+              </p>
+              {msg.original_content && msg.original_content !== msg.content && (
+                <div className="mt-2 text-xs">
+                  <button onClick={() => toggleOriginal(msg.id)} className="text-blue-500 hover:text-blue-700 underline font-medium toggle-original">
+                    {msg.showOriginal ? 'Show Translation' : 'Translated from Original'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Auto-Drafted AI Reply Component */}

@@ -97,16 +97,50 @@ async fn handle_webhook(
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
 
+    // Get tenant's preferred language
+    let mut preferred_language = "en".to_string();
+    {
+        let pool = crate::db::get_pool();
+        if let Ok(mut tx) = pool.begin().await {
+            if let Ok(row) = sqlx::query("SELECT preferred_language FROM tenants WHERE tenant_id = $1")
+                .bind(&payload.tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+            {
+                use sqlx::Row;
+                if let Some(row) = row {
+                    if let Ok(lang) = row.try_get("preferred_language") {
+                        preferred_language = lang;
+                    }
+                }
+            }
+            let _ = tx.commit().await;
+        }
+    }
+
+    let original_content = payload.message.clone();
+    let mut content = payload.message.clone();
+
     // Generate a draft reply
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let draft_reply = if !api_key.is_empty() {
+        let client = crate::minimax::MinimaxClient::new(api_key.clone());
+        let translation_prompt = format!(
+            "Translate the following customer message to the language code or name '{}'. Message: {}. Only output the translated text.",
+            preferred_language, payload.message
+        );
+        if let Ok(translated) = client.reason(&translation_prompt).await {
+            if !translated.trim().is_empty() {
+                content = translated;
+            }
+        }
+
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
+            "Write one concise, warm customer-service reply in the language code or name '{}'. Business context: {} Customer message: {}",
+            preferred_language, business_context, content
         );
         let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-        let client = crate::minimax::MinimaxClient::new(api_key);
         client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
@@ -124,12 +158,13 @@ async fn handle_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
     }
     let _ = sqlx::query(
-        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+        "INSERT INTO inbox_messages (id, tenant_id, source, content, original_content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(&id)
     .bind(&payload.tenant_id)
     .bind(&payload.source)
-    .bind(&payload.message)
+    .bind(&content)
+    .bind(&original_content)
     .bind(&draft_reply)
     .bind(&status)
     .execute(&mut *tx)
@@ -143,7 +178,8 @@ async fn handle_webhook(
         risk,
         serde_json::json!({
             "source": payload.source,
-            "message": payload.message,
+            "message": content,
+            "original_content": original_content,
             "draft_reply": draft_reply,
             "inbox_message_id": id,
         }),

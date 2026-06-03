@@ -2479,7 +2479,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query("SELECT id, tenant_id, source, content, original_content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
         .fetch_all(&mut *tx)
         .await
     {
@@ -2494,6 +2494,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
+                    "original_content": row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default(),
                     "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "created_at": created_at_str,
