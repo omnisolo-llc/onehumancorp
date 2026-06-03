@@ -27,7 +27,7 @@ export function currentAppSmoke(label: string) {
         console.log("smoke test skipped because local server flaked")
     }
 
-    const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
+    const ogCard = await request.get('http://localhost:3000/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
   });
 }
