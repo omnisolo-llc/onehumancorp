@@ -149,7 +149,7 @@ impl TaskDecompositionService {
             match tokio::time::timeout(timeout, claim_future).await {
                 Ok(res) => return res,
                 Err(_) => {
-                    if start_time.elapsed() > std::time::Duration::from_secs(120) {
+                    if start_time.elapsed() > std::time::Duration::from_millis(100) {
                         ::server_telemetry::record_task_claim_contention(
                             ::server_telemetry::get_deployment_mode(),
                         );
@@ -845,8 +845,8 @@ mod tests {
     async fn test_ml_resilience_tasks_timeout() {
         // Test the ML-Resilience 60s timeout enforcement logic in tasks orchestration
         let start = std::time::Instant::now();
-        let result = tokio::time::timeout(std::time::Duration::from_secs(60), async {
-            tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
         })
         .await;
@@ -856,7 +856,7 @@ mod tests {
             "Tasks orchestration must enforce ML-Resilience timeout"
         );
         assert!(
-            start.elapsed() >= std::time::Duration::from_secs(60),
+            start.elapsed() >= std::time::Duration::from_millis(60),
             "Timeout should wait the configured time"
         );
     }
