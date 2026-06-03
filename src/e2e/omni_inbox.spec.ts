@@ -5,6 +5,7 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
     await page.goto('/inbox');
 
     // Click Simulate Incoming Message
+    await page.waitForTimeout(2000);
     await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
 
     // Verify user message is added
