@@ -271,7 +271,7 @@ export default function OnboardingWizard() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full sm:max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
