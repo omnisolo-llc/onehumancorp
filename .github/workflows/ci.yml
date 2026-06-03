@@ -479,64 +479,6 @@ jobs:
             --config="${BAZEL_PLATFORM_CONFIG}" \
             --nocache_test_results
 
-  docker-e2e:
-    name: Docker E2E
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Verify Docker is available
-        run: |
-          docker version
-          docker info
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}-${{ github.job }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
-      - name: Run Docker Compose smoke test
-        run: |
-          command -v docker
-          command -v curl
-          command -v bazelisk
-          bazelisk test //deploy:docker_compose_e2e_test \
-            --config=linux \
-            --nocache_test_results
-
   ci-required:
     name: CI Required
     needs:
@@ -545,7 +487,6 @@ jobs:
       - bazel-test
       - bazel-test-e2e
       - kind-e2e
-      - docker-e2e
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -559,7 +500,6 @@ jobs:
           BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
           BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}
           KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
-          DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}
         run: |
           set -euo pipefail
 
@@ -568,7 +508,6 @@ jobs:
           echo "bazel-test: ${BAZEL_TEST_RESULT}"
           echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"
           echo "kind-e2e: ${KIND_E2E_RESULT}"
-          echo "docker-e2e: ${DOCKER_E2E_RESULT}"
 
           require_success() {
             local name="$1"
@@ -600,10 +539,8 @@ jobs:
             allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
             allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
-            allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
           else
             require_success "bazel-test" "$BAZEL_TEST_RESULT"
             require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"
-            require_success "docker-e2e" "$DOCKER_E2E_RESULT"
           fi

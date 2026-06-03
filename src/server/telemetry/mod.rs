@@ -269,7 +269,6 @@ pub fn record_swarm_task_completed(mission_id: &str) {
 
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static SYNC_DAEMON_ERROR_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
@@ -306,16 +305,6 @@ pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
         meter
             .f64_histogram("ohc_sync_daemon_batch_size")
             .with_description("Batch size for sync daemon")
-            .build()
-    })
-}
-
-pub fn get_sync_daemon_error_total() -> &'static Counter<u64> {
-    SYNC_DAEMON_ERROR_TOTAL.get_or_init(|| {
-        let meter = global::meter("ohc.daemon");
-        meter
-            .u64_counter("sync_daemon_error_total")
-            .with_description("Total sync daemon errors by mode and error type")
             .build()
     })
 }
@@ -676,12 +665,6 @@ pub async fn record_sync_latency(
     latency_ms: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let histogram = global::meter("ohc.daemon")
-        .f64_histogram("sync_latency_ms")
-        .with_description("Sync daemon latency in ms by mode")
-        .build();
-    histogram.record(latency_ms as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
-
     buffer_metric(
         pool,
         "sync_latency_ms",
@@ -697,12 +680,6 @@ pub async fn record_sync_payload_size(
     size_bytes: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let histogram = global::meter("ohc.daemon")
-        .f64_histogram("sync_payload_size_bytes")
-        .with_description("Sync daemon payload size in bytes by mode")
-        .build();
-    histogram.record(size_bytes as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
-
     buffer_metric(
         pool,
         "sync_payload_size_bytes",
@@ -719,15 +696,6 @@ pub async fn record_sync_daemon_error_total(
     mode: &str,
     error_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let counter = get_sync_daemon_error_total();
-    counter.add(
-        count as u64,
-        &[
-            opentelemetry::KeyValue::new("mode", mode.to_string()),
-            opentelemetry::KeyValue::new("error", error_type.to_string()),
-        ],
-    );
-
     buffer_metric(
         pool,
         "sync_daemon_error_total",

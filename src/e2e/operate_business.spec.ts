@@ -11,7 +11,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
 
   await page.goto('/website-builder');
 
-  await page.getByRole('button', { name: /Start My Business/ }).click();
+  await page.getByRole('button', { name: /Start My Business Next/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
@@ -27,12 +27,12 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Baker');
   await page.getByPlaceholder('you@email.com').fill(email);
   await page.getByPlaceholder('Password').fill('password123');
-  await page.locator('#step-7').getByRole('button', { name: /Next/ }).first().click();
+  await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
 
   await page.getByRole('button', { name: 'Modern' }).click();
-  await page.locator('#step-8').getByRole('button', { name: /Next/ }).first().click();
+  await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
   await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-  await page.locator('#step-9').getByRole('button', { name: /Next/ }).first().click();
+  await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
   await page.getByRole('button', { name: /Publish my business/ }).click();
 
   await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();

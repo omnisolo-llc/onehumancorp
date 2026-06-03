@@ -885,11 +885,6 @@ impl AgentService for AgentServiceImpl {
                         content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
                         ..Default::default()
                     },
-                    AgentEvent::GuardrailTripped { reason } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        content: format!("Guardrail Tripped: {}", reason),
-                        ..Default::default()
-                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };
