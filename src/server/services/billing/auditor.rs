@@ -36,6 +36,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     tenant_compute_costs: Mutex<HashMap<String, f64>>,
     tenant_network_costs: Mutex<HashMap<String, f64>>,
+    tenant_bandwidth_savings: Mutex<HashMap<String, f64>>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     tenant_revenues: Mutex<HashMap<String, f64>>,
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
@@ -71,6 +72,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             tenant_compute_costs: Mutex::new(HashMap::new()),
             tenant_network_costs: Mutex::new(HashMap::new()),
+            tenant_bandwidth_savings: Mutex::new(HashMap::new()),
             agent_revenues: Mutex::new(HashMap::new()),
             tenant_revenues: Mutex::new(HashMap::new()),
             tenant_payment_fees: Mutex::new(HashMap::new()),
@@ -177,6 +179,16 @@ impl CostAuditor {
         savings
     }
 
+    pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
+        let savings = calculator::calculate_bandwidth_savings(original_bytes, compressed_bytes, &self.config);
+
+        let mut tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
+        let current_savings = tenant_bandwidth_savings.entry(tenant_id.to_string()).or_insert(0.0);
+        *current_savings += savings;
+
+        savings
+    }
+
     pub fn get_total_storage_savings(&self) -> f64 {
         let storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings
@@ -269,6 +281,11 @@ impl CostAuditor {
     pub fn get_tenant_network_cost(&self, tenant_id: &str) -> f64 {
         let tenant_network_costs = self.tenant_network_costs.lock().unwrap();
         *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
+        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
@@ -491,5 +508,23 @@ mod tests {
         let bw_savings = auditor.record_bandwidth_savings("tenant1", original_bw_bytes, compressed_bw_bytes);
         assert_eq!(bw_savings, 0.05); // 0.5 GB * 0.10
         assert_eq!(auditor.get_tenant_bandwidth_savings("tenant1"), 0.05);
+    }
+
+    #[test]
+    fn test_record_bandwidth_compression() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.05,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let original_bytes = 1024 * 1024 * 1024 * 3; // 3GB
+        let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
+
+        let savings = auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);
+        // (3GB - 1GB) = 2GB saved. 2 * 0.05 = 0.10
+        assert_eq!(savings, 0.1);
+        assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
+        assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
     }
 }
