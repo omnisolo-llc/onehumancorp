@@ -12,6 +12,12 @@ pub struct RalphProgress {
     pub current_feature_index: usize,
     #[serde(default)]
     pub notes: Vec<String>,
+    #[serde(default)]
+    pub architectural_decisions: Vec<String>,
+    #[serde(default)]
+    pub unresolved_bugs: Vec<String>,
+    #[serde(default)]
+    pub session_id: String,
     pub is_complete: bool,
 }
 
@@ -49,7 +55,7 @@ impl RalphLoop {
 
     /// Run the full Ralph Loop
     pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Phase 1: Initializer
+        // Phase 1: Initializer Agent
         let mut progress = self.initialize(initial_task).await?;
 
         // Phase 2: Coding Agent Loop
@@ -66,34 +72,47 @@ impl RalphLoop {
                 continue;
             }
 
-            tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
+            tracing::info!("Ralph Loop (Phase 2): Starting work on feature: {}", feature_name);
 
-            // Phase 2 (Coding Agent): Read git logs to orient itself
+            // Phase 2 (Coding Agent): Orientation Step
+            // In every subsequent session, reads git logs and progress files to orient itself.
             let git_log_output = Command::new("git")
                 .arg("log")
                 .arg("--oneline")
                 .arg("-n")
-                .arg("5")
+                .arg("10")
                 .current_dir(&self.repo_path)
                 .output()
                 .ok()
                 .and_then(|out| String::from_utf8(out.stdout).ok())
                 .unwrap_or_else(|| "No git history available".to_string());
 
-            // Execute the agent run for this specific feature
+            let orientation_context = format!(
+                "[Ralph Loop Orientation]\n\
+                Overall Task: {}\n\
+                Recent Git History:\n{}\n\
+                Architectural Decisions: {:?}\n\
+                Unresolved Bugs: {:?}\n\
+                Recent Progress Summary:\n{}",
+                progress.task_description,
+                git_log_output,
+                progress.architectural_decisions,
+                progress.unresolved_bugs,
+                progress.notes.last().cloned().unwrap_or_default()
+            );
+
+            // Execute the agent run for this specific feature - Atomic Feature Execution
+            // Agent picks the highest-priority incomplete feature, works, commits, and updates the summary.
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
+                "{}\n\nCURRENT OBJECTIVE: Implement the feature: {}.\n\
+                Execute a Gather-Act-Verify cycle to complete this feature, then provide a condensed summary of your changes.",
+                orientation_context, feature_name
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
-            let scratchpad_context = if !progress.notes.is_empty() {
-                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
-            } else {
-                String::new()
-            };
-            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
+            feature_config.user_instructions = feature_prompt.clone();
+            feature_config.server_system_message.push_str("\nYou are currently operating in Phase 2 (Coding Agent) of a Ralph Loop. Stay focused on the CURRENT OBJECTIVE.");
 
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
@@ -105,18 +124,27 @@ impl RalphLoop {
                 Ok(result) => {
                     tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
+
+                    // Phase 2: Commit & Summarize
                     progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
+
+                    // Dynamically extract decisions and bugs from the coding agent's summary
+                    if result.to_lowercase().contains("architectural decision:") {
+                        progress.architectural_decisions.push(format!("[{}] {}", feature_name, result));
+                    }
+                    if result.to_lowercase().contains("bug:") || result.to_lowercase().contains("unresolved:") {
+                        progress.unresolved_bugs.push(format!("[{}] {}", feature_name, result));
+                    }
+
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
-                    let commit_msg = format!("Completed feature: {}", feature_name);
+                    let _ = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output();
+                    let commit_msg = format!("🤖 Ralph Agent: Completed feature '{}'\n\nSummary: {}", feature_name, result);
 
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
-                    let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
+                    let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@onehumancorp.com").current_dir(&self.repo_path).output();
 
                     if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
                         tracing::error!("Phase 2 failed to git commit: {}", e);
@@ -124,54 +152,81 @@ impl RalphLoop {
                 }
                 Err(e) => {
                     tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
+                    progress.notes.push(format!("ERROR on feature {}: {}", feature_name, e));
+                    let _ = self.save_progress(&progress).await;
                     break;
                 }
             }
         }
 
-        tracing::info!("Ralph Loop completely finished.");
+        tracing::info!("Ralph Loop completely finished. Task: {}", progress.task_description);
         Ok(())
     }
 
     async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
-                tracing::info!("Ralph Loop: Resuming from existing progress file.");
+                tracing::info!("Ralph Loop (Phase 1): Resuming from existing progress file.");
                 return Ok(progress);
             }
         }
 
-        tracing::info!("Ralph Loop: Initializing new progress file.");
+        tracing::info!("Ralph Loop (Phase 1): Initializing new project environment.");
 
-        let breakdown_prompt = format!("Break down the following task into 3 distinct, manageable features to implement sequentially. Respond strictly with a JSON array of strings representing the feature names. Task: {}", task);
+        // Run git init if not inside a repo
+        let git_status = Command::new("git").arg("status").current_dir(&self.repo_path).output();
+        if git_status.is_err() || !git_status.unwrap().status.success() {
+            let _ = Command::new("git").arg("init").current_dir(&self.repo_path).output();
+        }
+
+        let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
+        let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@onehumancorp.com").current_dir(&self.repo_path).output();
+
+        // 1. Task Breakdown using Initializer Agent (Architect)
+        let breakdown_prompt = format!(
+            "You are a Project Architect. Break down the following high-level task into a detailed, sequential list of 5-8 atomic features. \
+            Each feature must be small enough to implement in a single coding session. \
+            Respond strictly with a JSON array of strings representing the feature names.\n\
+            Task: {}",
+            task
+        );
+
+        let mut architect_cfg = self.config.clone();
+        architect_cfg.server_system_message.push_str("\nYou are acting as the Project Architect for a Ralph Loop.");
 
         let mut on_event = |_| {};
-        let result = self.agent.run(&self.config, &breakdown_prompt, &mut on_event).await?;
+        let result = self.agent.run(&architect_cfg, &breakdown_prompt, &mut on_event).await?;
 
+        // Handle JSON array if wrapped in markdown
+        let clean_json = result.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
         let mut features = vec![];
-        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&result) {
+        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(clean_json) {
             for name in parsed {
                 features.push(Feature { name, status: "pending".to_string() });
             }
         } else {
-            features.push(Feature { name: "Step 1".to_string(), status: "pending".to_string() });
-            features.push(Feature { name: "Step 2".to_string(), status: "pending".to_string() });
+            tracing::warn!("Ralph Loop: Architect failed to return valid JSON features. Using fallback breakdown.");
+            features.push(Feature { name: "Step 1: Scaffolding and Setup".to_string(), status: "pending".to_string() });
+            features.push(Feature { name: "Step 2: Core Logic Implementation".to_string(), status: "pending".to_string() });
+            features.push(Feature { name: "Step 3: Verification and Polishing".to_string(), status: "pending".to_string() });
         }
 
         let progress = RalphProgress {
             task_description: task.to_string(),
             features,
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
+            notes: vec![format!("Initialized task breakdown for: {}", task)],
+            architectural_decisions: vec!["Project initialized via Ralph Loop architecture.".to_string()],
+            unresolved_bugs: vec![],
+            session_id: uuid::Uuid::new_v4().to_string(),
             is_complete: false,
         };
 
-        self.save_progress(&progress).await?;
-
-        // Phase 1 (Initializer Agent): Setup environment, write init script, initial git commit.
+        // 2. Automatically generate environment artifacts: init.sh and .gitignore
         let init_script_path = self.repo_path.join("init.sh");
         if !init_script_path.exists() {
-            let _ = fs::write(&init_script_path, "#!/bin/bash\n# Ralph Loop Init Script\n").await;
+            let script_content = format!("#!/bin/bash\n# Ralph Loop Auto-Generated Init Script\n# Task: {}\necho 'Initializing project environment...'\n", task);
+            let _ = fs::write(&init_script_path, script_content).await;
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
@@ -182,23 +237,16 @@ impl RalphLoop {
             }
         }
 
-        // Run git init if not inside a repo
-        let git_status = Command::new("git").arg("status").current_dir(&self.repo_path).output();
-        if git_status.is_err() || !git_status.unwrap().status.success() {
-            if let Err(e) = Command::new("git").arg("init").current_dir(&self.repo_path).output() {
-                tracing::error!("Failed to git init: {}", e);
-            }
+        let gitignore_path = self.repo_path.join(".gitignore");
+        if !gitignore_path.exists() {
+            let _ = fs::write(&gitignore_path, ".agent_progress_*.json\n.scratchpad_*.json\nnode_modules/\ntarget/\n.env\n").await;
         }
 
-        let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
-        let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
+        self.save_progress(&progress).await?;
 
-        if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
-            tracing::error!("Failed to git add: {}", e);
-        }
-        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg("Ralph Loop Initial Commit").current_dir(&self.repo_path).output() {
-            tracing::error!("Failed to git commit: {}", e);
-        }
+        // 3. Create the initial "Baseline" git commit
+        let _ = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output();
+        let _ = Command::new("git").arg("commit").arg("-m").arg("🏁 Ralph Loop: Clean Slate Baseline Commit").current_dir(&self.repo_path).output();
 
         Ok(progress)
     }
