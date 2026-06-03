@@ -50,13 +50,13 @@ async fn test_tasks_db_claim_task_sqlite() {
     .await
     .unwrap();
 
-    let task = service.claim_task("agent1").await.unwrap();
+    let task = service.claim_task("org1", "agent1").await.unwrap();
     assert!(task.is_some());
     let task = task.unwrap();
     assert_eq!(task.id, "1");
     assert_eq!(task.status, "ASSIGNED");
     assert_eq!(task.assigned_agent_id, Some("agent1".to_string()));
 
-    let task2 = service.claim_task("agent2").await.unwrap();
+    let task2 = service.claim_task("org1", "agent2").await.unwrap();
     assert!(task2.is_none());
 }

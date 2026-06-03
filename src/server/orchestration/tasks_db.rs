@@ -16,7 +16,7 @@ impl TaskDbService {
         }
     }
 
-    pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTask>, String> {
+    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -24,11 +24,12 @@ impl TaskDbService {
                 let row_opt = sqlx::query(
                     r#"
                     SELECT * FROM shared_tasks
-                    WHERE status = 'PENDING'
+                    WHERE status = 'PENDING' AND organization_id = $1
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
                 )
+                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -69,10 +70,11 @@ impl TaskDbService {
                 let row_opt = sqlx::query(
                     r#"
                     SELECT * FROM shared_tasks
-                    WHERE status = 'PENDING'
+                    WHERE status = 'PENDING' AND organization_id = ?
                     LIMIT 1
                     "#
                 )
+                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;

@@ -522,7 +522,7 @@ mod tests {
             let svc_clone = service.clone();
             handles.push(tokio::spawn(async move {
                 let agent_id = format!("agent_{}", i);
-                let res = svc_clone.claim_task(&agent_id).await;
+                let res = svc_clone.claim_task("org_1", &agent_id).await;
                 res.is_err() // Check if the system degrades gracefully and returns Err
             }));
         }

@@ -828,10 +828,11 @@ impl TaskQueueService {
         Ok(())
     }
 
-    pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
+    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $2 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND st.tenant_id = $1 AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $2) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+            .bind(organization_id)
             .bind(agent_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -1320,7 +1321,7 @@ mod tests {
             assert!(push_res.is_ok());
 
             // Claim
-            let claim_res = service.claim_task("agent_1").await.unwrap();
+            let claim_res = service.claim_task("tenant_123", "agent_1").await.unwrap();
             assert!(claim_res.is_some());
             let claimed = claim_res.unwrap();
             assert_eq!(claimed.id, task_id);
@@ -1450,7 +1451,7 @@ mod tests {
             service.push_task(task).await.unwrap();
 
             // Claim it
-            let claimed = service.claim_task("agent_1").await.unwrap().unwrap();
+            let claimed = service.claim_task("tenant_123", "agent_1").await.unwrap().unwrap();
             assert_eq!(claimed.id, task_id);
 
             // Fail it
@@ -1523,18 +1524,18 @@ mod tests {
             service.push_task(child_task).await.unwrap();
 
             // Claiming should ONLY claim the parent since child is blocked by parent
-            let claim_1 = service.claim_task("agent_1").await.unwrap().unwrap();
+            let claim_1 = service.claim_task("tenant_123", "agent_1").await.unwrap().unwrap();
             assert_eq!(claim_1.id, task_id_parent);
 
             // Second claim should return None because child is blocked
-            let claim_2 = service.claim_task("agent_1").await.unwrap();
+            let claim_2 = service.claim_task("tenant_123", "agent_1").await.unwrap();
             assert!(claim_2.is_none());
 
             // Complete parent
             service.complete_task(&task_id_parent).await.unwrap();
 
             // Now child should be claimable
-            let claim_3 = service.claim_task("agent_2").await.unwrap().unwrap();
+            let claim_3 = service.claim_task("tenant_123", "agent_2").await.unwrap().unwrap();
             assert_eq!(claim_3.id, task_id_child);
         }
     }
