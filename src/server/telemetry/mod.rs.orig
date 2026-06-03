@@ -697,12 +697,6 @@ pub async fn record_sync_payload_size(
     size_bytes: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let histogram = global::meter("ohc.daemon")
-        .f64_histogram("sync_payload_size_bytes")
-        .with_description("Sync daemon payload size in bytes by mode")
-        .build();
-    histogram.record(size_bytes as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
-
     buffer_metric(
         pool,
         "sync_payload_size_bytes",
