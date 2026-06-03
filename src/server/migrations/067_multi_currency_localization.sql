@@ -51,3 +51,9 @@ DROP POLICY IF EXISTS tenant_isolation_ohc_multi_currency_ledger ON ohc_multi_cu
 CREATE POLICY tenant_isolation_ohc_multi_currency_ledger
 ON ohc_multi_currency_ledger
 USING (tenant_id = current_setting('app.current_tenant', true));
+
+ALTER TABLE ohc_fx_rates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_ohc_fx_rates ON ohc_fx_rates;
+CREATE POLICY tenant_isolation_ohc_fx_rates
+ON ohc_fx_rates
+USING (true);
