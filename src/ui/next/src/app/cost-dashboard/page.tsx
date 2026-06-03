@@ -57,6 +57,8 @@ export default function CostDashboardPage() {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         console.error("Error fetching cost data", err);
         setData({
+            network_cost: 0,
+            bandwidth_savings: 0,
             total_revenue: 0,
             total_costs: 0,
             llm_cost: 0,
