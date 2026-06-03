@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import UpsellInsightsCard from './components/UpsellInsightsCard';
 
-import { AppShell } from "../components/AppShell";import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { AppShell } from "../components/AppShell";
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 type DashboardMetrics = {
@@ -188,11 +189,16 @@ export default function Dashboard() {
           {offlineQueueCount} payments pending sync
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
-          Offline - changes saved locally        </div>
+          Offline - changes saved locally
+        </div>
         {error && <div className="app-badge bad">{error}</div>}
       </div>
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        <section className="mb-6 animate-fade-in">
+          <UpsellInsightsCard />
+        </section>
+
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
