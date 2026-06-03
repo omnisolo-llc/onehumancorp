@@ -259,6 +259,19 @@ roles:
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(err.contains("circular reporting loop detected"), "Expected circular reporting loop detected, got: {}", err);
+
+        let yaml_data_self_cycle = r#"
+domain: "Self Cyclic Domain"
+roles:
+  - id: "a"
+    context: "context a"
+    reports_to: "a"
+"#;
+
+        let res_self_cycle = parse_blueprint(yaml_data_self_cycle.as_bytes(), true);
+        assert!(res_self_cycle.is_err());
+        let err_self_cycle = res_self_cycle.unwrap_err();
+        assert!(err_self_cycle.contains("circular reporting loop detected"), "Expected circular reporting loop detected, got: {}", err_self_cycle);
     }
 
     #[test]

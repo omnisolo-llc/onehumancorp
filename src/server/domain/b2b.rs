@@ -72,6 +72,16 @@ mod tests {
         // Invalid JSON
         let res = tm.parse_jwks("bad-org.com", "{bad json}", vec![]);
         assert!(res.is_err());
+
+        // Empty partner_org
+        let res = tm.parse_jwks("", r#"{"keys": [{"kty": "RSA"}]}"#, vec!["Sales Agent".to_string()]);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().partner_org, "");
+
+        // Empty allowed_roles
+        let res = tm.parse_jwks("globex.com", r#"{"keys": [{"kty": "RSA"}]}"#, vec![]);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().allowed_roles.len(), 0);
     }
 
     #[test]

@@ -17,7 +17,7 @@ pub struct AlertParser;
 
 impl AlertParser {
     pub fn parse_prometheus_alert(&self, alert: &str) -> Result<Incident, String> {
-        if alert.contains("HighErrorRate") {
+        if alert.to_lowercase().contains("higherrorrate") {
             let id = format!("inc-{}", Utc::now().format("%Y%m%d%H%M%S"));
             return Ok(Incident {
                 id,
@@ -61,6 +61,22 @@ mod tests {
         assert_eq!(incident.severity, "P0");
         assert_eq!(incident.status, "INVESTIGATING");
         assert!(incident.id.starts_with("inc-"));
+
+        // Valid Alert HighErrorRate (lowercase)
+        let alert = "firing: higherrorrate in billing-engine";
+        let res = parser.parse_prometheus_alert(alert);
+        assert!(res.is_ok());
+        let incident = res.unwrap();
+        assert_eq!(incident.summary, "HighErrorRate");
+        assert_eq!(incident.severity, "P0");
+
+        // Valid Alert HighErrorRate (mixed case)
+        let alert = "firing: HIGHerrorRate in billing-engine";
+        let res = parser.parse_prometheus_alert(alert);
+        assert!(res.is_ok());
+        let incident = res.unwrap();
+        assert_eq!(incident.summary, "HighErrorRate");
+        assert_eq!(incident.severity, "P0");
 
         // Unknown Alert
         let alert = "firing: UnknownAlert in billing-engine";

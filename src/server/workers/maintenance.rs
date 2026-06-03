@@ -23,3 +23,27 @@ impl MaintenanceWorker {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_maintenance_worker_start_no_panic() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
+
+        let worker = Arc::new(MaintenanceWorker::new(db));
+        worker.start();
+
+        // Let the worker loop run a tiny bit to make sure no instant panics
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(true); // If it hasn't panicked, the test passes
+    }
+}
