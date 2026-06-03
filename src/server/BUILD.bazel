@@ -13,6 +13,8 @@ SERVER_RS_SRCS = [
     "hub.rs",
     "lib.rs",
     "minimax.rs",
+    "middleware/mod.rs",
+    "middleware/localization.rs",
     "msgbus.rs",
     "pipeline.rs",
     "powersync.rs",

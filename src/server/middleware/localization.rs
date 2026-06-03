@@ -1,4 +1,4 @@
-use axum::{
+use axum::{body::Body,
     http::{Request, header::ACCEPT_LANGUAGE},
     middleware::Next,
     response::Response,
@@ -7,7 +7,7 @@ use axum::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct TargetCurrency(pub String);
 
-pub async fn localization_middleware<B>(mut req: Request<B>, next: Next<B>) -> Response {
+pub async fn localization_middleware(mut req: Request<axum::body::Body>, next: Next) -> Response {
     let accept_lang = req
         .headers()
         .get(ACCEPT_LANGUAGE)
@@ -30,7 +30,7 @@ pub async fn localization_middleware<B>(mut req: Request<B>, next: Next<B>) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::Request};
+    use axum::{body::Body, body::Body, http::Request};
 
     #[tokio::test]
     async fn test_localization_middleware_usd() {
