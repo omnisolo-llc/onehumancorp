@@ -31,13 +31,21 @@ export default function OnboardingWizard() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
 
+  const getCookie = (name: string) => {
+    if (typeof document === 'undefined') return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return null;
+  };
+
   const handleSaveDraft = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = getCookie('tenant_id') || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') : null) || 'storefront';
+      const userId = getCookie('user_email') || (typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') : null) || 'test-user';
 
       const wizardState = {
         step,
@@ -85,8 +93,8 @@ export default function OnboardingWizard() {
   // Read state from server on mount
   useEffect(() => {
     setIsLoaded(true);
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const tenantId = getCookie('tenant_id') || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') : null) || 'storefront';
+    const userId = getCookie('user_email') || (typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') : null) || 'test-user';
 
     fetch('/api/onboarding/state', {
       headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
@@ -122,8 +130,8 @@ export default function OnboardingWizard() {
     // Only save if we are past the initial state
     if (step === 1 && chatStep === 1 && !businessName) return;
 
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const tenantId = getCookie('tenant_id') || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') : null) || 'storefront';
+    const userId = getCookie('user_email') || (typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') : null) || 'test-user';
 
     const wizardState = {
       step,
@@ -164,8 +172,8 @@ export default function OnboardingWizard() {
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = getCookie('tenant_id') || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') : null) || 'storefront';
+      const userId = getCookie('user_email') || (typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') : null) || 'test-user';
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
@@ -207,8 +215,8 @@ export default function OnboardingWizard() {
     setStep(4); // Go to loading screen
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = getCookie('tenant_id') || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') : null) || 'storefront';
+      const userId = getCookie('user_email') || (typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') : null) || 'test-user';
 
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
