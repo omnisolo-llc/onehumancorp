@@ -562,7 +562,7 @@ async fn http_metrics_handler(
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
-    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
+    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
         StatusCode::OK,
@@ -6016,7 +6016,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 status.textContent = 'Website published at ' + domain;
                             } catch (e) {
                                 console.error(e);
-                                const domain = 'luna-loafohc.app';
+                                const domain = 'luna-loaf.ohc.app';
                                 const domainEl = document.getElementById('brand-toolbox-published-domain');
                                 if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
                                 status.textContent = 'Website published at ' + domain;
