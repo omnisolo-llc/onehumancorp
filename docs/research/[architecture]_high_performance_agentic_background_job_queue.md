@@ -1,7 +1,7 @@
-# Issue Brief: High-Performance Agentic Background Job Queue
+# [Architecture] High-Performance Agentic Background Job Queue
 
 ## Title
-[Architecture] High-Performance Agentic Background Job Queue
+High-Performance Agentic Background Job Queue
 
 ## Problem Statement
 The OHC Hybrid Agentic OS requires a robust, high-performance background job queue to reliably execute asynchronous tasks. Non-technical business owners expect instantaneous UI responses, but AI agent workflows (like the Customer Success "Ambassador" drafting a reply, or the Operations Agent synchronizing inventory) take time. Currently, the lack of a formalized, highly scalable queueing system with persistence, retries, and dead-letter queues limits the platform's ability to scale and guarantees job execution, leading to potential data inconsistencies and "lost" tasks.
