@@ -7,24 +7,62 @@ export default function Booking() {
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  const [responseState, setResponseState] = useState<any>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulating form submission
-    await fetch("/api/v1/booking/request", {
+    const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+
+    // Simulating form submission to backend
+    const res = await fetch("/api/v1/booking/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        tenant_id: tenantId,
         description,
         fileName: file?.name,
         timestamp: new Date().toISOString()
       }),
     });
 
+    const data = await res.json();
+    setResponseState(data);
     setSubmitted(true);
   };
 
   if (submitted) {
+    if (responseState?.isAutonomous) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter p-6">
+          <div className="w-full max-w-[375px] bg-white/65 backdrop-blur-[30px] rounded-[24px] p-8 shadow-2xl text-center border border-white/40">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">⚡</div>
+            <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Quote Generated!</h1>
+            <p className="text-gray-600 text-sm leading-relaxed mb-6">
+              Based on your request, our AI has instantly generated a quote.
+            </p>
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-6 text-left">
+              <p className="text-sm text-blue-900">{responseState.quote}</p>
+            </div>
+            <a
+              href={responseState.calendarLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 w-full py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+            >
+              Book Time Slot
+            </a>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="mt-4 w-full py-3 px-4 rounded-xl font-bold text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter p-6">
         <div className="w-full max-w-[375px] bg-white/65 backdrop-blur-[30px] rounded-[24px] p-8 shadow-2xl text-center border border-white/40">

@@ -763,12 +763,39 @@ impl DepartmentOrchestrator {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 
+    pub async fn get_department_config_db(&self, tenant_id: &str, department: &str) -> Result<Option<crate::orchestration::departments::types::DepartmentConfig>, String> {
+        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+        if let crate::db::DbStore::Postgres = self.db.store {
+            let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = $1 AND department_type = $2")
+                .bind(tenant_id)
+                .bind(dep_type.to_string().to_lowercase())
+                .fetch_optional(&self.db.pool).await.map_err(|e| e.to_string())?;
+            if let Some(r) = row {
+                use sqlx::Row;
+                let config_json: serde_json::Value = r.get("config");
+                return Ok(serde_json::from_value(config_json).ok());
+            }
+        }
+        Ok(None)
+    }
+
     pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
         let deps = self.departments.read().await;
         let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
         if let Some(dep_lock) = deps.get(&dep_type) {
             let mut dep = dep_lock.write().await;
-            dep.set_config(tenant_id.to_string(), config);
+            dep.set_config(tenant_id.to_string(), config.clone());
+
+            if let crate::db::DbStore::Postgres = self.db.store {
+                let config_json = serde_json::to_value(&config).unwrap_or(serde_json::json!({}));
+                sqlx::query(
+                    "INSERT INTO agent_departments (id, tenant_id, department_type, config) VALUES (gen_random_uuid()::text, $1, $2, $3) ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = $3"
+                )
+                .bind(tenant_id)
+                .bind(dep_type.to_string().to_lowercase())
+                .bind(&config_json)
+                .execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+            }
             Ok(())
         } else {
             Err("Department not found".to_string())

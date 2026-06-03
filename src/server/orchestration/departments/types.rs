@@ -45,8 +45,14 @@ impl std::fmt::Display for DepartmentType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DepartmentConfig {
+    #[serde(default)]
     pub tone_of_voice: String,
+    #[serde(default)]
     pub auto_approve_limits: f64,
+    #[serde(default)]
+    pub autonomous_quoting_enabled: bool,
+    #[serde(default)]
+    pub base_pricing_rules: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

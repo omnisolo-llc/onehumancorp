@@ -3,7 +3,41 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { description, fileName, timestamp } = body;
+    const { tenant_id, description, fileName, timestamp } = body;
+
+    let isAutonomousQuotingEnabled = false;
+    let basePricingRules = '';
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+
+    try {
+      if (tenant_id) {
+        const res = await fetch(`${backendUrl}/api/agents/settings/sales`, {
+          headers: {
+            'x-organization-id': tenant_id
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          isAutonomousQuotingEnabled = data.autonomous_quoting_enabled || false;
+          basePricingRules = data.base_pricing_rules || '';
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings from backend:", err);
+    }
+
+    if (isAutonomousQuotingEnabled) {
+      // Simulate an AI-generated quote based on rules
+      const generatedQuote = `Estimated $150 based on your request: "${description.substring(0, 30)}..." and our pricing rules (${basePricingRules || 'standard rates'}).`;
+
+      return NextResponse.json({
+        success: true,
+        isAutonomous: true,
+        quote: generatedQuote,
+        calendarLink: 'https://cal.com/ohc-test/30min'
+      });
+    }
 
     // Stubbing the backend call. In reality we'd use a gRPC client to call BookingEngineService.CreateRequest
     // which then creates an event `tenant.quote.requested` and hits the SalesAgent.
