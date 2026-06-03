@@ -5325,14 +5325,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Advisory Dashboard Screen -->
-                    <div id="advisory-dashboard-screen" class="screen">
+                    <div id="advisory-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1>Advisory</h1>
                         <p id="advisory-dashboard-summary">Loading insights...</p>
                         <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                      <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
+                     <div id="checkout-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
