@@ -283,6 +283,15 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="app-grid metrics">
+
+            {/* AI Upsell Engine Revenue Insights Card */}
+            <div className="app-card" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                <div className="app-metric-label">AI Upsell Revenue</div>
+                <div className="app-metric-value">${upsellRevenue.toFixed(2)}</div>
+                <p className="app-list-subtitle mt-2">Generated this week</p>
+                <p className="app-list-subtitle">Autonomous 1-click upsells added to customer orders during checkout.</p>
+            </div>
+
             <WalkthroughTarget id="sales-card-target" className="app-card">
               <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
                 <div className="app-metric-label">Total Sales</div>
