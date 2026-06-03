@@ -62,6 +62,11 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
+<<<<<<< HEAD
+            network_cost: 0,
+            bandwidth_savings: 0,
+=======
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
@@ -99,7 +104,11 @@ export default function CostDashboardPage() {
               Here's what happened this week and what you should do next:<br/><br/>
               - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
               - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
+<<<<<<< HEAD
+              - We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!
+=======
               - We also noticed a few unread messages in your unified inbox. Using the AI draft feature might help you save time!
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             </p>
         </section>
 

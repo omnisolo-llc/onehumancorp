@@ -94,7 +94,11 @@ export default function TeamChatPage() {
                <span className="text-xs font-bold text-blue-600">OHC</span>
             </div>
             <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none text-sm text-gray-800">
+<<<<<<< HEAD
+              Hello! I'm your central team interface. How can we help your business today?
+=======
               Hello! I'm your unified team interface. How can we help your business today?
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             </div>
           </div>
 

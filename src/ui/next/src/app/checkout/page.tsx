@@ -114,13 +114,21 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
+<<<<<<< HEAD
+          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using saved wallet payment for frictionless vaulting.">
+=======
           <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using Apple/Google Pay for frictionless vaulting.">
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             <button
               onClick={() => handlePayment(true)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
+<<<<<<< HEAD
+              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Wallet Pay)'}
+=======
               {isProcessing ? 'Processing...' : 'Subscribe Monthly (Apple Pay)'}
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             </button>
           </WithTooltip>
 

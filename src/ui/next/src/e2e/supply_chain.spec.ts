@@ -1,6 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Supply Chain', () => {
+<<<<<<< HEAD
+  test('shows database-backed inventory state', async ({ page }) => {
+    await page.goto('http://localhost:3000/inventory');
+
+    await page.waitForSelector('h1', { timeout: 10000 });
+    await expect(page.locator('h1')).toHaveText('Inventory');
+
+    await expect(page.locator('text="Raw Materials"')).toBeVisible();
+    await expect(page.locator('text="Loaded from `/api/ui/supply`."')).toBeVisible();
+    await expect(page.locator('text=/No raw material rows found|Loading inventory|Low Stock|Healthy/')).toBeVisible();
+=======
   test('Maya approves a Purchase Order when raw materials are low', async ({ page }) => {
     // 1. Navigate to the inventory page (we assume the user is Maya and logged in)
     await page.goto('http://localhost:3000/inventory');
@@ -29,5 +40,6 @@ test.describe('Autonomous Supply Chain', () => {
     await expect(successMsg).toHaveText('Approved Purchase Order for mat1');
 
     await expect(alertCard).not.toBeVisible();
+>>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
   });
 });
