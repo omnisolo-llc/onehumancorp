@@ -2,15 +2,19 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Growth Loop: Milestone Viral Share', () => {
   test('User can share milestone and unlock reward', async ({ page }) => {
+    // Reset local storage to ensure the banner is not dismissed
+    await page.goto('/');
+    await page.evaluate(() => localStorage.removeItem('milestone_banner_dismissed'));
+
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
     // Wait for the Milestone Growth Loop component to appear
-    await page.locator('text=Milestone Unlocked').first().waitFor();
+    await expect(page.locator('text=Milestone Unlocked').first()).toBeVisible({ timeout: 15000 });
 
     // Verify the share button is visible
     const shareBtn = page.locator('text=Share & Claim Reward');
-    await shareBtn.first().waitFor();
+    await expect(shareBtn.first()).toBeVisible();
 
     // Handle any window dialogs (e.g., window.alert for success message)
     page.on('dialog', async dialog => {
