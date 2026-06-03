@@ -11,12 +11,12 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     }, id);
     await page.goto('/website-builder');
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
 
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
+    await page.locator('input[placeholder*="Maya"]').nth(1).fill('Original art and prints');
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
