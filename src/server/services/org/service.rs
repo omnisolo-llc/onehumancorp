@@ -206,7 +206,7 @@ impl OrgService for MyOrgService {
                 let (_org_res, _active_orders_res) = tokio::join!(
                     tokio::spawn(async move {
                         sqlx::query_as::<_, (String, String)>(
-                            "SELECT name, COALESCE(industry, ) FROM tenants WHERE id = $1"
+                            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                         )
                         .bind(&tenant_id_org)
                         .fetch_optional(&db_org)
@@ -214,7 +214,7 @@ impl OrgService for MyOrgService {
                     }),
                     tokio::spawn(async move {
                         sqlx::query_scalar::<_, i64>(
-                            "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != delivered"
+                            "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                         )
                         .bind(&tenant_id_orders)
                         .fetch_one(&db_orders)
@@ -241,7 +241,6 @@ impl OrgService for MyOrgService {
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
-    }
     }
 }
 
