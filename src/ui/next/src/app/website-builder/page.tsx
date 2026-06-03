@@ -391,17 +391,20 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col gap-4 mt-6">
+                    <input
+                      type="text"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      style={{ borderRadius: '8px' }}
+                      placeholder="e.g., Coffee Shop, Marketing Agency, Bakery"
+                      value={businessType}
+                      onChange={(e) => setBusinessType(e.target.value)}
+                    />
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
+                      disabled={!businessType.trim()}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => setWizardStep(2)}
                     >
-                      Online Store
-                    </button>
-                    <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
-                      onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
-                    >
-                      Restaurant
+                      Next
                     </button>
                   </div>
                 </>
@@ -409,13 +412,13 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 2 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What is the name of your business?</h1>
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
-                      placeholder="What is your business called?"
+                      placeholder="Enter your business name"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
@@ -440,7 +443,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 3 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What will you be selling?</h1>
                   <div id="step-4" className="mt-6 flex flex-col gap-4">
                     <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
                       <input

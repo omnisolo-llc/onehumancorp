@@ -83,14 +83,15 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
-    fireEvent.click(screen.getByText('Online Store'));
+    fireEvent.change(screen.getByPlaceholderText('e.g., Coffee Shop, Marketing Agency, Bakery'), { target: { value: 'Online Store' } });
+    fireEvent.click(screen.getByText('Next'));
 
     // Step 2
-    fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter your business name'), { target: { value: 'My Shop' } });
     fireEvent.click(screen.getByText('Next'));
 
     // Step 3
-    fireEvent.click(screen.getByLabelText('Physical Products'));
+    fireEvent.click(screen.getByText('Physical Products'));
     fireEvent.click(screen.getByText('Next'));
 
     // Step 4
