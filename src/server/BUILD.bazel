@@ -14,6 +14,7 @@ SERVER_RS_SRCS = [
     "lib.rs",
     "minimax.rs",
     "msgbus.rs",
+    "notifications.rs",
     "pipeline.rs",
     "powersync.rs",
     "queue.rs",

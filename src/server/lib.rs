@@ -1,3 +1,4 @@
+pub mod notifications;
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
@@ -1048,7 +1049,7 @@ impl HubService for MyHubService {
             tenant_id: req.organization_id.clone(),
             department: crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
             description: format!("Draft Confirmation for {}", req.customer_name),
-            status: crate::orchestration::departments::types::ApprovalStatus::PendingApproval,
+            status: crate::orchestration::departments::types::ApprovalStatus::Draft,
             action_risk: crate::orchestration::departments::types::ActionRisk::DraftForReview,
             payload: Some(serde_json::json!({
                 "draft_copy": format!("Hi {}, thank you for your custom order!", req.customer_name),
@@ -1831,7 +1832,7 @@ async fn get_pending_approvals(
                 title: format!("{:?}", task.department),
                 description: task.description,
                 status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Draft => "DRAFT".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
                 },
@@ -1846,7 +1847,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ActionRisk::DraftForReview => 2,
                 },
                 approval_status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Draft => "PENDING".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
                 },
