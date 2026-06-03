@@ -10,6 +10,44 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [lang, setLang] = useState("en");
+  const [currency, setCurrency] = useState("USD");
+  const [i18n, setI18n] = useState<any>(null);
+
+  React.useEffect(() => {
+    const tenantId = typeof window !== "undefined" ? window.localStorage.getItem("tenant") || "my-store" : "my-store";
+    setReferralLink(`https://ohc.app/invite/${tenantId}`);
+
+    const loadI18n = async () => {
+      try {
+        let cached = window.localStorage.getItem("ohc_i18n_cache");
+        if (!cached || navigator.onLine) {
+           const res = await fetch("/api/v1/i18n/cache");
+           if (res.ok) {
+              const data = await res.json();
+              window.localStorage.setItem("ohc_i18n_cache", JSON.stringify(data));
+              cached = JSON.stringify(data);
+           }
+        }
+        if (cached) {
+           setI18n(JSON.parse(cached));
+        }
+      } catch(e) { console.error(e); }
+    };
+    loadI18n();
+  }, []);
+
+  const t = (key: string) => {
+    if (i18n && i18n.translations && i18n.translations[lang] && i18n.translations[lang][key]) {
+      return i18n.translations[lang][key];
+    }
+    if (key === "checkout.title") return "Checkout";
+    if (key === "checkout.subtitle") return "Please enter your payment details below.";
+    if (key === "checkout.pay_now") return "Pay Now";
+    if (key === "checkout.cancel") return "Cancel";
+    if (key === "checkout.offline_warning") return "You are offline. Payment saved locally and will process when reconnected.";
+    return key;
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -39,11 +77,23 @@ export default function CheckoutPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>{t('checkout.title')}</h1>
+        <div className="flex gap-2">
+          <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm font-medium">
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+            <option value="ar">AR</option>
+          </select>
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-transparent border border-gray-300 rounded px-2 py-1 text-sm font-medium">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="AED">AED</option>
+          </select>
+        </div>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <p className="text-gray-700">{t('checkout.subtitle')}</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
@@ -54,7 +104,7 @@ export default function CheckoutPage() {
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
+              {isProcessing ? 'Processing...' : t('checkout.pay_now')}
             </button>
           </WithTooltip>
 
@@ -73,15 +123,23 @@ export default function CheckoutPage() {
                     queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
                   } catch (e) {}
 
+
+                  let rate = 1.0;
+                  if (i18n && i18n.exchange_rates && i18n.exchange_rates[currency]) {
+                     rate = i18n.exchange_rates[currency];
+                  }
+
                   queue.push({
-                    id: 'txn_' + Date.now(),
+                    transaction_id: 'txn_' + Date.now(),
                     amount: parseFloat(amount),
+                    currency: currency,
+                    exchange_rate: rate,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  alert(t('checkout.offline_warning'));
                   router.push('/dashboard');
                 }
               }}
@@ -108,7 +166,7 @@ export default function CheckoutPage() {
               onClick={() => router.push('/pricing')}
               className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
-              Cancel
+              {t('checkout.cancel')}
             </button>
           </WithTooltip>
         </div>
