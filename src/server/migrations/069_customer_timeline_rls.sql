@@ -1,0 +1,1 @@
+ALTER TABLE customer_timeline ENABLE ROW LEVEL SECURITY;
