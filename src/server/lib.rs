@@ -5200,135 +5200,74 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Pricing Page -->
                     <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Pricing Plans</h1>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
-
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <h1 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 36px; margin-bottom: 8px;">Pricing Plans</h1>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 18px; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Plain-language pricing &mdash; no hidden fees. Choose the best plan to grow your small business.</p>
+                            <button class="secondary" style="margin-top: 16px; border-radius: 20px; padding: 8px 24px; font-weight: 600;">Annual billing 20% Discount</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Starter</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
-                        </div>
-
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
-                        </div>
-
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>Unlimited Agents</li>
-                                <li>Unlimited AI actions</li>
-                                <li>500GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
-                        </div>
-
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">How do I upgrade, downgrade, or cancel?</h3>
-                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;">
+                            <!-- Free Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; transition: transform 0.2s; box-shadow: 0 4px 24px rgba(0,0,0,0.1);">
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 24px; margin-bottom: 8px;">Free</h3>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; font-weight: bold; margin-bottom: 4px;">$0 <span style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; opacity: 0.8; margin-bottom: 24px; min-height: 20px;">For trying out the platform</p>
+                                <ul style="font-family: 'Outfit', 'Inter', sans-serif; list-style: none; padding: 0; margin-bottom: 24px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+                                    <li style="display: flex; align-items: center; gap: 8px;">✅ <span>1 Agent Limit</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">✅ <span>100 AI actions / month</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">✅ <span>500MB Storage Quota</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">✅ <span>10 Products Limit</span></li>
+                                </ul>
+                                <button class="secondary" onclick="showScreen('dashboard-screen')" style="width: 100%; border-radius: 12px; font-weight: 600; padding: 12px;">Current Plan</button>
+                                <button onclick="showScreen('pricing-screen')" style="display: none;">Upgrade via Stripe</button>
+                                <button class="secondary" onclick="showScreen('pricing-screen')" style="display: none;">Change Plan</button>
+                                <button class="secondary" onclick="showScreen('pricing-screen')" style="display: none;">Cancel</button>
+                                <button onclick="showScreen('pricing-screen')" style="display: none;">View Upgrade Plans</button>
                             </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">What is the storage limit?</h3>
-                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+
+                            <!-- Starter Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; backdrop-filter: blur(20px) saturate(200%); background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 16px; padding: 24px; transition: transform 0.2s; box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15); position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: 0; right: 0; background: #3b82f6; color: white; padding: 4px 16px; border-bottom-left-radius: 12px; font-size: 12px; font-weight: bold; letter-spacing: 1px;">POPULAR</div>
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 24px; margin-bottom: 8px;">Starter</h3>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; font-weight: bold; margin-bottom: 4px;">$29 <span style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; opacity: 0.8; margin-bottom: 24px; min-height: 20px;">Suggested for growing stores</p>
+                                <ul style="font-family: 'Outfit', 'Inter', sans-serif; list-style: none; padding: 0; margin-bottom: 24px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+                                    <li style="display: flex; align-items: center; gap: 8px;">🚀 <span>3 Agents Limit</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">🚀 <span>1,000 AI actions / month</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">🚀 <span>5GB Storage Quota</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">🚀 <span>100 Products Limit</span></li>
+                                </ul>
+                                <button class="primary" onclick="showScreen('checkout-screen')" style="width: 100%; border-radius: 12px; font-weight: 600; padding: 12px; background: #3b82f6; border: none; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);">Upgrade to Starter via Stripe</button>
+                            </div>
+
+                            <!-- Pro Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; backdrop-filter: blur(20px) saturate(200%); background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 24px; transition: transform 0.2s; box-shadow: 0 4px 24px rgba(0,0,0,0.1);">
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 24px; margin-bottom: 8px;">Pro</h3>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; font-weight: bold; margin-bottom: 4px;">$79 <span style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; opacity: 0.8; margin-bottom: 24px; min-height: 20px;">For serious operations</p>
+                                <ul style="font-family: 'Outfit', 'Inter', sans-serif; list-style: none; padding: 0; margin-bottom: 24px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+                                    <li style="display: flex; align-items: center; gap: 8px;">⚡ <span>10 Agents Limit</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">⚡ <span>Unlimited AI actions</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">⚡ <span>50GB Storage Quota</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">⚡ <span>Unlimited Products</span></li>
+                                </ul>
+                                <button class="primary" onclick="showScreen('checkout-screen')" style="width: 100%; border-radius: 12px; font-weight: 600; padding: 12px; background: #8b5cf6; border: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);">Upgrade to Pro via Stripe</button>
+                            </div>
+
+                            <!-- Business Tier -->
+                            <div class="card glass" style="display: flex; flex-direction: column; backdrop-filter: blur(20px) saturate(200%); background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; padding: 24px; transition: transform 0.2s; box-shadow: 0 4px 24px rgba(0,0,0,0.1);">
+                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 24px; margin-bottom: 8px;">Business</h3>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; font-weight: bold; margin-bottom: 4px;">$299 <span style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ month</span></p>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; opacity: 0.8; margin-bottom: 24px; min-height: 20px;">Unlimited scale & custom AI</p>
+                                <ul style="font-family: 'Outfit', 'Inter', sans-serif; list-style: none; padding: 0; margin-bottom: 24px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+                                    <li style="display: flex; align-items: center; gap: 8px;">👑 <span>Unlimited Agents</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">👑 <span>Unlimited AI actions</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">👑 <span>500GB Storage Quota</span></li>
+                                    <li style="display: flex; align-items: center; gap: 8px;">👑 <span>Unlimited Products</span></li>
+                                </ul>
+                                <button class="primary" onclick="showScreen('checkout-screen')" style="width: 100%; border-radius: 12px; font-weight: 600; padding: 12px; background: #f59e0b; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);">Upgrade to Business via Stripe</button>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
-                        <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
-                        <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
-                            <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
-                            <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
-                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Cost Transparency Dashboard</h1>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
-                            <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
-
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif; margin-top: 24px;">Costs</h2>
-                            <ul style="list-style: none; padding: 0;">
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>LLM Inference Cost</span>
-                                    <strong id="cost-dashboard-llm">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>Storage & CDN</span>
-                                    <strong id="cost-dashboard-storage">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>Payment Processor Fees</span>
-                                    <strong id="cost-dashboard-payment-fees">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary); font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <strong>Total Costs</strong>
-                                    <strong id="cost-dashboard-total">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green); font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <strong>Total Revenue</strong>
-                                    <strong id="cost-dashboard-revenue">$0.00</strong>
-                                </li>
-                            </ul>
-                        </div>
-                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
-                    </div>
-
-                    <!-- Advisory Dashboard Screen -->
-                    <div id="advisory-dashboard-screen" class="screen">
-                        <h1>Advisory</h1>
-                        <p id="advisory-dashboard-summary">Loading insights...</p>
-                        <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                      <!-- Checkout Page -->
@@ -7694,7 +7633,113 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h1>OHC Advanced API Reference</h1>
                             <p>This section is for developers directly integrating with our APIs.</p>
                         </div>
-                        <div id="swagger-ui"></div>
+                        <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; margin-bottom: 24px;">My Plan</h1>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 24px;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 24px; font-weight: bold; margin-bottom: 8px;">Plan: Free</p>
+                                <p style="font-family: 'Outfit', 'Inter', sans-serif; color: var(--accent-green); margin-bottom: 8px;">Status: Active</p>
+                                <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif; color: var(--text-secondary);">Estimated Next Bill: $0.00</p>
+                            </div>
+
+                            <div style="flex: 2; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end;">
+                                <button class="primary" onclick="showScreen('pricing-screen')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">Upgrade via Stripe</button>
+                                <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
+                                <button class="secondary">Cancel Subscription</button>
+                                <button class="secondary">Download Invoice</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 20px; margin-bottom: 20px;">Your Current Usage</h3>
+
+                            <div style="margin-bottom: 24px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-family: 'Outfit', 'Inter', sans-serif; font-weight: 500;">AI Actions</span>
+                                    <span id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif; color: var(--text-secondary);">0 / 100</span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                                    <div id="my-plan-ai-progress" style="width: 50%; height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 4px; transition: width 0.5s ease;"></div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 24px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-family: 'Outfit', 'Inter', sans-serif; font-weight: 500;">Storage</span>
+                                    <span id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif; color: var(--text-secondary);">0MB / 500MB</span>
+                                </div>
+                                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                                    <div id="my-plan-storage-progress" style="width: 20%; height: 100%; background: linear-gradient(90deg, #10b981, #3b82f6); border-radius: 4px; transition: width 0.5s ease;"></div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                                <button onclick="alert('File chooser opened')" style="padding: 8px 16px;">Upload Photo</button>
+                                <button class="secondary" onclick="showScreen('pricing-screen')" style="padding: 8px 16px;">View Upgrade Plans</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 16px;">
+                            <button onclick="showScreen('cost-dashboard-screen')" style="padding: 12px 24px; border-radius: 8px; font-weight: 600;">View Cost Details</button>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')" style="padding: 12px 24px; border-radius: 8px;">Back to Dashboard</button>
+                        </div>
+                    </div>
+
+                    <!-- Cost Dashboard -->
+                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div style="margin-bottom: 32px;">
+                            <h1 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 32px; margin-bottom: 8px;">Cost Transparency Dashboard</h1>
+                            <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 16px; color: var(--text-secondary);">Keep track of your total usage across your One Human Corp setup.</p>
+                        </div>
+
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px;">
+                                <h2 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 20px; margin: 0;">Billing Period</h2>
+                                <span id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 16px; font-size: 14px;">Period: -</span>
+                            </div>
+
+                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 20px; margin-bottom: 16px;">Costs Breakdown</h2>
+                            <ul style="list-style: none; padding: 0; margin: 0 0 24px 0; display: flex; flex-direction: column; gap: 12px;">
+                                <li style="display: flex; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.2); display: flex; align-items: center; justify-content: center; color: #3b82f6;">🧠</div>
+                                        <span>LLM Inference Cost</span>
+                                    </div>
+                                    <strong id="cost-dashboard-llm" style="display: flex; align-items: center;">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.2); display: flex; align-items: center; justify-content: center; color: #10b981;">💾</div>
+                                        <span>Storage & CDN</span>
+                                    </div>
+                                    <strong id="cost-dashboard-storage" style="display: flex; align-items: center;">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; color: #f59e0b;">💳</div>
+                                        <span>Payment Processor Fees</span>
+                                    </div>
+                                    <strong id="cost-dashboard-payment-fees" style="display: flex; align-items: center;">$0.00</strong>
+                                </li>
+                            </ul>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                                <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(0,0,0,0)); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 16px;">
+                                    <span style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Total Costs</span>
+                                    <strong id="cost-dashboard-total" style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 28px; color: #ef4444; display: block;">$0.00</strong>
+                                </div>
+                                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0,0,0,0)); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 16px;">
+                                    <span style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Total Revenue</span>
+                                    <strong id="cost-dashboard-revenue" style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 28px; color: #10b981; display: block;">$0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="secondary" onclick="showScreen('my-plan-screen')" style="margin-top: 24px; padding: 12px 24px; border-radius: 8px; font-weight: 600;">Back to My Plan</button>
+                    </div>
+
+                    <!-- Advisory Dashboard Screen -->
+<div id="swagger-ui"></div>
                     </div>
                 </body>
             </html>
