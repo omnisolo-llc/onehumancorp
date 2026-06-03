@@ -22,14 +22,14 @@ export async function POST(request: Request) {
 
     if (!backendRes.ok) {
       const errorText = await backendRes.text();
-      console.error('Backend returned an error:', backendRes.status, errorText);
+      console.log('Backend returned an error:', backendRes.status, errorText);
       return NextResponse.json({ error: 'Failed to join waitlist' }, { status: backendRes.status });
     }
 
     const data = await backendRes.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error joining waitlist:', error);
+    console.log('Error joining waitlist:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
