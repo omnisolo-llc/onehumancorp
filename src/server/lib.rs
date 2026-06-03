@@ -5701,6 +5701,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <strong id="cost-dashboard-storage">$0.00</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <span>Network & Bandwidth</span>
+                                    <strong id="cost-dashboard-network">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; color: var(--accent-green); font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <span>Bandwidth Savings</span>
+                                    <strong id="cost-dashboard-bandwidth-savings">-$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>Payment Processor Fees</span>
                                     <strong id="cost-dashboard-payment-fees">$0.00</strong>
                                 </li>
@@ -7755,6 +7763,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-network').textContent = '$' + (data.network_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-bandwidth-savings').textContent = '-$' + (data.bandwidth_savings / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
