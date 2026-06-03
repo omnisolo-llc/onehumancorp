@@ -202,6 +202,12 @@ impl Tracker {
         }
     }
 
+    pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
+        if let Some(ref auditor) = self.auditor {
+            auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
+        }
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
         let total_tokens = if let Some(auditor) = &self.auditor {
             auditor.get_total_tokens()
