@@ -2525,7 +2525,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, confidence_score, created_at FROM inbox_messages ORDER BY created_at DESC")
         .fetch_all(&mut *tx)
         .await
     {
@@ -2535,6 +2535,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 use sqlx::Row;
                 let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
                 let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                let confidence_score: Option<i32> = row.get("confidence_score");
                 serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
@@ -2542,6 +2543,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "content": row.get::<String, _>("content"),
                     "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
+                    "confidence_score": confidence_score.unwrap_or(0),
                     "created_at": created_at_str,
                 })
             }).collect();

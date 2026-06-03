@@ -97,8 +97,19 @@ async fn handle_webhook(
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
 
-    // Generate a draft reply
+    // Generate a draft reply and confidence score
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+
+    // Simulate confidence score
+    let msg_lower = payload.message.to_lowercase();
+    let confidence_score = if msg_lower.contains("escalate") || msg_lower.contains("urgent") || msg_lower.contains("complaint") {
+        50
+    } else if msg_lower.contains("open") || msg_lower.contains("price") || msg_lower.contains("hours") {
+        95
+    } else {
+        80
+    };
+
     let draft_reply = if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(
@@ -109,12 +120,23 @@ async fn handle_webhook(
         let client = crate::minimax::MinimaxClient::new(api_key);
         client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
-        "Thank you for reaching out! We will get back to you shortly.".to_string()
+        if confidence_score > 90 {
+            "Thanks for reaching out! We are open until 6 PM today.".to_string()
+        } else {
+            "Thank you for reaching out! We will get back to you shortly.".to_string()
+        }
+    };
+
+    let status = if confidence_score > 90 {
+        "auto_replied"
+    } else if confidence_score >= 70 {
+        "pending"
+    } else {
+        "escalated"
     };
 
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
-    let status = "pending";
     let pool = get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
@@ -124,14 +146,15 @@ async fn handle_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
     }
     let _ = sqlx::query(
-        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status, confidence_score) VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(&id)
     .bind(&payload.tenant_id)
     .bind(&payload.source)
     .bind(&payload.message)
     .bind(&draft_reply)
-    .bind(&status)
+    .bind(status)
+    .bind(confidence_score)
     .execute(&mut *tx)
     .await;
     let _ = tx.commit().await;

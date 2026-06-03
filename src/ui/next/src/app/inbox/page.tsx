@@ -3,45 +3,42 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 type Message = {
-  id: number;
+  id: number | string;
   sender: string;
   source: string;
   icon: string;
   content: string;
   date: string;
   draft?: string;
+  status?: string;
+  confidence_score?: number;
 };
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'Facebook User',
-      source: 'Facebook',
-      icon: '📘',
-      content: 'Do you have vegan birthday cake options?',
-      date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
-    },
-    {
-      id: 2,
-      sender: 'Instagram User',
-      source: 'Instagram',
-      icon: '📸',
-      content: 'When will my order be shipped?',
-      date: 'Yesterday',
-      draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
-    },
-    {
-      id: 3,
-      sender: 'WhatsApp User',
-      source: 'WhatsApp',
-      icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  import { useEffect } from 'react';
+  useEffect(() => {
+    fetch('/api/inbox/messages')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const mapped = data.map((m: any) => ({
+            id: m.id,
+            sender: m.source === 'stripe' || m.source === 'mercadopago' ? 'System' : (m.source || 'Customer'),
+            source: m.source || 'Customer',
+            icon: m.source === 'instagram' ? '📷' : '💬',
+            content: m.content,
+            date: m.created_at || 'Just now',
+            draft: m.draft_reply,
+            status: m.status,
+            confidence_score: m.confidence_score
+          }));
+          setMessages(mapped);
+        }
+      })
+      .catch(console.error);
+  }, []);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -308,13 +305,25 @@ export default function InboxPage() {
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
 
-            {/* Auto-Drafted AI Reply Component */}
-            {msg.draft && msg.sender !== 'Me' && (
+            {/* AI Action/Draft Component */}
+            {msg.sender !== 'Me' && msg.status && (
                <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Replied
-                  </div>
+                  {msg.status === 'auto_replied' && (
+                    <div className="absolute -top-3 left-4 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                       ✅ Auto-Replied (Score: {msg.confidence_score})
+                    </div>
+                  )}
+                  {msg.status === 'escalated' && (
+                    <div className="absolute -top-3 left-4 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                       ⚠️ Escalated (Score: {msg.confidence_score})
+                    </div>
+                  )}
+                  {msg.status === 'pending' && (
+                    <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                       AI Draft (Score: {msg.confidence_score})
+                    </div>
+                  )}
 
                   {editingId === msg.id ? (
                       <div className="mt-2">
@@ -333,34 +342,29 @@ export default function InboxPage() {
                   ) : (
                       <>
                         <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
-                           </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                               Edit
-                           </button>
-                           <button onClick={async () => {
-                               const res = await fetch('/api/v1/booking/conversational_checkout', {
-                                   method: 'POST',
-                                   headers: { 'Content-Type': 'application/json' },
-                                   body: JSON.stringify({
-                                       tenant_id: 'tenant_123',
-                                       customer_id: 'cust_456',
-                                       amount_cents: 1000,
-                                       product_id: 'prod_789'
-                                   })
-                               });
-                               const data = await res.json();
-                               setCheckoutSession(data);
-                               setShowCheckoutModal(true);
-                               setCheckoutSuccess(false);
-                           }} className="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-1">
-                               Generate Checkout Link
-                           </button>
-                        </div>
+                        {msg.status === 'pending' && (
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
+                             <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
+                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                                 Approve
+                             </button>
+                             <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                 Edit
+                             </button>
+                             <button onClick={() => setMessages(messages.filter(m => m.id !== msg.id))} className="flex-1 bg-white text-red-500 border border-red-200 font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-red-50 transition-colors flex items-center justify-center gap-1">
+                                 Reject
+                             </button>
+                          </div>
+                        )}
+                        {msg.status === 'escalated' && (
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
+                             <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="w-full bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
+                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                 Write Manual Reply
+                             </button>
+                          </div>
+                        )}
                       </>
                   )}
                </div>
