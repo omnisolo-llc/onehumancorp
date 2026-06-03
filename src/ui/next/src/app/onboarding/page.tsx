@@ -187,6 +187,49 @@ export default function OnboardingWizard() {
     adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
+  const handleInstantSubmit = async () => {
+    if (businessDescription.trim().length < 10) {
+      setValidationError('Please provide a slightly more detailed description (at least 10 characters).');
+      return;
+    }
+    setValidationError('');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_name: businessDescription, what_you_sell: businessDescription, location: "Online" })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBusinessType(data.business_type || 'Online Store');
+        setCategories(data.categories || []);
+        if (data.initial_products && data.initial_products.length > 0) {
+           setFirstProductName(data.initial_products[0].name);
+           setFirstProductPrice(data.initial_products[0].price);
+        }
+        if (data.business_name) {
+          setBusinessName(data.business_name);
+        }
+        // Jump directly to Style & Team for 1-Tap Approval
+        setStep(3);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || "Failed to process business details.");
+        // We stay on the current screen to let the user retry and show truthful error
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Network error occurred. Please try again.");
+      // We stay on the current screen to let the user retry and show truthful error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleIntake = async () => {
     setIsLoading(true);
     setError('');
@@ -327,10 +370,14 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
+              {chatStep !== 'instant' && (
+                <>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                  </p>
+                </>
+              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
