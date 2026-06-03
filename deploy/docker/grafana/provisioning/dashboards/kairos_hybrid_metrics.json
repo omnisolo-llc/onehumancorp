@@ -33,9 +33,14 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"color: #000; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #000; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
+        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"color: #fff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #fff; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "datasource": {
@@ -126,7 +131,12 @@
       ],
       "title": "KAIROS State Transition Rate",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "datasource": {
@@ -218,7 +228,12 @@
       ],
       "title": "KAIROS Transition Latency (P95)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "datasource": {
@@ -309,7 +324,12 @@
       ],
       "title": "Sub-Agent Task Queue Depth",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "id": 5,
@@ -336,7 +356,9 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
       }
     },
     {
@@ -364,7 +386,9 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
       }
     },
     {
@@ -397,7 +421,9 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
       }
     },
     {
@@ -493,7 +519,12 @@
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "datasource": {
@@ -588,7 +619,12 @@
       ],
       "title": "RAG Escalation Rate",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "datasource": {
@@ -683,7 +719,12 @@
       ],
       "title": "Token Budget Alerts (last 1h)",
       "type": "timeseries",
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "type": "timeseries",
@@ -706,7 +747,12 @@
           "mode": "multi"
         }
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     },
     {
       "type": "timeseries",
@@ -729,7 +775,12 @@
           "mode": "multi"
         }
       },
-      "transparent": true
+      "transparent": true,
+      "style": {
+        "backdrop-filter": "blur(30px) saturate(210%)",
+        "background": "rgba(22, 22, 26, 0.7)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)"
+      }
     }
   ],
   "schemaVersion": 38,
