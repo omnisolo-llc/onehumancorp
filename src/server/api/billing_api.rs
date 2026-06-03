@@ -26,10 +26,21 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct CheckoutRequest {
+    pub plan_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CheckoutResponse {
+    pub url: String,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/checkout", axum::routing::post(checkout_handler))
         .with_state(hub)
 }
 
@@ -161,4 +172,48 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn checkout_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<CheckoutResponse>, (axum::http::StatusCode, String)> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => "default".to_string()
+    };
+
+    // Extract the body into CheckoutRequest
+    let bytes = match axum::body::to_bytes(request.into_body(), usize::MAX).await {
+        Ok(b) => b,
+        Err(e) => return Err((axum::http::StatusCode::BAD_REQUEST, e.to_string()))
+    };
+    let req: CheckoutRequest = match serde_json::from_slice(&bytes) {
+        Ok(r) => r,
+        Err(e) => return Err((axum::http::StatusCode::BAD_REQUEST, e.to_string()))
+    };
+
+    let price = match req.plan_id.as_str() {
+        "starter" => 29.0,
+        "pro" => 79.0,
+        "business" => 299.0,
+        _ => 0.0,
+    };
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "dummy".to_string());
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    let url = match client.create_checkout_session(&req.plan_id, &tenant_id, price).await {
+        Ok(u) => u,
+        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))
+    };
+
+    Ok(Json(CheckoutResponse { url }))
 }

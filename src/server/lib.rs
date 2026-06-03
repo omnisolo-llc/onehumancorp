@@ -5619,7 +5619,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>5GB Storage Quota</li>
                                 <li>100 Products Limit</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            <button onclick="startCheckout('starter')">Upgrade to Starter via Stripe</button>
                         </div>
 
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -5631,7 +5631,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>50GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <button onclick="startCheckout('pro')">Upgrade to Pro via Stripe</button>
                         </div>
 
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -5643,7 +5643,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>500GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                            <button onclick="startCheckout('business')">Upgrade to Business via Stripe</button>
                         </div>
 
                         <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -6574,6 +6574,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
                             // Re-run the campaign now that they have pro
                             sendReviewCampaign();
+                        }
+
+                        async function startCheckout(planId) {
+                            try {
+                                const response = await fetch('/api/billing/checkout', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ plan_id: planId })
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error('Failed to create checkout session');
+                                }
+
+                                const data = await response.json();
+                                if (data.url) {
+                                    window.location.href = data.url;
+                                } else {
+                                    alert('Error: No checkout URL returned');
+                                }
+                            } catch (error) {
+                                console.error('Checkout error:', error);
+                                alert('An error occurred while starting checkout.');
+                            }
                         }
 
                         function closeEmbedSetup() {
