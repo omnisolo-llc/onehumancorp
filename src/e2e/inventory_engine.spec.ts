@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Autonomous Inventory & Fulfillment Engine', () => {
   test('Non-technical user should view AI restock alerts and stock status', async ({ page }) => {
-    // We are mocking a direct visit to the inventory page for verification
-    await page.goto('http://localhost:3000/inventory');
+    // Navigate using relative URL
+    await page.goto('/inventory');
 
     // Verify AI Alert is present
     await expect(page.locator('text=✨ Heads up Priya')).toBeVisible();
