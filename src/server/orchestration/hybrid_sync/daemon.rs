@@ -167,6 +167,11 @@ impl HybridSyncDaemon {
                             .execute(&self.sqlite_pool)
                             .await;
                         warn!("Failed to commit pg transaction for mission {}: {}", id, e);
+                        let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                .bind(e.to_string())
+                                .bind(&id)
+                                .execute(&self.sqlite_pool)
+                                .await;
                         let _ = ::server_telemetry::record_sync_daemon_error_total(
                             &self.pg_pool,
                             1.0,
@@ -207,6 +212,11 @@ impl HybridSyncDaemon {
                         .await;
                     let _ = tx.rollback().await;
                     warn!("Failed to sync agent_mission to pg: {}", e);
+                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(e.to_string())
+                            .bind(&id)
+                            .execute(&self.sqlite_pool)
+                            .await;
                     let _ = ::server_telemetry::record_sync_daemon_error_total(
                         &self.pg_pool,
                         1.0,
