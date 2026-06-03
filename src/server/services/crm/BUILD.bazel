@@ -1,0 +1,34 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "crm",
+    crate_root = "mod.rs",
+    srcs = glob(["*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/domain/crm",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "crm_test",
+    crate = ":crm",
+    deps = [
+        "@crates//:tokio",
+    ],
+)
+
+exports_files(
+    [
+        "mod.rs",
+        "lifecycle_engine.rs",
+        "lifecycle_engine_test.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
