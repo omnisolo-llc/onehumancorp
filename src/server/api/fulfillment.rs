@@ -100,7 +100,7 @@ async fn get_queue(
             "Preparing" => {
                 to_pack.push(order.clone());
             }
-            "ReadyForPickup" | "DriverRequested" => {
+            "ReadyForPickup" => {
                 awaiting_pickup.push(order.clone());
             }
             _ => {}
@@ -140,14 +140,8 @@ async fn execute_action(
                         order.status = "ReadyForPickup".to_string();
                     }
                 }
-                "request_driver" => {
-                    if order.fulfillment_mode == "LocalDelivery" {
-                        // Mocking driver dispatch via DoorDash Drive
-                        order.status = "DriverRequested".to_string();
-                    }
-                }
                 "hand_off" => {
-                    if order.status == "ReadyForPickup" || order.status == "DriverRequested" {
+                    if order.status == "ReadyForPickup" {
                         order.status = "Delivered".to_string();
                     }
                 }

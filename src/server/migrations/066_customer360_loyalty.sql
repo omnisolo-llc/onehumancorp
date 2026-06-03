@@ -22,15 +22,3 @@ CREATE TABLE IF NOT EXISTS loyalty_ledger (
 );
 
 CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
-
-ALTER TABLE customer360 ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_customer360 ON customer360;
-CREATE POLICY tenant_isolation_customer360
-ON customer360
-USING (tenant_id = current_setting('app.current_tenant', true));
-
-ALTER TABLE loyalty_ledger ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_loyalty_ledger ON loyalty_ledger;
-CREATE POLICY tenant_isolation_loyalty_ledger
-ON loyalty_ledger
-USING (tenant_id = current_setting('app.current_tenant', true));
