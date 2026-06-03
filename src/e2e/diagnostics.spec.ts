@@ -6,17 +6,15 @@ test.describe('Diagnostics Page', () => {
     const screen = page.locator('#diagnostics-screen');
 
     await expect(screen).toBeVisible();
-    // Mock missing functionality for now, test the UI that is present
-    // await expect(screen).toContainText('System Status: All systems operational');
-    // await expect(screen).toContainText('Database: Healthy');
-    // await expect(screen).toContainText('Redis: Healthy');
+    await expect(screen).toContainText('System Status: All systems operational');
+    await expect(screen).toContainText('Database: Healthy');
+    await expect(screen).toContainText('Redis: Healthy');
     await expect(screen).toContainText('Response time latency: 42 ms');
 
-    // Mock missing functionality for now, test the UI that is present
-    // await page.getByRole('button', { name: 'Run Test' }).click();
-    // await expect(page.locator('#diagnostics-result')).toContainText('Running diagnostics test result passed');
-    // await page.getByRole('button', { name: 'Export Report' }).click();
-    // await expect(page.locator('#diagnostics-result')).toContainText('Diagnostics report download ready');
+    await page.getByRole('button', { name: 'Run Test' }).click();
+    await expect(page.locator('#diagnostics-result')).toContainText('Running diagnostics test result passed');
+    await page.getByRole('button', { name: 'Export Report' }).click();
+    await expect(page.locator('#diagnostics-result')).toContainText('Diagnostics report download ready');
   });
 });
 
