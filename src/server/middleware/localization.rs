@@ -30,7 +30,7 @@ pub async fn localization_middleware(mut req: Request<axum::body::Body>, next: N
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, body::Body, http::Request};
+    use axum::http::Request;
 
     #[tokio::test]
     async fn test_localization_middleware_usd() {
@@ -39,7 +39,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let (mut parts, _) = req.into_parts();
+        let (parts, _) = req.into_parts();
 
         // This is a simplified unit test logic since calling the actual axum middleware Next is complex
         // without a full app router in the test scope. We'll just test the extraction logic.
@@ -66,7 +66,7 @@ mod tests {
             .body(Body::empty())
             .unwrap();
 
-        let (mut parts, _) = req.into_parts();
+        let (parts, _) = req.into_parts();
 
         let accept_lang = parts
             .headers
