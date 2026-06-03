@@ -3530,10 +3530,25 @@ async fn create_ui_bom_item_handler(
         loop {
             tokio::select! {
                 _ = prune_interval.tick() => {
-                    let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
-                    if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        tracing::error!("failed to prune stale missions: {}", e);
+
+                    // Prune stale missions across all tenants
+                    let tenants_query = sqlx::query("SELECT id FROM tenants");
+                    use sqlx::Row;
+                    if let Ok(tenants) = tenants_query.fetch_all(&hub_for_sched.pool).await {
+                        for tenant in tenants {
+                            let tenant_id: String = tenant.get("id");
+                            let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), tenant_id);
+                            if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                                tracing::error!("failed to prune stale missions for tenant: {}", e);
+                            }
+                        }
                     }
+                    // Prune system tenant as well
+                    let system_sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
+                    if let Err(e) = system_sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                        tracing::error!("failed to prune stale missions for system tenant: {}", e);
+                    }
+
                 }
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();

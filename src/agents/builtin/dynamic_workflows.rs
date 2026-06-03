@@ -10,7 +10,6 @@ use tokio::sync::{mpsc, Semaphore};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
-    script: String,
     max_concurrent: usize,
     max_total_agents: usize,
 }
@@ -33,9 +32,8 @@ pub trait WorkflowAgent: Send + Sync {
 }
 
 impl DynamicWorkflow {
-    pub fn new(script: &str) -> Self {
+    pub fn new(_script: &str) -> Self {
         Self {
-            script: script.to_string(),
             max_concurrent: 16,
             max_total_agents: 1000,
         }
