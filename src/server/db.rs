@@ -203,7 +203,9 @@ impl DB {
                     }
                     #[cfg(not(unix))]
                     {
-                        let _ = std::fs::write(secret_path, &new_key);
+                        if let Err(e) = std::fs::write(&secret_path, &new_key) {
+                            tracing::error!("Failed to write sqlite key: {}", e);
+                        }
                     }
 
                     new_key
