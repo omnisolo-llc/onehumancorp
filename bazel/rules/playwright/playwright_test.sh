@@ -1,8 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ -z "${TEST_SRCDIR:-}" || -z "${TEST_TMPDIR:-}" ]]; then
+  echo "[playwright] Error: Playwright tests must run under Bazel with TEST_SRCDIR and TEST_TMPDIR set." >&2
+  exit 1
+fi
+
 RUNFILES_ROOT="${RUNFILES_ROOT:-}"
-if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
+if [[ -z "$RUNFILES_ROOT" ]]; then
   if [[ -n "${TEST_WORKSPACE:-}" && -d "$TEST_SRCDIR/$TEST_WORKSPACE" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR/$TEST_WORKSPACE"
   elif [[ -d "$TEST_SRCDIR/_main" ]]; then
@@ -11,24 +16,13 @@ if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
     RUNFILES_ROOT="$TEST_SRCDIR"
   fi
 fi
-if [[ -z "$RUNFILES_ROOT" ]]; then
-  RUNFILES_ROOT="$(pwd)"
-fi
 
-# Traverse up to find the real repository/workspace root containing node_modules
-workspace_root=""
-current_dir="$(pwd)"
-while [[ "$current_dir" != "/" ]]; do
-  if [[ -d "$current_dir/node_modules" && -f "$current_dir/package.json" ]]; then
-    workspace_root="$current_dir"
-    break
-  fi
-  current_dir="$(dirname "$current_dir")"
-done
-
-if [[ -z "$workspace_root" ]]; then
-  workspace_root="$(pwd)"
+workspace_root="$RUNFILES_ROOT"
+if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules" ]]; then
+  echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
+  exit 1
 fi
+cd "$workspace_root"
 
 # Resolve spec files to absolute paths if passed as arguments.
 ABS_SPEC_FILES=()
@@ -90,11 +84,11 @@ for candidate in "src/server/server" "../_main/src/server/server"; do
   fi
 done
 
-export HOME="${HOME:-${TEST_TMPDIR:-/tmp}/home}"
+export HOME="${HOME:-$TEST_TMPDIR/home}"
 mkdir -p "$HOME"
 
 # Run Playwright from a writable project-shaped directory.
-WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
+WORK_DIR="$TEST_TMPDIR/playwright-workspace"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/src/server"
 cp "$workspace_root/package.json" "$WORK_DIR/package.json"
@@ -183,6 +177,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
+echo "[playwright] Pre-pulling docker images with retries..."
+for i in {1..3}; do docker pull pgvector/pgvector:pg16 >/dev/null 2>&1 && break || sleep 2; done
+for i in {1..3}; do docker pull valkey/valkey:8-alpine >/dev/null 2>&1 && break || sleep 2; done
+
 docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
 docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
 
@@ -258,7 +256,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-    "$SERVER_BIN" >"${TEST_TMPDIR:-/tmp}/server.log" 2>&1 &
+    "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
   echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
@@ -269,12 +267,12 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     fi
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died."
-      tail -20 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -20 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     if (( i == 120 )); then
       echo "[playwright] Error: Server failed to become healthy after 120 seconds."
-      tail -50 "${TEST_TMPDIR:-/tmp}/server.log"
+      tail -50 "$TEST_TMPDIR/server.log"
       exit 1
     fi
     sleep 1
@@ -311,7 +309,7 @@ fi
 # Run Playwright
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"
+  LIST_LOG="$TEST_TMPDIR/playwright-list.log"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
     if grep -q "No tests found" "$LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."

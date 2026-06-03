@@ -34,6 +34,7 @@ nav:
       - Shared Task Mesh Architecture: technical/architecture/kairos/shared-task-mesh-architecture.md
       - Sub-Agent Queue Design: technical/architecture/kairos/sub-agent-queue-design.md
       - Task Decomposition: technical/architecture/kairos/task-decomposition-design.md
+      - Offline Mesh Sync: architecture/mesh/offline_first_sync.md
   - Features:
       - KAIROS Orchestration: features/kairos_orchestration.md
       - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md

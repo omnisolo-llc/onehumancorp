@@ -68,9 +68,12 @@ test.describe('Help Center & Documentation System', () => {
         await page.goto('/dashboard');
 
         // Find help widget button via aria-label
-        const helpWidgetBtn = page.locator('button[aria-label="Help"]');
-        await expect(helpWidgetBtn).toBeVisible();
-        await helpWidgetBtn.click();
+        const helpWidgetBtn = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '?' }).first();
+        const fallbackBtn = page.locator('button[aria-label="Help"]');
+        const theBtn = (await helpWidgetBtn.isVisible()) ? helpWidgetBtn : fallbackBtn;
+
+        await expect(theBtn).toBeVisible();
+        await theBtn.click();
 
         const videosBtn = page.locator('button:has-text("Videos")');
         await expect(videosBtn).toBeVisible();
@@ -94,19 +97,29 @@ test.describe('Help Center & Documentation System', () => {
     });
 
     test('Interactive Walkthroughs - verify trigger', async ({ page }) => {
-        // Go to builder where we can manually trigger the button
+        // Go to builder where generate-btn actually exists
         await page.goto('/builder');
 
-        // To get to step 3 where we can see the tour button for generate-btn
-        await page.evaluate(() => {
-           window.localStorage.setItem('tenant_id', 'test-store');
-        });
+        // We must reach step 2 to see the generate button
+        await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+        await page.locator('input[placeholder="e.g. Retail, Consulting, Tech"]').fill('Retail');
+        await page.locator('button:has-text("Next")').click();
 
-        // Go to the builder step 2 directly with bio content using store state bypassing
-        // Not possible via url, so we will use the standard KAIROS route
-        await page.goto('/kairos?walkthrough=true');
+        // Now we should be on the step with the bio and generate button
+        await expect(page.locator('#bio-input')).toBeVisible();
+        await expect(page.locator('#generate-btn')).toBeVisible();
+
+        // Find and click help widget
+        const helpWidgetBtn = page.locator('button[aria-label="Open Help & Resources"]');
+        await expect(helpWidgetBtn).toBeVisible();
+        await helpWidgetBtn.click();
+
+        // Trigger tour
+        const storeTourBtn = page.locator('span:has-text("Tour: Activate your AI Support Agent")');
+        await expect(storeTourBtn).toBeVisible();
+        await storeTourBtn.click();
 
         // Look for the speech bubble tooltip
-        await expect(page.locator('text="The Shared Task List is the \'Brain\' of your business, where KAIROS manages and prioritizes all agent activities."')).toBeVisible({ timeout: 5000 });
+        await expect(page.locator('h3:has-text("Activate your AI agent.")')).toBeVisible({ timeout: 5000 });
     });
 });

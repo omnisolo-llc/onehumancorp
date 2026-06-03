@@ -20,7 +20,20 @@ pub fn get_ongoing_generation() -> Arc<Mutex<HashSet<String>>> {
 pub static EDGE_CACHE: OnceLock<Arc<HybridCache<String>>> = OnceLock::new();
 
 pub fn get_edge_cache() -> Arc<HybridCache<String>> {
-    EDGE_CACHE.get_or_init(|| Arc::new(HybridCache::new(None))).clone()
+    EDGE_CACHE.get_or_init(|| {
+        let redis_client = if let Ok(url) = std::env::var("REDIS_URL") {
+            match redis::Client::open(url.clone()) {
+                Ok(client) => Some(client),
+                Err(e) => {
+                    tracing::warn!("Failed to initialize Redis client for EDGE_CACHE at {}: {}. Falling back to in-memory cache.", url, e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        Arc::new(HybridCache::new(redis_client))
+    }).clone()
 }
 
 pub struct EdgeWorkerState {
@@ -35,18 +48,36 @@ fn escape_html(s: &str) -> String {
      .replace("'", "&#x27;")
 }
 
-pub async fn handle_edge_request(
+pub struct StorefrontRouter;
+
+impl StorefrontRouter {
+    pub async fn handle_edge_request(
+        Extension(state): Extension<Arc<EdgeWorkerState>>,
+        Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+        headers: axum::http::HeaderMap,
+    ) -> Result<Response<Body>, axum::http::StatusCode> {
+        handle_edge_request_impl(Extension(state), Path((tenant_id_str, site_id_str)), headers).await
+    }
+}
+
+pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Response<Body>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
-    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id);
+    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
+    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         let mut response = Html(cached_html).into_response();
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
         response.headers_mut().insert(
             CACHE_CONTROL,
             "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
@@ -87,6 +118,10 @@ pub async fn handle_edge_request(
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
             let mut response = Html(cached_html).into_response();
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
             response.headers_mut().insert(
                 CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
@@ -102,9 +137,14 @@ pub async fn handle_edge_request(
         ongoing.lock().await.remove(&cache_key);
     }
 
-    let (html, _tags) = result?;
+    let (html, tags) = result?;
 
     let mut response = Html(html).into_response();
+    if !tags.is_empty() {
+        if let Ok(cache_tag) = tags.join(", ").parse() {
+            response.headers_mut().insert("Cache-Tag", cache_tag);
+        }
+    }
     response.headers_mut().insert(
         CACHE_CONTROL,
         "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
