@@ -103,7 +103,8 @@ proto_rust_library(
 # ── Skills ─────────────────────────────────────────────────────────────────────
 
 proto_library(
-    name = "skills_proto",
+    name = "skills.proto",
+    "tax.proto",
     srcs = ["skills.proto"],
     deps = [":common_proto"],
     visibility = ["//visibility:public"],

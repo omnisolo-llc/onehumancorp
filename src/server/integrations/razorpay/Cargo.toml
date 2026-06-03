@@ -5,6 +5,3 @@ edition = "2024"
 
 [lib]
 path = "mod.rs"
-
-[dependencies]
-server_integrations_core = { path = "../core" }
