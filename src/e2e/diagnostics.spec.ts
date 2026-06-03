@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Diagnostics Page', () => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   test('shows health metrics and diagnostic actions', async ({ page }) => {
     await page.goto('/diagnostics');
     const screen = page.locator('#diagnostics-screen');

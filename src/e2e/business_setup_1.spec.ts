@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard', () => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   test.beforeEach(async ({ page }) => {
     const id = `business-setup-${Date.now()}-${Math.random()}`;
     await page.addInitScript((tenantId) => {
