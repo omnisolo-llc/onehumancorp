@@ -35,15 +35,7 @@ pub struct DraftPage {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct StoreProfile {
-    #[serde(default)]
-    pub theme: Option<String>,
-    #[serde(default)]
-    pub sample_products: Vec<serde_json::Value>,
-    #[serde(default)]
-    pub shipping_settings: Option<serde_json::Value>,
-    #[serde(default)]
-    pub tax_settings: Option<serde_json::Value>,
+pub struct SiteDraft {
     pub domain: Option<String>,
     pub pages: Vec<DraftPage>,
 }
@@ -62,7 +54,7 @@ pub struct GenerateStorefrontRequest {
 #[derive(Deserialize)]
 pub struct PublishDraftRequest {
     pub domain: Option<String>,
-    pub draft: StoreProfile,
+    pub draft: SiteDraft,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -166,7 +158,7 @@ pub struct BrandToolboxResponse {
     pub social_calendar: Vec<SocialCalendarItem>,
     pub assets: Vec<GeneratedBrandAsset>,
     pub photoshoot: PhotoshootPlan,
-    pub store_profile: StoreProfile,
+    pub website_draft: SiteDraft,
     pub editable_controls: Vec<String>,
     pub export_formats: Vec<String>,
 }
@@ -229,7 +221,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
@@ -533,10 +525,6 @@ async fn create_block(
     )
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let cache = crate::builder::edge::get_edge_cache();
-    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -567,10 +555,6 @@ async fn update_block(
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let cache = crate::builder::edge::get_edge_cache();
-    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -714,20 +698,12 @@ fn synthesize_brand_dna(
     }
 }
 
-fn synthesize_store_profile(description: &str, brand_dna: Option<&BrandDna>) -> StoreProfile {
+fn synthesize_site_draft(description: &str, brand_dna: Option<&BrandDna>) -> SiteDraft {
     let context = infer_business_context(description, brand_dna);
     let is_service = context.business_type.contains("Service");
     let primary_offer = if is_service { "Book a consultation" } else { "Shop the latest" };
 
-    StoreProfile {
-        theme: Some("Glassmorphism".to_string()),
-        sample_products: vec![
-            serde_json::json!({"name": "Signature Item", "price": 45.0}),
-            serde_json::json!({"name": "Premium Bundle", "price": 120.0}),
-            serde_json::json!({"name": "Basic Package", "price": 25.0}),
-        ],
-        shipping_settings: Some(serde_json::json!({"default_rate": 5.0, "free_shipping_threshold": 50.0})),
-        tax_settings: Some(serde_json::json!({"default_tax_rate": 0.08})),
+    SiteDraft {
         domain: None,
         pages: vec![DraftPage {
             path: "/".to_string(),
@@ -905,7 +881,7 @@ fn synthesize_brand_toolbox(payload: &GenerateBrandToolboxRequest) -> BrandToolb
         .campaign_prompt
         .clone()
         .unwrap_or_else(|| "launch, trust building, and repeat purchases".to_string());
-    let store_profile = synthesize_store_profile(&payload.description, Some(&brand_dna));
+    let website_draft = synthesize_site_draft(&payload.description, Some(&brand_dna));
 
     BrandToolboxResponse {
         id: None,
@@ -1053,7 +1029,7 @@ fn synthesize_brand_toolbox(payload: &GenerateBrandToolboxRequest) -> BrandToolb
                 "add to Brand DNA".to_string(),
             ],
         },
-        store_profile,
+        website_draft,
         editable_controls: vec![
             "Edit copy".to_string(),
             "Regenerate variants".to_string(),
@@ -1157,7 +1133,7 @@ async fn publish_brand_toolbox_website(
     } else {
         Some(format!("{}.ohc.store", slug))
     };
-    let site = publish_store_profile(&pool, tenant_id, domain, toolbox.store_profile).await?;
+    let site = publish_site_draft(&pool, tenant_id, domain, toolbox.website_draft).await?;
     Ok(Json(site))
 }
 
@@ -1193,7 +1169,7 @@ async fn generate_storefront(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<GenerateStorefrontRequest>,
-) -> Result<Json<StoreProfile>, axum::http::StatusCode> {
+) -> Result<Json<SiteDraft>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
         .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let persisted_brand_dna = if payload.brand_dna.is_none() {
@@ -1208,7 +1184,7 @@ async fn generate_storefront(
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     if api_key.trim().is_empty() {
-        return Ok(Json(synthesize_store_profile(
+        return Ok(Json(synthesize_site_draft(
             &payload.description,
             active_brand_dna,
         )));
@@ -1269,22 +1245,10 @@ Additional brand/product grounding:
 First, synthesize the context to select an appropriate template, generate copywriting, and select relevant concepts.
 Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
-You must also act as the Operations and Finance agents to generate 3 sample products (in 'sample_products'), default shipping settings, and default tax settings.
 
 The JSON must exactly match this structure:
 {{
   "domain": null,
-  "theme": "Glassmorphism",
-  "sample_products": [
-    {{"name": "...", "price": 10.0, "description": "..."}}
-  ],
-  "shipping_settings": {{
-    "default_rate": 5.0,
-    "free_shipping_threshold": 50.0
-  }},
-  "tax_settings": {{
-    "default_tax_rate": 0.08
-  }},
   "pages": [
     {{
       "path": "/",
@@ -1320,7 +1284,7 @@ The JSON must exactly match this structure:
     }}
   ]
 }}
-Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) and sample products perfectly reflect the extracted entities."#,
+Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
         business_context.name,
         business_context.business_type,
         business_context.vibe,
@@ -1328,17 +1292,17 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         source_context
     );
 
-    let site_draft: StoreProfile = match minimax.reason(&promoter_prompt).await {
+    let site_draft: SiteDraft = match minimax.reason(&promoter_prompt).await {
         Ok(promoter_response) => {
             let cleaned_response = clean_model_json(&promoter_response);
             serde_json::from_str(cleaned_response).unwrap_or_else(|e| {
                 tracing::warn!("Failed to parse JSON from Promoter AI, using heuristic storefront: {}", e);
-                synthesize_store_profile(&payload.description, active_brand_dna)
+                synthesize_site_draft(&payload.description, active_brand_dna)
             })
         },
         Err(e) => {
             tracing::warn!("Promoter AI unavailable, using heuristic storefront: {}", e);
-            synthesize_store_profile(&payload.description, active_brand_dna)
+            synthesize_site_draft(&payload.description, active_brand_dna)
         }
     };
 
@@ -1352,15 +1316,15 @@ async fn publish_draft(
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
         .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-    let site = publish_store_profile(&pool, tenant_id, payload.domain, payload.draft).await?;
+    let site = publish_site_draft(&pool, tenant_id, payload.domain, payload.draft).await?;
     Ok(Json(site))
 }
 
-async fn publish_store_profile(
+async fn publish_site_draft(
     pool: &PgPool,
     tenant_id: Uuid,
     domain: Option<String>,
-    draft: StoreProfile,
+    draft: SiteDraft,
 ) -> Result<SiteResponse, axum::http::StatusCode> {
     let mut tx = pool
         .begin()

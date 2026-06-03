@@ -7,7 +7,6 @@ rust_library(
         "cache.rs",
         "calculator.rs",
         "compression.rs",
-        "dynamic.rs",
         "mod.rs",
         "payment_routing.rs",
         "prompt_caching.rs",

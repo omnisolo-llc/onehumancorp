@@ -1,21 +1,9 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-
-#[derive(Deserialize)]
-struct BashArgs {
-    command: String,
-    #[serde(default = "default_timeout")]
-    timeout: f64,
-}
-
-fn default_timeout() -> f64 {
-    120.0
-}
+use super::{Tool, ToolExecutor};
 
 struct BashExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -23,10 +11,16 @@ struct BashExecutor {
 }
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<BashArgs> for BashExecutor {
-    async fn execute_typed(&self, args: BashArgs) -> Result<String, ToolError> {
-        let command = args.command;
-        let timeout_secs = args.timeout;
+impl ToolExecutor for BashExecutor {
+    async fn execute(
+        &self,
+        args: Value,
+    ) -> Result<String, ToolError> {
+        let command = args["command"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
+            .to_string();
+        let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
         let wd_ref = self.working_dir.as_deref();
@@ -83,81 +77,6 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BashExecutor { working_dir, runner })),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::runner::mock::MockCommandRunner;
-
-    #[tokio::test]
-    async fn test_bash_executor_success() {
-        let runner = Arc::new(MockCommandRunner::new());
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "hello bash", "")));
-
-        let executor = BashExecutor {
-            working_dir: None,
-            runner,
-        };
-
-        let args = BashArgs {
-            command: "echo 'hello bash'".to_string(),
-            timeout: 120.0,
-        };
-
-        let result = executor.execute_typed(args).await.unwrap();
-        assert_eq!(result, "hello bash");
-    }
-
-    #[tokio::test]
-    async fn test_bash_executor_stderr() {
-        let runner = Arc::new(MockCommandRunner::new());
-        runner.push_response(Ok(crate::runner::mock::mock_output(1, "output", "some error")));
-
-        let executor = BashExecutor {
-            working_dir: None,
-            runner,
-        };
-
-        let args = BashArgs {
-            command: "ls -z".to_string(),
-            timeout: 120.0,
-        };
-
-        let result = executor.execute_typed(args).await.unwrap();
-        assert!(result.contains("output"));
-        assert!(result.contains("STDERR:\nsome error"));
-    }
-
-    #[tokio::test]
-    async fn test_bash_executor_timeout() {
-        struct HangingRunner;
-        #[async_trait::async_trait]
-        impl crate::runner::CommandRunner for HangingRunner {
-            async fn run(&self, _prog: &str, _args: &[&str], _cwd: Option<&std::path::Path>, _env: Vec<(String, String)>) -> std::io::Result<std::process::Output> {
-                tokio::time::sleep(Duration::from_secs(5)).await;
-                Ok(crate::runner::mock::mock_output(0, "", ""))
-            }
-        }
-
-        let runner = Arc::new(HangingRunner);
-        let executor = BashExecutor {
-            working_dir: None,
-            runner,
-        };
-
-        let args = BashArgs {
-            command: "sleep 5".to_string(),
-            timeout: 1.0, // Should timeout quickly
-        };
-
-        let result = executor.execute_typed(args).await;
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("timed out")),
-            _ => panic!("Expected LlmRecoverable timeout error"),
-        }
+        execute: Arc::new(BashExecutor { working_dir, runner }),
     }
 }

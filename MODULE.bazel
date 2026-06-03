@@ -240,7 +240,7 @@ use_repo(rules_pkg_rpm, "rules_pkg_rpmbuild")
 register_toolchains("@rules_pkg_rpmbuild//:all")
 
 bazel_dep(name = "rules_oci", version = "2.3.0")
-bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "aspect_bazel_lib", version = "2.7.9")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 bazel_dep(name = "rules_playwright", version = "0.5.4")
@@ -269,11 +269,7 @@ npm.npm_translate_lock(
     },
     pnpm_lock = "//:pnpm-lock.yaml",
 )
-npm.npm_translate_lock(
-    name = "next_npm",
-    pnpm_lock = "//src/ui/next:pnpm-lock.yaml",
-)
-use_repo(npm, "next_npm", "npm")
+use_repo(npm, "npm")
 
 platforms_host = use_extension("@platforms//host:extension.bzl", "host_platform")
 use_repo(platforms_host, "host_platform")

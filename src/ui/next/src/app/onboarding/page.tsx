@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -17,8 +17,6 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
-    adminEmail, setAdminEmail,
-    adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
@@ -28,7 +26,6 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
 
   const handleSaveDraft = async () => {
@@ -49,11 +46,8 @@ export default function OnboardingWizard() {
         businessType,
         categories,
         websiteTemplate,
-        domainChoice,
         firstProductName,
         firstProductPrice,
-        adminEmail,
-        adminPassword,
         aiAgents,
         aiAutoRespond
       };
@@ -105,9 +99,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
@@ -135,11 +126,8 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
-      domainChoice,
       firstProductName,
       firstProductPrice,
-      adminEmail,
-      adminPassword,
       aiAgents,
       aiAutoRespond
     };
@@ -155,8 +143,8 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+    aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -194,8 +182,6 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
-      setStep(1);
-      setChatStep(3);
     } finally {
       setIsLoading(false);
     }
@@ -223,15 +209,14 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: businessName + ' Admin',
-          admin_password: adminPassword || 'password123',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
-          price_type: 'fixed',
-          location: location || ''
+          price_type: 'fixed'
         })
       });
 
@@ -271,7 +256,7 @@ export default function OnboardingWizard() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[24px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
@@ -282,13 +267,13 @@ export default function OnboardingWizard() {
 
         <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           {error && (
-            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[8px] text-sm animate-shake">
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[12px] text-sm animate-shake">
               {error}
             </div>
           )}
 
           {step === 1 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -300,14 +285,14 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
-                      onClick={() => handleSaveDraft()}
+                      onClick={handleSaveDraft}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -323,19 +308,8 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(2);
-                          }
-                        }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -352,7 +326,7 @@ export default function OnboardingWizard() {
                         setChatStep(2);
                       }}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -361,7 +335,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -371,7 +345,7 @@ export default function OnboardingWizard() {
                       Tell us a bit about your products or services.
                     </p>
                     <button
-                      onClick={() => handleSaveDraft()}
+                      onClick={handleSaveDraft}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -386,36 +360,17 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (!whatYouSell.trim()) {
-                              setValidationError('Please tell us what you sell.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(3);
-                          }
-                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => {
-                        if (!whatYouSell.trim()) {
-                          setValidationError('Please tell us what you sell.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(3);
-                      }}
+                      onClick={() => setChatStep(3)}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -424,7 +379,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -434,7 +389,7 @@ export default function OnboardingWizard() {
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
-                      onClick={() => handleSaveDraft()}
+                      onClick={handleSaveDraft}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
@@ -450,38 +405,20 @@ export default function OnboardingWizard() {
                         autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (!location.trim()) {
-                              setValidationError('Please tell us your location.');
-                              return;
-                            }
-                            if (!isLoading) {
-                              setValidationError('');
-                              handleIntake();
-                            }
-                          }
-                        }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (!location.trim()) {
-                          setValidationError('Please tell us your location.');
-                          return;
-                        }
                         setValidationError('');
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -500,7 +437,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in">
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -510,7 +447,7 @@ export default function OnboardingWizard() {
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
+                  onClick={handleSaveDraft}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
@@ -526,34 +463,18 @@ export default function OnboardingWizard() {
                     type="text"
                     autoFocus
                     value={businessName}
-                    onChange={(e) => {
-                      setBusinessName(e.target.value);
-                      if (e.target.value.trim().length < 3) {
-                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
-                  {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
                     value={businessType}
-                    onChange={(e) => {
-                      setBusinessType(e.target.value);
-                      if (e.target.value.trim().length === 0) {
-                        setValidationErrors(prev => ({ ...prev, businessType: 'Required field.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
-                  {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
@@ -561,7 +482,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -571,7 +492,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -580,19 +501,9 @@ export default function OnboardingWizard() {
                         type="text"
                         inputMode="decimal"
                         value={firstProductPrice}
-                        onChange={(e) => {
-                           setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length === 0) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
-                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
-                           } else {
-                              setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
-                           }
-                        }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        onChange={(e) => setFirstProductPrice(e.target.value)}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
                 </div>
               </div>
@@ -605,15 +516,11 @@ export default function OnboardingWizard() {
                       setValidationError('Business Name must be at least 3 characters.');
                       return;
                     }
-                    if (Object.keys(validationErrors).length > 0) {
-                      setValidationError('Please fix the errors before continuing.');
-                      return;
-                    }
                     setValidationError('');
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -622,7 +529,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -632,7 +539,7 @@ export default function OnboardingWizard() {
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
+                  onClick={handleSaveDraft}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
@@ -662,43 +569,17 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.store</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
-                      <input
-                        type="email"
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
-                      <input
-                        type="password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
                     </div>
                   </div>
                 </div>
@@ -750,7 +631,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[12px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -795,7 +676,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 mac-glass-container rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                <div className="p-3 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>

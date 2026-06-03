@@ -100,7 +100,6 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             name = shard_name,
             spec_args = _shard_specs(ci_specs, index, ci_shard_count),
             common_data = common_data,
-            manual = True,
         )
 
     native.test_suite(

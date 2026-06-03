@@ -1,6 +1,6 @@
 use super::server::ReverseTunnelServer;
 use super::client::LocalProxyClient;
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer;
+use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::{McpReverseTunnelService, McpReverseTunnelServiceServer};
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
 use tonic::transport::{Server, Endpoint};
 use std::sync::Arc;

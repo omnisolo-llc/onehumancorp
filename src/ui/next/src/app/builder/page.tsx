@@ -144,7 +144,7 @@ export default function BuilderPage() {
         sort_order: i
       }));
 
-      // In a more complete implementation, we'd store the StoreProfile returned from generate,
+      // In a more complete implementation, we'd store the SiteDraft returned from generate,
       // but for now we construct a minimal valid draft payload preserving current blocks.
       const payload = {
           domain: null,
@@ -712,7 +712,7 @@ export default function BuilderPage() {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[60] flex flex-col justify-end">
             <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[12px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
                   👑
                 </div>
                 <button
@@ -768,9 +768,9 @@ export default function BuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>

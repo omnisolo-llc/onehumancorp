@@ -39,9 +39,11 @@ impl BaseFSProvider {
     fn resolve_path(&self, path_str: &str) -> io::Result<PathBuf> {
         let path = Path::new(path_str);
         // Prevent absolute path bypassing
-        if path.is_absolute() {
-            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Absolute paths not allowed"));
-        }
+        let path = if path.is_absolute() {
+            path.strip_prefix("/").unwrap_or(path)
+        } else {
+            path
+        };
 
         let full_path = self.root_dir.join(path);
         let normalized = normalize_path(&full_path);
@@ -65,41 +67,9 @@ impl FileSystemProvider for BaseFSProvider {
     async fn write_file(&self, path: &str, content: &[u8]) -> io::Result<()> {
         let resolved = self.resolve_path(path)?;
         if let Some(parent) = resolved.parent() {
-            #[cfg(unix)]
-            {
-                let mut builder = tokio::fs::DirBuilder::new();
-                builder.recursive(true);
-                builder.mode(0o700);
-                if let Err(e) = builder.create(parent).await {
-                    if e.kind() != std::io::ErrorKind::AlreadyExists {
-                        return Err(e);
-                    }
-                }
-            }
-            #[cfg(not(unix))]
-            {
-                tokio::fs::create_dir_all(parent).await?;
-            }
+            tokio::fs::create_dir_all(parent).await?;
         }
-
-        #[cfg(unix)]
-        {
-            use tokio::io::AsyncWriteExt;
-            let mut file = tokio::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .mode(0o600)
-                .open(resolved)
-                .await?;
-            file.write_all(content).await?;
-        }
-        #[cfg(not(unix))]
-        {
-            tokio::fs::write(resolved, content).await?;
-        }
-
-        Ok(())
+        tokio::fs::write(resolved, content).await
     }
 
     async fn list_dir(&self, path: &str) -> io::Result<Vec<String>> {

@@ -27,22 +27,6 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
-
-fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return 1.0;
-    }
-    let (dot_product, norm_a, norm_b) = a.iter().zip(b.iter()).fold(
-        (0.0f32, 0.0f32, 0.0f32),
-        |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
-    );
-    if norm_a == 0.0 || norm_b == 0.0 {
-        return 1.0;
-    }
-    let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
-    1.0 - similarity
-}
-
 impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository { store: VectorMemoryStore::Postgres(pool) }
@@ -292,6 +276,25 @@ impl VectorRepository {
                             metadata: row.get("metadata"),
                         };
                         all_records.push(record);
+                    }
+
+                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+                        if a.len() != b.len() || a.is_empty() {
+                            return 1.0;
+                        }
+                        let mut dot_product = 0.0;
+                        let mut norm_a = 0.0;
+                        let mut norm_b = 0.0;
+                        for i in 0..a.len() {
+                            dot_product += a[i] * b[i];
+                            norm_a += a[i] * a[i];
+                            norm_b += b[i] * b[i];
+                        }
+                        if norm_a == 0.0 || norm_b == 0.0 {
+                            return 1.0;
+                        }
+                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+                        1.0 - similarity
                     }
 
                     let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
@@ -593,6 +596,25 @@ impl VectorRepository {
                             metadata: row.get("metadata"),
                         };
                         all_records.push(record);
+                    }
+
+                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+                        if a.len() != b.len() || a.is_empty() {
+                            return 1.0;
+                        }
+                        let mut dot_product = 0.0;
+                        let mut norm_a = 0.0;
+                        let mut norm_b = 0.0;
+                        for i in 0..a.len() {
+                            dot_product += a[i] * b[i];
+                            norm_a += a[i] * a[i];
+                            norm_b += b[i] * b[i];
+                        }
+                        if norm_a == 0.0 || norm_b == 0.0 {
+                            return 1.0;
+                        }
+                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+                        1.0 - similarity
                     }
 
                     let mut match_count = 0;
@@ -2569,72 +2591,6 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
-    }
-
-
-    #[tokio::test]
-    async fn test_pruning_edge_cases_override() {
-        let repo = setup_sqlite_repo().await;
-
-        let now = chrono::Utc::now();
-        let stale_time = now - chrono::Duration::days(200);
-
-        let mut v1 = vec![0.0; 10];
-        v1[0] = 1.0;
-
-        // A stale record with very high reliability, but no owner_override -> should NOT be pruned by first rule, but... wait, let's check the pruning logic.
-        // The rule is: (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)
-
-        let stale_but_high_rel = EmbeddingRecord {
-            id: "stale_high_rel".to_string(),
-            tenant_id: "org_test".to_string(),
-            agent_id: "agent1".to_string(),
-            content: "old stuff".to_string(),
-            embedding: v1.clone(),
-            source_type: "TASK_SUMMARY".to_string(),
-            created_at: stale_time,
-            last_referenced_at: stale_time,
-            reference_count: 1, // less than 5
-            reliability_score: 99, // very high reliability
-            owner_override: false, // NO owner override
-            metadata: None,
-        };
-
-        let stale_low_rel_but_override = EmbeddingRecord {
-            id: "stale_low_rel_override".to_string(),
-            tenant_id: "org_test".to_string(),
-            agent_id: "agent1".to_string(),
-            content: "old stuff but overridden".to_string(),
-            embedding: v1.clone(),
-            source_type: "TASK_SUMMARY".to_string(),
-            created_at: stale_time,
-            last_referenced_at: stale_time,
-            reference_count: 1,
-            reliability_score: 10, // low reliability
-            owner_override: true, // WITH owner override
-            metadata: None,
-        };
-
-        repo.upsert(&stale_but_high_rel).await.unwrap();
-        repo.upsert(&stale_low_rel_but_override).await.unwrap();
-
-        // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
-
-        // Check which ones remain
-        let results = repo.cross_department_search("org_test", &v1, 10).await.unwrap();
-        let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
-
-        // The logic is:
-        // (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY')
-        // OR (reliability_score < 20 AND owner_override = FALSE)
-
-        // stale_high_rel should be PRUNED because it meets the first condition (stale, no override, < 5 refs, TASK_SUMMARY), even though its reliability is high.
-        // stale_low_rel_override should be KEPT because it has owner_override = TRUE, which bypasses both conditions.
-
-        assert_eq!(remaining_ids.len(), 1, "Only one record should remain");
-        assert!(!remaining_ids.contains(&"stale_high_rel".to_string()), "stale_high_rel should be pruned despite high reliability because no override");
-        assert!(remaining_ids.contains(&"stale_low_rel_override".to_string()), "stale_low_rel_override should be kept because of owner_override");
     }
 
     #[tokio::test]

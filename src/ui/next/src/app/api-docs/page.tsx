@@ -5,7 +5,7 @@ import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 
 // OpenAPI spec for OHC backend
-const getSwaggerSpec = (origin: string) => ({
+const swaggerSpec = {
   openapi: "3.0.0",
   info: {
     title: "OHC Advanced API Reference",
@@ -14,8 +14,8 @@ const getSwaggerSpec = (origin: string) => ({
   },
   servers: [
     {
-      url: origin || "http://localhost:8080",
-      description: "Backend Server"
+      url: "http://localhost:8080",
+      description: "Local Backend Server"
     }
   ],
   paths: {
@@ -158,25 +158,23 @@ const getSwaggerSpec = (origin: string) => ({
       }
     }
   }
-});
+};
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
-  const [spec, setSpec] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
-    setSpec(getSwaggerSpec(window.location.origin));
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[20px] saturate-200 font-inter">
-      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
+    <div className="min-h-screen bg-gray-50/50 p-8">
+      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm">
         <p className="text-yellow-700 text-sm">
-          <strong className="font-outfit">Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
+          <strong>Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
         </p>
       </div>
-      {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40"><SwaggerUI spec={spec} /></div>}
+      {mounted && <div className="bg-white/10 backdrop-blur-md saturate-200 p-6 rounded-2xl shadow-xl border border-white/20"><SwaggerUI spec={swaggerSpec} /></div>}
     </div>
   );
 }

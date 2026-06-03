@@ -122,7 +122,7 @@ graph LR
 - **Problem Statement**: "Scattered Communications" and "Operational Fatigue" plague users like Maya, who lose orders across Instagram, WhatsApp, and email.
 - **Research Report**: Analysis of Maya (The Home Baker) persona reveals she loses track of custom orders in DMs. A unified inbox would consolidate these scattered messages and leverage an AI agent to draft replies based on past customer history.
 - **Design Doc**: A centralized feed (`Hub` data model) aggregating all external messages. The 'Ambassador' AI agent listens to the event mesh, drafts contextual replies based on past customer history, and presents them for 1-tap approval.
-- **Implementation Prompt**: Create the UI for the Unified Inbox. The Critical User Journey involves opening a new message, reviewing an AI-generated draft, and tapping 'Approve to Send'. Must integrate with the existing `Hub` Rust backend and NATS event mesh.
+- **Implementation Prompt**: Create the UI for the Unified Inbox. The Critical User Journey involves opening a new message, reviewing an AI-generated draft, and tapping 'Approve to Send'. Must integrate with the existing `Hub` Go backend and NATS event mesh.
 - **Priority**: P0
 - **Estimated Scope**: Medium
 

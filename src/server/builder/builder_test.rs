@@ -279,7 +279,7 @@ async fn test_builder_generate_and_publish_draft() {
     assert!(!toolbox.assets.is_empty());
     assert!(!toolbox.photoshoot.prompts.is_empty());
     assert!(!toolbox.photoshoot.shots.is_empty());
-    assert_eq!(toolbox.store_profile.pages.len(), 1);
+    assert_eq!(toolbox.website_draft.pages.len(), 1);
     let toolbox_id = toolbox.id.expect("generated toolbox should be persisted");
 
     let res = client
@@ -313,11 +313,7 @@ async fn test_builder_generate_and_publish_draft() {
     assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with(".ohc.store"));
 
     // 1. Mock Generate Storefront instead of hitting external APIs.
-    let draft = super::api::StoreProfile {
-        theme: Some("Modern".to_string()),
-        sample_products: vec![],
-        shipping_settings: Some(serde_json::json!({})),
-        tax_settings: Some(serde_json::json!({})),
+    let draft = super::api::SiteDraft {
         domain: Some("handyman-draft.com".to_string()),
         pages: vec![super::api::DraftPage {
             path: "/".to_string(),

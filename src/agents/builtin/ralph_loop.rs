@@ -110,16 +110,14 @@ impl RalphLoop {
                     self.save_progress(&progress).await?;
 
                     // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
-                    let commit_msg = format!("Completed feature: {}", feature_name);
-
                     let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
                     let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
 
-                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
+                    if Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output().is_ok() {
+                        let commit_msg = format!("Completed feature: {}\n\n{}", feature_name, result);
+                        if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                            tracing::error!("Phase 2 failed to git commit: {}", e);
+                        }
                     }
                 }
                 Err(e) => {
@@ -205,7 +203,11 @@ impl RalphLoop {
 
     async fn save_progress(&self, progress: &RalphProgress) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string_pretty(progress)?;
-        fs::write(&self.progress_file_path, json).await?;
+        let tmp_path = format!("{}.tmp", self.progress_file_path);
+        fs::write(&tmp_path, json).await?;
+        if let Err(e) = fs::rename(&tmp_path, &self.progress_file_path).await {
+            tracing::error!("Failed to rename progress file: {}", e);
+        }
         Ok(())
     }
 }

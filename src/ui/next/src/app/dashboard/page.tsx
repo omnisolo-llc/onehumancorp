@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
-import { OneTapReferral } from "../components/OneTapReferral";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -29,9 +27,6 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
-  const [activeReferrals, setActiveReferrals] = useState<number>(0);
-  const [revenueFromReferrals, setRevenueFromReferrals] = useState<number>(0);
-  const [pendingRewards, setPendingRewards] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
@@ -84,8 +79,6 @@ export default function Dashboard() {
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
-
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -256,10 +249,8 @@ export default function Dashboard() {
     };
 
     const ws = connectSwarmMesh();
-    let metricsFetched = false;
+
     const fetchMetrics = async () => {
-        if (metricsFetched) return;
-        metricsFetched = true;
         try {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
@@ -270,7 +261,7 @@ export default function Dashboard() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
-                fetch(`/api/v1/growth/team-invites/aggregated-metrics?team_id=${tenant}`, {
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -286,10 +277,7 @@ export default function Dashboard() {
 
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
-                setTeamInvitesSent(invitesData.total_invites !== undefined ? invitesData.total_invites : (invitesData?.metrics?.team_invites_sent || 0));
-                setActiveReferrals(invitesData?.metrics?.active_referrals || 0);
-                setRevenueFromReferrals(invitesData?.metrics?.revenue || 0);
-                setPendingRewards(invitesData?.metrics?.pending_rewards || 0);
+                setTeamInvitesSent(invitesData.total_invites);
             }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
@@ -298,12 +286,12 @@ export default function Dashboard() {
 
     fetchMetrics();
 
-
-    return () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", updateOfflineStatus);
         window.removeEventListener("storage", handleStorage);
         clearInterval(queueCheckInterval);
+
+    return () => {
         if (ws) ws.close();
     };
   }, []);
@@ -320,7 +308,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + tenant)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -415,43 +403,12 @@ export default function Dashboard() {
     }
   };
 
-  const walkthroughSteps = [
-    {
-      targetId: "store-setup-target",
-      title: "Set up your store",
-      content: "Click here to set up your business details and launch your storefront.",
-      position: "bottom" as const
-    },
-    {
-      targetId: "stripe-setup-btn",
-      title: "Accept your first payment",
-      content: "Connect your bank account securely to start accepting payments from customers.",
-      position: "bottom" as const
-    },
-    {
-      targetId: "agents-tab-target",
-      title: "Activate your AI Support Agent",
-      content: "Hire and manage your AI assistants here to handle customer support while you sleep.",
-      position: "bottom" as const
-    }
-  ];
-
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <InteractiveWalkthrough
-        steps={walkthroughSteps}
-        isOpen={isWalkthroughOpen}
-        onClose={() => setIsWalkthroughOpen(false)}
-      />
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderBottom: "1px solid rgba(255, 255, 255, 0.4)", position: "sticky", top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
-            <button onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors shadow-sm">
-              Start Tour
-            </button>
-          </div>
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: "#1D1D1F", letterSpacing: "-0.02em" }}>Dashboard</h1>
           <div className="flex items-center">
             <div id="queue-dashboard" className={`${offlineQueueCount > 0 ? "block" : "hidden"} px-3 py-1 rounded-full text-xs font-medium`} style={{ background: "rgba(0, 102, 255, 0.2)", color: "#0066FF", border: "1px solid rgba(0, 102, 255, 0.3)", marginRight: "8px" }}>
               {offlineQueueCount} Payments Pending Sync
@@ -473,37 +430,22 @@ export default function Dashboard() {
                Review Campaigns ⭐️
              </Link>
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
-               Social Share Cards 🎴
-             </Link>
-             <Link href="/milestones" className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-md text-sm font-medium hover:bg-indigo-200 transition-colors border border-indigo-200 shadow-sm">
-               Milestones 🏆
-             </Link>
-             <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
-               Business Analytics
+               Social Cards 🎴
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
-             <Link href="/wrapped" className="px-4 py-2 rounded-md text-sm font-medium text-white transition-colors border border-pink-300 shadow-sm" style={{ background: 'linear-gradient(135deg, #FF0066 0%, #A445B2 100%)' }}>
-               Store Wrapped 🎁
-             </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <WithTooltip id="agents-tab-tooltip" defaultText="Hire and manage your AI assistants here.">
-               <WalkthroughTarget id="agents-tab-target">
-                 <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-                   <span>🤖</span> AI Departments
-                 </Link>
-               </WalkthroughTarget>
-             </WithTooltip>
+             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+               <span>🤖</span> AI Departments
+             </Link>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
-             <Link href="/plan" passHref legacyBehavior>
-               <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-                 Billing
-               </button>
+             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
+               My Plan
              </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
@@ -521,18 +463,14 @@ export default function Dashboard() {
                </div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <WalkthroughTarget id="sales-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your sales today.">
-                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Total Sales</h3>
-                   </WithTooltip>
-                   <div className="text-4xl font-bold font-outfit text-gray-900">${(todaysSales || 0).toFixed(2)}</div>
-               </WalkthroughTarget>
-               <WalkthroughTarget id="visitors-card-target" className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <WithTooltip id="visitors-tooltip" defaultText="Number of unique visitors who viewed your store today.">
-                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 inline-block">Visitors</h3>
-                   </WithTooltip>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+               </div>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
                    <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
-               </WalkthroughTarget>
+               </div>
            </div>
 
            {/* Advanced AI Insights Soft Paywall */}
@@ -571,7 +509,7 @@ export default function Dashboard() {
                  <div className="text-2xl">🌅</div>
                  <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
                </div>
-               <p id="store-setup-target" className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
                  Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
                </p>
                <div className="flex gap-4">
@@ -688,7 +626,7 @@ export default function Dashboard() {
                      <button
                          onClick={() => {
                              const tenant = localStorage.getItem('tenant') || 'DEFAULT';
-                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: https://ohc.store/join?ref=${tenant}`);
+                             const text = encodeURIComponent(`I just reached ${activeCustomers} customers on my store! Start your own business today with One Human Corp: ohc://join?ref=${tenant}`);
                              window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
 
                              localStorage.setItem('milestone_banner_dismissed', 'true');
@@ -754,7 +692,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
@@ -782,7 +720,7 @@ export default function Dashboard() {
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${(todaysSales || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -795,50 +733,6 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
-            </div>
-         </section>
-
-         {/* Storefront Branding Soft Paywall */}
-         <section className="mb-6">
-            <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 165, 0, 0.3)' }}>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Storefront Branding
-                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255, 165, 0, 0.1)', color: '#d97706' }}>
-                            Premium Feature
-                        </span>
-                    </h3>
-                </div>
-
-                <p className="text-gray-600 font-inter text-sm mb-4 leading-relaxed">
-                    Remove the "Powered by OHC" watermark from your storefront and embed widgets.
-                </p>
-
-                <div className="flex justify-between items-center bg-black/5 p-4 rounded-xl mb-4">
-                    <div className="flex flex-col">
-                        <span className="font-semibold text-gray-900">Remove "Powered by OHC" Badge</span>
-                        <span className="text-sm text-gray-600">Show only your own brand on your storefront.</span>
-                    </div>
-                    <div className="relative">
-                        {/* Toggle Switch (Locked) */}
-                        <label className="relative inline-block w-12 h-7 opacity-50 cursor-not-allowed">
-                            <input type="checkbox" disabled className="opacity-0 w-0 h-0" />
-                            <span className="absolute cursor-not-allowed top-0 left-0 right-0 bottom-0 bg-gray-300 transition-all duration-300 rounded-full"></span>
-                            <span className="absolute h-5 w-5 left-1 bottom-1 bg-white transition-all duration-300 rounded-full"></span>
-                        </label>
-                        <div className="absolute -top-2.5 -right-2.5 text-base">🔒</div>
-                    </div>
-                </div>
-
-                <div className="text-center mt-4">
-                    <button
-                        onClick={() => { setShowSoftPaywall(true); }}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 shadow-md"
-                        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)' }}
-                    >
-                        Upgrade to Premium to Unlock
-                    </button>
-                </div>
             </div>
          </section>
 
@@ -1169,7 +1063,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
                     <div className="flex-1 w-full">
                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
@@ -1221,7 +1115,7 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2 w-full md:w-auto">
                     <button
                         onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
                             navigator.clipboard.writeText(message);
                             setSaleShareCopied(true);
                             setTimeout(() => setSaleShareCopied(false), 2000);
@@ -1241,10 +1135,10 @@ export default function Dashboard() {
                         )}
                     </button>
                     <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
                         onClick={() => setShowSaleCelebration(false)}
                     >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
@@ -1268,13 +1162,10 @@ export default function Dashboard() {
                       <button
                           onClick={() => {
                               const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-                              const url = `https://ohc.store/join?ref=${tenant}`;
+                              const url = `ohc://join?ref=${tenant}`;
                               const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                              setTimeout(() => {
-                                alert("Awesome! Your 7-day Pro Trial Extension has been unlocked.");
-                                setShowMilestoneBanner(false);
-                              }, 500);
+                              setShowMilestoneBanner(false);
                           }}
                           className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
                       >
@@ -1290,53 +1181,6 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Growth Loop: Store Wrapped */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>2024 Store Wrapped</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
-                        <span className="text-xs font-medium text-pink-600">Viral Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #A445B2 0%, #D41872 52%, #FF0066 100%)', border: '1px solid rgba(255, 255, 255, 0.4)', color: 'white' }}>
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold font-outfit text-white mb-2">Celebrate Your Success ✨</h3>
-                    <p className="text-sm text-white/90 mb-4 leading-relaxed">Your 2024 Store Wrapped is ready! Discover your top-selling products, review your annual revenue, and share your incredible journey with your customers and followers.</p>
-                    <Link href="/wrapped" className="inline-flex px-6 py-3 bg-white text-[#D41872] font-bold rounded-xl shadow-xl hover:bg-gray-50 transition-all font-inter text-sm items-center gap-2">
-                        View Your Wrapped 🎁
-                    </Link>
-                </div>
-                <div className="w-full md:w-1/3 bg-white/20 backdrop-blur-md rounded-xl p-6 flex flex-col items-center justify-center border border-white/30 min-h-[160px] text-center">
-                    <div className="text-4xl mb-2">🎉</div>
-                    <div className="text-sm font-semibold opacity-90 uppercase tracking-widest">Share to earn</div>
-                    <div className="text-xs font-medium mt-1">Get $50 credit for every new store created from your link</div>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: Social Share Cards */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Share Cards</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
-                        <span className="text-xs font-medium text-pink-600">Growth Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Beautiful Shareable Cards</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate vibrant, customized share cards to promote your store on Twitter, Facebook, and Instagram. Each card comes with a built-in referral link to grow your business.</p>
-                    <Link href="/share-cards" className="inline-flex px-4 py-2 bg-pink-600 text-white font-bold rounded-xl shadow-md hover:bg-pink-700 transition-all font-inter text-sm items-center gap-2">
-                        <span className="text-lg">🎴</span> Generate Share Cards
-                    </Link>
-                </div>
-            </div>
-         </section>
-
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1347,7 +1191,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
@@ -1510,17 +1354,17 @@ export default function Dashboard() {
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(revenueFromReferrals || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">${(pendingRewards || 0).toFixed(2)}</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
                 </div>
             </div>
          </section>
@@ -1617,7 +1461,7 @@ export default function Dashboard() {
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                  Share on X
+                  Share to X
                 </a>
               </div>
               <div className="flex justify-center pt-2">
@@ -2227,7 +2071,8 @@ export default function Dashboard() {
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+              style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free
@@ -2287,10 +2132,6 @@ export default function Dashboard() {
       )}
 
       {/* Referral Modal */}
-      <div className="fixed bottom-4 right-4 z-40 hidden md:block w-72">
-        <OneTapReferral tenantId={typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} source="dashboard_float" />
-      </div>
-
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="mac-glass-container w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">

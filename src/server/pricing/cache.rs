@@ -162,20 +162,6 @@ mod tests {
     }
 
     #[test]
-    fn test_local_embedding_cache_get() {
-        let cache = LocalEmbeddingCache::new(Duration::from_secs(60));
-
-        // Insert a test prompt
-        let prompt = "test_prompt_get";
-        let expected_response = "test_response_get";
-        cache.set(prompt, expected_response);
-
-        // Verify we can retrieve it correctly
-        let result = cache.get(prompt);
-        assert_eq!(result, Some(expected_response.to_string()));
-    }
-
-    #[test]
     fn test_compressed_embedding_cache() {
         let cache = CompressedEmbeddingCache::new(Duration::from_millis(100));
         

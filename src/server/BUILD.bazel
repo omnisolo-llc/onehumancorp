@@ -43,13 +43,9 @@ SERVER_RS_SRCS = [
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
-    "//src/server/api:oauth/mod.rs",
-    "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
     "//src/server/api:offline_sync.rs",
-    "//src/server/api:staff_mesh.rs",
     "//src/server/api:telemetry.rs",
-    "//src/server/api:catalog.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",
@@ -80,7 +76,6 @@ SERVER_RS_SRCS = [
     "//src/server/domain:mod.rs",
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
-    "//src/server/domain:subscription.rs",
     "//src/server/domain:sre.rs",
     "//src/server/domain:unified_tenant_test.rs",
     "//src/server/domain/repository:mod.rs",
@@ -193,12 +188,8 @@ SERVER_RS_SRCS = [
     "//src/server/services/growth:quota.rs",
     "//src/server/services/growth:referral_api.rs",
     "//src/server/services/growth:referrals.rs",
-
-
-
     "//src/server/services/growth:service.rs",
     "//src/server/services/growth:viral_loop.rs",
-    "//src/server/services/growth:event_listener.rs",
     "//src/server/services/integration:mod.rs",
     "//src/server/services/integration:service.rs",
     "//src/server/services/mcp:mod.rs",
@@ -257,9 +248,6 @@ SERVER_RS_SRCS = [
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
     "//src/server/workers:mod.rs",
-    "//src/server/voice:mod.rs",
-    "//src/server/voice:engine.rs",
-    "//src/server/voice:router.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules
@@ -297,7 +285,6 @@ rust_library(
         "//src/server/integrations/calendly:server_integrations_calendly",
         "//src/server/integrations/chromadb:server_integrations_chromadb",
         "//src/server/integrations/core:server_integrations_core",
-        "//src/server/integrations/doordash:server_integrations_doordash",
         "//src/server/integrations/easypost:server_integrations_easypost",
         "//src/server/integrations/jitsi:server_integrations_jitsi",
         "//src/server/integrations/listmonk:server_integrations_listmonk",

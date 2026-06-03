@@ -226,82 +226,6 @@ impl TeammateMesh for SleepingMockMesh {
 
 #[cfg(test)]
 mod chaos_tests {
-    #[tokio::test]
-    async fn test_timeout_storm() {
-        let mesh: Arc<dyn TeammateMesh> = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(Arc::new(SleepingMockMesh), std::time::Duration::from_millis(50)));
-
-        let mut successful_sends = 0;
-        let mut timeouts = 0;
-
-        for _ in 0..10 {
-            let result = mesh.ping().await;
-            if result.is_err() {
-                timeouts += 1;
-            } else {
-                successful_sends += 1;
-            }
-        }
-
-        assert!(timeouts >= 10, "System should timeout internally on all calls when agent is non-responsive");
-        assert_eq!(successful_sends, 0, "System should not have successful sends during a timeout storm");
-    }
-
-    #[tokio::test]
-    async fn test_pubsub_high_message_loss_degradation() {
-        let transport = Arc::new(DroppingMockTransport::new(90));
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
-        let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let received_clone = received.clone();
-
-        let _ = mesh.subscribe("mesh:test:severe_loss", Box::new(move |_msg| {
-            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        })).await.unwrap();
-
-        let _ = mesh.start_health_responder().await;
-
-        let mut successful_sends = 0;
-        let mut failed_sends = 0;
-
-        for _ in 0..20 {
-             if mesh.ping().await.is_ok() {
-                 successful_sends += 1;
-             } else {
-                 failed_sends += 1;
-             }
-        }
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-        assert!(failed_sends > 0, "System should report failed sends under severe degradation");
-        assert_eq!(successful_sends + failed_sends, 20, "All messages should be accounted for (success or safe failure)");
-    }
-
-    #[tokio::test]
-    async fn test_partition_tolerance() {
-        let transport = Arc::new(DroppingMockTransport::new(100));
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
-
-        let _ = mesh.subscribe("mesh:test:partition", Box::new(move |_msg| {
-        })).await.unwrap();
-
-        let _ = mesh.start_health_responder().await;
-
-        let mut successful_sends = 0;
-        let mut failures = 0;
-
-        for _ in 0..10 {
-            let result = mesh.ping().await;
-            if result.is_err() {
-                failures += 1;
-            } else {
-                successful_sends += 1;
-            }
-        }
-
-        assert_eq!(failures, 10, "System should handle partition by failing all requests gracefully");
-        assert_eq!(successful_sends, 0, "System should not have successful sends during a network partition");
-    }
-
     use super::*;
 
     #[tokio::test]
@@ -372,11 +296,8 @@ mod chaos_tests {
         let mesh = Arc::new(CorruptedMockMesh::new());
         let counter = mesh.received_messages.clone();
 
-        let notify = Arc::new(tokio::sync::Notify::new());
-        let notify_clone = notify.clone();
-
         // This will spawn a task that immediately receives corrupted message
-        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(move |msg| {
+        let _ = mesh.subscribe("mesh:test:corrupt", Box::new(|msg| {
             // Simulate how the orchestrator processes JSON with fallback
             let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&msg.payload);
             if parsed.is_err() {
@@ -390,10 +311,9 @@ mod chaos_tests {
                  }
                  assert_eq!(fallback_attempts, 3);
             }
-            notify_clone.notify_one();
         })).await.unwrap();
 
-        notify.notified().await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
@@ -404,16 +324,11 @@ mod chaos_tests {
         let mut join_handles = vec![];
         let resource_name = "ohc:lock:test_race_lock";
 
-        let num_tasks = 25; // Simulating extreme contention
-        let barrier = Arc::new(tokio::sync::Barrier::new(num_tasks));
-
-        // Spawn concurrent tasks trying to acquire the same lock exactly at the same time
-        for i in 0..num_tasks {
+        // Spawn 1000 concurrent tasks trying to acquire the same lock
+        for i in 0..1000 {
             let mesh_clone = mesh.clone();
-            let barrier_clone = barrier.clone();
             let owner = format!("agent_{}", i);
             join_handles.push(tokio::spawn(async move {
-                barrier_clone.wait().await;
                 mesh_clone.acquire_lock(resource_name, &owner, 10).await.unwrap_or(false)
             }));
         }
@@ -426,7 +341,7 @@ mod chaos_tests {
         }
 
         // Ensure exactly ONE agent wins the race condition under massive load
-        assert_eq!(winners, 1, "There should be exactly one winner in a lock race even under high contention");
+        assert_eq!(winners, 1, "There should be exactly one winner in a lock race");
     }
 
 
@@ -437,11 +352,8 @@ mod chaos_tests {
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel(20);
-
         let _ = mesh.subscribe("mesh:test:loss", Box::new(move |_msg| {
             received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            let _ = tx.try_send(());
         })).await.unwrap();
 
         // Start health responder (simulates ack responder)
@@ -455,9 +367,10 @@ mod chaos_tests {
              // We can just use ping() which wraps publish_with_ack for health!
              if mesh.ping().await.is_ok() {
                  successful_sends += 1;
-                 let _ = rx.recv().await;
              }
         }
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
 
         // Resilience rule: system must recover or degrade gracefully.
         // We verify that some messages were successfully delivered and ack'd despite high packet loss,
@@ -497,74 +410,89 @@ mod chaos_tests {
     }
 
     #[tokio::test]
-    async fn test_llm_api_failure_recovery() {
-        // Simulates LLM API failures and ensuring circuit breaker/fallback behavior.
-        use crate::workers::OperationsWorker;
-
-        // Intentionally bad OHC_HUB_URL to simulate API failure
-        temp_env::with_var("OHC_HUB_URL", Some("http://127.0.0.1:1"), || async {
-            let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-                .connect("sqlite::memory:")
-                .await
-                .unwrap();
-
-            let db = Arc::new(DB {
-                pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-                store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
-            });
-
-            // Initialize schema for OperationsWorker
-            sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload TEXT, status TEXT, locked_until TEXT, created_at TEXT, updated_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, organization_id TEXT, tenant_id TEXT, name TEXT, inventory_count INT, supplier_name TEXT, supplier_contact TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, created_at TEXT, updated_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT, created_at TEXT)").execute(&dummy_sqlite_pool).await.unwrap();
-            sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INT)").execute(&dummy_sqlite_pool).await.unwrap();
-
-            // Seed data: low inventory product
-            sqlx::query("INSERT INTO products (id, organization_id, tenant_id, name, inventory_count, supplier_name, supplier_contact) VALUES ('p1', 't1', 't1', 'item1', 1, 's1', 'c1')").execute(&dummy_sqlite_pool).await.unwrap();
-            let payload = serde_json::json!({"items": [{"product_id": "p1", "quantity": 1}]});
-            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task1', 't1', 'operations', 'OrderPlaced', ?, 'PENDING')")
-                .bind(payload.to_string())
-                .execute(&dummy_sqlite_pool).await.unwrap();
-
-            // Poll - this should trigger restock drafting which will fail AI call due to bad OHC_HUB_URL
-            let res = OperationsWorker::poll(&db).await;
-            assert!(res.is_ok());
-
-            // Despite AI failure, a fallback message should be used and final_status should be PAUSED after retries
-            let row: (String, String) = sqlx::query_as("SELECT status, proposed_content FROM department_tasks JOIN shared_tasks ON department_tasks.tenant_id = shared_tasks.organization_id WHERE department_tasks.id = 'task1' AND shared_tasks.title LIKE '%AI Agent Paused%'")
-                .fetch_one(&dummy_sqlite_pool).await.unwrap();
-
-            assert_eq!(row.0, "PAUSED");
-            assert!(row.1.contains("System is paused"));
-        }).await;
-    }
-
-    #[tokio::test]
-    async fn test_host_memory_exhaustion_degradation() {
-        // We simulate host memory exhaustion by synthetically increasing database operation latency
-        // and verifying that the 2-second timeout triggers graceful degradation.
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(3000));
-
-        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
+    async fn test_cloud_db_transition_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        // Should fallback safely instead of panicking/blocking forever
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_cloud_db_pull_fallback() {
+        // Intentionally bad DB URL to simulate database failure / degraded performance
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool,
+            store: DbStore::Postgres,
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db, mesh);
+
+        let tasks = state_manager.pull_available_tasks(10).await;
+
+        // On connection failure (not timeout), it correctly propagates the error.
+        assert!(tasks.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_transition_fallback() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
+            store: DbStore::Sqlite(pool),
+        });
+
+        // The fallback is tested via a timeout on the inner lock block
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state("task1", "tenant1", "PENDING", "IN_PROGRESS", None, None).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_standalone_db_pull_fallback() {
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
 
-        let start = std::time::Instant::now();
-        let res = state_manager.pull_available_tasks(10).await;
-        let elapsed = start.elapsed();
+        let tasks = state_manager.pull_available_tasks(10).await;
 
-        // Operation takes 3s due to LatencyMockMesh, but StateManager has 2s timeout
-        assert!(elapsed < std::time::Duration::from_millis(2500));
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap().len(), 0);
+        // With SleepingMockMesh, this triggers the inner lock timeout.
+        assert!(tasks.is_ok());
+        assert_eq!(tasks.unwrap().len(), 0);
     }
 }

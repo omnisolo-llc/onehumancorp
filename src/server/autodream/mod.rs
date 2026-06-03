@@ -129,7 +129,7 @@ impl AutoDreamWorker {
                  }
              };
 
-             db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
@@ -211,7 +211,7 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&org_id, &id, &table).await?;
+            db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
         }
