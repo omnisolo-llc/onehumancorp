@@ -140,6 +140,10 @@ async fn handle_create_product(
 
     let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
 
+    let cache = crate::builder::edge::get_edge_cache();
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 

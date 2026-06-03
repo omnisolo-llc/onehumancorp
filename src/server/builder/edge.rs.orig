@@ -3,12 +3,10 @@ use axum::{
     response::{Html, IntoResponse, Response},
     http::header::CACHE_CONTROL,
     body::Body,
-    Json,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use serde::Serialize;
 use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
 use std::collections::HashSet;
@@ -59,34 +57,6 @@ impl StorefrontRouter {
         headers: axum::http::HeaderMap,
     ) -> Result<Response<Body>, axum::http::StatusCode> {
         handle_edge_request_impl(Extension(state), Path((tenant_id_str, site_id_str)), headers).await
-    }
-
-    pub async fn handle_hydrate_request(
-        Extension(state): Extension<Arc<EdgeWorkerState>>,
-        Path((tenant_id_str, site_id_str)): Path<(String, String)>,
-        headers: axum::http::HeaderMap,
-    ) -> Result<impl IntoResponse, axum::http::StatusCode> {
-        let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
-        let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
-
-        // Zero-Trust for Hydration: Validating anonymous session token
-        let auth_header = headers.get("Authorization").and_then(|h| h.to_str().ok()).unwrap_or("");
-        if !auth_header.starts_with("Bearer ") || auth_header.len() < 15 {
-             tracing::warn!("Hydration request for tenant {} site {} without valid Authorization header.", tenant_id, site_id);
-             return Err(axum::http::StatusCode::UNAUTHORIZED);
-        }
-
-        let res = handle_hydrate_request_impl(state.pool.clone(), tenant_id, site_id).await?;
-        let mut response = res.into_response();
-
-        // SWR headers on hydration endpoint too (less cacheable than HTML, but can help)
-        // "public, s-maxage=5, stale-while-revalidate=15"
-        response.headers_mut().insert(
-            CACHE_CONTROL,
-            "public, s-maxage=5, stale-while-revalidate=15".parse().unwrap(),
-        );
-
-        Ok(response)
     }
 }
 
@@ -276,14 +246,12 @@ async fn regenerate_cache(
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
                         let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
-                        let mut pid_attr = String::new();
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
-                            pid_attr = format!(" data-product-id=\"{pid}\"");
                         }
                         html.push_str(&format!(
-                            "<div class=\"product-card\"{}>\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit skeleton\">{}</div>\n</div>\n",
-                            pid_attr, escape_html(name), escape_html(desc), escape_html(price)
+                            "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
+                            escape_html(name), escape_html(desc), escape_html(price)
                         ));
                     }
                 }
@@ -325,55 +293,6 @@ async fn regenerate_cache(
             ⚡ Powered by OHC
         </div>
     </div>
-    <script>
-        async function hydrateStorefront() {
-            try {
-                // Extract tenant and site IDs from the current URL path
-                const parts = window.location.pathname.split('/');
-                let tenantId = "";
-                let siteId = "";
-
-                // Assuming path is like /api/v1/builder/edge/{tenant_id}/{site_id}
-                const edgeIndex = parts.indexOf("edge");
-                if (edgeIndex !== -1 && parts.length > edgeIndex + 2) {
-                    tenantId = parts[edgeIndex + 1];
-                    siteId = parts[edgeIndex + 2];
-                }
-
-                if (!tenantId || !siteId) return;
-
-                // Send dummy auth token to satisfy security check for storefront
-                const response = await fetch(`/api/v1/builder/edge/${tenantId}/${siteId}/hydrate`, {
-                    headers: { 'Authorization': 'Bearer dynamic-hydrate-token' }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    const productElements = document.querySelectorAll(".product-card");
-                    productElements.forEach(el => {
-                        const pid = el.getAttribute("data-product-id");
-                        const priceEl = el.querySelector(".product-price");
-                        if (pid && priceEl && priceEl.classList.contains("skeleton")) {
-                            const productData = data.products[pid];
-                            priceEl.classList.remove("skeleton");
-                            if (productData) {
-                                priceEl.innerHTML = `<span style="color: ${productData.inventory_count > 0 ? 'green' : 'red'}; font-size: 0.8em; margin-right: 8px;">${productData.inventory_count > 0 ? productData.inventory_count + ' Available' : 'Sold Out'}</span>` + priceEl.innerHTML;
-                            } else {
-                                priceEl.innerHTML = "<span style=\"color: grey; font-size: 0.8em; margin-right: 8px;\">Unavailable</span>" + priceEl.innerHTML;
-                            }
-                        }
-                    });
-
-                    console.log("Storefront hydrated:", data);
-                }
-            } catch (err) {
-                console.error("Failed to hydrate storefront", err);
-            }
-        }
-
-        document.addEventListener("DOMContentLoaded", hydrateStorefront);
-    </script>
     </body>
     </html>
     "#);
@@ -381,71 +300,4 @@ async fn regenerate_cache(
     cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
     Ok((html, tags))
-}
-
-#[derive(Serialize)]
-pub struct HydrationResponse {
-    pub products: std::collections::HashMap<String, ProductHydrationData>,
-}
-
-#[derive(Serialize)]
-pub struct ProductHydrationData {
-    pub inventory_count: i32,
-    pub price: Option<String>,
-}
-
-pub async fn handle_hydrate_request_impl(
-    pool: PgPool,
-    tenant_id: Uuid,
-    site_id: Uuid,
-) -> Result<impl IntoResponse, axum::http::StatusCode> {
-    let _site = super::db::list_sites(&pool, tenant_id).await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
-        .into_iter()
-        .find(|s| s.id == site_id)
-        .ok_or(axum::http::StatusCode::NOT_FOUND)?;
-
-    let pages = super::db::list_pages(&pool, tenant_id, site_id).await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if pages.is_empty() {
-        return Err(axum::http::StatusCode::NOT_FOUND);
-    }
-    let page = &pages[0];
-
-    let blocks = super::db::list_blocks(&pool, tenant_id, page.id).await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let mut product_ids = Vec::new();
-    for block in blocks {
-        if block.block_type == "ProductGridBlock" || block.block_type == "Catalog" {
-            if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
-                for item in items {
-                    if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
-                        product_ids.push(pid.to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    let mut products_res = std::collections::HashMap::new();
-
-    if !product_ids.is_empty() {
-        let query = "SELECT id::text, inventory_count FROM products WHERE tenant_id = $1 AND id = ANY($2)";
-        let product_uuids: Result<Vec<Uuid>, _> = product_ids.iter().map(|s| Uuid::parse_str(s)).collect();
-        if let Ok(uuids) = product_uuids {
-            if let Ok(rows) = sqlx::query_as::<_, (String, i32)>(query)
-                .bind(&tenant_id)
-                .bind(&uuids)
-                .fetch_all(&pool)
-                .await {
-                for (id, count) in rows {
-                    products_res.insert(id, ProductHydrationData { inventory_count: count, price: None });
-                }
-            }
-        }
-    }
-
-    Ok(Json(HydrationResponse { products: products_res }))
 }

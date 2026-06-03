@@ -230,6 +230,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
 
     Router::new()
         .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+        .route("/edge/{tenant_id}/{site_id}/hydrate", get(super::edge::StorefrontRouter::handle_hydrate_request))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
