@@ -103,6 +103,14 @@ struct AnthropicMessage {
     content: Vec<AnthropicContent>,
 }
 
+
+#[derive(Serialize)]
+struct AnthropicImageSource {
+    r#type: String,
+    media_type: String,
+    data: String,
+}
+
 #[derive(Serialize)]
 struct AnthropicContent {
     r#type: String,
@@ -118,6 +126,9 @@ struct AnthropicContent {
     tool_use_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<Value>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source: Option<AnthropicImageSource>,
     #[serde(skip_serializing_if = "Option::is_none")]
     is_error: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -215,6 +226,7 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: Some(tr.tool_call_id.clone()),
                     content: Some(Value::String(text)),
+                    source: None,
                     is_error,
                     cache_control: None,
                 });
@@ -230,10 +242,12 @@ impl LlmClient for AnthropicClient {
                     input: Some(tc.arguments.clone()),
                     tool_use_id: None,
                     content: None,
+                    source: None,
                     is_error: None,
                     cache_control: None,
                 });
             }
+
 
             // Text content
             if !m.content.is_empty() {
@@ -245,6 +259,34 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: None,
                     content: None,
+                    source: None,
+                    is_error: None,
+                    cache_control: None,
+                });
+            }
+
+            // Image content
+            for img in &m.images {
+                let (media_type, data) = if img.starts_with("data:image/") {
+                    let parts: Vec<&str> = img.split(";base64,").collect();
+                    let mime = parts[0].strip_prefix("data:").unwrap_or("image/png");
+                    (mime.to_string(), parts.get(1).unwrap_or(&"").to_string())
+                } else {
+                    ("image/png".to_string(), img.clone())
+                };
+                content_blocks.push(AnthropicContent {
+                    r#type: "image".to_string(),
+                    text: None,
+                    id: None,
+                    name: None,
+                    input: None,
+                    tool_use_id: None,
+                    content: None,
+                    source: Some(AnthropicImageSource {
+                        r#type: "base64".to_string(),
+                        media_type,
+                        data,
+                    }),
                     is_error: None,
                     cache_control: None,
                 });
@@ -259,6 +301,7 @@ impl LlmClient for AnthropicClient {
                     input: None,
                     tool_use_id: None,
                     content: None,
+                    source: None,
                     is_error: None,
                     cache_control: None,
                 });

@@ -28,7 +28,10 @@ pub struct Message {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub content: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tool_calls: Vec<ToolCall>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tool_results: Vec<ToolResult>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -42,6 +45,7 @@ impl Message {
         Self {
             role: Role::User,
             content: content.into(),
+            images: vec![],
             tool_calls: vec![],
             tool_results: vec![],
             response_id: None,
@@ -53,6 +57,7 @@ impl Message {
         Self {
             role: Role::Assistant,
             content: content.into(),
+            images: vec![],
             tool_calls: vec![],
             tool_results: vec![],
             response_id: None,
@@ -64,6 +69,7 @@ impl Message {
         Self {
             role: Role::System,
             content: content.into(),
+            images: vec![],
             tool_calls: vec![],
             tool_results: vec![],
             response_id: None,

@@ -229,11 +229,34 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
 
 // ── Wire types ────────────────────────────────────────────────────────────────
 
+
+#[derive(Serialize)]
+struct OpenAIImageURL {
+    url: String,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum OpenAIMessageContent {
+    Text(String),
+    Array(Vec<OpenAIMessageContentPart>),
+}
+
+#[derive(Serialize)]
+struct OpenAIMessageContentPart {
+    r#type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_url: Option<OpenAIImageURL>,
+}
+
 #[derive(Serialize)]
 struct OpenAIMessage {
     role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    content: Option<String>,
+    content: Option<OpenAIMessageContent>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_calls: Option<Vec<OpenAIToolCall>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -376,7 +399,7 @@ impl LlmClient for OpenAIClient {
         if !req.system.is_empty() {
             messages.push(OpenAIMessage {
                 role: "system".to_string(),
-                content: Some(req.system.clone()),
+                content: Some(OpenAIMessageContent::Text(req.system.clone())),
                 tool_calls: None,
                 tool_call_id: None,
             });
@@ -396,11 +419,42 @@ impl LlmClient for OpenAIClient {
                 };
                 messages.push(OpenAIMessage {
                     role: "tool".to_string(),
-                    content: Some(content),
+                    content: Some(OpenAIMessageContent::Text(content)),
                     tool_calls: None,
                     tool_call_id: Some(tr.tool_call_id.clone()),
                 });
             }
+
+
+            let msg_content = if m.images.is_empty() {
+                if m.content.is_empty() {
+                    None
+                } else {
+                    Some(OpenAIMessageContent::Text(m.content.clone()))
+                }
+            } else {
+                let mut parts = Vec::new();
+                if !m.content.is_empty() {
+                    parts.push(OpenAIMessageContentPart {
+                        r#type: "text".to_string(),
+                        text: Some(m.content.clone()),
+                        image_url: None,
+                    });
+                }
+                for img in &m.images {
+                    let url = if img.starts_with("data:image/") {
+                        img.clone()
+                    } else {
+                        format!("data:image/png;base64,{}", img)
+                    };
+                    parts.push(OpenAIMessageContentPart {
+                        r#type: "image_url".to_string(),
+                        text: None,
+                        image_url: Some(OpenAIImageURL { url }),
+                    });
+                }
+                Some(OpenAIMessageContent::Array(parts))
+            };
 
             // Assistant with tool calls
             if !m.tool_calls.is_empty() {
@@ -418,18 +472,14 @@ impl LlmClient for OpenAIClient {
                     .collect();
                 messages.push(OpenAIMessage {
                     role: "assistant".to_string(),
-                    content: if m.content.is_empty() {
-                        None
-                    } else {
-                        Some(m.content.clone())
-                    },
+                    content: msg_content,
                     tool_calls: Some(calls),
                     tool_call_id: None,
                 });
             } else {
                 messages.push(OpenAIMessage {
                     role: m.role.to_string(),
-                    content: Some(m.content.clone()),
+                    content: msg_content,
                     tool_calls: None,
                     tool_call_id: None,
                 });

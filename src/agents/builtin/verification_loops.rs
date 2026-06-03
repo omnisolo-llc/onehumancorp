@@ -73,24 +73,69 @@ impl VerificationManager {
 }
 
 /// An InferentialSensor that uses an LlmClient to act as a judge.
-pub struct PlaywrightVisualVerifier;
+pub struct PlaywrightVisualVerifier {
+    pub llm: std::sync::Arc<dyn ohc_builtin_agent_core::llm::LlmClient>,
+    pub model: String,
+}
 
 #[async_trait::async_trait]
 impl VisualVerifier for PlaywrightVisualVerifier {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
+        let screenshot_path = "test.png";
         let output = std::process::Command::new("npx")
             .arg("playwright")
             .arg("screenshot")
             .arg(ui_state_path)
-            .arg("test.png")
+            .arg(screenshot_path)
             .output()
             .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
 
-        if output.status.success() {
-            Ok(())
-        } else {
+        if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}", stderr))
+            return Err(format!("Visual check failed to take screenshot. Playwright error: {}", stderr));
+        }
+
+        let image_bytes = tokio::fs::read(screenshot_path).await.map_err(|e| format!("Failed to read screenshot: {}", e))?;
+        use base64::{Engine as _, engine::general_purpose};
+        let b64 = general_purpose::STANDARD.encode(&image_bytes);
+        let data_uri = format!("data:image/png;base64,{}", b64);
+
+        let system_prompt = "You are an expert visual QA tester. Evaluate the provided screenshot of the UI. Is the UI rendered correctly and visibly free of obvious errors? Respond strictly with JSON: {\"status\": \"APPROVE\"|\"REJECT\", \"reason\": \"...\"}";
+
+        let mut user_msg = ohc_builtin_agent_core::types::Message::user("Please verify this UI screenshot.");
+        user_msg.images = vec![data_uri];
+
+        let req = ohc_builtin_agent_core::types::ChatRequest {
+            model: self.model.clone(),
+            system: system_prompt.to_string(),
+            messages: vec![user_msg],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.0,
+        };
+
+        struct ParserAdapter { llm: std::sync::Arc<dyn ohc_builtin_agent_core::llm::LlmClient>, }
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_core::output_parser::LlmClientForParser for ParserAdapter {
+            async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
+        }
+        let parser_client = std::sync::Arc::new(ParserAdapter { llm: self.llm.clone() }) as std::sync::Arc<dyn ohc_builtin_agent_core::output_parser::LlmClientForParser>;
+
+        #[derive(serde::Deserialize)]
+        struct VisualEval {
+            status: String,
+            reason: String,
+        }
+
+        match ohc_builtin_agent_core::output_parser::parse_structured_output::<VisualEval>(&parser_client, req, 3).await {
+            Ok(eval) => {
+                if eval.status.to_uppercase() == "REJECT" {
+                    Err(format!("Visual REJECT: {}", eval.reason))
+                } else {
+                    Ok(())
+                }
+            }
+            Err(e) => Err(format!("LLM Vision Error: {}", e)),
         }
     }
 }
@@ -174,17 +219,23 @@ mod tests {
         }
     }
 
+
     #[tokio::test]
     async fn test_playwright_visual_verifier() {
         // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
         // but test the struct initialization.
-        let verifier = PlaywrightVisualVerifier;
-        // Run against an invalid path, expecting an error
+        let pass_llm = std::sync::Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good"}"#.to_string() });
+        let verifier = PlaywrightVisualVerifier {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+        };
+        // Run against an invalid path, expecting an error about playwright failing
         let res = verifier.verify_visual("invalid_path_123").await;
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:"));
+        assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:") || err.contains("Failed to read screenshot:"));
     }
+
 
     struct MockLlmClient {
         response_text: String,

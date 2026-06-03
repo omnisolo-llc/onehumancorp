@@ -2467,7 +2467,14 @@ impl Agent {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    if final_cfg.visual_verification_command == "playwright" {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier {
+                            llm: self.llm.clone(),
+                            model: final_cfg.model.clone(),
+                        }));
+                    } else {
+                        verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    }
                 }
                 if final_cfg.enable_llm_judge {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
