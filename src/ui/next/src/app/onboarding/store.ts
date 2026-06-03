@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
-  chatStep: number;
+  chatStep: number | string;
   businessDescription: string;
   businessName: string;
   whatYouSell: string;
@@ -22,7 +22,7 @@ interface OnboardingState {
   error: string;
   startResult: any;
   setStep: (step: number) => void;
-  setChatStep: (step: number) => void;
+  setChatStep: (step: number | string) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;

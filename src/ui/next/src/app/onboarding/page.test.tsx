@@ -295,6 +295,25 @@ describe('OnboardingWizard', () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it('Instant Build: Displays validation error when description is too short', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 1,
+        chatStep: 'instant',
+        businessDescription: 'Too short',
+      });
+    });
+
+    render(<OnboardingWizard />);
+
+    const generateBtn = screen.getByRole('button', { name: /Generate Storefront/i });
+    await user.click(generateBtn);
+
+    expect(await screen.findByText('Please provide a slightly more detailed description (at least 10 characters).')).toBeInTheDocument();
+  });
+
   it('Step 1: Displays validation error when business name is too short', async () => {
     const user = userEvent.setup({ delay: null });
 

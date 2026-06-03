@@ -159,6 +159,49 @@ export default function OnboardingWizard() {
     adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
+  const handleInstantSubmit = async () => {
+    if (businessDescription.trim().length < 10) {
+      setValidationError('Please provide a slightly more detailed description (at least 10 characters).');
+      return;
+    }
+    setValidationError('');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_name: businessDescription, what_you_sell: businessDescription, location: "Online" })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBusinessType(data.business_type || 'Online Store');
+        setCategories(data.categories || []);
+        if (data.initial_products && data.initial_products.length > 0) {
+           setFirstProductName(data.initial_products[0].name);
+           setFirstProductPrice(data.initial_products[0].price);
+        }
+        if (data.business_name) {
+          setBusinessName(data.business_name);
+        }
+        // Jump directly to Style & Team for 1-Tap Approval
+        setStep(3);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || "Failed to process business details.");
+        // We stay on the current screen to let the user retry and show truthful error
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Network error occurred. Please try again.");
+      // We stay on the current screen to let the user retry and show truthful error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleIntake = async () => {
     setIsLoading(true);
     setError('');
@@ -294,10 +337,14 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
+              {chatStep !== 'instant' && (
+                <>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                  </p>
+                </>
+              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
@@ -355,6 +402,48 @@ export default function OnboardingWizard() {
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
+                    </button>
+                    <button
+                      onClick={() => {
+                        setValidationError('');
+                        setChatStep('instant');
+                      }}
+                      className="w-full bg-white text-[#0066FF] border border-[#0066FF] p-4 rounded-[8px] font-bold shadow-sm hover:bg-blue-50 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                    >
+                      Instant AI Build
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 'instant' && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 w-full text-left">Describe your business in a sentence</h2>
+
+                  <div className="space-y-4 flex-1 w-full">
+                    <div>
+                      <textarea
+                        autoFocus
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        placeholder="e.g. I run a local bakery that specializes in custom vegan cakes."
+                        className="w-full border border-white/50 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-4 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                        style={{ borderRadius: '8px' }}
+                        rows={4}
+                      />
+                      {validationError && (
+                        <p className="text-[#FF3B30] text-sm mt-1 text-left">{validationError}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4 mt-6 w-full">
+                    <button
+                      onClick={handleInstantSubmit}
+                      disabled={isLoading}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50"
+                    >
+                      {isLoading ? 'Generating...' : 'Generate Storefront'}
                     </button>
                   </div>
                 </div>
