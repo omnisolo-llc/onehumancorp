@@ -79,6 +79,8 @@ rust_library(
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
         "//src/server/services/syndication:mod.rs",
+        "//src/server/services/subscription:mod.rs",
+        "//src/server/services/subscription:service.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
-    GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
+    GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
@@ -33,7 +33,7 @@ pub fn get_pool() -> PgPool {
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
-    })
+    }).clone()
 }
 
 #[derive(Clone)]
@@ -897,13 +897,18 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
-                    .bind(threshold)
-                    .execute(&mut *tx)
-                    .await?;
-                tx.commit().await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2")
+                        .bind(threshold)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
+                }
             }
         };
 
@@ -912,6 +917,7 @@ impl DB {
 
     pub async fn inject_truth(
         &self,
+        tenant_id: &str,
         memory_id: &str,
         context: &str,
         embedding: &str,
@@ -922,7 +928,7 @@ impl DB {
             }
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
@@ -960,23 +966,27 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                for row in shared_rows {
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "shared_tasks".to_string()));
-                }
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                    for row in shared_rows {
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "shared_tasks".to_string()));
+                    }
 
-                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                tx.commit().await?;
-                for row in swarm_rows {
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                    let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                    tx.commit().await?;
+                    for row in swarm_rows {
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                    }
                 }
             }
         };
@@ -1091,6 +1101,7 @@ impl DB {
 
     pub async fn handoff_mission(
         &self,
+        tenant_id: &str,
         mission_id: &str,
         blockers: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1110,7 +1121,7 @@ impl DB {
             }
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
@@ -1141,14 +1152,20 @@ impl DB {
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)")
-                    .bind(threshold)
-                    .execute(&mut *tx)
-                    .await?.rows_affected();
-                tx.commit().await?;
-                affected
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut total_affected = 0;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
+                        .bind(threshold)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await?.rows_affected();
+                    tx.commit().await?;
+                }
+                total_affected
             }
         };
         if affected > 0 {
@@ -1163,6 +1180,7 @@ impl DB {
 
     pub async fn mark_task_auto_dreamed(
         &self,
+        tenant_id: &str,
         task_id: &str,
         table: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1186,7 +1204,7 @@ impl DB {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
                 tx.commit().await?;
             }

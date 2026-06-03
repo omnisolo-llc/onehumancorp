@@ -43,8 +43,13 @@ pub fn reduce_tokens(data: &str) -> String {
         .filter(|word| {
             !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
         })
-        .collect::<Vec<&str>>()
-        .join(" ")
+        .fold(String::with_capacity(data.len()), |mut acc, w| {
+            if !acc.is_empty() {
+                acc.push(' ');
+            }
+            acc.push_str(w);
+            acc
+        })
 }
 
 
@@ -202,5 +207,27 @@ mod tests {
         let (w, h) = image::GenericImageView::dimensions(&opt_img);
         assert!(w <= 5);
         assert!(h <= 5);
+    }
+
+    #[test]
+    fn test_optimize_image_invalid() {
+        let invalid_data = vec![0, 1, 2, 3];
+        let result = optimize_image(&invalid_data, 5);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decompress_lossless_invalid_base64() {
+        let invalid_base64 = format!("{}invalid_base64", COMPRESSION_PREFIX);
+        let result = decompress_lossless(&invalid_base64);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decompress_lossless_invalid_gzip() {
+        // "AAAA" is valid base64 but invalid gzip
+        let invalid_gzip = format!("{}AAAA", COMPRESSION_PREFIX);
+        let result = decompress_lossless(&invalid_gzip);
+        assert!(result.is_err());
     }
 }

@@ -1,7 +1,35 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { AppShell } from '../components/AppShell';
+
+type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
+
+function SetupIcon({ name }: { name: SetupIconName }) {
+  const paths: Record<SetupIconName, string[]> = {
+    dashboard: ['M4 5h7v7H4z', 'M13 5h7v4h-7z', 'M13 11h7v8h-7z', 'M4 14h7v5H4z'],
+    eye: ['M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+    launch: ['M13 10V3L4 14h7v7l9-11h-7z'],
+    next: ['M5 12h14', 'M13 6l6 6-6 6'],
+    save: ['M5 4h12l2 2v16H5z', 'M8 4v7h8V4', 'M8 18h8'],
+  };
+
+  return (
+    <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+      {paths[name].map((d) => <path key={d} d={d} />)}
+    </svg>
+  );
+}
+
+function IconLabel({ icon, children }: { icon: SetupIconName; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-2">
+      <SetupIcon name={icon} />
+      <span>{children}</span>
+    </span>
+  );
+}
 
 export default function OnboardingWizard() {
   const {
@@ -17,6 +45,8 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    adminEmail, setAdminEmail,
+    adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
@@ -50,6 +80,8 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
+        adminEmail,
+        adminPassword,
         aiAgents,
         aiAutoRespond
       };
@@ -101,6 +133,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
+        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
@@ -132,6 +166,8 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
+      adminEmail,
+      adminPassword,
       aiAgents,
       aiAutoRespond
     };
@@ -148,7 +184,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    aiAgents, aiAutoRespond, isLoaded
+    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -186,6 +222,8 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
+      setStep(1);
+      setChatStep(3);
     } finally {
       setIsLoading(false);
     }
@@ -213,9 +251,9 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: 'online',
-          admin_email: 'admin@ohc.app',
-          admin_name: 'Admin',
-          admin_password: 'password123',
+          admin_email: adminEmail || 'admin@ohc.app',
+          admin_name: businessName + ' Admin',
+          admin_password: adminPassword || 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
@@ -256,14 +294,19 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-      {/* Background Glows for Premium Aesthetic */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container sm:rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+    <AppShell
+      title="Setup"
+      subtitle="Guided business setup in the same operations-console layout."
+      statusItems={[
+        { label: "Step", value: `${step}/5`, tone: "neutral" },
+        { label: "Progress", value: `${Math.round(getProgress())}%`, tone: step === 5 ? "good" : "warn" },
+      ]}
+      actions={[{ label: "Dashboard", href: "/dashboard" }]}
+    >
+      <div className="app-grid two">
+        <div id="setup-screen" className="app-panel w-full overflow-hidden flex flex-col min-h-[640px] relative">
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
+        <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
             className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
@@ -278,7 +321,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -290,7 +333,7 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
@@ -300,7 +343,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -344,14 +387,14 @@ export default function OnboardingWizard() {
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      <IconLabel icon="next">Next</IconLabel>
                     </button>
                   </div>
                 </div>
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -364,7 +407,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -379,9 +422,12 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            if (whatYouSell.trim()) {
-                              setChatStep(3);
+                            if (!whatYouSell.trim()) {
+                              setValidationError('Please tell us what you sell.');
+                              return;
                             }
+                            setValidationError('');
+                            setChatStep(3);
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
@@ -390,20 +436,28 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      onClick={() => {
+                        if (!whatYouSell.trim()) {
+                          setValidationError('Please tell us what you sell.');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(3);
+                      }}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      <IconLabel icon="next">Next</IconLabel>
                     </button>
                   </div>
                 </div>
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -416,7 +470,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -430,10 +484,16 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                          if (e.key === 'Enter') {
                             e.preventDefault();
-                            setValidationError('');
-                            handleIntake();
+                            if (!location.trim()) {
+                              setValidationError('Please tell us your location.');
+                              return;
+                            }
+                            if (!isLoading) {
+                              setValidationError('');
+                              handleIntake();
+                            }
                           }
                         }}
                         placeholder="e.g. Portland, OR"
@@ -442,9 +502,14 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
+                        if (!location.trim()) {
+                          setValidationError('Please tell us your location.');
+                          return;
+                        }
                         setValidationError('');
                         handleIntake();
                       }}
@@ -459,7 +524,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : 'Generate My Business'}
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                     </button>
                   </div>
                 </div>
@@ -468,7 +533,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -481,8 +546,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-                  Save Draft
-                </button>
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -552,8 +617,8 @@ export default function OnboardingWizard() {
                            setFirstProductPrice(e.target.value);
                            if (e.target.value.trim().length === 0) {
                               setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
-                           } else if (isNaN(Number(e.target.value))) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Must be a number.' }));
+                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
                            } else {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
@@ -573,20 +638,24 @@ export default function OnboardingWizard() {
                       setValidationError('Business Name must be at least 3 characters.');
                       return;
                     }
+                    if (Object.keys(validationErrors).length > 0) {
+                      setValidationError('Please fix the errors before continuing.');
+                      return;
+                    }
                     setValidationError('');
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue
+                  <IconLabel icon="next">Continue</IconLabel>
                 </button>
               </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -599,8 +668,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-                  Save Draft
-                </button>
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -637,6 +706,32 @@ export default function OnboardingWizard() {
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
+                      <input
+                        type="email"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
+                      <input
+                        type="password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
                     </div>
                   </div>
                 </div>
@@ -698,7 +793,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Launching...
                     </span>
-                  ) : 'Launch Store'}
+                  ) : <IconLabel icon="launch">Launch Store</IconLabel>}
                 </button>
               </div>
             </div>
@@ -742,21 +837,46 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  Go to Dashboard
+                  <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm  active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  Preview Storefront
+                  <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>
+        <aside className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Setup Progress</div>
+              <div className="app-list-subtitle">This panel now lives in the same side-menu application frame.</div>
+            </div>
+          </div>
+          <div className="app-list">
+            {[
+              ['Business intake', step > 1],
+              ['Review details', step > 2],
+              ['Style and team', step > 3],
+              ['Launch', step > 4],
+            ].map(([label, complete]) => (
+              <div key={String(label)} className="app-list-item">
+                <div>
+                  <div className="app-list-title">{label}</div>
+                  <div className="app-list-subtitle">{complete ? 'Complete' : 'Pending'}</div>
+                </div>
+                <span className={`app-badge ${complete ? 'good' : ''}`}>{complete ? 'Done' : 'Open'}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </AppShell>
   );
 }

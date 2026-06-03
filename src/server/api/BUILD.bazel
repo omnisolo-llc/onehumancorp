@@ -19,6 +19,7 @@ exports_files(
         "staff_mesh.rs",
         "telemetry.rs",
         "catalog.rs",
+        "local_seo.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -44,6 +45,7 @@ rust_library(
         "staff_mesh.rs",
         "telemetry.rs",
         "catalog.rs",
+        "local_seo.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",

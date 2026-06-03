@@ -54,7 +54,7 @@ export default function WebsiteBuilderPage() {
         if (res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0 && data.wizardState) {
-            useWebsiteBuilderStore.getState().loadState?.(data.wizardState);
+            useWebsiteBuilderStore.setState(data.wizardState);
           }
         }
       } catch (e) {

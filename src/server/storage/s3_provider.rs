@@ -72,6 +72,8 @@ impl Provider for S3Provider {
                         saved = original_size - compressed_size,
                         "S3Provider: Auto-optimized image to WebP via compression utility"
                     );
+                    let t_id = key_str.split('/').next().unwrap_or("default");
+                    self.tracker.record_bandwidth_compression(t_id, original_size as i64, compressed_size as i64);
                     compressed_size
                 }
                 Err(e) => {

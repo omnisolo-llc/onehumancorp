@@ -9,6 +9,8 @@ interface CostDashboardData {
   llm_cost: number;
   storage_cost: number;
   payment_fees: number;
+  network_cost: number;
+  bandwidth_savings: number;
   period_start: string;
   period_end: string;
 }
@@ -43,6 +45,8 @@ export default function CostDashboardPage() {
                 llm_cost: 0,
                 storage_cost: 0,
                 payment_fees: 0,
+                network_cost: 0,
+                bandwidth_savings: 0,
                 period_start: startOfMonth.toLocaleDateString('en-CA'),
                 period_end: endOfMonth.toLocaleDateString('en-CA'),
             });
@@ -58,6 +62,8 @@ export default function CostDashboardPage() {
             llm_cost: 0,
             storage_cost: 0,
             payment_fees: 0,
+            network_cost: 0,
+            bandwidth_savings: 0,
             period_start: startOfMonth.toLocaleDateString('en-CA'),
             period_end: endOfMonth.toLocaleDateString('en-CA'),
         });
@@ -95,7 +101,7 @@ export default function CostDashboardPage() {
               Here's what happened this week and what you should do next:<br/><br/>
               - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
               - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
-              - We also noticed a few unread messages in your unified inbox. Using the AI draft feature might help you save time!
+              - We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!
             </p>
         </section>
 
@@ -107,14 +113,15 @@ export default function CostDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
-                <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                     <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                 </div>
+
             </div>
         </section>
 
@@ -123,7 +130,7 @@ export default function CostDashboardPage() {
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
@@ -131,7 +138,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
@@ -139,12 +146,27 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                    <div>
+                        <span className="font-medium text-gray-900">Network & Bandwidth</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
+                    </div>
+                    <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
+                </div>
+
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                    <div>
+                        <span className="font-medium text-green-700">Bandwidth Savings</span>
+                        <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
+                    </div>
+                    <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
             </div>
         </section>

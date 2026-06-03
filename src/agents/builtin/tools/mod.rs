@@ -42,6 +42,7 @@ pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
 pub mod workflow;
+pub mod checkout;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -148,6 +149,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
+        checkout::conversational_checkout_tool(),
     ];
 
     if let Some(env) = native_env {

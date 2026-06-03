@@ -16,6 +16,8 @@ pub enum NodeType {
     Condition { condition_expression: String, true_target: String, false_target: String },
     Input { name: String },
     Output,
+    SubAgent { agent_name: String, task_template: String },
+    Merge { state_keys: Vec<String>, output_key: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,12 +42,13 @@ pub struct WorkflowExecutor {
     pub graph: WorkflowGraph,
     pub agent: Arc<Agent>,
     pub tools: Vec<crate::tools::Tool>,
+    pub sub_agents: HashMap<String, Arc<Agent>>,
     pub config: AgentRunConfig,
 }
 
 impl WorkflowExecutor {
-    pub fn new(graph: WorkflowGraph, agent: Arc<Agent>, tools: Vec<crate::tools::Tool>, config: AgentRunConfig) -> Self {
-        Self { graph, agent, tools, config }
+    pub fn new(graph: WorkflowGraph, agent: Arc<Agent>, tools: Vec<crate::tools::Tool>, sub_agents: HashMap<String, Arc<Agent>>, config: AgentRunConfig) -> Self {
+        Self { graph, agent, tools, sub_agents, config }
     }
 
     pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
@@ -104,7 +107,7 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = tool.execute.execute(args).await
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
                         .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
 
                     state.insert(node.id.clone(), result);
@@ -126,6 +129,31 @@ impl WorkflowExecutor {
                     current_node_id = if is_true { true_target.clone() } else { false_target.clone() };
                     // Condition nodes dictate explicit routing, skip standard edge traversal
                     continue;
+                }
+                NodeType::SubAgent { agent_name, task_template } => {
+                    let mut task = task_template.clone();
+                    for (k, v) in &state {
+                        task = task.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let sub_agent = self.sub_agents.get(agent_name)
+                        .ok_or_else(|| format!("SubAgent {} not found", agent_name))?;
+
+                    let mut on_event = |_| {};
+                    let result = sub_agent.run(&self.config, &task, &mut on_event).await
+                        .map_err(|e| format!("SubAgent node {} failed: {}", node.id, e))?;
+
+                    state.insert(node.id.clone(), result);
+                }
+                NodeType::Merge { state_keys, output_key } => {
+                    let mut merged_data = Vec::new();
+                    for key in state_keys {
+                        if let Some(val) = state.get(key) {
+                            merged_data.push(val.clone());
+                        }
+                    }
+                    let merged_string = serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
+                    state.insert(output_key.clone(), merged_string);
                 }
                 NodeType::Output => {
                     if let Some(edge) = self.graph.edges.iter().find(|e| e.target == current_node_id) {
@@ -212,7 +240,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, tools, config);
+        let executor = WorkflowExecutor::new(graph, agent, tools, HashMap::new(), config);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "raw_data".to_string());
@@ -244,7 +272,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], config.clone());
+        let executor = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], HashMap::new(), config.clone());
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
@@ -271,7 +299,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
@@ -281,4 +309,78 @@ mod tests {
         assert_eq!(result.unwrap_err(), "Visual Orchestrator cycle detected");
     }
 
+
+    #[tokio::test]
+    async fn test_visual_workflow_subagent() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
+                Node { id: "sub1".to_string(), node_type: NodeType::SubAgent { agent_name: "test_sub".to_string(), task_template: "Run task: {{in}}".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "sub1".to_string() },
+                Edge { source: "sub1".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        struct MockSubAgentLlmClient;
+        #[async_trait::async_trait]
+        impl LlmClient for MockSubAgentLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let last_user = req.messages.last().unwrap().content.clone();
+                Ok(ChatResponse {
+                    message: Message::assistant(format!("SubAgent Output: {}", last_user)),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("sub_id1".to_string()),
+                })
+            }
+        }
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let sub_agent = Arc::new(Agent::new(Arc::new(MockSubAgentLlmClient), vec![]));
+
+        let mut sub_agents = HashMap::new();
+        sub_agents.insert("test_sub".to_string(), sub_agent);
+
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], sub_agents, config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "my_task_data".to_string());
+
+        let result = executor.execute(inputs).await.unwrap();
+        assert_eq!(result, "SubAgent Output: Run task: my_task_data");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_merge() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in1".to_string(), node_type: NodeType::Input { name: "input_1".to_string() } },
+                Node { id: "merge1".to_string(), node_type: NodeType::Merge { state_keys: vec!["in1".to_string(), "in2".to_string()], output_key: "merged".to_string() } },
+                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Merged is {{merged}}".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in1".to_string(), target: "merge1".to_string() },
+                Edge { source: "merge1".to_string(), target: "llm1".to_string() },
+                Edge { source: "llm1".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in1".to_string(), "val1".to_string());
+        inputs.insert("in2".to_string(), "val2".to_string());
+
+        let result = executor.execute(inputs).await.unwrap();
+        assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
+    }
 }
