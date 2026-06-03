@@ -8,16 +8,28 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
+<<<<<<< HEAD
+    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
+=======
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+>>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
+<<<<<<< HEAD
+    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
+    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
+    { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
+    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
+=======
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Unified omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Unified Instagram and Facebook Inbox." },
     { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Unified omnichannel inbox aggregating messages across all channels." },
+>>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
   ]);
 
@@ -86,7 +98,11 @@ export default function Integrations() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio Conversations</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+<<<<<<< HEAD
+              Select the channels you want to route into your central inbox. You can update this later without losing message history.
+=======
               Select the channels you want to route into your unified inbox. You can update this later without losing message history.
+>>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             </p>
 
             <div className="space-y-4 mb-6">

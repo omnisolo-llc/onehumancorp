@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Actionable Feed', () => {
+<<<<<<< HEAD
+  test('should display database-backed operations console', async ({ page }) => {
+    await page.goto('http://localhost:3000/dashboard');
+
+    await expect(page.locator('text="Business Analytics"')).toBeVisible();
+    await expect(page.locator('text="Operations Map"')).toBeVisible();
+    await expect(page.locator('text="Action Required"')).toBeVisible();
+    await expect(page.locator('text="Recent Orders"')).toBeVisible();
+    await expect(page.locator('text="Inbox Activity"')).toBeVisible();
+=======
   test('should display daily pulse and action cards', async ({ page }) => {
     await page.goto('http://localhost:3000/dashboard');
 
@@ -18,5 +28,6 @@ test.describe('Dashboard Actionable Feed', () => {
     // Check for Advisor card
     await expect(page.locator('text="Advisor"')).toBeVisible();
     await expect(page.locator('text="Weekly Insights Available"')).toBeVisible();
+>>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
   });
 });
