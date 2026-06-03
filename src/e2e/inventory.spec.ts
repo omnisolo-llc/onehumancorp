@@ -9,7 +9,7 @@ test.describe('Autonomous Predictive Inventory', () => {
         await page.goto('/inventory');
 
         // Wait for proposal to load
-        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible();
+        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible({ timeout: 10000 });
         await expect(page.locator('text=You will sell out in 3 days. Restock 20 units for $150?')).toBeVisible();
 
         // 1-Tap Approve

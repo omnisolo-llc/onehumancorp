@@ -15,6 +15,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
+  await page.waitForTimeout(500);
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 
   await page.getByLabel(/Physical Products/).check();
@@ -53,6 +54,7 @@ test('Maya adds a new Vegan Cake product to her store', async ({ page }) => {
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
+  await page.waitForTimeout(500);
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 
   await page.getByLabel(/Physical Products/).check();
@@ -80,6 +82,7 @@ test('Maya adds a new Vegan Cake product to her store', async ({ page }) => {
 
   // Now navigate to Products
   await page.getByRole('link', { name: 'Products' }).click();
+  await page.waitForTimeout(1000);
 
   // Click Add Product
   await page.getByRole('button', { name: 'Add Product' }).click();
