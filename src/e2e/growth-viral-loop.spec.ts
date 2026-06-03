@@ -61,9 +61,13 @@ test.describe('Growth Viral Loop: Powered by OHC Banner', () => {
         return;
     }
 
-    // Verify the toggle exists and is checked by default
+    // Wait for the toggle to be attached and check its state
     const toggle = page.locator('input[type="checkbox"]');
-    await expect(toggle).toBeChecked();
+    await toggle.waitFor({ state: 'attached', timeout: 10000 });
+
+    // We expect it to be checked since it's the default state in our code
+    // However, depending on timing it might need a moment
+    await expect(toggle).toBeChecked({ timeout: 5000 });
 
     // Verify the banner is visible
     const banner = page.getByText('Powered by');
