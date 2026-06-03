@@ -11,6 +11,8 @@ vi.mock('swagger-ui-react', () => {
   };
 });
 
+vi.mock('swagger-ui-react/swagger-ui.css', () => ({}));
+
 describe('ApiDocsPage', () => {
   it('renders the advanced warning and swagger ui mock', () => {
     render(<ApiDocsPage />);
