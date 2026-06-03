@@ -166,14 +166,14 @@ impl std::error::Error for ToolError {}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HumanInLoopSpectrum {
     /// Operates without human intervention except for strictly defined high-risk tools.
-    Autonomous,
-    /// Requires human approval for tools that modify state (the classic "Restrictive" mode).
-    ApprovalOnMutate,
+    FullAuto,
+    /// Requires human approval for tools that modify state.
+    ConfirmActions,
     /// Requires human explicit approval before executing any tool, including read-only ones.
-    ApprovalOnAll,
+    ObserveOnly,
     /// Expects the human to actively review and optionally edit the tool arguments before execution.
-    CollaborativeEdit,
-    /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
+    Steerable,
+    /// Triggers human intervention only under specific conditions (e.g. low confidence).
     Supervisory,
 }
 

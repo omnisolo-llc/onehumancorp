@@ -605,7 +605,7 @@ impl AgentServiceImpl {
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
-            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::FullAuto,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
             enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
@@ -1036,7 +1036,7 @@ impl AgentService for AgentServiceImpl {
                 enable_serverless_hibernation: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
-            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::FullAuto,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
             enable_tao_orchestration_loop: sub_req.enable_tao_orchestration_loop,

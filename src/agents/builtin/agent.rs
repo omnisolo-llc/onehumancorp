@@ -212,7 +212,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
-            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::FullAuto,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
         }
@@ -2565,12 +2565,12 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} read-only tool calls concurrently.", read_only_calls.len());
             }
             for tc in &read_only_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ObserveOnly {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
                     }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Steerable {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
@@ -2763,12 +2763,12 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate || final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnAll {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ConfirmActions || final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ObserveOnly {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
                     }
-                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::CollaborativeEdit {
+                } else if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::Steerable {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires collaborative editing/approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires collaborative editing/approval.", tc.name)).into());
@@ -3598,7 +3598,7 @@ mod tests {
 
         let agent = Agent::new(client, vec![dummy_tool]);
         let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::ApprovalOnAll;
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::ObserveOnly;
         cfg.manually_approved_tool_calls = vec![];
 
         let mut events = vec![];
@@ -3641,7 +3641,7 @@ mod tests {
 
         let agent = Agent::new(client, vec![dummy_tool]);
         let mut cfg = AgentRunConfig::default();
-        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::CollaborativeEdit;
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Steerable;
         cfg.manually_approved_tool_calls = vec![];
 
         let mut events = vec![];
