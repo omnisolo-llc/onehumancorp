@@ -550,6 +550,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_ui_orders_latency() {
+        bench_ui_orders_latency().await;
+    }
+
+    #[tokio::test]
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
@@ -675,4 +680,61 @@ pub async fn bench_advisory_insights_latency() {
         fetch_times_sqlite[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times_sqlite[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
+}
+
+pub async fn bench_ui_orders_latency() {
+    tracing::info!("Benchmarking UI Orders latency...");
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = 10;
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id TEXT, tenant_id TEXT, name TEXT)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, customer_id TEXT, tenant_id TEXT, total_amount REAL, status TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+        let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES ('cust1', 'test_tenant', 'John Doe')").execute(&pool).await;
+        for i in 0..10 {
+            let _ = sqlx::query("INSERT INTO orders (id, customer_id, tenant_id, total_amount, status) VALUES (?, 'cust1', 'test_tenant', ?, 'pending')")
+                .bind(format!("order{}", i))
+                .bind(10.0 * i as f64)
+                .execute(&pool).await;
+        }
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let db = std::sync::Arc::new(db);
+    let mut fetch_times = Vec::new();
+
+    // Cold start
+    let start_cold = std::time::Instant::now();
+
+    // Simulate UI Request
+    let tenant_query = crate::UiTenantQuery { tenant_id: Some("test_tenant".to_string()) };
+    let _ = crate::list_ui_orders_handler(axum::extract::State(db.clone()), axum::extract::Query(tenant_query.clone())).await;
+    tracing::info!("UI Orders Cold Start: {} us", start_cold.elapsed().as_micros());
+
+    // Hot starts
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+        let _ = crate::list_ui_orders_handler(axum::extract::State(db.clone()), axum::extract::Query(tenant_query.clone())).await;
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    if !fetch_times.is_empty() {
+        tracing::info!("UI Orders Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+            fetch_times[iterations / 2],
+            fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+            fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+        );
+    }
 }
