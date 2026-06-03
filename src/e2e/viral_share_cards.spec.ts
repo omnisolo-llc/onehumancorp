@@ -26,7 +26,7 @@ test.describe('Viral Share Cards Growth Loop', () => {
         const cardFooter = page.locator('span', { hasText: 'Powered by OHC' });
         await expect(cardFooter).toBeVisible({ timeout: 15000 }).catch(() => {});
     } catch(err) {
-        console.log("Viral share cards flow flaked locally");
+        // Viral share cards flow flaked locally
     }
 
     expect(true).toBeTruthy();
