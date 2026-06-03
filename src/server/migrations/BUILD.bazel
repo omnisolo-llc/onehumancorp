@@ -1,6 +1,6 @@
 filegroup(
     name = "migrations",
-    srcs = glob(["*.sql"]),
+    srcs = glob(["*.sql"]) + ["071_offline_sync_ledger.sql"],
     visibility = [
         "//deploy:__pkg__",
         "//src/server:__pkg__",
