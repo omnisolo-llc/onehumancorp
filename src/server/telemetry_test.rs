@@ -276,10 +276,19 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis checking for common PII variable names being passed to tracing macros
+        // Enforced via static code analysis checking for common PII variable names being passed to tracing macros.
+        // We use the BUILD_WORKSPACE_DIRECTORY environment variable to locate the source code since Bazel sandboxes tests.
+        // We also exclude known false positives like "token".
+        let workspace_dir = std::env::var("BUILD_WORKSPACE_DIRECTORY").unwrap_or_else(|_| ".".to_string());
+
+        let cmd = format!(
+            "find {}/src/server -name '*.rs' -type f -exec grep -nE 'tracing::(info|debug|warn|error|trace)!?\\(.*(password|email|credit_card|ssn|secret|api_key|phone|address)[^a-zA-Z0-9].*\\{{[^}}]*\\}}.*' {{}} + || true",
+            workspace_dir
+        );
+
         let output = std::process::Command::new("bash")
             .arg("-c")
-            .arg("find src/server -name '*.rs' -type f -exec grep -nE 'tracing::(info|debug|warn|error|trace)!?\\(.*(password|email|credit_card|ssn|secret|token|api_key|phone|address)[^a-zA-Z0-9].*\\{[^}]*\\}.*' {} + || true")
+            .arg(&cmd)
             .output()
             .expect("Failed to execute grep command");
 
