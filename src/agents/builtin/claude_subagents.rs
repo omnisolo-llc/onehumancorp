@@ -324,6 +324,53 @@ impl ClaudeSubagentSpawner {
         assert!(worktree_dir.join("test.txt").exists());
     }
     #[tokio::test]
+    async fn test_claude_subagent_execute_and_summarize_retries() {
+        // Parent client expects to receive the final summary call
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![
+                "Condensed summary after retries".to_string()
+            ]),
+        });
+        let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
+
+        // Sub client will fail a few times before succeeding
+        struct FailingMockLlmClient {
+            call_count: std::sync::Mutex<usize>,
+        }
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for FailingMockLlmClient {
+            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().unwrap();
+                *count += 1;
+                if *count < 3 {
+                    Err("Simulated LLM failure".into())
+                } else {
+                    Ok(ohc_builtin_agent_core::types::ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("Success on try 3"),
+                        usage: ohc_builtin_agent_core::types::Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("id1".to_string()),
+                    })
+                }
+            }
+        }
+
+        let sub_client = Arc::new(FailingMockLlmClient { call_count: std::sync::Mutex::new(0) });
+        let subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_agent,
+            subagent,
+            ClaudeSubagentMode::Fork, // using fork to just test execute_and_summarize logic
+        );
+
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do failing task", &[], &config).await.unwrap();
+
+        assert_eq!(result, "Condensed summary after retries");
+    }
+
+    #[tokio::test]
     async fn test_claude_subagent_worktree_cleanup_and_merge() {
         let parent_client = Arc::new(MockLlmClient {
             responses: std::sync::Mutex::new(vec![

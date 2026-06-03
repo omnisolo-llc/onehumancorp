@@ -281,4 +281,57 @@ mod tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));
     }
+
+    struct MockLlmClientFailingParse;
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClientFailingParse {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let msg = Message {
+                role: ohc_builtin_agent_core::types::Role::Assistant,
+                content: "invalid json".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            };
+            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+                message: msg,
+                usage: Usage::default(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_sensor_parse_error() {
+        let fail_llm = Arc::new(MockLlmClientFailingParse);
+        let judge = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
+        let res = judge.verify_inferential("output", "task").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("LLM Error"));
+    }
+
+    struct MockLlmClientNetworkError;
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClientNetworkError {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Network connection failed".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_sensor_network_error() {
+        let fail_llm = Arc::new(MockLlmClientNetworkError);
+        let judge = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
+        let res = judge.verify_inferential("output", "task").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("LLM Error"));
+    }
 }

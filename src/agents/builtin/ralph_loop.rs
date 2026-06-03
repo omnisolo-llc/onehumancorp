@@ -304,4 +304,47 @@ mod tests {
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
     }
+
+    struct FailingTestLlmClient;
+
+    #[async_trait::async_trait]
+    impl LlmClient for FailingTestLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Agent failed during feature implementation".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_with_failing_agent() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress_fail.json");
+
+        let initial_progress = RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                Feature { name: "Step 1".to_string(), status: "pending".to_string() },
+            ],
+            current_feature_index: 0,
+            notes: vec![],
+            is_complete: false,
+        };
+        std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();
+
+        let llm = Arc::new(FailingTestLlmClient);
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+
+        let result = ralph.run("Build a web server").await;
+        // The run should finish without returning an error because the error is logged and loop breaks.
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+        // Since it failed, it shouldn't be marked as complete
+        assert!(!saved_progress.is_complete);
+        // The first feature should remain pending
+        assert_eq!(saved_progress.features[0].status, "pending");
+    }
 }
