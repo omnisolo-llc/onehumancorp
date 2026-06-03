@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Smart Pricing Feature CUJ', () => {
   test('Owner configures smart pricing bounds', async ({ page }) => {
