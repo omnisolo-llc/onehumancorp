@@ -41,8 +41,8 @@ async function main() {
     stdio: 'inherit',
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
-      REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@127.0.0.1:5432/ohc',
+      REDIS_URL: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
       OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
     },
   });
