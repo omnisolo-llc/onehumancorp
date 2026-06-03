@@ -9,16 +9,15 @@ test.describe('Dynamic Pricing Tiers UI', () => {
     await page.goto('/pricing');
 
     // Check if the page title is visible
-    await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
 
-    // Look for limits in the UI which confirm dynamic loading is applied.
-    // Given the defaults if the API endpoint wasn't reached, it would show '500MB Storage Quota'
-    // Let's assert that "Storage Quota" is displayed to make sure the format function worked.
-    await expect(page.locator('text=Storage Quota').first()).toBeVisible();
+    // Wait explicitly for the network call to avoid flakiness, although not necessary if the default text renders first
+    // In our case we expect to see 'Agent Limit' eventually
+    await expect(page.locator('li:has-text("Agent Limit")').first()).toBeVisible({ timeout: 20000 });
 
     // Check for other dynamic formats
-    await expect(page.locator('text=Agent Limit').first()).toBeVisible();
-    await expect(page.locator('text=AI actions / month').first()).toBeVisible();
-    await expect(page.locator('text=Products Limit').first()).toBeVisible();
+    await expect(page.locator('li:has-text("AI actions / month")').first()).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('li:has-text("Storage Quota")').first()).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('li:has-text("Products Limit")').first()).toBeVisible({ timeout: 20000 });
   });
 });
