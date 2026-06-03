@@ -25,6 +25,12 @@ export default function DiagnosticsPage() {
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Operational Telemetry</h2>
           <div className="space-y-4">
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Database:</span> Healthy
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Redis:</span> Healthy
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Response time latency:</span> 42 ms
             </div>
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
