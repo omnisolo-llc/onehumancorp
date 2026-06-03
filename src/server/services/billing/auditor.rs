@@ -9,6 +9,7 @@ use opentelemetry::KeyValue;
 pub struct AuditEvent {
     pub agent_id: String,
     pub tenant_id: String,
+    pub model: String,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
@@ -24,19 +25,19 @@ pub struct ComputeEvent {
 
 pub struct CostAuditor {
     config: CostConfig,
-    agent_costs: Mutex<HashMap<String, f64>>,
-    tenant_costs: Mutex<HashMap<String, f64>>,
-    agent_budgets: Mutex<HashMap<String, f64>>,
-    total_cost: Mutex<f64>,
-    caching_savings: Mutex<f64>,
-    storage_savings: Mutex<f64>,
-    total_compute_cost: Mutex<f64>,
-    total_network_cost: Mutex<f64>,
-    tenant_compute_costs: Mutex<HashMap<String, f64>>,
-    tenant_network_costs: Mutex<HashMap<String, f64>>,
-    agent_revenues: Mutex<HashMap<String, f64>>,
-    tenant_revenues: Mutex<HashMap<String, f64>>,
-    tenant_payment_fees: Mutex<HashMap<String, f64>>,
+    agent_costs: Mutex<HashMap<String, i64>>,
+    tenant_costs: Mutex<HashMap<String, i64>>,
+    agent_budgets: Mutex<HashMap<String, i64>>,
+    total_cost: Mutex<i64>,
+    caching_savings: Mutex<i64>,
+    storage_savings: Mutex<i64>,
+    total_compute_cost: Mutex<i64>,
+    total_network_cost: Mutex<i64>,
+    tenant_compute_costs: Mutex<HashMap<String, i64>>,
+    tenant_network_costs: Mutex<HashMap<String, i64>>,
+    agent_revenues: Mutex<HashMap<String, i64>>,
+    tenant_revenues: Mutex<HashMap<String, i64>>,
+    tenant_payment_fees: Mutex<HashMap<String, i64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
@@ -58,11 +59,11 @@ impl CostAuditor {
             agent_costs: Mutex::new(HashMap::new()),
             tenant_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
-            total_cost: Mutex::new(0.0),
-            caching_savings: Mutex::new(0.0),
-            storage_savings: Mutex::new(0.0),
-            total_compute_cost: Mutex::new(0.0),
-            total_network_cost: Mutex::new(0.0),
+            total_cost: Mutex::new(0),
+            caching_savings: Mutex::new(0),
+            storage_savings: Mutex::new(0),
+            total_compute_cost: Mutex::new(0),
+            total_network_cost: Mutex::new(0),
             tenant_compute_costs: Mutex::new(HashMap::new()),
             tenant_network_costs: Mutex::new(HashMap::new()),
             agent_revenues: Mutex::new(HashMap::new()),
@@ -82,30 +83,29 @@ impl CostAuditor {
         self.telemetry_tx = Some(tx);
     }
 
-    pub fn record_event(&self, event: AuditEvent) -> f64 {
-        let cost = calculator::calculate_cost_with_config(
+    pub fn record_event(&self, event: AuditEvent) -> i64 {
+        let cost_cents = calculator::calculate_cost_cents(
+            &event.model,
             event.input_tokens,
             event.output_tokens,
             event.cached_input_tokens,
-            event.local_embedding_tokens,
-            &self.config,
         );
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
 
-        let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
-        *current_cost += cost;
+        let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0);
+        *current_cost += cost_cents;
 
         let mut tenant_costs = self.tenant_costs.lock().unwrap();
-        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
-        *current_tenant_cost += cost;
+        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0);
+        *current_tenant_cost += cost_cents;
 
         // Detect anomalies (simple threshold check)
-        if cost > 10.0 {
-            tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
+        if cost_cents > 1000 {
+            tracing::warn!("Anomaly detected: High token usage cost cents ({})", cost_cents);
         }
-        *total_cost += cost;
+        *total_cost += cost_cents;
 
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
@@ -115,14 +115,13 @@ impl CostAuditor {
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
-        let cost_cents = (cost * 100.0).round() as u64;
-        self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.llm_cost_counter.add(cost_cents as u64, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
         }
 
-        cost
+        cost_cents
     }
 
     pub fn record_cache_hit(&self, event: AuditEvent) -> f64 {
@@ -150,34 +149,33 @@ impl CostAuditor {
 
     pub fn get_agent_cost(&self, agent_id: &str) -> f64 {
         let agent_costs = self.agent_costs.lock().unwrap();
-        *agent_costs.get(agent_id).unwrap_or(&0.0)
+        (*agent_costs.get(agent_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn get_total_savings(&self) -> f64 {
         let caching_savings = self.caching_savings.lock().unwrap();
-        *caching_savings
+        (*caching_savings as f64) / 100.0
     }
 
-    pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
-        let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
+    pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> i64 {
+        let savings = calculator::calculate_storage_savings_cents(original_bytes, compressed_bytes, &self.config);
         
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
         
-        let savings_cents = (savings * 100.0).round() as u64;
-        self.storage_savings_counter.add(savings_cents, &[]);
+        self.storage_savings_counter.add(savings as u64, &[]);
 
         savings
     }
 
     pub fn get_total_storage_savings(&self) -> f64 {
         let storage_savings = self.storage_savings.lock().unwrap();
-        *storage_savings
+        (*storage_savings as f64) / 100.0
     }
 
     pub fn get_total_cost(&self) -> f64 {
         let total_cost = self.total_cost.lock().unwrap();
-        *total_cost
+        (*total_cost as f64) / 100.0
     }
 
     pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
@@ -187,12 +185,14 @@ impl CostAuditor {
         let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let mut result = Vec::new();
         for (agent_id, cost) in agent_costs.iter() {
-            let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
+            let revenue = agent_revenues.get(agent_id).unwrap_or(&0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
-            let roi = self.calculate_roi(*cost, *revenue);
-            let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
+            let cost_f64 = (*cost as f64) / 100.0;
+            let revenue_f64 = (*revenue as f64) / 100.0;
+            let roi = self.calculate_roi(cost_f64, revenue_f64);
+            let efficiency = self.calculate_efficiency(cost_f64, *output_tokens);
+            result.push((agent_id.clone(), cost_f64, *output_tokens, roi, efficiency, *storage_bytes));
         }
         result
     }
@@ -216,32 +216,33 @@ impl CostAuditor {
 
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
-        *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+        (*tenant_costs.get(tenant_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn get_total_revenue(&self) -> f64 {
         let agent_revenues = self.agent_revenues.lock().unwrap();
-        agent_revenues.values().sum()
+        let total: i64 = agent_revenues.values().sum();
+        (total as f64) / 100.0
     }
 
     pub fn get_tenant_revenue(&self, tenant_id: &str) -> f64 {
         let tenant_revenues = self.tenant_revenues.lock().unwrap();
-        *tenant_revenues.get(tenant_id).unwrap_or(&0.0)
+        (*tenant_revenues.get(tenant_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn get_tenant_payment_fees(&self, tenant_id: &str) -> f64 {
         let tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
-        *tenant_payment_fees.get(tenant_id).unwrap_or(&0.0)
+        (*tenant_payment_fees.get(tenant_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn get_tenant_compute_cost(&self, tenant_id: &str) -> f64 {
         let tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
-        *tenant_compute_costs.get(tenant_id).unwrap_or(&0.0)
+        (*tenant_compute_costs.get(tenant_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn get_tenant_network_cost(&self, tenant_id: &str) -> f64 {
         let tenant_network_costs = self.tenant_network_costs.lock().unwrap();
-        *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
+        (*tenant_network_costs.get(tenant_id).unwrap_or(&0) as f64) / 100.0
     }
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
@@ -253,29 +254,31 @@ impl CostAuditor {
     }
 
     pub fn record_revenue(&self, agent_id: &str, tenant_id: &str, amount: f64) {
+        let amount_cents = (amount * 100.0).round() as i64;
+        let fee_cents = (amount_cents * 29) / 1000 + 30;
+
         {
             let mut agent_revenues = self.agent_revenues.lock().unwrap();
-            let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
-            *current_revenue += amount;
+            let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0);
+            *current_revenue += amount_cents;
         }
 
         {
             let mut tenant_revenues = self.tenant_revenues.lock().unwrap();
-            let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
-            *current_tenant_revenue += amount;
+            let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0);
+            *current_tenant_revenue += amount_cents;
         }
 
         {
             let mut tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
-            let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0.0);
-            // Using Stripe's standard fee calculation: 2.9% + 30 cents per transaction
-            *current_tenant_fee += amount * 0.029 + 0.30;
+            let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0);
+            *current_tenant_fee += fee_cents;
         }
     }
 
-    pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
-        let compute_cost = calculator::calculate_compute_cost(event.compute_hours, &self.config);
-        let network_cost = calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
+    pub fn record_compute_event(&self, event: ComputeEvent) -> i64 {
+        let compute_cost = calculator::calculate_compute_cost_cents(event.compute_hours, &self.config);
+        let network_cost = calculator::calculate_network_cost_cents(event.network_egress_bytes, &self.config);
         let total = compute_cost + network_cost;
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
@@ -283,26 +286,25 @@ impl CostAuditor {
         let mut total_compute_cost = self.total_compute_cost.lock().unwrap();
         let mut total_network_cost = self.total_network_cost.lock().unwrap();
 
-        let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0.0);
+        let current_cost = agent_costs.entry(event.agent_id.clone()).or_insert(0);
         *current_cost += total;
         *total_cost += total;
         *total_compute_cost += compute_cost;
         *total_network_cost += network_cost;
 
         let mut tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
-        let current_tenant_compute = tenant_compute_costs.entry(event.tenant_id.clone()).or_insert(0.0);
+        let current_tenant_compute = tenant_compute_costs.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_compute += compute_cost;
 
         let mut tenant_network_costs = self.tenant_network_costs.lock().unwrap();
-        let current_tenant_network = tenant_network_costs.entry(event.tenant_id.clone()).or_insert(0.0);
+        let current_tenant_network = tenant_network_costs.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_network += network_cost;
 
         let mut tenant_costs = self.tenant_costs.lock().unwrap();
-        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
+        let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_cost += total;
 
-        let total_cents = (total * 100.0).round() as u64;
-        self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+        self.compute_cost_counter.add(total as u64, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
@@ -328,11 +330,11 @@ impl CostAuditor {
 
         for (agent_id, cost) in agent_costs.iter() {
 
-            let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
+            let revenue = agent_revenues.get(agent_id).unwrap_or(&0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
 
-            let roi = self.calculate_roi(*cost, *revenue);
-            let efficiency = self.calculate_efficiency(*cost, *output_tokens);
+            let roi = self.calculate_roi((*cost as f64) / 100.0, (*revenue as f64) / 100.0);
+            let efficiency = self.calculate_efficiency((*cost as f64) / 100.0, *output_tokens);
 
             let metrics_str = format!(" [ROI: {:.2}%, Efficiency: {:.2} tok/$]", roi, efficiency);
 
@@ -361,14 +363,14 @@ impl CostAuditor {
 
     pub fn set_agent_budget(&self, agent_id: &str, budget: f64) {
         let mut agent_budgets = self.agent_budgets.lock().unwrap();
-        agent_budgets.insert(agent_id.to_string(), budget);
+        agent_budgets.insert(agent_id.to_string(), (budget * 100.0).round() as i64);
     }
 
     pub fn is_agent_over_budget(&self, agent_id: &str) -> bool {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_budgets = self.agent_budgets.lock().unwrap();
 
-        let cost = agent_costs.get(agent_id).unwrap_or(&0.0);
+        let cost = agent_costs.get(agent_id).unwrap_or(&0);
         let budget = agent_budgets.get(agent_id);
 
         if let Some(budget) = budget {
@@ -396,6 +398,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "gpt-4o".to_string(),
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
@@ -404,13 +407,13 @@ mod tests {
         
 
         let cost = auditor.record_event(event);
-        assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
+        assert_eq!(cost, 1); // 1000 * 5/1M + 500 * 15/1M = 0.0125 dollars -> 1 cent
 
         auditor.record_revenue("agent1", "tenant1", 5.0);
 
-        assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
+        assert_eq!(auditor.get_agent_cost("agent1"), 0.01);
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
-        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
+        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), ((500 * 29) / 1000 + 30) as f64 / 100.0);
         
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
@@ -432,6 +435,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "gpt-4o".to_string(),
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,
@@ -439,8 +443,8 @@ mod tests {
         };
 
         let savings = auditor.record_cache_hit(event);
-        assert!(savings > 0.0);
-        assert_eq!(auditor.get_total_savings(), savings);
+        assert!(savings > 0);
+        assert_eq!(auditor.get_total_savings(), savings as f64 / 100.0);
     }
 
     #[test]
@@ -455,7 +459,7 @@ mod tests {
         let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
 
         let savings = auditor.record_storage_compression(original_bytes, compressed_bytes);
-        assert_eq!(savings, 0.1);
+        assert_eq!(savings, 10);
         assert_eq!(auditor.get_total_storage_savings(), 0.1);
     }
 }
