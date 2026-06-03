@@ -51,24 +51,45 @@ impl VerificationManager {
     }
 
     pub async fn run_computational_guides(&self, code: &str, context: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for guide in &self.computational {
-            guide.verify(code, context).await?;
+            if let Err(e) = guide.verify(code, context).await {
+                errors.push(e);
+            }
         }
-        Ok(())
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n---\n"))
+        }
     }
 
     pub async fn run_visual_verifiers(&self, ui_state_path: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for verifier in &self.visual {
-            verifier.verify_visual(ui_state_path).await?;
+            if let Err(e) = verifier.verify_visual(ui_state_path).await {
+                errors.push(e);
+            }
         }
-        Ok(())
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n---\n"))
+        }
     }
 
     pub async fn run_inferential_sensors(&self, output: &str, task: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for sensor in &self.inferential {
-            sensor.verify_inferential(output, task).await?;
+            if let Err(e) = sensor.verify_inferential(output, task).await {
+                errors.push(e);
+            }
         }
-        Ok(())
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n---\n"))
+        }
     }
 }
 
@@ -256,6 +277,40 @@ mod tests {
         let mut fail_manager = VerificationManager::new();
         fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
         assert!(fail_manager.run_computational_guides("", "").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verification_manager_multiple_guides_error_aggregation() {
+        struct MockErrorGuide { error_msg: String }
+        #[async_trait::async_trait]
+        impl ComputationalGuide for MockErrorGuide {
+            async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+                Err(self.error_msg.clone())
+            }
+        }
+
+        let mut manager = VerificationManager::new();
+        manager.add_computational(Arc::new(MockComputationalGuide { should_pass: true }));
+        manager.add_computational(Arc::new(MockErrorGuide { error_msg: "Error 1".to_string() }));
+        manager.add_computational(Arc::new(MockComputationalGuide { should_pass: true }));
+        manager.add_computational(Arc::new(MockErrorGuide { error_msg: "Error 2".to_string() }));
+
+        let result = manager.run_computational_guides("", "").await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("Error 1"));
+        assert!(err_msg.contains("Error 2"));
+        assert!(err_msg.contains("\n---\n"));
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_sensor_parsing_failure() {
+        // Test when LLM returns unparsable JSON
+        let fail_llm = Arc::new(MockLlmClient { response_text: "invalid json".to_string() });
+        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
+        let res = judge_fail.verify_inferential("output", "task").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("LLM Error:"));
     }
 
     #[tokio::test]
