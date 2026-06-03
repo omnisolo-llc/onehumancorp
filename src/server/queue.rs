@@ -303,7 +303,7 @@ impl TaskQueue for PostgresTaskQueue {
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
         let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
@@ -586,7 +586,7 @@ impl QueueManager {
 
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
         let start_poll = std::time::Instant::now();
         let mut retry_count = 0;
@@ -830,7 +830,7 @@ impl TaskQueueService {
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
         let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
             .bind(agent_id)
             .fetch_optional(&mut *tx)

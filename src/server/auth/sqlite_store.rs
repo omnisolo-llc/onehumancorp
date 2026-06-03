@@ -325,7 +325,8 @@ mod tests {
         let res = repo.get_by_id("dummy_id", "system").await;
         if is_multitenant {
             assert!(res.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+            let err_str = res.unwrap_err().to_string();
+            assert!(err_str.contains("tenant_id \'system\' cannot be queried"));
         } else {
             assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
         }

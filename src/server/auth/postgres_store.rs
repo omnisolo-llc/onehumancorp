@@ -338,7 +338,9 @@ mod security_tests {
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        assert!(res.is_err());
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("tenant_id \'system\' cannot be queried"));
     }
 
     #[tokio::test]

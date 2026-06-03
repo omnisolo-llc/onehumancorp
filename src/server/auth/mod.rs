@@ -162,11 +162,15 @@ impl Store {
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    let mut key_bytes = [0u8; 32];
-                    use rand::RngCore;
-                    rand::thread_rng().fill_bytes(&mut key_bytes);
-                    key_bytes.to_vec()
+                    if ::server_config::get().multitenant {
+                        tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
+                        let mut key_bytes = [0u8; 32];
+                        use rand::RngCore;
+                        rand::thread_rng().fill_bytes(&mut key_bytes);
+                        key_bytes.to_vec()
+                    } else {
+                        panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+                    }
                 };
 
                 #[cfg(unix)]
