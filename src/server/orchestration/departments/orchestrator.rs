@@ -797,6 +797,8 @@ impl DepartmentOrchestrator {
                         preferences: prefs_str.and_then(|s| serde_json::from_str(&s).ok()),
                         created_at: Some(r.get("created_at")),
                         updated_at: Some(r.get("updated_at")),
+                        status: r.try_get("status").ok(),
+                        expected_purchase_cadence_days: r.try_get("expected_purchase_cadence_days").ok(),
                     }))
                 } else {
                     Ok(None)
@@ -822,6 +824,8 @@ impl DepartmentOrchestrator {
                         preferences: prefs_str.and_then(|s| serde_json::from_str(&s).ok()),
                         created_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").unwrap_or_else(|_| chrono::Utc::now())),
                         updated_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now())),
+                        status: r.try_get("status").ok(),
+                        expected_purchase_cadence_days: r.try_get("expected_purchase_cadence_days").ok(),
                     }))
                 } else {
                     Ok(None)
@@ -835,7 +839,7 @@ impl DepartmentOrchestrator {
         let now = chrono::Utc::now();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO UPDATE SET mood = EXCLUDED.mood, updated_at = EXCLUDED.updated_at")
+                sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at, status, expected_purchase_cadence_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (id) DO UPDATE SET mood = EXCLUDED.mood, updated_at = EXCLUDED.updated_at, status = EXCLUDED.status, expected_purchase_cadence_days = EXCLUDED.expected_purchase_cadence_days")
                     .bind(&c.id)
                     .bind(&c.tenant_id)
                     .bind(&c.customer_id)
@@ -845,6 +849,8 @@ impl DepartmentOrchestrator {
                     .bind(&prefs_str)
                     .bind(&c.created_at.unwrap_or(now))
                     .bind(&now)
+                    .bind(&c.status)
+                    .bind(&c.expected_purchase_cadence_days)
                     .execute(&self.db.pool)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -857,16 +863,18 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?.is_some();
                 if exists {
-                    sqlx::query("UPDATE customer360 SET mood = ?, updated_at = ? WHERE tenant_id = ? AND customer_id = ?")
+                    sqlx::query("UPDATE customer360 SET mood = ?, updated_at = ?, status = ?, expected_purchase_cadence_days = ? WHERE tenant_id = ? AND customer_id = ?")
                         .bind(&c.mood)
                         .bind(&now)
+                        .bind(&c.status)
+                        .bind(&c.expected_purchase_cadence_days)
                         .bind(&c.tenant_id)
                         .bind(&c.customer_id)
                         .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
                 } else {
-                    sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                    sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at, status, expected_purchase_cadence_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                         .bind(&c.id)
                         .bind(&c.tenant_id)
                         .bind(&c.customer_id)
@@ -876,6 +884,8 @@ impl DepartmentOrchestrator {
                         .bind(&prefs_str)
                         .bind(&c.created_at.unwrap_or(now))
                         .bind(&now)
+                        .bind(&c.status)
+                        .bind(&c.expected_purchase_cadence_days)
                         .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
@@ -901,6 +911,8 @@ impl DepartmentOrchestrator {
                 preferences: None,
                 created_at: None,
                 updated_at: None,
+                status: None,
+                expected_purchase_cadence_days: None,
             };
             self.upsert_customer360(&cust).await
         }

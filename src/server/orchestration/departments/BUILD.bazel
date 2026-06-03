@@ -4,6 +4,8 @@ exports_files(
     [
         "approvals_test.rs",
         "business_advisory_agent.rs",
+        "churn_engine.rs",
+        "churn_engine_test.rs",
         "customer_success_agent.rs",
         "finance_agent.rs",
         "flow_test.rs",
@@ -25,6 +27,8 @@ rust_library(
         "bazel_lib.rs",
         "approvals_test.rs",
         "business_advisory_agent.rs",
+        "churn_engine.rs",
+        "churn_engine_test.rs",
         "customer_success_agent.rs",
         "finance_agent.rs",
         "flow_test.rs",
