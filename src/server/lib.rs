@@ -3928,6 +3928,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 width: 100%;
                                 margin-right: 0;
                             }
+                            .screen {
+                                width: 100%;
+                                overflow-x: hidden;
+                                box-sizing: border-box;
+                                padding: 16px 14px 100px;
+                            }
                         }
 
                         /* Login screen specific */
@@ -4166,7 +4172,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
             #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
             #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
-            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; min-height: 44px; min-width: 44px; }
             .help-category-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--primary); }
             .help-category-card h3 { margin: 0 0 8px 0; color: var(--primary); }
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
@@ -7582,6 +7588,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
+                            if (screen) {
+                                screen.style.display = 'block';
+                            }
 
                             if (id === 'api-docs-screen' || id === 'api-screen') {
                                 if (window.SwaggerUIBundle) {
