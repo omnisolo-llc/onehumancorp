@@ -1,7 +1,8 @@
 # [ARCH] Proactive Business Insights & Advisory Agent
 
 **Status:** Proposed
-**Priority:** P2
+**Estimated Scope: Large
+Priority:** P2
 **Persona Focus:** Fatima (Food Cart), Carlos (Handyman)
 
 ## 1. Problem Statement

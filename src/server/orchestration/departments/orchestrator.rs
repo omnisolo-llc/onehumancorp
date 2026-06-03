@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use sqlx::Row;
+use sqlx::Executor;
 use uuid::Uuid;
 use chrono::Utc;
 use std::str::FromStr;
@@ -377,7 +378,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -425,7 +425,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -478,7 +477,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -526,7 +524,6 @@ impl DepartmentOrchestrator {
                         .await
                 };
                 if let Ok(rows) = fetch_res {
-
                     for row in rows {
                         let dep_str: String = row.get("department");
                         let status_str: String = row.get("status");
@@ -585,7 +582,6 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
-
                         let dep = r.get::<String, _>("department");
                         let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
                             Ok(p) => serde_json::from_str(&p).unwrap_or(None),
@@ -616,7 +612,6 @@ impl DepartmentOrchestrator {
                     .await;
                 match row {
                     Ok(Some(r)) => {
-
                         let dep = r.get::<String, _>("department");
                         let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
                         let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
@@ -716,7 +711,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 for row in rows {
-
                     let meta_str: String = row.get("metadata");
                     results.push(crate::orchestration::departments::types::TimelineEvent {
                         id: row.get("id"),
@@ -739,7 +733,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 for row in rows {
-
                     let meta_str: String = row.get("metadata");
                     let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
 
@@ -786,7 +779,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     let prefs_str: Option<String> = r.get("preferences");
                     Ok(Some(crate::orchestration::departments::types::Customer360 {
                         id: r.get("id"),
@@ -811,7 +803,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     let prefs_str: Option<String> = r.get("preferences");
                     Ok(Some(crate::orchestration::departments::types::Customer360 {
                         id: r.get("id"),
@@ -917,7 +908,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
@@ -938,7 +928,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
@@ -1012,7 +1001,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
                 } else {
                     Ok(None)
@@ -1026,7 +1014,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
                 } else {
                     Ok(None)
@@ -1045,7 +1032,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some(r.get("customer_id")))
                 } else {
                     Ok(None)
@@ -1059,7 +1045,6 @@ impl DepartmentOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
-
                     Ok(Some(r.get("customer_id")))
                 } else {
                     Ok(None)

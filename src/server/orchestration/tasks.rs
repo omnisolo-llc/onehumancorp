@@ -1,8 +1,8 @@
 use crate::db::{DB, DbStore};
-use sqlx::Executor;
 use crate::tasks::SharedTask;
 use chrono::Utc;
 use sqlx::Row;
+use sqlx::Executor;
 use std::sync::Arc;
 
 use opentelemetry::global;
@@ -1187,7 +1187,6 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
@@ -1343,14 +1342,12 @@ mod tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
             })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
-
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })

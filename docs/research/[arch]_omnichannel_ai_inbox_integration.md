@@ -1,7 +1,8 @@
 # [ARCH] Omnichannel AI Inbox Integration
 
 **Status:** Proposed
-**Priority:** P0
+**Estimated Scope: Large
+Priority:** P0
 **Persona Focus:** Maya (Home Baker - Instagram DMs), Fatima (Food Cart - Phone/SMS)
 
 ## 1. Problem Statement

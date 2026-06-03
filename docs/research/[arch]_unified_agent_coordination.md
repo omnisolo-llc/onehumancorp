@@ -1,7 +1,8 @@
 # [ARCH] Unified Agent Coordination & Context Mesh
 
 **Status:** Proposed
-**Priority:** P0
+**Estimated Scope: Large
+Priority:** P0
 **Persona Focus:** Maya (Home Baker), Carlos (Handyman)
 
 ## 1. Problem Statement

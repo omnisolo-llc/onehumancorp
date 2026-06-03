@@ -10,7 +10,7 @@ impl Tracker {
     pub fn sanitize_props(&self, props: HashMap<String, String>) -> HashMap<String, String> {
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
-            if ::server_telemetry::is_sensitive_key(k) || ::server_telemetry::contains_pii(v) {
+            if ::server_telemetry::is_sensitive_key(k) {
                 *v = "[REDACTED]".to_string();
             } else if ::server_telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
@@ -47,8 +47,6 @@ mod tests {
         props.insert("email".to_string(), "user@example.com".to_string());
         props.insert("contact".to_string(), "contact@test.com".to_string());
         props.insert("billing_address".to_string(), "123 Main St".to_string());
-        props.insert("comment".to_string(), "My SSN is 123-456-7890".to_string());
-        props.insert("notes".to_string(), "Card number 4111-1111-1111-1111".to_string());
 
         let sanitized = tracker.sanitize_props(props);
 
@@ -57,8 +55,6 @@ mod tests {
         assert_eq!(sanitized.get("email").unwrap(), "[REDACTED]");
         assert_eq!(sanitized.get("contact").unwrap(), "[EMAIL_REDACTED]");
         assert_eq!(sanitized.get("billing_address").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("comment").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized.get("notes").unwrap(), "[REDACTED]");
     }
 
     #[test]

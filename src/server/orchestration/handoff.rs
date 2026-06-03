@@ -1,6 +1,7 @@
 use crate::db::{DbStore, DB};
 use ::server_ohc::orchestration::SyncStateHandoff;
 use crate::orchestration::mesh::TeammateMesh;
+use sqlx::Row;
 use sqlx::Executor;
 use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
 use prost::Message;
@@ -161,7 +162,6 @@ mod tests {
     use super::*;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-    use sqlx::Row;
     use std::str::FromStr;
 
     #[tokio::test]
@@ -188,10 +188,8 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
-
                         conn.execute("DISCARD ALL").await?;
                         Ok(true)
                     })
@@ -287,10 +285,8 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
-
                         conn.execute("DISCARD ALL").await?;
                         Ok(true)
                     })
@@ -430,10 +426,8 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
-
                         conn.execute("DISCARD ALL").await?;
                         Ok(true)
                     })

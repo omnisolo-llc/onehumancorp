@@ -1,7 +1,8 @@
 # [ARCH] Proactive Sales Recovery Agent (Abandoned Cart & Re-engagement)
 
 **Status:** Proposed
-**Priority:** P1
+**Estimated Scope: Large
+Priority:** P1
 **Persona Focus:** Priya (Boutique Owner), Leo (Music Tutor)
 
 ## 1. Problem Statement

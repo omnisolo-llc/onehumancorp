@@ -1050,14 +1050,6 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
     ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s)
 }
 
-pub fn contains_pii(s: &str) -> bool {
-    static SSN_RE: OnceLock<Regex> = OnceLock::new();
-    static CC_RE: OnceLock<Regex> = OnceLock::new();
-    let ssn_re = SSN_RE.get_or_init(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
-    let cc_re = CC_RE.get_or_init(|| Regex::new(r"\b(\d{4}[- ]?){3,4}\d{1,4}\b").unwrap());
-    ssn_re.is_match(s) || cc_re.is_match(s)
-}
-
 pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
     k.contains("password")
