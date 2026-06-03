@@ -1,3 +1,7 @@
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const swCode = `
 const CACHE_NAME = 'ohc-offline-cache-v1';
 const STATIC_ASSETS = [
   '/',
@@ -25,7 +29,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful GET responses
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -35,13 +38,11 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Fallback to cache
         return caches.match(event.request);
       })
   );
 });
 
-// IndexedDB Utility for Service Worker
 function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('ohc_offline_db', 1);
@@ -88,7 +89,7 @@ self.addEventListener('sync', (event) => {
         if (queue && queue.length > 0) {
            const formattedMutations = queue.map((item) => {
              return {
-                 transaction_id: item.idempotency_key || item.id || `txn_${Date.now()}`,
+                 transaction_id: item.idempotency_key || item.id || \`txn_\${Date.now()}\`,
                  product_id: item.product_id || item.id || 'unknown',
                  quantity_deducted: item.quantity_deducted || item.amount || 1
              }
@@ -106,13 +107,11 @@ self.addEventListener('sync', (event) => {
              if (res.ok) {
                 await clearQueue();
 
-                // Notify clients
                 const clients = await self.clients.matchAll();
                 for (const client of clients) {
                   client.postMessage({ type: 'SYNC_COMPLETE' });
                 }
 
-                // Show notification
                 self.registration.showNotification("Offline Sync Complete", {
                     body: "Your offline orders have been successfully synced.",
                     icon: "/icon-192x192.png",
@@ -122,7 +121,7 @@ self.addEventListener('sync', (event) => {
              }
           } catch(err) {
               console.error("Background sync failed", err);
-              throw err; // Re-throw to trigger retry
+              throw err;
           }
         }
       })()
@@ -140,3 +139,12 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, options)
   );
 });
+`;
+
+  return new NextResponse(swCode, {
+    headers: {
+      'Content-Type': 'application/javascript',
+      'Service-Worker-Allowed': '/'
+    },
+  });
+}

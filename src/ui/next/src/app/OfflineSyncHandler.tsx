@@ -6,7 +6,7 @@ export function OfflineSyncHandler() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/sw.js").then(
+        navigator.serviceWorker.register("/api/sw").then(
           function (registration) {
             console.log(
               "ServiceWorker registration successful with scope: ",
