@@ -83,6 +83,39 @@ export default function InboxPage() {
     setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [swipeData, setSwipeData] = useState<{ id: number, startX: number, currentX: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent, id: number) => {
+    setSwipeData({ id, startX: e.clientX, currentX: e.clientX });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (swipeData) {
+      setSwipeData({ ...swipeData, currentX: e.clientX });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent, id: number) => {
+    if (!swipeData) return;
+    const diff = swipeData.currentX - swipeData.startX;
+
+    // Swipe Right -> Approve & Send (diff > 50)
+    // Swipe Left -> Edit (diff < -50)
+    if (diff > 50) {
+      sendReply(id);
+    } else if (diff < -50) {
+      const msg = messages.find(m => m.id === id);
+      if (msg) {
+        setEditingId(id);
+        setReplyInput(msg.draft || '');
+      }
+    }
+
+    setSwipeData(null);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
   const handleSchedulePost = () => {
     if (!postContent.trim()) return;
     setScheduledPosts([
@@ -225,41 +258,65 @@ export default function InboxPage() {
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Draft
-                  </div>
+               <div className="relative mt-3 ml-4">
+                 <div className="absolute -top-3 left-4 bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 border border-green-200 z-30">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    AI Draft (Swipe &rarr; Send, &larr; Edit)
+                 </div>
+                 <div
+                   className="bg-green-50/50 backdrop-blur-md border border-green-500/30 rounded-xl p-3 shadow-sm relative overflow-hidden transition-transform touch-pan-y"
+                   style={{
+                     transform: swipeData?.id === msg.id ? `translateX(${swipeData.currentX - swipeData.startX}px)` : 'translateX(0)',
+                     opacity: swipeData?.id === msg.id ? Math.max(0.2, 1 - Math.abs(swipeData.currentX - swipeData.startX) / 200) : 1
+                   }}
+                   onPointerDown={(e) => handlePointerDown(e, msg.id)}
+                   onPointerMove={handlePointerMove}
+                   onPointerUp={(e) => handlePointerUp(e, msg.id)}
+                   onPointerCancel={(e) => handlePointerUp(e, msg.id)}
+                   data-testid={`ai-draft-${msg.id}`}
+                 >
+                    {swipeData?.id === msg.id && (swipeData.currentX - swipeData.startX > 50) && (
+                      <div className="absolute inset-0 flex items-center justify-start pl-4 text-green-700 font-bold bg-green-100/80 z-10">
+                        Approve & Send &rarr;
+                      </div>
+                    )}
+                    {swipeData?.id === msg.id && (swipeData.currentX - swipeData.startX < -50) && (
+                      <div className="absolute inset-0 flex items-center justify-end pr-4 text-yellow-700 font-bold bg-yellow-100/80 z-10">
+                        &larr; Edit
+                      </div>
+                    )}
 
                   {editingId === msg.id ? (
-                      <div className="mt-2">
+                      <div className="mt-2 relative z-20">
                         <textarea
                           id="reply-input-edit"
                           value={replyInput}
                           onChange={e => setReplyInput(e.target.value)}
-                          className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
+                          onPointerDown={(e) => e.stopPropagation()} // Prevent swiping when typing
+                          className="w-full border border-green-300 rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
                           rows={3}
                         />
                         <div className="flex justify-end mt-2 gap-2">
-                           <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
-                           <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
+                           <button onClick={() => setEditingId(null)} onPointerDown={(e) => e.stopPropagation()} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
+                           <button onClick={() => sendReply(msg.id)} onPointerDown={(e) => e.stopPropagation()} className="bg-green-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-green-700 transition-colors">Send</button>
                         </div>
                       </div>
                   ) : (
                       <>
-                        <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
+                        <p className="text-sm text-gray-800 mt-2 italic pointer-events-none">"{msg.draft}"</p>
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-green-200/50 relative z-20">
+                           <button onClick={() => sendReply(msg.id)} onPointerDown={(e) => e.stopPropagation()} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                                Send
                            </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} onPointerDown={(e) => e.stopPropagation()} className="flex-1 bg-white text-green-700 border border-green-300 font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-green-50 transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                Edit
                            </button>
                         </div>
                       </>
                   )}
+                 </div>
                </div>
             )}
           </div>
