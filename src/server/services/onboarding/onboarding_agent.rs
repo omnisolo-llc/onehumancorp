@@ -77,21 +77,45 @@ impl OnboardingAgent {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        use sqlx::Row;
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(tenant_id)
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let mut merged_state = state_json.clone();
+        let mut final_step = current_step;
+        if let Some(record) = row {
+            let existing_state: serde_json::Value = match record.try_get::<String, _>("state_json") {
+                Ok(s) => serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({})),
+                Err(_) => record.try_get::<serde_json::Value, _>("state_json").unwrap_or_else(|_| serde_json::json!({})),
+            };
+            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
+
+            if let (Some(existing_obj), Some(new_obj)) = (existing_state.as_object(), state_json.as_object()) {
+                let mut merged_obj = existing_obj.clone();
+                for (k, v) in new_obj {
+                    merged_obj.insert(k.clone(), v.clone());
+                }
+                merged_state = serde_json::Value::Object(merged_obj);
+            }
+            final_step = std::cmp::max(existing_step, current_step);
+        }
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = CASE \
-                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
-                 ELSE onboarding_state.state_json || EXCLUDED.state_json \
-                 END, \
-                 current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
+             SET state_json = EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
         .bind(user_id)
-        .bind(current_step)
-        .bind(state_json)
+        .bind(final_step)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -116,7 +140,10 @@ impl OnboardingAgent {
         .map_err(|e| e.to_string())?;
 
         if let Some(record) = row {
-            let mut state: serde_json::Value = record.get("state_json");
+            let mut state: serde_json::Value = match record.try_get::<String, _>("state_json") {
+                Ok(s) => serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({})),
+                Err(_) => record.try_get::<serde_json::Value, _>("state_json").unwrap_or_else(|_| serde_json::json!({})),
+            };
             let current_step: i32 = record.get("current_step");
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
@@ -2473,7 +2500,7 @@ mod tests {
     use crate::db::DB;
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
-    async fn setup_test_db() -> Option<Arc<DB>> {
+    pub(crate) async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("OHC_DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
@@ -2645,4 +2672,41 @@ mod tests {
         let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
     }
+}
+
+#[tokio::test]
+async fn test_save_onboarding_state_merge() {
+    // This uses an in-memory SQLite database by default
+    let db = match tests::setup_test_db().await {
+        Some(db) => db,
+        None => return,
+    };
+    let (tx, _) = tokio::sync::mpsc::channel(10);
+    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+    let agent = OnboardingAgent::new(db.clone(), hub);
+
+    let tenant_id = "test_tenant";
+    let user_id = "test_user";
+
+    // First save
+    let initial_state = serde_json::json!({
+        "step1": "completed",
+        "businessName": "My Store"
+    });
+    agent.save_onboarding_state(tenant_id, user_id, 1, &initial_state).await.unwrap();
+
+    // Second save (update)
+    let update_state = serde_json::json!({
+        "step2": "completed",
+        "businessName": "My Awesome Store"
+    });
+    agent.save_onboarding_state(tenant_id, user_id, 2, &update_state).await.unwrap();
+
+    // Fetch and verify
+    let fetched_state = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
+
+    assert_eq!(fetched_state.get("step1").and_then(|v| v.as_str()), Some("completed"));
+    assert_eq!(fetched_state.get("step2").and_then(|v| v.as_str()), Some("completed"));
+    assert_eq!(fetched_state.get("businessName").and_then(|v| v.as_str()), Some("My Awesome Store"));
+    assert_eq!(fetched_state.get("step").and_then(|v| v.as_i64()), Some(2));
 }
