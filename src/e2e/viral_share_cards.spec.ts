@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Viral Share Cards Growth Loop', () => {
   test('verify social share cards flow and viral branding', async ({ page }) => {

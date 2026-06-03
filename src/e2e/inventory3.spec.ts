@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Predictive Inventory Load', () => {
     test('should load the inventory page correctly', async ({ page }) => {

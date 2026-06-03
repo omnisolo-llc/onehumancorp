@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
