@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Rocket,
   CheckCircle2,
@@ -30,12 +31,21 @@ interface RalphProgress {
   is_complete: boolean;
 }
 
-export default function RalphLoopPage() {
+function RalphLoopContent() {
+  const searchParams = useSearchParams();
   const [task, setTask] = useState('');
   const [missionId, setMissionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<RalphProgress | null>(null);
   const [polling, setPolling] = useState(false);
+
+  useEffect(() => {
+    const taskId = searchParams.get('taskId');
+    if (taskId) {
+      setMissionId(taskId);
+      setPolling(true);
+    }
+  }, [searchParams]);
 
   const startMission = async () => {
     setLoading(true);
@@ -136,10 +146,10 @@ export default function RalphLoopPage() {
                   Mission Roadmap
                 </h3>
                 <div className="space-y-6">
-                  {progress?.features.map((f, i) => (
+                  {progress?.features?.map((f, i) => (
                     <div key={i} className="flex gap-4 relative">
-                      {i !== (progress.features.length - 1) && (
-                        <div className={`absolute left-3 top-8 w-0.5 h-10 ${i < progress.current_feature_index ? 'bg-blue-500' : 'bg-slate-200'}`} />
+                      {i !== ((progress?.features?.length || 0) - 1) && (
+                        <div className={`absolute left-3 top-8 w-0.5 h-10 ${i < (progress?.current_feature_index ?? 0) ? 'bg-blue-500' : 'bg-slate-200'}`} />
                       )}
                       <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center mt-1 transition-colors ${
                         f.status === 'completed' ? 'bg-blue-600' :
@@ -164,12 +174,12 @@ export default function RalphLoopPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                   <BookOpen className="text-indigo-600 mb-2" />
-                  <span className="text-2xl font-black text-slate-900">{progress?.architectural_decisions.length || 0}</span>
+                  <span className="text-2xl font-black text-slate-900">{progress?.architectural_decisions?.length || 0}</span>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Decisions</span>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                   <Bug className="text-rose-600 mb-2" />
-                  <span className="text-2xl font-black text-slate-900">{progress?.unresolved_bugs.length || 0}</span>
+                  <span className="text-2xl font-black text-slate-900">{progress?.unresolved_bugs?.length || 0}</span>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Bugs Found</span>
                 </div>
               </div>
@@ -203,7 +213,7 @@ export default function RalphLoopPage() {
                   </div>
                 </div>
                 <div className="p-8 space-y-4 max-h-[500px] overflow-y-auto font-mono text-sm leading-relaxed bg-[#0F172A] text-slate-300">
-                  {progress?.notes.map((n, i) => (
+                  {progress?.notes?.map((n, i) => (
                     <div key={i} className="flex gap-4 group">
                       <span className="text-slate-600 select-none">{i+1}</span>
                       <p className="group-hover:text-blue-400 transition-colors">
@@ -214,7 +224,7 @@ export default function RalphLoopPage() {
                   ))}
                   {polling && (
                     <div className="flex gap-4 animate-pulse">
-                      <span className="text-slate-600">{ (progress?.notes.length || 0) + 1 }</span>
+                      <span className="text-slate-600">{ (progress?.notes?.length || 0) + 1 }</span>
                       <div className="flex items-center gap-2 text-blue-400">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Ralph is implementing next feature...</span>
@@ -232,7 +242,7 @@ export default function RalphLoopPage() {
                       Key Decisions
                     </h4>
                     <ul className="space-y-3">
-                      {progress?.architectural_decisions.map((d, i) => (
+                      {progress?.architectural_decisions?.map((d, i) => (
                         <li key={i} className="text-indigo-800 text-sm leading-relaxed flex gap-2">
                           <span className="font-bold text-indigo-300">•</span>
                           {d}
@@ -246,7 +256,7 @@ export default function RalphLoopPage() {
                       Known Issues
                     </h4>
                     <ul className="space-y-3">
-                      {progress?.unresolved_bugs.map((b, i) => (
+                      {progress?.unresolved_bugs?.map((b, i) => (
                         <li key={i} className="text-rose-800 text-sm leading-relaxed flex gap-2">
                           <span className="font-bold text-rose-300">!</span>
                           {b}
@@ -261,5 +271,13 @@ export default function RalphLoopPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function RalphLoopPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-500">Loading Mission Control...</div>}>
+      <RalphLoopContent />
+    </Suspense>
   );
 }
