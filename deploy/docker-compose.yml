@@ -138,7 +138,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
