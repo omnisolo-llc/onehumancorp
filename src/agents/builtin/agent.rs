@@ -850,7 +850,7 @@ impl Agent {
         cfg: &AgentRunConfig,
         initial_message: &str,
         session_tools: Vec<crate::tools::Tool>,
-        on_event: &mut F,
+        _on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
         F: FnMut(AgentEvent) + Send + Sync,
