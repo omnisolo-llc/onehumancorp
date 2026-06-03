@@ -16,6 +16,7 @@ exports_files(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
+        "pos_sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
         "catalog.rs",
@@ -23,29 +24,10 @@ exports_files(
     ],
     visibility = ["//visibility:public"],
 )
-
 rust_library(
     name = "server_api",
     srcs = [
         "bazel_lib.rs",
-        "autodream.rs",
-        "billing_api.rs",
-        "billing_webhook.rs",
-        "billing_webhook_test.rs",
-        "dynamic_workflows.rs",
-        "growth.rs",
-        "health.rs",
-        "syndication_handler.rs",
-        "mcp_webhook.rs",
-        "mesh_handler.rs",
-        "oauth/mod.rs",
-        "oauth/proxy.rs",
-        "mod.rs",
-        "offline_sync.rs",
-        "staff_mesh.rs",
-        "telemetry.rs",
-        "catalog.rs",
-        "local_seo.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
@@ -55,13 +37,10 @@ rust_library(
         "//src/server/api/agents:settings.rs",
         "//src/server/api/agents:webhook.rs",
         "//src/server/api/onboarding:mod.rs",
-    ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
-    ],
-    visibility = ["//visibility:public"],
     deps = [
         "//src/server:server_lib",
         "//src/agents/builtin:core",
@@ -147,14 +126,10 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:walkdir",
-    ],
-)
-
 rust_test(
     name = "server_api_unit_test",
     size = "large",
     crate = ":server_api",
-    edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -162,4 +137,3 @@ rust_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-)

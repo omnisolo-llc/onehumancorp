@@ -30,3 +30,8 @@ define_playwright_tests(
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]),
 )
+
+playwright_test(
+    name = "pos_offline_sync",
+    srcs = ["tests/pos_offline_sync.spec.ts"],
+)
