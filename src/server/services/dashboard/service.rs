@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
 pub struct MyDashboardService {
@@ -35,7 +36,16 @@ impl MyDashboardService {
     }
 
     async fn fetch_meetings(&self) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        Ok(self.hub.get_meetings().await)
+        let cache_key = "hub:meetings".to_string();
+        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(meetings) = cache.get(&cache_key).await {
+            return Ok(meetings);
+        }
+
+        let meetings = self.hub.get_meetings().await;
+        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+        Ok(meetings)
     }
 
     async fn fetch_cost_summary(&self, org_id: String) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
