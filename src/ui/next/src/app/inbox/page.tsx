@@ -119,10 +119,12 @@ export default function InboxPage() {
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
-        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
-          &lt; Back
+        <Link href="/dashboard" className="mr-3 p-2 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]" aria-label="Back to dashboard">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </Link>
-        <h1 className="text-2xl font-bold">Customer Inbox</h1>
+        <h1 className="text-xl font-bold truncate flex-1">Customer Inbox</h1>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setShowSettingsModal(true)}
@@ -133,10 +135,11 @@ export default function InboxPage() {
           </button>
           <button
             onClick={simulateIncomingMessage}
-            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
-            title="Simulate Incoming Message"
+            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700 flex items-center justify-center min-w-[44px] min-h-[44px]"
+            title="Simulate Message"
+            aria-label="Simulate Incoming Message"
           >
-            🤖 Simulate Incoming Message
+            🤖
           </button>
           <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
             Audit Dashboard
