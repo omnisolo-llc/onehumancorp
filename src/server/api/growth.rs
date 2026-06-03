@@ -1148,12 +1148,13 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let (active_referrals_res, total_invites_res) = tokio::join!(
+        sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(conversions), 0) FROM referrals").fetch_one(&state.pool),
+        tracker.get_total_invites_count()
+    );
+    let active_referrals = active_referrals_res.unwrap_or(0);
 
-    match tracker.get_total_invites_count().await {
+    match total_invites_res {
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse {
             total_invites,
             metrics: GrowthMetrics {
