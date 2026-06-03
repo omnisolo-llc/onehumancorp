@@ -5,3 +5,5 @@ edition = "2024"
 
 [lib]
 path = "lib.rs"
+
+jsonschema = "0.46.5"
