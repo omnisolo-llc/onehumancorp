@@ -102,6 +102,26 @@ async fn handle_create_product(
         ).into_response();
     }
 
+    // Refresh the tenant's inventory cache
+    let inventory_cache = crate::builder::edge::get_inventory_edge_cache();
+    let cache_key = format!("inventory_{}", tenant_id);
+    // Simple fetch all for the cache
+    let products: Vec<(String, String)> = sqlx::query_as(
+        "SELECT title, type FROM products WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&mut *conn)
+    .await
+    .unwrap_or_default();
+
+    let cache_json = serde_json::to_string(&products).unwrap_or_else(|_| "[]".to_string());
+    inventory_cache.set_with_tags(
+        &cache_key,
+        cache_json,
+        vec![format!("tenant-id:{}", tenant_id)],
+        std::time::Duration::from_secs(86400)
+    ).await;
+
     if payload.is_subscription.unwrap_or(false) {
         let plan_id = uuid::Uuid::new_v4().to_string();
         let interval = payload.subscription_interval.unwrap_or_else(|| "Monthly".to_string()).to_lowercase();
