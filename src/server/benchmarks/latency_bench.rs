@@ -410,7 +410,6 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) -> (String, u128
 
     tracing::info!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
     tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
-    (name.to_string(), enq_p95 + deq_p95)
 }
 
 #[cfg(test)]
