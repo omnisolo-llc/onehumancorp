@@ -207,11 +207,6 @@ impl CostAuditor {
         savings
     }
 
-    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
-        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
-    }
-
     pub fn get_total_cost(&self) -> f64 {
         let total_cost = self.total_cost.lock().unwrap();
         *total_cost
@@ -274,6 +269,11 @@ impl CostAuditor {
     pub fn get_tenant_compute_cost(&self, tenant_id: &str) -> f64 {
         let tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
         *tenant_compute_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
+        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn get_tenant_network_cost(&self, tenant_id: &str) -> f64 {
