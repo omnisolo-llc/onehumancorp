@@ -1426,6 +1426,21 @@ message ChatTestResponse {
   bool success = 1;
 }
 
+message UnifiedMessage {
+  string id = 1;
+  string channel = 2;
+  string channel_id = 3;
+  string customer_id = 4;
+  string intent_category = 5;
+  float confidence_score = 6;
+  string status = 7;
+  string from_agent = 8;
+  string content = 9;
+  string thread_id = 10;
+  int64 timestamp_unix = 11;
+  string enriched_context_json = 12;
+}
+
 message ChatMessage {
   string id = 1;
   string channel = 2;
@@ -1455,6 +1470,19 @@ service ChatService {
   rpc TestConnection(ChatTestRequest) returns (ChatTestResponse);
   rpc GetChatMessages(GetChatMessagesRequest) returns (GetChatMessagesResponse);
   rpc SendChatMessage(ChatSendRequest) returns (ChatMessage);
+}
+
+message ProcessUnifiedMessageRequest {
+  UnifiedMessage message = 1;
+}
+
+message ProcessUnifiedMessageResponse {
+  UnifiedMessage message = 1;
+  string action_taken = 2;
+}
+
+service UnifiedSupportService {
+  rpc ProcessMessage(ProcessUnifiedMessageRequest) returns (ProcessUnifiedMessageResponse);
 }
 
 message GetIntegrationsRequest {
