@@ -26,9 +26,6 @@ impl OperationsWorker {
 
     pub fn start(&self) {
         let db = self.db.clone();
-        let _db = db.clone();
-
-
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
@@ -494,9 +491,6 @@ impl CustomerSuccessWorker {
 
     pub fn start(&self) {
         let db = self.db.clone();
-        let _db = db.clone();
-
-
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
@@ -816,9 +810,6 @@ impl PromoterWorker {
 
     pub fn start(&self) {
         let db = self.db.clone();
-        let _db = db.clone();
-
-
         let hub = self.hub.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
@@ -915,7 +906,6 @@ impl AdvisorWorker {
 
     pub fn start(&self) {
         let db = self.db.clone();
-        let _db = db.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
             loop {

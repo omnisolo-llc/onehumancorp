@@ -31,12 +31,11 @@ pub struct CostAuditor {
     caching_savings: Mutex<f64>,
     storage_savings: Mutex<f64>,
     bandwidth_savings: Mutex<f64>,
-
+    tenant_bandwidth_savings: Mutex<HashMap<String, f64>>,
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     tenant_compute_costs: Mutex<HashMap<String, f64>>,
     tenant_network_costs: Mutex<HashMap<String, f64>>,
-    tenant_bandwidth_savings: Mutex<HashMap<String, f64>>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     tenant_revenues: Mutex<HashMap<String, f64>>,
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
@@ -276,11 +275,11 @@ impl CostAuditor {
         let tenant_network_costs = self.tenant_network_costs.lock().unwrap();
         *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
     }
+
     pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
         let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
         *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
     }
-
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)
