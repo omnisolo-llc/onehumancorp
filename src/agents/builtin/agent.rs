@@ -3735,6 +3735,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.confidence_threshold = 2.0;
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
@@ -3742,7 +3743,7 @@ mod tests {
         // Wait, confidence_threshold is 0.0 by default, so it triggers.
         // We'll assert it triggers user intervention.
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("requires explicit user confirmation"));
+        assert!(res.unwrap_err().to_string().contains("Human supervision required"));
     }
 
     #[tokio::test]
