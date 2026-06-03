@@ -1483,23 +1483,28 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Referral Program Snapshot */}
+         {/* Autonomous Loyalty Engine & Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Referral Program</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Growth & Loyalty</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100">
                         <span className="text-xs font-medium text-indigo-600">Active</span>
                     </div>
                 </div>
-                <button
-                    name="Referrals"
-                    onClick={openReferralModal}
-                    disabled={isGeneratingReferral}
-                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
-                >
-                    <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <Link href="/loyalty" className="px-5 py-2.5 bg-white text-indigo-600 font-semibold rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-50 transition-all font-inter text-sm flex items-center gap-2">
+                        💖 AI Loyalty Engine
+                    </Link>
+                    <button
+                        name="Referrals"
+                        onClick={openReferralModal}
+                        disabled={isGeneratingReferral}
+                        className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
+                    >
+                        <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

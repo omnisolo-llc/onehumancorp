@@ -906,6 +906,88 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn get_loyalty_settings(&self, tenant_id: &str) -> Result<crate::orchestration::departments::types::LoyaltySettings, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT * FROM loyalty_settings WHERE tenant_id = $1")
+                    .bind(tenant_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(crate::orchestration::departments::types::LoyaltySettings {
+                        tenant_id: r.get("tenant_id"),
+                        point_ratio: r.get("point_ratio"),
+                    })
+                } else {
+                    Ok(crate::orchestration::departments::types::LoyaltySettings {
+                        tenant_id: tenant_id.to_string(),
+                        point_ratio: 1, // Default point ratio
+                    })
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT * FROM loyalty_settings WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(crate::orchestration::departments::types::LoyaltySettings {
+                        tenant_id: r.get("tenant_id"),
+                        point_ratio: r.get("point_ratio"),
+                    })
+                } else {
+                    Ok(crate::orchestration::departments::types::LoyaltySettings {
+                        tenant_id: tenant_id.to_string(),
+                        point_ratio: 1, // Default point ratio
+                    })
+                }
+            }
+        }
+    }
+
+    pub async fn update_loyalty_settings(&self, tenant_id: &str, point_ratio: i32) -> Result<(), String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO loyalty_settings (tenant_id, point_ratio) VALUES ($1, $2) ON CONFLICT (tenant_id) DO UPDATE SET point_ratio = EXCLUDED.point_ratio, updated_at = CURRENT_TIMESTAMP")
+                    .bind(tenant_id)
+                    .bind(point_ratio)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let exists = sqlx::query("SELECT 1 FROM loyalty_settings WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .is_some();
+
+                if exists {
+                    sqlx::query("UPDATE loyalty_settings SET point_ratio = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ?")
+                        .bind(point_ratio)
+                        .bind(tenant_id)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    sqlx::query("INSERT INTO loyalty_settings (tenant_id, point_ratio) VALUES (?, ?)")
+                        .bind(tenant_id)
+                        .bind(point_ratio)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                Ok(())
+            }
+        }
+    }
+
     pub async fn get_loyalty_ledger(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::LoyaltyLedger>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {

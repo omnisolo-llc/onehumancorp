@@ -102,11 +102,17 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+#[derive(Deserialize)]
+pub struct LoyaltySettingsRequest {
+    pub point_ratio: i32,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/loyalty/settings", get(get_loyalty_settings).post(update_loyalty_settings))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -1165,4 +1171,55 @@ async fn handle_aggregated_team_invites_metrics(
         })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn get_loyalty_settings(
+    Extension(pool): Extension<PgPool>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<crate::orchestration::departments::types::LoyaltySettings>, (StatusCode, String)> {
+    let tenant_id = headers
+        .get("X-Tenant-ID")
+        .or_else(|| headers.get("x-tenant-id"))
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("test-tenant"); // Fallback for tests
+
+    let row = sqlx::query("SELECT * FROM loyalty_settings WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some(r) = row {
+        use sqlx::Row;
+        Ok(Json(crate::orchestration::departments::types::LoyaltySettings {
+            tenant_id: r.get("tenant_id"),
+            point_ratio: r.get("point_ratio"),
+        }))
+    } else {
+        Ok(Json(crate::orchestration::departments::types::LoyaltySettings {
+            tenant_id: tenant_id.to_string(),
+            point_ratio: 1, // Default point ratio
+        }))
+    }
+}
+
+async fn update_loyalty_settings(
+    Extension(pool): Extension<PgPool>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<LoyaltySettingsRequest>,
+) -> Result<Json<()>, (StatusCode, String)> {
+    let tenant_id = headers
+        .get("X-Tenant-ID")
+        .or_else(|| headers.get("x-tenant-id"))
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("test-tenant"); // Fallback for tests
+
+    sqlx::query("INSERT INTO loyalty_settings (tenant_id, point_ratio) VALUES ($1, $2) ON CONFLICT (tenant_id) DO UPDATE SET point_ratio = EXCLUDED.point_ratio, updated_at = CURRENT_TIMESTAMP")
+        .bind(tenant_id)
+        .bind(payload.point_ratio)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(()))
 }

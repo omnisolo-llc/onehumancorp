@@ -662,6 +662,7 @@ impl Hub {
         Ok(child_id)
     }
 
+
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
 

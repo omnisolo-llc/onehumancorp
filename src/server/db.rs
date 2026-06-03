@@ -856,6 +856,13 @@ impl DB {
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+
+                    CREATE TABLE IF NOT EXISTS loyalty_settings (
+                        tenant_id TEXT PRIMARY KEY,
+                        point_ratio INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }

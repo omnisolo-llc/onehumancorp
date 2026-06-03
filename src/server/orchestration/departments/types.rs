@@ -129,6 +129,12 @@ pub struct Customer360 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoyaltySettings {
+    pub tenant_id: String,
+    pub point_ratio: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoyaltyLedger {
     pub id: String,
     pub tenant_id: String,
