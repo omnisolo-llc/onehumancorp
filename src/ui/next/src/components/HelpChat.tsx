@@ -134,7 +134,7 @@ export function HelpChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
+          <div className="flex-1 p-5 overflow-y-auto h-[60vh] max-h-[400px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
