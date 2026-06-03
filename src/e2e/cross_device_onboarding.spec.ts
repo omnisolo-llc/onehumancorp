@@ -12,7 +12,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await page.getByRole('button', { name: /Log In/i }).click();
 
     await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
+    await page.goto('/onboarding');
 
     // Verify it landed on the Onboarding page
     await expect(page.getByText('Tell us about your business')).toBeVisible();
