@@ -1,5 +1,6 @@
+import React from 'react';
 import { TooltipProvider } from '../../components/TooltipRegistry';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import Dashboard from './page';
 import { expect, test, vi } from 'vitest';
 
@@ -9,15 +10,22 @@ global.fetch = vi.fn(() => Promise.resolve({
   json: () => Promise.resolve({})
 })) as any;
 
-test('renders dashboard with actionable feed', async () => {
+test('renders dashboard with actionable feed and unified agentic intake', async () => {
   render(<TooltipProvider><Dashboard /></TooltipProvider>);
 
   await waitFor(() => {
     expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
   });
 
-  expect(screen.getByText(/Action Required/)).toBeDefined();
-  expect(screen.getByText("Complete Stripe Setup")).toBeDefined();
-  expect(screen.getByText("Weekly Insights")).toBeDefined();
-  expect(screen.getByText("AI Business Advisory")).toBeDefined();
+  expect(screen.getByText("The Advisor Action Feed")).toBeDefined();
+  expect(screen.getByText("Unified Agentic Intake")).toBeDefined();
+
+  // Check for specific actionable buttons
+  expect(screen.getByText("Yes, Draft Replies")).toBeDefined();
+  const approveBtn = screen.getByText("Approve Quote");
+  expect(approveBtn).toBeDefined();
+
+  // Fire the click to simulate approval
+  fireEvent.click(approveBtn);
+  expect(screen.getByText("Quote Approved & Sent ✓")).toBeDefined();
 });

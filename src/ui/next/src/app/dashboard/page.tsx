@@ -34,7 +34,13 @@ export default function Dashboard() {
   const [pendingRewards, setPendingRewards] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
-  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
+    const [businessName, setBusinessName] = useState('Maya');
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      setBusinessName(localStorage.getItem('business_name') || 'Maya');
+    }
+  }, []);
+
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -563,7 +569,86 @@ export default function Dashboard() {
            </div>
          </section>
 
+                  {/* The Advisor Action Feed & Unified Agentic Intake (Agentic Solutions) */}
+         <section className="mb-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {/* Solution 2: The Advisor Action Feed */}
+               <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(0, 122, 255, 0.3)' }}>
+                 <div className="flex items-center gap-3 mb-4">
+                   <div className="text-2xl">🤖</div>
+                   <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>The Advisor Action Feed</h2>
+                 </div>
+                 <div className="space-y-4">
+                   <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex flex-col gap-3">
+                     <p className="text-sm text-blue-900 font-medium leading-relaxed">
+                       You have 3 unread inquiries. Want me to draft replies?
+                     </p>
+                     <div className="flex gap-2">
+                       <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap" onClick={() => alert('Replies drafted!')}>Yes, Draft Replies</button>
+                       <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">Not Now</button>
+                     </div>
+                   </div>
+                   <div className="p-4 bg-green-50 border border-green-100 rounded-xl flex flex-col gap-3">
+                     <p className="text-sm text-green-900 font-medium leading-relaxed">
+                       It's Tuesday, want me to post the new cake to Instagram?
+                     </p>
+                     <div className="flex gap-2">
+                       <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap" onClick={() => alert('Posted to Instagram!')}>Yes, Post It</button>
+                       <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">Review First</button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Solution 3: Unified Agentic Intake */}
+               <div id="unified-agentic-intake" className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 149, 0, 0.3)' }}>
+                 <div className="flex items-center justify-between mb-4">
+                   <div className="flex items-center gap-3">
+                     <div className="text-2xl">⚡</div>
+                     <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Unified Agentic Intake</h2>
+                   </div>
+                   <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-full uppercase tracking-wide">Action Required</span>
+                 </div>
+                 <div className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm mb-4">
+                   <div className="flex justify-between items-start mb-2">
+                     <div>
+                       <h3 className="font-semibold text-gray-900 text-sm">Carlos the Handyman Inquiry</h3>
+                       <p className="text-xs text-gray-500">From: john.doe@example.com</p>
+                     </div>
+                     <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded">Just Now</span>
+                   </div>
+                   <p className="text-sm text-gray-700 mb-3 bg-gray-50 p-3 rounded border border-gray-100 italic">
+                     "My kitchen sink pipe is actively leaking. Need help ASAP."
+                   </p>
+                   <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg">
+                     <p className="text-xs font-semibold text-orange-900 mb-1">Customer Success Agent Drafted Quote:</p>
+                     <p className="text-xs text-orange-800 mb-2 font-mono bg-white p-2 rounded border border-orange-200">
+                       Emergency Plumbing Service Call: $150 (Initial Visit)<br/>
+                       Parts & Labor (Est): $50 - $200<br/>
+                       Availability: Today at 2:00 PM
+                     </p>
+                   </div>
+                 </div>
+                 <div className="flex gap-3">
+                   <button id="approve-quote-btn" className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-transform hover:scale-[1.02] shadow-md flex items-center justify-center gap-2" onClick={() => {
+                     const btn = document.getElementById('approve-quote-btn');
+                     if (btn) {
+                       btn.innerHTML = 'Quote Approved & Sent ✓';
+                       btn.className = 'flex-1 px-4 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold shadow-md flex items-center justify-center gap-2';
+                     }
+                   }}>
+                     Approve Quote
+                   </button>
+                   <button className="px-4 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                     Edit
+                   </button>
+                 </div>
+               </div>
+           </div>
+         </section>
+
          {/* Morning Briefing */}
+
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">
              <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
