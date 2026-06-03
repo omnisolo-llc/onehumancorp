@@ -404,7 +404,7 @@ impl HierarchicalPromptBuilder {
                     combined_system.push_str("\n\n");
                 }
                 combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-                combined_system.push_str(&self.server_system_message);
+                combined_system.push_str(&::server_pricing::compression::reduce_tokens(&self.server_system_message));
             }
         }
 
@@ -7122,8 +7122,8 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
-        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
-        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete database."));
+        assert!(prompt.ends_with("CRITICAL: Never delete database."));
     }
 
     #[test]
