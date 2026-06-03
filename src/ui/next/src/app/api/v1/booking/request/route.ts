@@ -12,7 +12,6 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tenant_id: tenant_id || "DEFAULT",
-
         message: description,
         source: "internal_booking",
       }),
