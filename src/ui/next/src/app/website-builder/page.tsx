@@ -423,7 +423,7 @@ export default function WebsiteBuilderPage() {
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
-                      placeholder="e.g. Maya's Cakes"
+                      placeholder="e.g. Custom cookies and cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                     />
