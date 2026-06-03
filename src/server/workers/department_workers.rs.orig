@@ -1321,9 +1321,9 @@ mod tests {
             let content: String = row.get("proposed_content");
             let approval_status: String = row.get("approval_status");
 
-            assert!(title == "Draft Reply" || title == "AI Agent Paused: Customer Success");
+            assert_eq!(title, "AI Agent Paused: Customer Success");
             // In test environment, the AI call fails and creates the paused fallback task
-            assert!(content.contains("System is paused. Please manually reply to customer messages.") || content.len() > 0);
+            assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
             assert_eq!(approval_status, "PENDING");
 
              // Verify task was marked PAUSED (since AI call fails in test environment)
