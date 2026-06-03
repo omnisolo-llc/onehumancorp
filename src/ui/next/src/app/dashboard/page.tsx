@@ -256,8 +256,10 @@ export default function Dashboard() {
     };
 
     const ws = connectSwarmMesh();
-
+    let metricsFetched = false;
     const fetchMetrics = async () => {
+        if (metricsFetched) return;
+        metricsFetched = true;
         try {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
@@ -296,12 +298,12 @@ export default function Dashboard() {
 
     fetchMetrics();
 
+
+    return () => {
         window.removeEventListener("online", handleOnline);
         window.removeEventListener("offline", updateOfflineStatus);
         window.removeEventListener("storage", handleStorage);
         clearInterval(queueCheckInterval);
-
-    return () => {
         if (ws) ws.close();
     };
   }, []);

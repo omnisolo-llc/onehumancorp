@@ -562,7 +562,7 @@ async fn http_metrics_handler(
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
-    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
+    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
         StatusCode::OK,
