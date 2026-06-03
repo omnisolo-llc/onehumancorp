@@ -46,7 +46,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-      chatStep: 1,
+      chatStep: 0,
       businessDescription: '',
       businessName: '',
       whatYouSell: '',

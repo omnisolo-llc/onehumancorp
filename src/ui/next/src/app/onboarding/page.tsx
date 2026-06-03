@@ -120,7 +120,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && !businessDescription && !businessName) return;
+    if (step === 1 && chatStep === 1 && !businessName) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -224,6 +224,50 @@ export default function OnboardingWizard() {
       console.error(err);
       setError(err.message || 'An error occurred during instant launch');
       setStep(1);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIntake = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+
+      const intakeRes = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: combinedDescription })
+      });
+
+      const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+
+      setStep(2); // Go to review step
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred processing details');
+      setStep(1);
+      setChatStep(3);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -283,7 +327,7 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    if (step === 1) return 33;
+    if (step === 1) return (chatStep / 3) * 33;
     if (step === 2) return 50;
     if (step === 3) return 75;
     if (step === 4) return 90;
@@ -325,85 +369,285 @@ export default function OnboardingWizard() {
                 Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
               </p>
 
-              <div className="flex items-center justify-between mb-2 w-full">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-left">
-                  Our AI will instantly generate your storefront, products, and back-office agents.
-                </p>
-                <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                  Save Draft
-                </button>
-              </div>
+              {/* Instant Build Mode (chatStep === 0) */}
+              {chatStep === 0 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 w-full animate-fade-in">
+                  <div className="flex items-center justify-between mb-2 w-full">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-left">
+                      Our AI will instantly generate your storefront, products, and back-office agents.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      Save Draft
+                    </button>
+                  </div>
 
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-              <div className="space-y-4 flex-1 w-full">
-                <textarea
-                  autoFocus
-                  value={businessDescription}
-                  onChange={(e) => setBusinessDescription(e.target.value)}
-                  placeholder="e.g. I bake custom vegan cakes for weddings and parties in Portland, OR. My best seller is chocolate raspberry."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-48 resize-none transition-all shadow-inner"
-                />
-              </div>
+                  <div className="space-y-4 flex-1 w-full">
+                    <textarea
+                      autoFocus
+                      value={businessDescription}
+                      onChange={(e) => setBusinessDescription(e.target.value)}
+                      placeholder="e.g. I bake custom vegan cakes for weddings and parties in Portland, OR. My best seller is chocolate raspberry."
+                      className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-48 resize-none transition-all shadow-inner"
+                    />
+                  </div>
 
-              {validationError && <p className="text-red-500 text-sm font-semibold mb-2 text-center">{validationError}</p>}
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2 text-center">{validationError}</p>}
 
-              <div className="mt-auto pt-6 w-full space-y-3">
-                <button
-                  onClick={handleInstantLaunch}
-                  disabled={businessDescription.trim().length < 10 || isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Building...
-                    </span>
-                  ) : 'Instant Launch (30 Seconds)'}
-                </button>
-                <button
-                  onClick={async () => {
-                    setValidationError('');
-
-                    if (businessDescription.trim().length >= 10) {
-                      setIsLoading(true);
-                      try {
-                        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-                        const intakeRes = await fetch('/api/onboarding/intake', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-                          body: JSON.stringify({ description: businessDescription })
-                        });
-
-                        const intakeData = await intakeRes.json();
-                        if (intakeRes.ok) {
-                          setBusinessType(intakeData.business_type || 'Online Store');
-                          setBusinessName(intakeData.business_name || 'My Business');
-                          setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
-                          setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-                          setCategories(intakeData.categories || ['physical']);
+                  <div className="mt-auto pt-6 w-full space-y-3">
+                    <button
+                      onClick={handleInstantLaunch}
+                      disabled={businessDescription.trim().length < 10 || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Building...
+                        </span>
+                      ) : 'Instant Launch (30 Seconds)'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setValidationError('');
+                        if (businessDescription.trim().length >= 10) {
+                          setIsLoading(true);
+                          try {
+                            const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                            const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+                            const intakeRes = await fetch('/api/onboarding/intake', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+                              body: JSON.stringify({ description: businessDescription })
+                            });
+                            const intakeData = await intakeRes.json();
+                            if (intakeRes.ok) {
+                              setBusinessType(intakeData.business_type || 'Online Store');
+                              setBusinessName(intakeData.business_name || 'My Business');
+                              setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+                              setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+                              setCategories(intakeData.categories || ['physical']);
+                            }
+                          } catch (e) {
+                             console.error(e);
+                          } finally {
+                            setIsLoading(false);
+                          }
                         }
-                      } catch (e) {
-                         console.error(e);
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    }
-                    setStep(2);
-                  }}
-                  className="w-full bg-transparent text-[#1D1D1F] dark:text-[#F5F5F7] border border-gray-300 dark:border-gray-600 min-h-[54px] p-4 rounded-[8px] font-bold hover:bg-gray-100 dark:hover:bg-white/5 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  Detailed Setup
-                </button>
-              </div>
+                        setChatStep(1);
+                      }}
+                      className="w-full bg-transparent text-[#1D1D1F] dark:text-[#F5F5F7] border border-gray-300 dark:border-gray-600 min-h-[54px] p-4 rounded-[8px] font-bold hover:bg-gray-100 dark:hover:bg-white/5 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                    >
+                      Detailed Setup
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 1 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      Our AI will instantly generate your storefront, products, and back-office agents.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      Save Draft
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (businessName.trim().length < 3) {
+                              setValidationError('Business Name must be at least 3 characters.');
+                              return;
+                            }
+                            setValidationError('');
+                            setChatStep(2);
+                          }
+                        }}
+                        placeholder="e.g. Maya's Custom Cakes"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => {
+                        if (businessName.trim().length < 3) {
+                          setValidationError('Business Name must be at least 3 characters.');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(2);
+                      }}
+                      disabled={!businessName.trim()}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 2 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      Tell us a bit about your products or services.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      Save Draft
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <textarea
+                        autoFocus
+                        value={whatYouSell}
+                        onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (!whatYouSell.trim()) {
+                              setValidationError('Please tell us what you sell.');
+                              return;
+                            }
+                            setValidationError('');
+                            setChatStep(3);
+                          }
+                        }}
+                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => {
+                        if (!whatYouSell.trim()) {
+                          setValidationError('Please tell us what you sell.');
+                          return;
+                        }
+                        setValidationError('');
+                        setChatStep(3);
+                      }}
+                      disabled={!whatYouSell.trim()}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 3 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      This helps us set up your shipping and tax settings.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      Save Draft
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (!location.trim()) {
+                              setValidationError('Please tell us your location.');
+                              return;
+                            }
+                            if (!isLoading) {
+                              setValidationError('');
+                              handleIntake();
+                            }
+                          }
+                        }}
+                        placeholder="e.g. Portland, OR"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => {
+                        if (!location.trim()) {
+                          setValidationError('Please tell us your location.');
+                          return;
+                        }
+                        setValidationError('');
+                        handleIntake();
+                      }}
+                      disabled={!location.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Analyzing...
+                        </span>
+                      ) : 'Generate My Business'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

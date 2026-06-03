@@ -10,7 +10,7 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      chatStep: 1,
+      chatStep: 0,
       businessName: '',
       whatYouSell: '',
       location: '',
@@ -32,20 +32,18 @@ describe('OnboardingWizard', () => {
     vi.clearAllMocks();
   });
 
-  it('Step 1: Renders initial Instant Build screen correctly', async () => {
+  it('Step 1: Renders initial screen correctly', async () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
-    const instantLaunchBtn = screen.getByRole('button', { name: /Instant Launch/i });
-    expect(instantLaunchBtn).toBeDisabled();
     expect(screen.getByRole('button', { name: /Detailed Setup/i })).toBeInTheDocument();
   });
+
 
   it('Performs Instant Launch successfully', async () => {
     const user = userEvent.setup({ delay: null });
 
-    (global.fetch as any).mockImplementation((url) => {
+    (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
           ok: true,
@@ -91,7 +89,7 @@ describe('OnboardingWizard', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
-    (global.fetch as any).mockImplementation((url) => {
+    (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
@@ -122,61 +120,173 @@ describe('OnboardingWizard', () => {
     await user.click(detailedSetupBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     });
   });
 
-  it('Restores detailed setup flow testing from Step 2 onwards', async () => {
+  it('Step 1: Displays validation error when description is too short', async () => {
     const user = userEvent.setup({ delay: null });
 
-    // Mock start success
-    (global.fetch as any).mockImplementation((url) => {
-      if (url === '/api/onboarding/start') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ message: "Success!" })
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    render(<OnboardingWizard />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Short');
+
+    const instantLaunchBtn = screen.getByRole('button', { name: /Instant Launch/i });
+    expect(instantLaunchBtn).toBeDisabled();
+  });
+  it('Step 2: Displays validation error when product price is invalid', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Bakery',
+        categories: ['food'],
+        domainChoice: 'subdomain',
+        firstProductName: 'Cake',
+        firstProductPrice: 'abc' // Invalid price
+      });
     });
 
-    // Start at step 2
+    render(<OnboardingWizard />);
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
+
+    const priceInput = screen.getByDisplayValue('abc');
+    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
+
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      // The general error message should trigger
+      expect(screen.getByText('Please fix the errors before continuing.')).toBeInTheDocument();
+      expect(screen.getByText('Invalid price.')).toBeInTheDocument();
+    });
+
+    // Check that we're still on step 2
+    expect(useOnboardingStore.getState().step).toBe(2);
+  });
+
+  it('Step 2: Proceeds to Step 3 when validation passes', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Set initial state to Step 2
     act(() => {
-      useOnboardingStore.setState({ step: 2 });
+      useOnboardingStore.setState({
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Bakery',
+        categories: ['food'],
+        domainChoice: 'subdomain',
+        firstProductName: 'Cake',
+        firstProductPrice: '20'
+      });
     });
 
     render(<OnboardingWizard />);
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
-    // We need to fill data since it's step 2 validation
+    await user.click(continueButton);
+
+    expect(screen.queryByText('Business Name must be at least 3 characters.')).not.toBeInTheDocument();
+    expect(screen.getByText('Style & Team')).toBeInTheDocument();
+  });
+
+  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Verify initial Web Address options
+    const subdomainOption = screen.getByText('Free Subdomain');
+    const customOption = screen.getByText('Custom Domain');
+    expect(subdomainOption).toBeInTheDocument();
+    expect(customOption).toBeInTheDocument();
+
+    // Select Custom Domain
+    await user.click(customOption);
+
+    // Verify initial state
+    const salesAgent = screen.getByText('Sales Agent');
+    expect(salesAgent).toBeInTheDocument();
+
+    // Check toggle
+    const toggle = screen.getByRole('checkbox');
+    expect(toggle).toBeChecked();
+
+    // Select Sales Agent
+    await user.click(salesAgent);
+
+    // Toggle auto respond
+    await user.click(toggle);
+
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAutoRespond).toBe(false);
+      expect(state.domainChoice).toBe('custom');
+    });
+  });
+
+  it('Step 5: Shows Live Screen with correct links', async () => {
     act(() => {
       useOnboardingStore.setState({
-        businessName: 'Maya Bakery',
-        businessType: 'Online Store',
-        categories: ['food'],
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
+        step: 5,
+        startResult: { message: "Your business has been successfully launched." }
       });
     });
 
-    await user.click(continueButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
-
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    await user.type(emailInput, 'maya@example.com');
-
-    const passInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passInput, 'mypassword123');
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await user.click(launchButton);
+    render(<OnboardingWizard />);
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
+  });
+
+  it('Save Draft button triggers draft API and shows success message', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock draft API success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({})
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    // Start at Step 2
+    act(() => {
+      useOnboardingStore.setState({ step: 2 });
+    });
+
+    render(<OnboardingWizard />);
+
+    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    expect(saveDraftButton).toBeInTheDocument();
+
+    await user.click(saveDraftButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    });
+
+    // Verify API was called
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
+      method: 'POST'
+    }));
   });
 });
