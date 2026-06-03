@@ -26,11 +26,47 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Serialize)]
+pub struct TierConfig {
+    pub name: String,
+    pub price: f64,
+    pub agent_limit: Option<usize>,
+    pub action_limit: Option<u32>,
+    pub storage_limit_mb: Option<u32>,
+    pub product_limit: Option<usize>,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/tiers", axum::routing::get(tiers_handler))
         .with_state(hub)
+}
+
+pub async fn tiers_handler() -> Json<Vec<TierConfig>> {
+    let tiers = vec![
+        ::server_pricing::rate_limit::PlanTier::Free,
+        ::server_pricing::rate_limit::PlanTier::Starter,
+        ::server_pricing::rate_limit::PlanTier::Pro,
+        ::server_pricing::rate_limit::PlanTier::Business,
+    ];
+
+    let configs: Vec<TierConfig> = tiers.into_iter().map(|t| TierConfig {
+        name: match t {
+            ::server_pricing::rate_limit::PlanTier::Free => "Free",
+            ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
+            ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
+            ::server_pricing::rate_limit::PlanTier::Business => "Business",
+        }.to_string(),
+        price: t.base_price(),
+        agent_limit: t.max_agents(),
+        action_limit: t.monthly_action_limit().map(|v| v as u32),
+        storage_limit_mb: t.storage_limit_mb().map(|v| v as u32),
+        product_limit: t.max_products(),
+    }).collect();
+
+    Json(configs)
 }
 
 pub async fn my_plan_handler(

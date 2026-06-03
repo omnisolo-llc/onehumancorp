@@ -5601,10 +5601,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
+                                <li id="pricing-free-agent">✓ 1 Agent Limit</li>
+                                <li id="pricing-free-action">✓ 100 AI actions / month</li>
+                                <li id="pricing-free-storage">✓ 500MB Storage Quota</li>
+                                <li id="pricing-free-product">✓ 10 Products Limit</li>
                             </ul>
                             <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
@@ -5614,10 +5614,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
+                                <li id="pricing-starter-agent">✓ 3 Agents Limit</li>
+                                <li id="pricing-starter-action">✓ 1,000 AI actions / month</li>
+                                <li id="pricing-starter-storage">✓ 5GB Storage Quota</li>
+                                <li id="pricing-starter-product">✓ 100 Products Limit</li>
                             </ul>
                             <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
@@ -5626,10 +5626,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
+                                <li id="pricing-pro-agent">✓ 10 Agents Limit</li>
+                                <li id="pricing-pro-action">✓ Unlimited AI actions</li>
+                                <li id="pricing-pro-storage">✓ 50GB Storage Quota</li>
+                                <li id="pricing-business-product">✓ Unlimited Products</li>
                             </ul>
                             <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
@@ -5638,10 +5638,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>Unlimited Agents</li>
-                                <li>Unlimited AI actions</li>
-                                <li>500GB Storage Quota</li>
-                                <li>Unlimited Products</li>
+                                <li id="pricing-business-agent">✓ Unlimited Agents</li>
+                                <li id="pricing-business-action">✓ Unlimited AI actions</li>
+                                <li id="pricing-business-storage">✓ 500GB Storage Quota</li>
+                                <li id="pricing-business-product">✓ Unlimited Products</li>
                             </ul>
                             <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
                         </div>
@@ -5656,7 +5656,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">What is the storage limit?</h3>
-                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+                                <p id="faq-storage-limit" class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
                             </div>
                         </div>
                     </div>
@@ -7744,6 +7744,55 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
                                     })
                                     .catch(err => console.error('Error fetching plan info:', err));
+                            }
+
+
+                            if (id === 'pricing-screen') {
+                                fetch('/api/billing/tiers')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        data.forEach(tier => {
+                                            const tierLower = tier.name.toLowerCase();
+                                            const storageElem = document.getElementById('pricing-' + tierLower + '-storage');
+                                            const actionElem = document.getElementById('pricing-' + tierLower + '-action');
+                                            const agentElem = document.getElementById('pricing-' + tierLower + '-agent');
+                                            const productElem = document.getElementById('pricing-' + tierLower + '-product');
+                                            if (storageElem) {
+                                                const mb = tier.storage_limit_mb;
+                                                const text = mb === null ? 'Unlimited Storage' : (mb >= 1024 ? (mb / 1024).toFixed(0) + 'GB Storage Quota' : mb + 'MB Storage Quota');
+                                                storageElem.textContent = '✓ ' + text;
+                                            }
+                                            if (actionElem) {
+                                                const act = tier.action_limit;
+                                                const text = act === null ? 'Unlimited AI actions' : act + ' AI actions / month';
+                                                actionElem.textContent = '✓ ' + text;
+                                            }
+                                            if (agentElem) {
+                                                const ag = tier.agent_limit;
+                                                const text = ag === null ? 'Unlimited Agents' : ag + ' Agents Limit';
+                                                agentElem.textContent = '✓ ' + text;
+                                            }
+                                            if (productElem) {
+                                                const prod = tier.product_limit;
+                                                const text = prod === null ? 'Unlimited Products' : prod + ' Products Limit';
+                                                productElem.textContent = '✓ ' + text;
+                                            }
+                                        });
+
+                                        const freeTier = data.find(t => t.name === 'Free');
+                                        const busTier = data.find(t => t.name === 'Business');
+                                        if (freeTier && busTier) {
+                                            const freeMb = freeTier.storage_limit_mb;
+                                            const freeText = freeMb === null ? 'Unlimited' : (freeMb >= 1024 ? (freeMb / 1024).toFixed(0) + 'GB' : freeMb + 'MB');
+                                            const busMb = busTier.storage_limit_mb;
+                                            const busText = busMb === null ? 'Unlimited' : (busMb >= 1024 ? (busMb / 1024).toFixed(0) + 'GB' : busMb + 'MB');
+                                            const faqStorageElem = document.getElementById('faq-storage-limit');
+                                            if (faqStorageElem) {
+                                                faqStorageElem.textContent = 'Answer: Storage limits vary by plan, starting at ' + freeText + ' for Free and up to ' + busText + ' for Business.';
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.error('Error fetching tiers:', err));
                             }
 
                             if (id === 'cost-dashboard-screen') {

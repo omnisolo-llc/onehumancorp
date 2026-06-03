@@ -1,11 +1,66 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function PricingPage() {
+
   const router = useRouter();
+  const [tiers, setTiers] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchTiers() {
+      try {
+        const res = await fetch('/api/billing/tiers');
+        if (res.ok) {
+          const data = await res.json();
+          setTiers(data);
+        }
+      } catch (err) {
+        console.error('Error fetching tiers:', err);
+      }
+    }
+    fetchTiers();
+  }, []);
+
+  const getTierConfig = (name: string) => {
+    return tiers.find(t => t.name === name) || null;
+  };
+
+  const formatStorage = (mb: number | null) => {
+    if (mb === null) return 'Unlimited Storage';
+    if (mb >= 1024) return (mb / 1024).toFixed(0) + 'GB Storage Quota';
+    return mb + 'MB Storage Quota';
+  };
+
+  const formatActions = (actions: number | null) => {
+    if (actions === null) return 'Unlimited AI actions';
+    return actions.toLocaleString() + ' AI actions / month';
+  };
+
+  const formatAgents = (agents: number | null) => {
+    if (agents === null) return 'Unlimited Agents';
+    return agents + ' Agent' + (agents === 1 ? '' : 's') + ' Limit';
+  };
+
+
+  const formatProducts = (products: number | null) => {
+    if (products === null) return 'Unlimited Products';
+    return products.toLocaleString() + ' Products Limit';
+  };
+
+  const getTierStorageText = (tierName: string, fallback: string) => {
+    const tier = getTierConfig(tierName);
+    if (!tier || tier.storage_limit_mb === undefined) return fallback;
+    const mb = tier.storage_limit_mb;
+    if (mb === null) return 'Unlimited';
+    return mb >= 1024 ? (mb / 1024).toFixed(0) + 'GB' : mb + 'MB';
+  };
+
+  const freeStorageText = getTierStorageText('Free', '500MB');
+  const businessStorageText = getTierStorageText('Business', '500GB');
+
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
@@ -34,10 +89,11 @@ export default function PricingPage() {
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Free</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
+                {/* Free Tier limits */}
+                <li className="flex items-center gap-2"><span>✓</span> {formatAgents(getTierConfig('Free')?.agent_limit ?? 1)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatActions(getTierConfig('Free')?.action_limit ?? 100)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatStorage(getTierConfig('Free')?.storage_limit_mb ?? 500)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatProducts(getTierConfig('Free')?.product_limit ?? 10)}</li>
               </ul>
             </div>
             <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
@@ -53,10 +109,11 @@ export default function PricingPage() {
               <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 1,000 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 5GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
+                {/* Starter Tier limits */}
+                <li className="flex items-center gap-2"><span>✓</span> {formatAgents(getTierConfig('Starter')?.agent_limit ?? 3)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatActions(getTierConfig('Starter')?.action_limit ?? 1000)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatStorage(getTierConfig('Starter')?.storage_limit_mb ?? 5000)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatProducts(getTierConfig('Starter')?.product_limit ?? 100)}</li>
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
@@ -70,10 +127,11 @@ export default function PricingPage() {
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Pro</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 50GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
+                {/* Pro Tier limits */}
+                <li className="flex items-center gap-2"><span>✓</span> {formatAgents(getTierConfig('Pro')?.agent_limit ?? 10)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatActions(getTierConfig('Pro')?.action_limit ?? null)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatStorage(getTierConfig('Pro')?.storage_limit_mb ?? 50000)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatProducts(getTierConfig('Pro')?.product_limit ?? null)}</li>
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Pro')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
@@ -87,10 +145,11 @@ export default function PricingPage() {
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Business</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
+                {/* Business Tier limits */}
+                <li className="flex items-center gap-2"><span>✓</span> {formatAgents(getTierConfig('Business')?.agent_limit ?? null)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatActions(getTierConfig('Business')?.action_limit ?? null)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatStorage(getTierConfig('Business')?.storage_limit_mb ?? 512000)}</li>
+                <li className="flex items-center gap-2"><span>✓</span> {formatProducts(getTierConfig('Business')?.product_limit ?? null)}</li>
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Business')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
@@ -111,7 +170,7 @@ export default function PricingPage() {
             </div>
             <div>
                 <h3 className="font-semibold">What is the storage limit?</h3>
-                <p className="text-gray-700 text-sm mt-1">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+                <p className="text-gray-700 text-sm mt-1">Storage limits vary by plan, starting at {freeStorageText} for Free and up to {businessStorageText} for Business.</p>
             </div>
         </div>
 
