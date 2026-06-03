@@ -600,13 +600,14 @@ export default function Dashboard() {
          )}
 
          {/* Agent Updates (Approvals) */}
-         {(approvals.length > 0) && (
-            <section className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
-                        <button
+         <section className="mb-6">
+             <div className="flex items-center justify-between mb-4">
+                 <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Updates</h2>
+                 <div className="flex items-center gap-2">
+                      <Link href="/agents" className="text-sm font-medium text-[#0066FF] hover:underline" style={{ marginRight: '8px' }}>Manage AI Assistants</Link>
+                      <Link href="/settings" className="text-sm font-medium text-[#0066FF] hover:underline" style={{ marginRight: '8px' }}>Settings</Link>
+                     <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                     <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
                             className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                         >
@@ -614,6 +615,7 @@ export default function Dashboard() {
                         </button>
                     </div>
                 </div>
+                {(approvals.length > 0) && (
                 <div className="flex flex-col gap-4">
                     {approvals.map(approval => {
                         // Extract plain english message and payload
@@ -666,8 +668,8 @@ export default function Dashboard() {
                         );
                     })}
                 </div>
+                )}
             </section>
-         )}
 
          {/* Milestone Viral Share Loop Banner */}
          {activeCustomers > 0 && !bannerDismissed && (
