@@ -28,8 +28,11 @@ export default function CheckoutPage() {
     }, 800);
   };
 
-  const handlePayment = async () => {
+  const [isSubscription, setIsSubscription] = useState(false);
+
+  const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
+    setIsSubscription(isSub);
 
     // Fetch dynamic referral link
     try {
@@ -103,11 +106,21 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
-              onClick={handlePayment}
+              onClick={() => handlePayment(false)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
               {isProcessing ? 'Processing...' : 'Pay Now'}
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using Apple/Google Pay for frictionless vaulting.">
+            <button
+              onClick={() => handlePayment(true)}
+              disabled={isProcessing}
+              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Apple Pay)'}
             </button>
           </WithTooltip>
 
@@ -181,9 +194,15 @@ export default function CheckoutPage() {
             </div>
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
-            </p>
+            {isSubscription ? (
+              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                You're in! We'll text you a magic link to manage your subscription anytime. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+              </p>
+            ) : (
+              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+              </p>
+            )}
 
             <div className="space-y-4">
               <div>
