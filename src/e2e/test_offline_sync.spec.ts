@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
@@ -41,7 +41,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
             btn.classList.remove('bg-gray-100', 'text-gray-800');
             btn.classList.add('bg-red-100', 'text-red-700');
 
-            let queue = [];
+            let queue: any = [];
             try {
               queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
             } catch(e) {}
@@ -78,7 +78,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
     await page.evaluate(() => {
         // Mock fetch call since we don't have a real backend in some test environments
-        window.fetch = async () => ({ ok: true });
+        window.fetch = async () => ({ ok: true }) as any;
 
         window.dispatchEvent(new Event('online'))
 
