@@ -92,7 +92,7 @@ function actionIcon(action: ShellAction): IconName {
 
 function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const active = pathname ? pathname === item.href || pathname.startsWith(`${item.href}/`) : false;
 
   return (
     <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>

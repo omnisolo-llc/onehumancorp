@@ -2863,7 +2863,75 @@ async fn create_ui_supply_vendor_handler(
     }
 }
 
+
+async fn update_ui_raw_material_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let current_quantity = match payload.get("current_quantity").and_then(|v| v.as_i64()) {
+        Some(q) => q as i32,
+        None => return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "current_quantity is required"}))).into_response(),
+    };
+
+    let get_result = match &db.store {
+        crate::db::DbStore::Postgres => sqlx::query("SELECT reorder_threshold FROM raw_materials WHERE id = $1 AND tenant_id = $2")
+            .bind(&id).bind(&tenant_id).fetch_optional(&db.pool).await,
+        crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT reorder_threshold FROM raw_materials WHERE id = ? AND tenant_id = ?")
+            .bind(&id).bind(&tenant_id).fetch_optional(pool).await,
+    };
+
+    let reorder_threshold: i32 = match get_result {
+        Ok(Some(row)) => row.get("reorder_threshold"),
+        Ok(None) => return (axum::http::StatusCode::NOT_FOUND, axum::Json(serde_json::json!({"error": "raw material not found"}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch raw material: {}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database read failed"}))).into_response();
+        }
+    };
+
+    let update_result = match &db.store {
+        crate::db::DbStore::Postgres => sqlx::query("UPDATE raw_materials SET current_quantity = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(current_quantity).bind(&id).bind(&tenant_id).execute(&db.pool).await.map(|_| ()),
+        crate::db::DbStore::Sqlite(pool) => sqlx::query("UPDATE raw_materials SET current_quantity = ? WHERE id = ? AND tenant_id = ?")
+            .bind(current_quantity).bind(&id).bind(&tenant_id).execute(pool).await.map(|_| ()),
+    };
+
+    if let Err(e) = update_result {
+        tracing::error!("Failed to update raw material: {}", e);
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response();
+    }
+
+    if current_quantity <= reorder_threshold {
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "raw_material_id": id,
+            "current_quantity": current_quantity,
+            "reorder_threshold": reorder_threshold
+        });
+
+        let enqueue_result = match &db.store {
+            crate::db::DbStore::Postgres => sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, $3, $4)")
+                .bind(&job_id).bind(&tenant_id).bind("low_stock_alert").bind(&payload).execute(&db.pool).await.map(|_| ()),
+            crate::db::DbStore::Sqlite(pool) => sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES (?, ?, ?, ?)")
+                .bind(&job_id).bind(&tenant_id).bind("low_stock_alert").bind(&payload).execute(pool).await.map(|_| ()),
+        };
+
+        if let Err(e) = enqueue_result {
+            tracing::error!("Failed to enqueue low_stock_alert job: {}", e);
+        }
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "current_quantity": current_quantity}))).into_response()
+}
+
 async fn create_ui_raw_material_handler(
+
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
     axum::Json(payload): axum::Json<serde_json::Value>,
@@ -3091,6 +3159,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
+        .route("/api/ui/supply/raw-materials/:id", axum::routing::patch(update_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
