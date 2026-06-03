@@ -27,6 +27,8 @@ mod tests {
         assert_eq!(route_payment(4999), "CreditCard");
         assert_eq!(route_payment(5000), "ACH");
         assert_eq!(route_payment(100000), "ACH");
+        assert_eq!(route_payment(0), "CreditCard");
+        assert_eq!(route_payment(-100), "CreditCard");
     }
 
     #[test]
@@ -35,5 +37,7 @@ mod tests {
         assert_eq!(should_batch_payout(9999), true);
         assert_eq!(should_batch_payout(10000), false);
         assert_eq!(should_batch_payout(50000), false);
+        assert_eq!(should_batch_payout(0), true);
+        assert_eq!(should_batch_payout(-100), true);
     }
 }

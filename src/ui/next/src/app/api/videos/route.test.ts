@@ -1,34 +1,55 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
+import { NextRequest } from 'next/server';
 
 describe('/api/videos GET', () => {
-  it('returns the help videos list with specific content', async () => {
-    const response = await GET();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fetches videos from the backend and returns them', async () => {
+    const mockVideos = [
+      { id: 1, title: 'How to add a product', duration: '1:20' },
+      { id: 2, title: 'Setting up payments', duration: '1:15' },
+    ];
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockVideos),
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/videos');
+    const response = await GET(request);
+
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBe(10); // We know there are 10 items
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos');
+    expect(data).toEqual(mockVideos);
+  });
 
-    // Check specific items to ensure content is correct
-    const firstVideo = data.find((item: any) => item.id === 1);
-    expect(firstVideo).toBeDefined();
-    expect(firstVideo.title).toBe('How to set up your first store easily');
-    expect(firstVideo.duration).toBe('1:20');
-
-    const lastVideo = data.find((item: any) => item.id === 10);
-    expect(lastVideo).toBeDefined();
-    expect(lastVideo.title).toBe('Adding staff to your account');
-    expect(lastVideo.duration).toBe('0:40');
-
-    // Ensure all items have the required fields
-    data.forEach((item: any) => {
-      expect(item).toHaveProperty('id');
-      expect(typeof item.id).toBe('number');
-      expect(item).toHaveProperty('title');
-      expect(typeof item.title).toBe('string');
-      expect(item).toHaveProperty('duration');
-      expect(typeof item.duration).toBe('string');
+  it('returns an empty array and correct status on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
     });
+
+    const request = new NextRequest('http://localhost:3000/api/videos');
+    const response = await GET(request);
+
+    expect(response.status).toBe(404);
+    const data = await response.json();
+    expect(data).toEqual([]);
+  });
+
+  it('handles fetch exceptions gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    const request = new NextRequest('http://localhost:3000/api/videos');
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data).toEqual([]);
   });
 });
