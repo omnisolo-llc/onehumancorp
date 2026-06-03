@@ -2162,6 +2162,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
 
+    tokio::spawn(async {
+        crate::services::cache_invalidator::start_cache_invalidator().await;
+    });
+
     let grpc_port = std::env::var("OHC_GRPC_PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())

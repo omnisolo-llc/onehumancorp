@@ -140,6 +140,20 @@ async fn handle_create_product(
 
     let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
 
+    let event_payload_inv = serde_json::json!({
+        "event": "inventory.updated",
+        "tags": [format!("tenant-id:{}", tenant_id), format!("entity:product:{}", product_id)]
+    });
+
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if let Ok(mut conn) = client.get_async_connection().await {
+                use redis::AsyncCommands;
+                let _: redis::RedisResult<()> = conn.publish("cache_invalidation_events", serde_json::to_string(&event_payload_inv).unwrap_or_default()).await;
+            }
+        }
+    }
+
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
