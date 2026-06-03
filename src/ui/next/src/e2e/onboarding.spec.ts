@@ -35,6 +35,13 @@ test.describe('OnboardingWizard CUJ', () => {
     // Mock the start API call (triggered when moving from Step 3 to Step 4/5)
     await page.route('/api/onboarding/start', async route => {
       // Simulate network delay for the loading animation
+      const postData = route.request().postDataJSON();
+      if (!postData.location) {
+          return route.fulfill({
+              status: 400,
+              body: JSON.stringify({ error: 'Missing location in E2E test' })
+          });
+      }
       await new Promise(resolve => setTimeout(resolve, 500));
       await route.fulfill({
         status: 200,

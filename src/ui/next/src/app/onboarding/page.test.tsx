@@ -216,6 +216,10 @@ describe('OnboardingWizard', () => {
       method: 'POST',
       body: expect.stringContaining('"admin_password":"mypassword123"'),
     }));
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"location":"NY"'),
+    }));
   });
 
   it('Step 1: Handles intake API failure', async () => {
