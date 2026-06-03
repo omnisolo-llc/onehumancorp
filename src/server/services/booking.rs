@@ -321,7 +321,8 @@ use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
     CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
-    ReserveTimeSlotRequest, ReserveTimeSlotResponse,
+    ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
+    ConversationalCheckoutSession,
 };
 
 pub struct NativeBookingService {
@@ -481,14 +482,52 @@ impl BookingEngineService for NativeBookingService {
             deposit_stripe_link,
         }))
     }
+
+    async fn create_conversational_checkout(
+        &self,
+        request: Request<CreateConversationalCheckoutRequest>,
+    ) -> Result<Response<ConversationalCheckoutSession>, Status> {
+        let req = request.into_inner();
+        let session_id = Uuid::new_v4().to_string();
+        let expires_at = Utc::now() + chrono::Duration::minutes(15);
+
+        let inventory_lock_id = format!("ohc:lock:{}:inventory:{}:{}", req.tenant_id, req.product_id, session_id);
+
+        if let Some(client) = &self.redis_client {
+            let mut conn = client.get_multiplexed_async_connection().await
+                .map_err(|e| Status::internal(format!("Redis conn failed: {}", e)))?;
+            let _acquired: bool = redis::cmd("SET")
+                .arg(&inventory_lock_id)
+                .arg("1")
+                .arg("EX")
+                .arg(900) // 15 min TTL
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(false);
+        }
+
+        let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
+
+        Ok(Response::new(ConversationalCheckoutSession {
+            session_id,
+            tenant_id: req.tenant_id,
+            customer_id: req.customer_id,
+            amount_cents: req.amount_cents,
+            inventory_lock_id,
+            checkout_url,
+            status: "pending".to_string(),
+            expires_at_unix: expires_at.timestamp(),
+        }))
+    }
 }
+
 
 #[cfg(test)]
 mod native_booking_tests {
     use super::*;
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-    use ::server_ohc::app::{ReserveTimeSlotRequest};
+    use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
 
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
@@ -515,5 +554,24 @@ mod native_booking_tests {
         });
         let res = svc.check_availability(req).await;
         assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_native_create_conversational_checkout() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(CreateConversationalCheckoutRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            amount_cents: 1000,
+            product_id: "p1".to_string(),
+        });
+        let res = svc.create_conversational_checkout(req).await;
+        assert!(res.is_ok());
+        let session = res.unwrap().into_inner();
+        assert_eq!(session.tenant_id, "t1");
+        assert_eq!(session.customer_id, "c1");
+        assert_eq!(session.amount_cents, 1000);
+        assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
+        assert_eq!(session.status, "pending");
     }
 }
