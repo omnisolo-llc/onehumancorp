@@ -110,9 +110,6 @@ describe('Walkthrough Component', () => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
-    // SVG is inside a button, find the button by getting the closest button to the SVG
-    // Or we can query the skip button by its class name or hover state which we know from the component
-    // We can also query all buttons and pick the one with SVG inside.
     const buttons = screen.getAllByRole('button');
     const skipButton = buttons.find(btn => btn.querySelector('svg'));
     if (skipButton) {
@@ -120,5 +117,49 @@ describe('Walkthrough Component', () => {
     }
 
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('renders correctly with different positions', async () => {
+    const { rerender } = render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Top Step', content: 'content', position: 'top' },
+        ]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Top Step')).toBeInTheDocument();
+    });
+
+    rerender(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Right Step', content: 'content', position: 'right' },
+        ]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Right Step')).toBeInTheDocument();
+    });
+
+    rerender(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Left Step', content: 'content', position: 'left' },
+        ]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Left Step')).toBeInTheDocument();
+    });
   });
 });
