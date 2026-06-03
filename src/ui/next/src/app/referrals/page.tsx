@@ -6,6 +6,9 @@ export default function ReferralsPage() {
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   useEffect(() => {
     const fetchReferralLink = async () => {
@@ -79,6 +82,47 @@ export default function ReferralsPage() {
 
             <div className="border-t border-gray-100 pt-8">
               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Share Tools</h3>
+
+              <div className="mb-6 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                <h4 className="text-sm font-bold text-indigo-900 mb-2">Invite via Email</h4>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    placeholder="friend@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!inviteEmail) return;
+                      setIsInviting(true);
+                      try {
+                        const response = await fetch('/api/v1/growth/referrals/invite', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: inviteEmail }),
+                        });
+                        if (response.ok) {
+                          setInviteSuccess(true);
+                          setInviteEmail('');
+                          setTimeout(() => setInviteSuccess(false), 3000);
+                        }
+                      } catch (e) {
+                        console.error("Failed to send invite", e);
+                      } finally {
+                        setIsInviting(false);
+                      }
+                    }}
+                    disabled={isInviting || !inviteEmail}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {isInviting ? 'Sending...' : (inviteSuccess ? 'Sent!' : 'Send Invite')}
+                  </button>
+                </div>
+                {inviteSuccess && <p className="text-green-600 text-xs mt-2 font-medium">Invite sent successfully!</p>}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => {

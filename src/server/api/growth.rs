@@ -126,6 +126,7 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
+        .route("/referrals/invite", post(handle_referral_invite))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
@@ -183,6 +184,10 @@ pub struct ReferralGenerateResponse {
     pub referral_link: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralInviteRequest {
+    pub email: String,
+}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct GrowthMetrics {
@@ -775,6 +780,38 @@ async fn handle_referral_convert(
     }
 }
 
+
+async fn handle_referral_invite(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ReferralInviteRequest>,
+) -> Result<Json<()>, StatusCode> {
+    let ref_code = uuid::Uuid::new_v4().to_string();
+    let ref_id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
+        .bind(&ref_id)
+        .bind(&auth_info.org_id)
+        .bind(&auth_info.agent_id)
+        .bind(&ref_code)
+        .bind(now)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => {
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({
+                "type": "growth.referral_invite_sent",
+                "id": ref_id,
+                "referral_code": ref_code,
+                "target_email": req.email
+            }));
+            state.hub.append_recent_event(msg);
+            Ok(Json(()))
+        },
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
 
 async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,
