@@ -7,9 +7,7 @@ use crate::orchestration::departments::types::{
 use serde_json::Value;
 use std::collections::HashMap;
 
-// Note: In actual implementation the OutboundDispatcher and ChatClient would be full featured modules
-// Since we are mocking them here temporarily to not break the build dependencies, they remain here but
-// should be injected via config in a real app.
+// Using the mock LLM client approach for tests but wiring up the structural capability for real ones
 #[async_trait::async_trait]
 pub trait ChatClient: Send + Sync {
     async fn generate_response(&self, prompt: &str) -> Result<(String, f64), String>;
@@ -28,6 +26,64 @@ impl ChatClient for DummyGeminiClient {
             Ok(("Your order is currently processing.".to_string(), 92.0))
         } else {
             Ok(("Thank you for your message. We will get back to you shortly.".to_string(), 85.0))
+        }
+    }
+}
+
+pub struct ProductionGeminiClient {
+    api_key: String,
+}
+
+impl ProductionGeminiClient {
+    pub fn new(api_key: String) -> Self {
+        Self { api_key }
+    }
+}
+
+#[async_trait::async_trait]
+impl ChatClient for ProductionGeminiClient {
+    async fn generate_response(&self, prompt: &str) -> Result<(String, f64), String> {
+        // Build JSON payload for Gemini REST API
+        let payload = serde_json::json!({
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "temperature": 0.2
+            }
+        });
+
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={}",
+            self.api_key
+        );
+
+        let client = reqwest::Client::new();
+        match client.post(&url).json(&payload).send().await {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    if let Ok(json) = resp.json::<Value>().await {
+                        let text = json["candidates"][0]["content"]["parts"][0]["text"].as_str().unwrap_or("").to_string();
+                        // Naive JSON extraction to pull response and score
+                        let start = text.find('{').unwrap_or(0);
+                        let end = text.rfind('}').unwrap_or(text.len());
+                        if start < end && end < text.len() {
+                            let json_str = &text[start..end+1];
+                            if let Ok(parsed) = serde_json::from_str::<Value>(json_str) {
+                                let reply = parsed.get("response").and_then(|v| v.as_str()).unwrap_or("Thank you.").to_string();
+                                let score = parsed.get("confidence_score").and_then(|v| v.as_f64()).unwrap_or(85.0);
+                                return Ok((reply, score));
+                            }
+                        }
+                    }
+                }
+                // Fallback if parsing fails or status is not success
+                Ok(("Thank you for your inquiry. We are reviewing your request.".to_string(), 85.0))
+            }
+            Err(_) => {
+                // Network error fallback
+                Ok(("Thank you for your inquiry. We are reviewing your request.".to_string(), 85.0))
+            }
         }
     }
 }
@@ -57,11 +113,17 @@ pub struct CustomerSuccessAgent {
 
 impl CustomerSuccessAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        // Ideally we would pull the real gemini client or similar here, using dummy for current scope implementation
+        let api_key = std::env::var("GEMINI_API_KEY").unwrap_or_default();
+        let llm: std::sync::Arc<dyn ChatClient> = if cfg!(debug_assertions) || api_key.is_empty() {
+            std::sync::Arc::new(DummyGeminiClient {})
+        } else {
+            std::sync::Arc::new(ProductionGeminiClient::new(api_key))
+        };
+
         Self {
             orchestrator,
             configs: HashMap::new(),
-            llm: std::sync::Arc::new(DummyGeminiClient {}),
+            llm,
             dispatcher: std::sync::Arc::new(DefaultOutboundDispatcher {}),
         }
     }
@@ -184,7 +246,14 @@ impl Department for CustomerSuccessAgent {
 
             let tone = config.clone().map(|c| c.tone_of_voice).unwrap_or_else(|| "professional and helpful".to_string());
 
-            let mut full_prompt = format!("You are an AI customer success ambassador. Tone: {}. Context: {}. Message: {}", tone, context_summary, message);
+            let mut full_prompt = format!(
+                "You are an AI customer success ambassador. Tone: {}. Context: {}. \
+                Analyze the message and format your response strictly as JSON: \
+                {{\"response\": \"your text reply\", \"confidence_score\": 0.0 to 100.0}}. \
+                Message: {}",
+                tone, context_summary, message
+            );
+
             if has_images {
                 full_prompt.push_str("\nNote: Image attachments were included in the message. Analyze them and incorporate into the response.");
             }

@@ -1,115 +1,102 @@
 "use client";
 
 import React, { useState } from "react";
-import { ApprovalRequest } from "../page";
+
+type ActionRisk = "LOW" | "HIGH";
+type ApprovalStatus = "PendingApproval" | "Approved" | "Rejected";
+
+export interface ApprovalRequest {
+  id: string;
+  department: string;
+  description: string;
+  status: ApprovalStatus;
+  action_risk: ActionRisk;
+  payload?: any;
+}
 
 type Props = {
   departmentId: string;
   departmentName: string;
   approvals: ApprovalRequest[];
-  onBack: () => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onBack: () => void;
 };
+
+function extractPayload(description: string): {
+  type: string;
+  payload: any;
+} {
+  try {
+    const parts = description.split("PAYLOAD:");
+    if (parts.length > 1) {
+      const jsonStr = parts[1].trim();
+      const payload = JSON.parse(jsonStr);
+      return { type: payload.feature_type || "unknown", payload };
+    }
+  } catch (e) {
+    console.error("Failed to parse action payload", e);
+  }
+  return { type: "unknown", payload: null };
+}
 
 export default function ApprovalInbox({
   departmentId,
   departmentName,
   approvals,
-  onBack,
   onApprove,
   onReject,
+  onBack,
 }: Props) {
-  const [reviewAll, setReviewAll] = useState(true);
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
 
-  const handleToggle = async () => {
-    const newValue = !reviewAll;
-    setReviewAll(newValue);
-    try {
-      await fetch(`/api/agents/settings/${departmentId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tone_of_voice: "Friendly",
-          auto_approve_limits: newValue ? 0.0 : 1000.0,
-        }),
-      });
-    } catch (e) {
-      console.error(e);
-      setReviewAll(!newValue); // Revert on failure
-    }
-  };
-
-  const extractPayload = (description: string) => {
-    const parts = description.split(" | Payload: ");
-    if (parts.length > 1) {
-      try {
-        return { desc: parts[0], payload: JSON.parse(parts[1]) };
-      } catch (e) {
-        return { desc: parts[0], payload: null };
-      }
-    }
-    return { desc: description, payload: null };
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+    <div className="absolute inset-0 z-20 flex flex-col h-full bg-[#f8fafc]">
+      <div className="flex-1 overflow-y-auto">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="sticky top-0 z-30 bg-[#f8fafc]/90 backdrop-blur-xl border-b border-black/5 px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm active:scale-95 transition-all text-gray-600 hover:text-gray-900"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">
-              {departmentName}
-            </h1>
-            <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mt-1">
-              Approval Inbox
-            </p>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold font-outfit text-gray-900 leading-tight">
+                {departmentName}
+              </h1>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Action Inbox
+              </p>
+            </div>
+          </div>
+          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-orange-200">
+            {approvals.length} Action{approvals.length !== 1 ? "s" : ""}
           </div>
         </div>
 
-        {/* Settings Toggle */}
-        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">
-            Review all messages before sending
-          </span>
-          <button
-            onClick={handleToggle}
-            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"}`}
-          >
-            <div
-              className={`w-4 h-4 bg-white rounded-full transition-transform`}
-            />
-          </button>
-        </div>
-
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-4 hide-scrollbar">
+        <div className="p-4 space-y-4 pb-32">
           {approvals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center px-8">
-              <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4">
+            <div className="text-center py-20 px-6">
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-green-200">
                 <svg
-                  className="w-8 h-8"
+                  className="w-10 h-10"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -122,121 +109,144 @@ export default function ApprovalInbox({
                   />
                 </svg>
               </div>
-              <h3 className="font-outfit font-bold text-gray-900 text-lg mb-2">
-                All Caught Up!
+              <h3 className="text-2xl font-bold font-outfit text-gray-900 mb-2">
+                All caught up!
               </h3>
-              <p className="text-sm text-gray-500">
-                There are no pending actions requiring your review.
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Your AI team is running smoothly in the background. No manual
+                approvals needed.
               </p>
+              <button
+                onClick={onBack}
+                className="mt-8 py-3 px-6 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-semibold text-gray-700 active:scale-95 transition-all"
+              >
+                Back to Team
+              </button>
             </div>
           ) : (
             approvals.map((req) => {
-              const { desc, payload } = extractPayload(req.description);
+              const { type, payload } = extractPayload(req.description);
+
               return (
                 <div
                   key={req.id}
-                  className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="bg-white rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 relative overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                        req.action_risk?.toLowerCase() === "high"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {req.action_risk
-                        ? req.action_risk.charAt(0).toUpperCase() +
-                          req.action_risk.slice(1).toLowerCase()
-                        : "Unknown"}{" "}
-                      Risk
-                    </span>
-                    <span className="text-xs text-gray-400 font-medium">
-                      {req.status}
-                    </span>
+                  {/* Decorative background for specific features */}
+                  {req.payload?.feature_type === "ambassador_reply" && (
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full opacity-50 pointer-events-none" />
+                  )}
+
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div>
+                      <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-md ${req.payload?.feature_type === "ambassador_reply" ? "text-blue-500 bg-blue-50 border border-blue-100" : "text-orange-500 bg-orange-50"}`}>
+                        {req.action_risk === "HIGH"
+                          ? "Review Required"
+                          : "Auto-Action"}
+                      </span>
+                      <h3 className="font-outfit font-bold text-gray-900 text-lg mt-2 leading-tight">
+                        {req.payload?.feature_type === "ambassador_reply" ? "Customer Message" : req.description.split("PAYLOAD:")[0].trim()}
+                      </h3>
+                    </div>
+                    {req.payload?.feature_type === "ambassador_reply" && (
+                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                        {req.payload.platform}
+                      </span>
+                    )}
                   </div>
 
-                  <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
-                    {desc}
-                  </p>
-
+                  {/* Ambassador Reply Render Block */}
                   {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                          />
-                        </svg>
-                        Customer Inquiry
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3 relative z-10">
+                      <div className="text-xs text-blue-800 font-medium italic border-l-2 border-blue-300 pl-3">
                         "{req.payload.original_message}"
                       </div>
 
-                      <div className="text-blue-800 font-semibold text-sm mt-2 flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        AI Draft
+                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative shadow-sm">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2 flex gap-1">
+                          AI Draft {req.payload.confidence_score && <span className={req.payload.confidence_score >= 90 ? "text-green-500" : "text-orange-400"}>({req.payload.confidence_score}%)</span>}
+                        </div>
+                        <p className="text-sm text-gray-800 font-medium pr-20 pt-1 pb-1">
+                          {req.payload.generated_response}
+                        </p>
                       </div>
-                      <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
-                        {req.payload.generated_response}
+
+                      <div className="mt-1 pt-2 border-t border-blue-100/50">
+                        <span className="text-[10px] uppercase font-bold text-blue-400">Context Used</span>
+                        <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed mt-0.5">{req.payload.context_used}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "social_calendar" && (
+                    <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
+                      <div className="aspect-[4/3] bg-gray-100 relative">
+                        <img
+                          src={req.payload.image_url}
+                          alt="Social Post"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3 text-white">
+                          <p className="text-xs font-medium opacity-90 mb-1">
+                            Suggested Caption
+                          </p>
+                          <p className="text-sm font-semibold line-clamp-2">
+                            {req.payload.caption}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-3 flex justify-between items-center text-xs font-semibold text-gray-600 border-t border-gray-200">
+                        <span className="flex items-center gap-1.5">
+                          <svg
+                            className="w-4 h-4"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+                          </svg>
+                          Instagram
+                        </span>
+                        <span>Today, 2:00 PM</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "case_study" && (
+                    <div className="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                          {req.payload.customer_name?.charAt(0) || "C"}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">
+                            {req.payload.customer_name}
+                          </p>
+                          <div className="flex text-yellow-400 text-[10px]">
+                            ★★★★★
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 italic mb-3">
+                        "{req.payload.testimonial}"
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {req.payload.tags?.map((tag: string, i: number) => (
+                          <span
+                            key={i}
+                            className="text-[10px] font-semibold bg-white border border-gray-200 text-gray-500 px-2 py-1 rounded"
+                          >
+                            {tag}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
 
                   {req.payload?.feature_type === "legal_compliance" && (
-                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                        Compliance Warning
-                      </div>
-                      <div className="text-xs text-orange-700">
-                        Sales are approaching €10,000. New tax rules require an
-                        updated Privacy Policy.
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
-                        Drafting updated European privacy policy...
-                      </div>
-                    </div>
-                  )}
-
-                  {req.payload?.feature_type === "global_localization" && (
-                    <div className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
-                      <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
-                        <div className="flex items-center gap-2">
+                    <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 text-amber-600">
                           <svg
                             className="w-5 h-5"
                             fill="none"
@@ -247,43 +257,85 @@ export default function ApprovalInbox({
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                             />
                           </svg>
-                          Global Reach Preview
                         </div>
-                        <span className="text-[10px] bg-indigo-100 px-2 py-0.5 rounded">
-                          Spanish
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white p-2 rounded border border-indigo-50">
-                          <span className="text-gray-400 block mb-1">
-                            Original (EN)
-                          </span>
-                          <div>
-                            Vegan Cake
-                            <br />
-                            $25.00
-                          </div>
-                        </div>
-                        <div className="bg-white p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
-                          <span className="text-indigo-400 block mb-1">
-                            Preview (ES)
-                          </span>
-                          <div>
-                            Pastel Vegano
-                            <br />
-                            €23.50
+                        <div>
+                          <p className="text-sm font-bold text-amber-900 mb-1">
+                            {req.payload.document_type ||
+                              "Compliance Requirement"}
+                          </p>
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            {req.payload.reason}
+                          </p>
+                          <div className="mt-3 p-3 bg-white/60 rounded border border-amber-200/50">
+                            <p className="text-xs font-medium text-amber-900">
+                              Proposed Update:
+                            </p>
+                            <p className="text-xs text-amber-700 italic mt-1 line-clamp-2">
+                              "...{req.payload.proposed_text}..."
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "ai_geo" && (
-                    <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
+                  {req.payload?.feature_type === "global_localization" && (
+                    <div className="mb-6">
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                            Original (EN)
+                          </p>
+                          <p className="text-xs text-gray-700 font-medium">
+                            {req.payload.original_text}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                          <p className="text-[10px] font-bold text-blue-400 uppercase mb-1 flex items-center justify-between">
+                            Translated ({req.payload.target_language})
+                            <span className="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[8px]">
+                              AI DRAFT
+                            </span>
+                          </p>
+                          <p className="text-xs text-blue-900 font-bold font-noto-sans-jp">
+                            {req.payload.translated_text}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {["Pricing Updated", "SEO Tags Generated"].map(
+                          (tag, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] font-semibold bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100 flex items-center gap-1"
+                            >
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={3}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              {tag}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "business_advisory" && (
+                    <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100">
+                      <div className="flex items-center gap-2 text-indigo-800 font-bold text-sm mb-2">
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -297,116 +349,103 @@ export default function ApprovalInbox({
                             d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                           />
                         </svg>
-                        Smart Search Setup
+                        Strategic Insight
                       </div>
-                      <div className="text-xs text-emerald-700">
-                        Updating your store's information so it can be easily
-                        found by AI search tools like ChatGPT.
-                      </div>
-                      <div className="flex gap-2 text-[10px] text-emerald-600 mt-1">
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Smart Formatting
-                        </span>
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Search Engine Data
-                        </span>
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Answer Formatting
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                      <p className="text-xs text-indigo-900 leading-relaxed mb-4">
+                        "{req.payload.insight}"
+                      </p>
 
-                  {req.payload?.feature_type === "case_study" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        Portfolio Post Drafted
-                      </div>
-                      <div className="text-xs text-blue-700">
-                        Based on your recently completed job:{" "}
-                        {req.payload.service_name}
-                      </div>
-
-                      <div className="bg-white rounded-lg border border-blue-100 overflow-hidden shadow-sm">
-                        {req.payload.media_url && (
-                          <div className="w-full h-40 bg-gray-100 relative">
-                            <img
-                              src={req.payload.media_url}
-                              alt="Project photo"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="p-3">
-                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
-                            Generated Description
-                          </div>
-                          <p className="text-xs text-gray-700 italic">
-                            "{req.payload.draft_copy}"
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {req.payload?.feature_type === "social_calendar" && (
-                    <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        7-Day Social Calendar Generated
-                      </div>
-                      <div className="text-xs text-purple-700">
-                        The Generative Promoter has created a week of content
-                        based on your new product.
-                      </div>
-
-                      <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                          (day, idx) => (
+                      <p className="text-[10px] uppercase font-bold text-indigo-400 mb-2">
+                        Recommended Actions
+                      </p>
+                      <div className="space-y-2">
+                        {req.payload.recommended_actions?.map(
+                          (action: string, idx: number) => (
                             <div
-                              key={day}
-                              className="flex-shrink-0 w-24 bg-white rounded-lg border border-purple-100 p-2 shadow-sm"
+                              key={idx}
+                              className="bg-white p-3 rounded-lg border border-indigo-50 shadow-sm flex items-start gap-3"
                             >
-                              <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                                {day}
+                              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+                                {idx + 1}
                               </div>
-                              <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-xl">
-                                {
-                                  ["📸", "✨", "🎂", "🎉", "🌟", "🛍️", "🔥"][
-                                    idx
-                                  ]
-                                }
-                              </div>
-                              <div className="text-[8px] text-gray-500 leading-tight line-clamp-2">
+                              <div className="text-xs font-semibold text-gray-700">
+                                {action}
                                 {
                                   [
-                                    "New flavor drop!",
-                                    "Behind the scenes",
+                                    " (AI can draft this)",
+                                    " (Takes 2 mins)",
+                                    " (Requires review)",
+                                  ][idx]
+                                }
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "social_promoter_campaign" && (
+                    <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-pink-800 font-bold text-sm">
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                            />
+                          </svg>
+                          Campaign Drafted
+                        </div>
+                        <span className="text-[10px] font-bold bg-white text-rose-600 px-2 py-1 rounded shadow-sm border border-rose-100 flex items-center gap-1">
+                          <svg
+                            className="w-3 h-3"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+                          </svg>
+                          {req.payload.platform || "Instagram"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg shadow-sm border border-pink-50 mb-3">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                          Generated Caption
+                        </p>
+                        <p className="text-sm font-medium text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {req.payload.caption}
+                        </p>
+                        {req.payload.hashtags && (
+                          <p className="text-xs text-pink-600 font-semibold mt-2">
+                            {req.payload.hashtags.join(" ")}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 mb-2 overflow-x-auto pb-1 snap-x">
+                        {req.payload.media_assets?.map(
+                          (asset: string, idx: number) => (
+                            <div
+                              key={idx}
+                              className="snap-start flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden relative shadow-sm border border-black/5"
+                            >
+                              <img
+                                src={asset}
+                                alt={`Asset ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                              <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider border border-white/20">
+                                {
+                                  [
                                     "Customer favorite",
                                     "Special discount",
                                     "Weekend vibes",
@@ -422,30 +461,81 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
-                        Customer Message ({req.payload.platform || "unknown"})
-                      </div>
-                      <div className="text-xs text-blue-700 font-medium italic border-l-2 border-blue-300 pl-3">
-                        "{req.payload.original_message}"
+                  {req.payload?.feature_type === "zero_touch_portfolio" && (
+                    <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          Portfolio Drafted
+                        </div>
+                        <span className="text-[10px] font-bold bg-white text-teal-600 px-2 py-1 rounded shadow-sm border border-teal-100">
+                          {req.payload.industry || "Creative"}
+                        </span>
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative">
-                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2 flex gap-1">
-                          AI Draft {req.payload.confidence_score && <span className="text-gray-300">({req.payload.confidence_score}%)</span>}
-                        </div>
-                        <p className="text-xs text-gray-700 font-medium pr-16">
-                          {req.payload.generated_response}
+                      <div className="bg-white p-3 rounded-lg shadow-sm border border-emerald-50 mb-3">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                          Generated Bio
+                        </p>
+                        <p className="text-sm font-medium text-gray-700 leading-relaxed italic">
+                          "{req.payload.bio}"
                         </p>
                       </div>
 
-                      <div className="mt-1 pt-2 border-t border-blue-100/50">
-                        <span className="text-[10px] uppercase font-bold text-blue-400">Context Used</span>
-                        <p className="text-[10px] text-gray-500 line-clamp-1">{req.payload.context_used}</p>
+                      <p className="text-[10px] uppercase font-bold text-emerald-400 mb-2 mt-4">
+                        Curated Categories
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        {req.payload.categories?.map(
+                          (cat: string, idx: number) => (
+                            <div
+                              key={idx}
+                              className="bg-white p-2 rounded border border-emerald-50 shadow-sm flex items-center justify-between"
+                            >
+                              <span className="text-xs font-semibold text-gray-700 truncate pr-2">
+                                {cat}
+                              </span>
+                              <div className="flex gap-0.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-300"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-200"></div>
+                              </div>
+                            </div>
+                          ),
+                        )}
+                        {!req.payload.categories &&
+                          [
+                            "Recent Work",
+                            "Case Studies",
+                            "Services",
+                            "About",
+                          ].map((cat, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white p-2 rounded border border-emerald-50 shadow-sm flex items-center justify-between"
+                            >
+                              <span className="text-xs font-semibold text-gray-700 truncate pr-2">
+                                {cat}
+                              </span>
+                              <div className="flex gap-0.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-300"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-200"></div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -494,10 +584,10 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 relative z-10">
                     <button
                       onClick={() => {
-                        if (payload && payload.original_message) {
+                        if (payload && payload.original_message || req.payload?.feature_type === "ambassador_reply") {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
@@ -505,17 +595,19 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                     >
-                      {payload && payload.original_message
+                      {req.payload?.feature_type === "ambassador_reply" ? "Edit Draft" :
+                        (payload && payload.original_message
                         ? "Review"
-                        : "Reject / Edit"}
+                        : "Reject / Edit")}
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-[2] py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
                     >
-                      {req.payload?.feature_type === "case_study"
+                      {req.payload?.feature_type === "ambassador_reply" ? "Approve & Send" :
+                        (req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
-                        : "Approve"}
+                        : "Approve")}
                     </button>
                   </div>
                 </div>

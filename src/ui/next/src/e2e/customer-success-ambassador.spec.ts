@@ -28,20 +28,15 @@ test.describe('Customer Success Ambassador Engine', () => {
         actualTenantId = data.tenant_id;
     }
 
-    // Fire directly into the new Omnichannel Gateway with the test bypass signature
-    const res = await request.post('/api/v1/omnichannel/receive', {
-      headers: {
-        'X-Test-Bypass': 'true'
-      },
+    // Use the explicit webhook gateway endpoint which correctly parses payload.source and payload.message
+    const res = await request.post('/api/agents/webhook', {
       data: {
         tenant_id: actualTenantId,
-        platform: 'whatsapp',
-        original_message: 'Hi, can I order a custom birthday cake?',
-        attachments: []
+        source: 'whatsapp',
+        message: 'Hi, can I order a custom birthday cake?',
       }
     });
 
-    // We expect the backend to accept it and process it
     expect(res.status()).toBe(200);
 
     // Wait for the background worker / event bus to process the message and queue the approval
@@ -52,7 +47,8 @@ test.describe('Customer Success Ambassador Engine', () => {
     await page.waitForURL('/team');
 
     // 3. Verify the message flowed through to the Approval Inbox
-    await expect(page.locator('text=Customer Message (whatsapp)')).toBeVisible();
+    await expect(page.locator('h3:has-text("Customer Message")')).toBeVisible();
+    await expect(page.locator('span:has-text("whatsapp")')).toBeVisible();
     await expect(page.locator('text="Hi, can I order a custom birthday cake?"')).toBeVisible();
 
     // Verify touch targets exist
