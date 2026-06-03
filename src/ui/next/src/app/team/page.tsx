@@ -31,7 +31,8 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
 
   const fetchApprovals = async () => {
     try {
@@ -52,7 +53,23 @@ export default function TeamPage() {
 
     if (typeof window !== 'undefined' && window.localStorage) {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
-      setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+      const fetchLink = async () => {
+        setIsGeneratingInvite(true);
+        try {
+          const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            setInviteLink(data.referral_link);
+          } else {
+            setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+          }
+        } catch (e) {
+          setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+        } finally {
+          setIsGeneratingInvite(false);
+        }
+      };
+      fetchLink();
     }
   }, []);
 
@@ -184,20 +201,21 @@ export default function TeamPage() {
                   id="cloud-bridge-invite-link"
                   type="text"
                   readOnly
-                  value={inviteLink}
+                  value={isGeneratingInvite ? 'Generating secure bridge link...' : inviteLink}
                   className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
                 />
               </div>
 
               <button
                 onClick={() => {
+                  if (isGeneratingInvite) return;
                   navigator.clipboard.writeText(inviteLink);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}
                 className={`w-full py-3 rounded-xl text-sm font-bold shadow-md transition-all active:scale-[0.98] ${linkCopied ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
               >
-                {linkCopied ? 'Copied!' : 'Copy Link'}
+                {isGeneratingInvite ? 'Generating...' : linkCopied ? 'Copied!' : 'Copy Link'}
               </button>
             </div>
           </div>
