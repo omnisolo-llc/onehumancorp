@@ -268,14 +268,14 @@ export default function OnboardingWizard() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
       {/* Background Glows for Premium Aesthetic */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0071E3]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
           <div
-            className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
+            className="h-full bg-[#0071E3] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,113,227,0.5)]"
             style={{ width: `${getProgress()}%` }}
           ></div>
         </div>
@@ -289,26 +289,26 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0071E3]/20 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#0071E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
                 Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
               </p>
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
+                  <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0071E3] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
                     </button>
@@ -335,7 +335,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0071E3] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -352,7 +352,7 @@ export default function OnboardingWizard() {
                         setChatStep(2);
                       }}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] hover:shadow-[0_6px_20px_rgba(0,113,227,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -362,17 +362,17 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => setChatStep(1)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
+                  <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Tell us a bit about your products or services.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0071E3] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
                     </button>
@@ -398,7 +398,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -415,7 +415,7 @@ export default function OnboardingWizard() {
                         setChatStep(3);
                       }}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] hover:shadow-[0_6px_20px_rgba(0,113,227,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -425,17 +425,17 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => setChatStep(2)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
+                  <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0071E3] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
                       Save Draft
                     </button>
@@ -464,7 +464,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0071E3] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -481,7 +481,7 @@ export default function OnboardingWizard() {
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] hover:shadow-[0_6px_20px_rgba(0,113,227,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -501,17 +501,17 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => setStep(1)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0071E3] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
                 </button>
@@ -534,7 +534,7 @@ export default function OnboardingWizard() {
                         setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                       }
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0071E3]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -551,7 +551,7 @@ export default function OnboardingWizard() {
                         setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                       }
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0071E3]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -561,7 +561,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -571,7 +571,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                       />
                    </div>
                    <div>
@@ -590,7 +590,7 @@ export default function OnboardingWizard() {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0071E3]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -613,7 +613,7 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -623,17 +623,17 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => setStep(2)} className="self-start text-[#0071E3] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0071E3] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
                   Save Draft
                 </button>
@@ -649,7 +649,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
@@ -662,14 +662,14 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.store</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
@@ -687,7 +687,7 @@ export default function OnboardingWizard() {
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                       />
                     </div>
                     <div>
@@ -697,7 +697,7 @@ export default function OnboardingWizard() {
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                       />
                     </div>
                   </div>
@@ -718,10 +718,10 @@ export default function OnboardingWizard() {
                                setAiAgents([...aiAgents, agent]);
                              }
                            }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white'}`}
+                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white'}`}
                          >
                            <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
+                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0071E3] bg-[#0071E3]' : 'border-gray-400'}`}>
                               {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                            </div>
                          </div>
@@ -750,7 +750,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -769,8 +769,8 @@ export default function OnboardingWizard() {
           {step === 4 && (
              <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
-                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
-                 <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+                 <div className="absolute inset-0 border-4 border-[#0071E3]/20 rounded-full"></div>
+                 <div className="absolute inset-0 border-4 border-[#0071E3] rounded-full border-t-transparent animate-spin"></div>
                </div>
                <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
                <div className="space-y-2">
@@ -798,7 +798,7 @@ export default function OnboardingWizard() {
                 <div className="p-3 mac-glass-container rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
+                      <span className="text-[#0071E3] font-semibold">my-business.ohc.store</span>
                    </div>
                 </div>
 
