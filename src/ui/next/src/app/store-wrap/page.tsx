@@ -33,7 +33,7 @@ export default function StoreWrapPage() {
     }
   }, []);
 
-  const referralLink = `https://ohc.store/join?ref=${tenant}`;
+  const referralLink = `https://ohc.app/join?ref=${tenant}`;
   const shareText = `My business just generated $${metrics.sales.toLocaleString()} in revenue this year! 🚀 Built and scaled on OHC. Start your own business today and get a $50 credit: ${referralLink}`;
 
   const slides = [

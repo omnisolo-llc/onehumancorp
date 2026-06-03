@@ -64,7 +64,7 @@ describe('ReferralsPage', () => {
     });
 
     const referralSpan = document.getElementById('referral-link');
-    expect(referralSpan?.textContent).toBe('ohc://join?ref=my-tenant-store');
+    expect(referralSpan?.textContent).toBe('https://ohc.app/join?ref=my-tenant-store');
 
     consoleErrorSpy.mockRestore();
   });

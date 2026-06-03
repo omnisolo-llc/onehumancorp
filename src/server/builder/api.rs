@@ -1153,9 +1153,9 @@ async fn publish_brand_toolbox_website(
         .collect::<Vec<_>>()
         .join("-");
     let domain = if slug.is_empty() {
-        Some("brand-toolbox.ohc.store".to_string())
+        Some("brand-toolboxohc.app".to_string())
     } else {
-        Some(format!("{}.ohc.store", slug))
+        Some(format!("{}ohc.app", slug))
     };
     let site = publish_store_profile(&pool, tenant_id, domain, toolbox.store_profile).await?;
     Ok(Json(site))

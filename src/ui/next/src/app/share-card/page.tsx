@@ -11,8 +11,8 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const title = typeof searchParams.title === 'string' ? searchParams.title : 'One Human Corp';
   const description = typeof searchParams.description === 'string' ? searchParams.description : 'Launch your business online instantly with OHC!';
-  const image = typeof searchParams.image === 'string' ? searchParams.image : 'https://ohc.store/default-share.png';
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.store';
+  const image = typeof searchParams.image === 'string' ? searchParams.image : 'https://ohc.app/default-share.png';
+  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.app';
 
   return {
     title,
@@ -34,14 +34,14 @@ export async function generateMetadata(
 }
 
 export default function ShareCardPage({ searchParams }: Props) {
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.store';
+  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.app';
 
   // Basic validation to prevent arbitrary open redirects.
   // It should ideally only redirect to relative paths or trusted domains.
-  let targetUrl = 'https://ohc.store';
+  let targetUrl = 'https://ohc.app';
   try {
-    const parsedUrl = new URL(urlParam, 'https://ohc.store');
-    if (parsedUrl.hostname === 'ohc.store' || parsedUrl.hostname === 'ohc.app' || urlParam.startsWith('ohc://')) {
+    const parsedUrl = new URL(urlParam, 'https://ohc.app');
+    if (parsedUrl.hostname === 'ohc.app' || urlParam.startsWith('ohc://')) {
         // Use parsedUrl.href to ensure the URL is properly formatted and escaped
         targetUrl = parsedUrl.href;
     }

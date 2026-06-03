@@ -9,8 +9,8 @@ export default function LinkInBioGeneratorPage() {
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
   const [links, setLinks] = useState([
-    { id: '1', title: 'Visit My Store', url: 'https://ohc.store' },
-    { id: '2', title: 'Book an Appointment', url: 'https://ohc.store/book' },
+    { id: '1', title: 'Visit My Store', url: 'https://ohc.app' },
+    { id: '2', title: 'Book an Appointment', url: 'https://ohc.app/book' },
   ]);
   const [theme, setTheme] = useState('gradient');
   const [copied, setCopied] = useState(false);
@@ -205,7 +205,7 @@ export default function LinkInBioGeneratorPage() {
                      </div>
 
                      <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
+                         <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
                              Powered by OHC
                          </a>
                      </div>

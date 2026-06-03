@@ -217,7 +217,7 @@ describe('WebsiteBuilderPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-      expect(screen.getByText('https://testdomain.ohc.store')).toBeInTheDocument();
+      expect(screen.getByText('https://testdomain.ohc.app')).toBeInTheDocument();
     });
   });
 

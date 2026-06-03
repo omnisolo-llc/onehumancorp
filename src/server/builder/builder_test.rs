@@ -310,7 +310,7 @@ async fn test_builder_generate_and_publish_draft() {
         .unwrap();
     assert_eq!(res.status(), 200);
     let toolbox_site: super::api::SiteResponse = res.json().await.unwrap();
-    assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with(".ohc.store"));
+    assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with("ohc.app"));
 
     // 1. Mock Generate Storefront instead of hitting external APIs.
     let draft = super::api::StoreProfile {

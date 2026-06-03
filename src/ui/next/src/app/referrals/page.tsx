@@ -18,12 +18,12 @@ export default function ReferralsPage() {
           setReferralLink(data.referral_link);
         } else {
           const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-          setReferralLink(`ohc://join?ref=${tenant}`);
+          setReferralLink(`https://ohc.app/join?ref=${tenant}`);
         }
       } catch (e) {
         console.error("Failed to generate dynamic referral link", e);
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`ohc://join?ref=${tenant}`);
+        setReferralLink(`https://ohc.app/join?ref=${tenant}`);
       } finally {
         setIsLoading(false);
       }
@@ -121,7 +121,7 @@ export default function ReferralsPage() {
                 <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
                 <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
                     <pre id="embed-code">
-{`<iframe src="https://mybusiness.ohc.store/api/v1/growth/storefront/embed"
+{`<iframe src="https://mybusinessohc.app/api/v1/growth/storefront/embed"
   width="100%"
   height="600"
   frameborder="0"
@@ -132,7 +132,7 @@ export default function ReferralsPage() {
                 <button
                   className="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-200 transition-colors"
                   onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://mybusiness.ohc.store/api/v1/growth/storefront/embed" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://mybusinessohc.app/api/v1/growth/storefront/embed" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>`);
                       alert("Embed code copied!");
                   }}
                 >

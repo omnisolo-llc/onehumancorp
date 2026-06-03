@@ -242,7 +242,7 @@ async fn handle_generate_review(
     // In a real implementation we would call an AI provider here.
     // For now we simulate generating a review request based on the inputs.
     let generated = format!(
-        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.app/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
         req.customer_name, req.product_name, req.order_id
     );
 
@@ -257,7 +257,7 @@ async fn handle_generate_customer_referral(
 ) -> impl IntoResponse {
     let store = req.store_name.unwrap_or_else(|| "our store".to_string());
     let generated = format!(
-        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
+        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.app/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
         store, store
     );
     Json(GenerateCustomerReferralResponse {
@@ -272,7 +272,7 @@ async fn handle_generate_cart(
     let name = req.customer_name.unwrap_or_else(|| "there".to_string());
     let value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
     let generated = format!(
-        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.app/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
         name, value
     );
     Json(GenerateCartResponse {
@@ -335,7 +335,7 @@ async fn handle_affiliate_generate_link(
         .await
     {
         Ok(_) => {
-            let affiliate_link = format!("https://ohc.store/ref/{}", affiliate_code);
+            let affiliate_link = format!("https://ohc.app/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
         Err(e) => {
@@ -674,7 +674,7 @@ async fn handle_generate_discount_share(
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!("https://ohc.app/discount/{}?tenant={}", uuid, tenant_id);
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,

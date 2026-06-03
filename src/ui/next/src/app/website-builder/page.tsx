@@ -298,7 +298,7 @@ export default function WebsiteBuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setStatus("live");
-        const url = `https://${data.domain || 'myshop'}.ohc.store`;
+        const url = `https://${data.domain || 'myshop'}.ohc.app`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {

@@ -3160,7 +3160,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <head>
                     <title>OneHuman Corp</title>
                     <meta property="og:title" content="OneHuman Corp - Start Your Business" />
-                    <meta property="og:image" content="https://ohc.store/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=My+Store" />
+                    <meta property="og:image" content="https://ohc.app/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=My+Store" />
                     <meta property="og:description" content="Discover great products and services powered by OHC." />
                     <meta name="twitter:card" content="summary_large_image" />
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -4400,7 +4400,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" style="margin-top: 24px;">
                             <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
                             <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
-                            <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
+                            <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.app" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
                             <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
                         </div>
 
@@ -5663,7 +5663,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="domain-setup" id="domain-step-free">
                                 <p>Your free domain:</p>
-                                <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
+                                <input type="text" id="free-domain-input" placeholder="mybusiness" /> ohc.app
                                 <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
                             </div>
                         </div>
@@ -6016,7 +6016,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 status.textContent = 'Website published at ' + domain;
                             } catch (e) {
                                 console.error(e);
-                                const domain = 'luna-loaf.ohc.store';
+                                const domain = 'luna-loafohc.app';
                                 const domainEl = document.getElementById('brand-toolbox-published-domain');
                                 if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
                                 status.textContent = 'Website published at ' + domain;
@@ -6164,7 +6164,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function shareOgCardToX() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            const url = encodeURIComponent(`https://ohc.app/join?ref=${tenant}`);
                             window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
