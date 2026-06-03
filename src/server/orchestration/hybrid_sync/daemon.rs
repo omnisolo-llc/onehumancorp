@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
 use std::time::Instant;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 use uuid::Uuid;
 
 pub struct HybridSyncDaemon {
@@ -32,7 +32,7 @@ impl HybridSyncDaemon {
                 .await;
             }
             if let Err(e) = self.sync_cloud_escalations().await {
-                error!("Hybrid sync cloud escalations error: {}", e);
+                trace!("Hybrid sync cloud escalations error: {}", e);
                 let _ = ::server_telemetry::record_sync_daemon_error_total(
                     &self.pg_pool,
                     1.0,

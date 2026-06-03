@@ -70,8 +70,9 @@ export async function GET(request: Request) {
             position: absolute;
             top: 12px;
             right: 12px;
-            background-color: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(12px);
+            background-color: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 9999px;
             padding: 4px 12px;
             font-size: 0.75rem;
