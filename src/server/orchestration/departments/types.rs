@@ -126,6 +126,8 @@ pub struct Customer360 {
     pub preferences: Option<serde_json::Value>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub status: Option<String>,
+    pub expected_purchase_cadence_days: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
