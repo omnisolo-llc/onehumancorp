@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, ReactNode } from 'react';
+import { calculateBubbleStyle, Position } from './positioning';
 
 type Step = {
   targetId: string;
   title: string;
   content: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: Position;
 };
 
 type WalkthroughProps = {
@@ -74,49 +75,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
   if (!targetRect) return null; // Enforce requirement: no generic popups/modals without target
 
-  // Calculate bubble position based on targetRect
-  let bubbleStyle: React.CSSProperties = {};
-  let arrowClass = "";
-
-  if (targetRect) {
-    const margin = 16;
-    const position = currentStep.position || 'bottom';
-
-    switch (position) {
-      case 'bottom':
-        bubbleStyle = {
-          top: targetRect.bottom + margin,
-          left: targetRect.left + (targetRect.width / 2),
-          transform: 'translateX(-50%)'
-        };
-        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
-        break;
-      case 'top':
-        bubbleStyle = {
-          top: targetRect.top - margin,
-          left: targetRect.left + (targetRect.width / 2),
-          transform: 'translate(-50%, -100%)'
-        };
-        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
-        break;
-      case 'right':
-         bubbleStyle = {
-          top: targetRect.top + (targetRect.height / 2),
-          left: targetRect.right + margin,
-          transform: 'translateY(-50%)'
-        };
-        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white/90 border-y-transparent border-l-0 border-8";
-        break;
-      case 'left':
-         bubbleStyle = {
-          top: targetRect.top + (targetRect.height / 2),
-          left: targetRect.left - margin,
-          transform: 'translate(-100%, -50%)'
-        };
-        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8";
-        break;
-    }
-  }
+  const { bubbleStyle, arrowClass } = calculateBubbleStyle(targetRect, currentStep.position || 'bottom', 16);
 
   return (
     <>
