@@ -50,7 +50,7 @@ graph TD;
     LegacyWeb[Legacy Next.js Prototype] -.-> API;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
-    Orchestration --> Agents[AI Agents - Invisible No-Code SMB Managers];
+    Orchestration --> Agents[AI Agents];
     API --> Postgres[(Postgres)];
     API --> SQLite[(Local SQLite SIPDB)];
     API --> Integrations[Public Integrations\nGoogle Chat / Issue Trackers / MCP];

@@ -75,9 +75,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
     catalog.push(listmonk_provider.to_integration_provider());
 
-    let doordash_provider = crate::integrations::doordash::provider::DoorDashProvider::new("dummy_token".to_string());
-    catalog.push(doordash_provider.to_integration_provider());
-
     let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
     catalog.push(easypost_provider.to_integration_provider());
 

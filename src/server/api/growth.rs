@@ -294,12 +294,18 @@ async fn handle_send_campaign(
     let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
-    let msg = state.hub.sanitize_hub_event(serde_json::json!({
-        "type": "growth.campaign_sent",
+    if let Ok(event) = serde_json::to_string(&serde_json::json!({
+        "type": "campaign_sent",
         "segment": req.target_segment,
         "emails_sent": target_emails
-    }));
-    state.hub.append_recent_event(msg);
+    })) {
+        let msg = crate::hub::HubEvent {
+            r#type: "growth.campaign_sent".to_string(),
+            payload: event,
+            occurred_at: chrono::Utc::now(),
+        };
+        state.hub.append_recent_event(msg);
+    }
 
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
@@ -743,9 +749,14 @@ async fn handle_referral_click(
             }
             state.hub.referral_tracker().record_click(&req.id);
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
-            state.hub.append_recent_event(msg);
-
+            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
+                let msg = crate::hub::HubEvent {
+                    r#type: "growth.referral_clicked".to_string(),
+                    payload: event,
+                    occurred_at: chrono::Utc::now(),
+                };
+                state.hub.append_recent_event(msg);
+            }
             Ok(Json(()))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -767,8 +778,14 @@ async fn handle_referral_convert(
             }
             state.hub.referral_tracker().record_conversion(&req.id);
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
-            state.hub.append_recent_event(msg);
+            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
+                let msg = crate::hub::HubEvent {
+                    r#type: "growth.referral_converted".to_string(),
+                    payload: event,
+                    occurred_at: chrono::Utc::now(),
+                };
+                state.hub.append_recent_event(msg);
+            }
             Ok(Json(()))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -794,8 +811,14 @@ async fn handle_referral_generate(
         .await
     {
         Ok(_) => {
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
-            state.hub.append_recent_event(msg);
+            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": ref_id, "referral_code": ref_code })) {
+                let msg = crate::hub::HubEvent {
+                    r#type: "growth.referral_generated".to_string(),
+                    payload: event,
+                    occurred_at: chrono::Utc::now(),
+                };
+                state.hub.append_recent_event(msg);
+            }
             Ok(Json(ReferralGenerateResponse {
                 referral_link: format!("https://ohc.app/ref/{}", ref_code),
             }))
@@ -813,8 +836,14 @@ async fn handle_team_invite_accept(
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => {
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
-            state.hub.append_recent_event(msg);
+            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
+                let msg = crate::hub::HubEvent {
+                    r#type: "growth.team_invite_accepted".to_string(),
+                    payload: event,
+                    occurred_at: chrono::Utc::now(),
+                };
+                state.hub.append_recent_event(msg);
+            }
             Ok(Json(()))
         },
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
@@ -831,8 +860,14 @@ async fn handle_create_team_invite(
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(_) => {
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
-            state.hub.append_recent_event(msg);
+            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id })) {
+                let msg = crate::hub::HubEvent {
+                    r#type: "growth.team_invite_created".to_string(),
+                    payload: event,
+                    occurred_at: chrono::Utc::now(),
+                };
+                state.hub.append_recent_event(msg);
+            }
             Ok(Json(()))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
