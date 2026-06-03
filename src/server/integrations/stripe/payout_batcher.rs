@@ -152,6 +152,12 @@ mod tests {
         // With no pool, it falls back to immediate payout
         let result = batcher.record_payout("acct_1", 2000).await.unwrap();
         assert_eq!(result, Some(2000));
+
+        let pending = batcher.get_pending_balance("acct_1").await.unwrap();
+        assert_eq!(pending, 0);
+
+        let force_result = batcher.force_payout("acct_1").await.unwrap();
+        assert_eq!(force_result, None);
     }
 
     #[tokio::test]

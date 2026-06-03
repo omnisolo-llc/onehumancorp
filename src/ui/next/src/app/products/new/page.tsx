@@ -5,12 +5,7 @@ import Link from 'next/link';
 
 export default function AutoCatalogPage() {
   const [loading, setLoading] = useState(false);
-  const [enhancing, setEnhancing] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [variations, setVariations] = useState<string[]>([]);
-  const [selectedVariation, setSelectedVariation] = useState<string | null>(null);
-
-  const [productData, setProductData] = useState<{
+      const [productData, setProductData] = useState<{
     title: string;
     description: string;
     price: string;
@@ -23,43 +18,18 @@ export default function AutoCatalogPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
-      setUploadedImage(imageUrl);
-    }
-  };
-
-  const handleMagicEnhance = async () => {
-    setEnhancing(true);
-    try {
-      const response = await fetch('/api/magic-enhance', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      setVariations(data.variations);
-    } catch (error) {
-      console.error('Error generating variations:', error);
-    } finally {
-      setEnhancing(false);
-    }
-  };
-
-  const handleVariationSelect = (variation: string) => {
-    setSelectedVariation(variation);
-  };
-
-  const handleContinueToCatalog = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/auto-catalog', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      setProductData(data);
-    } catch (error) {
-      console.error('Error auto-cataloging:', error);
-    } finally {
-      setLoading(false);
+      setLoading(true);
+      try {
+        const response = await fetch('/api/auto-catalog', {
+          method: 'POST',
+        });
+        const data = await response.json();
+        setProductData(data);
+      } catch (error) {
+        console.error('Error auto-cataloging:', error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -112,7 +82,7 @@ export default function AutoCatalogPage() {
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>
       </div>
 
-      {!uploadedImage && !loading && !productData && (
+      {!loading && !productData && (
         <div className="flex-1 flex flex-col items-center justify-center">
           <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="text-4xl mb-2">📷</div>
@@ -125,67 +95,10 @@ export default function AutoCatalogPage() {
         </div>
       )}
 
-      {uploadedImage && !enhancing && variations.length === 0 && !loading && !productData && (
-        <div className="flex-1 flex flex-col items-center gap-6">
-          <div className="w-full aspect-square rounded-2xl overflow-hidden relative shadow-sm border border-gray-200">
-            <img src={uploadedImage} alt="Uploaded product" className="w-full h-full object-cover" />
-          </div>
-          <button
-            onClick={handleMagicEnhance}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-lg"
-            style={{
-              boxShadow: '0 4px 15px rgba(0, 102, 255, 0.3)',
-            }}
-          >
-            <span>✨</span> Magic Enhance
-          </button>
-          <p className="text-sm text-gray-500 text-center px-4">
-            Transform your raw photo into a professional studio-quality image instantly.
-          </p>
-        </div>
-      )}
-
-      {enhancing && (
+      {loading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-           <div className="w-full aspect-square bg-gray-200 rounded-2xl animate-pulse flex items-center justify-center relative overflow-hidden">
-              {uploadedImage && <img src={uploadedImage} alt="Original" className="w-full h-full object-cover opacity-30" />}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-6xl animate-spin" style={{ animationDuration: '3s' }}>🪄</div>
-              </div>
-           </div>
-           <p className="text-lg font-semibold text-purple-600 animate-pulse text-center">AI is setting up the studio...</p>
-        </div>
-      )}
-
-      {variations.length > 0 && !loading && !productData && (
-        <div className="flex-1 flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-gray-900 text-center">Select a Variation</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {variations.map((v, idx) => (
-              <div
-                key={idx}
-                onClick={() => handleVariationSelect(v)}
-                className={`aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${selectedVariation === v ? 'border-blue-500 shadow-md scale-[1.02]' : 'border-transparent shadow-sm hover:scale-[1.01]'}`}
-              >
-                <img src={v} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={handleContinueToCatalog}
-            disabled={!selectedVariation}
-            className={`w-full py-4 font-bold rounded-xl shadow-md transition-all mt-4 text-lg ${selectedVariation ? 'bg-gray-900 text-white hover:bg-black' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-          >
-            Continue
-          </button>
-        </div>
-      )}
-
-      {loading && variations.length > 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6">
-           <div className="w-full aspect-square bg-gray-200 rounded-2xl flex items-center justify-center overflow-hidden">
-             {selectedVariation && <img src={selectedVariation} alt="Selected" className="w-full h-full object-cover opacity-50" />}
+           <div className="w-full aspect-square bg-gray-200 rounded-2xl animate-pulse flex items-center justify-center">
+              <div className="text-4xl animate-bounce">✨</div>
            </div>
            <div className="w-full space-y-4">
               <div className="h-6 bg-gray-200 rounded-md animate-pulse w-3/4"></div>
@@ -198,14 +111,10 @@ export default function AutoCatalogPage() {
 
       {productData && !loading && (
         <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
-           <div className="w-full aspect-square bg-gray-200 rounded-2xl overflow-hidden relative shadow-sm border border-gray-200">
-              {selectedVariation ? (
-                 <img src={selectedVariation} alt="Final product" className="w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center">
-                   <div className="text-6xl">🧁</div>
-                </div>
-              )}
+           <div className="w-full aspect-square bg-gray-200 rounded-2xl overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center">
+                 <div className="text-6xl">🧁</div>
+              </div>
            </div>
 
            {/* Glassmorphism Card */}

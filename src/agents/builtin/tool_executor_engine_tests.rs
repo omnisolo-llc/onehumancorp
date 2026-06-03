@@ -215,6 +215,7 @@ mod tests {
         };
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::UserFixable(msg) => assert_eq!(msg, "User aborted. Original error: ask user"),
@@ -242,6 +243,7 @@ mod tests {
         };
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "User provided input to resolve the issue: here is the fix");
     }

@@ -21,44 +21,14 @@ test.describe('Auto-Catalog flow', () => {
       buffer: dummyImage,
     });
 
-    // Verify Magic Enhance button is visible
-    const magicEnhanceButton = page.getByRole('button', { name: '✨ Magic Enhance' });
-    await expect(magicEnhanceButton).toBeVisible();
-    await magicEnhanceButton.click();
-
-    // Verify loading state for AI studio
-    await expect(page.getByText('AI is setting up the studio...')).toBeVisible();
-
-    // Select a variation (click the first one)
-    const variationImage = page.locator('img[alt="Variation 1"]');
-    await expect(variationImage).toBeVisible({ timeout: 10000 });
-    await variationImage.click();
-
-    // Click Continue
-    const continueButton = page.getByRole('button', { name: 'Continue' });
-    await expect(continueButton).toBeEnabled();
-    await continueButton.click();
-
-    // Verify loading state for auto-catalog
+    // Verify loading state
     await expect(page.getByText('AutoDream AI is analyzing your photo...')).toBeVisible();
 
     // Verify generated product data populates the form
-    // The auto-catalog form might not have an id anymore in the new layout, we can find inputs directly or by class
-    // In our new layout they are in the dom under the form layout.
-    // The previous test relied on `#auto-catalog-form input`, but we didn't add the ID in the React component.
-    // We should look for the inputs by label or position
-
-    // Title input
-    const titleInput = page.locator('input').nth(1); // the first input is the file input
-    await expect(titleInput).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
-
-    // Price input
-    const priceInput = page.locator('input').nth(2);
-    await expect(priceInput).toHaveValue('4.99');
-
-    // Category input
-    const categoryInput = page.locator('input').nth(3);
-    await expect(categoryInput).toHaveValue('Baked Goods');
+    const generatedFields = page.locator('#auto-catalog-form input');
+    await expect(generatedFields.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
+    await expect(generatedFields.nth(1)).toHaveValue('4.99');
+    await expect(generatedFields.nth(2)).toHaveValue('Baked Goods');
 
     // Click Publish
     await page.getByRole('button', { name: 'Publish Product' }).click();
