@@ -15,16 +15,14 @@ export async function GET() {
     "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
     "changelog-nav-tooltip": "See the latest updates and new features we just added.",
-    "center-tab": "Browse our Help Center articles.",
-    "chat-tab": "Ask our AI Agent any questions you have.",
-    "videos-tab": "Watch short video tutorials.",
-    "whatsnew-tab": "See the latest updates and release notes.",
     "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid.",
     "checkout-pay-now-tooltip": "Click here to securely finish your purchase and process your payment.",
     "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
     "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
     "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
     "total-sales-tooltip": "Total revenue generated from your sales today.",
-    "visitors-tooltip": "Number of unique visitors who viewed your store today."
+    "visitors-tooltip": "Number of unique visitors who viewed your store today.",
+    "agents-tab-tooltip": "Hire and manage your AI assistants here.",
+    "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC."
   });
 }

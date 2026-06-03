@@ -5558,6 +5558,7 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
+ "ohc_builtin_agent",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -5574,6 +5575,50 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "server_auth",
+ "server_common",
+ "server_config",
+ "server_harness",
+ "server_integrations_acuity",
+ "server_integrations_alipay",
+ "server_integrations_ayrshare",
+ "server_integrations_buffer",
+ "server_integrations_cal_com",
+ "server_integrations_calendly",
+ "server_integrations_chatwoot",
+ "server_integrations_chromadb",
+ "server_integrations_convertkit",
+ "server_integrations_core",
+ "server_integrations_daily",
+ "server_integrations_easypost",
+ "server_integrations_google_calendar",
+ "server_integrations_jitsi",
+ "server_integrations_listmonk",
+ "server_integrations_mailchimp",
+ "server_integrations_manychat",
+ "server_integrations_mcp_config_sync",
+ "server_integrations_mercadopago",
+ "server_integrations_messagebird",
+ "server_integrations_meta",
+ "server_integrations_nats",
+ "server_integrations_nylas",
+ "server_integrations_pubsub",
+ "server_integrations_razorpay",
+ "server_integrations_resend",
+ "server_integrations_restic",
+ "server_integrations_sendgrid",
+ "server_integrations_shipengine",
+ "server_integrations_shippo",
+ "server_integrations_stripe",
+ "server_integrations_task_scheduler",
+ "server_integrations_teams",
+ "server_integrations_twilio",
+ "server_integrations_zoom",
+ "server_ohc",
+ "server_oidc",
+ "server_pricing",
+ "server_telemetry",
+ "server_utils",
  "sha2",
  "sqlx",
  "tauri-cli",
@@ -5594,6 +5639,10 @@ dependencies = [
  "uuid",
  "walkdir",
 ]
+
+[[package]]
+name = "ohc_builtin_agent"
+version = "0.1.0"
 
 [[package]]
 name = "oid-registry"
@@ -8175,6 +8224,187 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "server_auth"
+version = "0.1.0"
+
+[[package]]
+name = "server_common"
+version = "0.1.0"
+
+[[package]]
+name = "server_config"
+version = "0.1.0"
+
+[[package]]
+name = "server_harness"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_acuity"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_alipay"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_ayrshare"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_buffer"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_cal_com"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_calendly"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_chatwoot"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_chromadb"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_convertkit"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_core"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_daily"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_easypost"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_google_calendar"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_jitsi"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_listmonk"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_mailchimp"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_manychat"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_mcp_config_sync"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_mercadopago"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_messagebird"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_meta"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_nats"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_nylas"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_pubsub"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_razorpay"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_resend"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_restic"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_sendgrid"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_shipengine"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_shippo"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_stripe"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_task_scheduler"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_teams"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_twilio"
+version = "0.1.0"
+
+[[package]]
+name = "server_integrations_zoom"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde_json",
+ "server_integrations_core",
+]
+
+[[package]]
+name = "server_ohc"
+version = "0.1.0"
+
+[[package]]
+name = "server_oidc"
+version = "0.1.0"
+
+[[package]]
+name = "server_pricing"
+version = "0.1.0"
+
+[[package]]
+name = "server_telemetry"
+version = "0.1.0"
+
+[[package]]
+name = "server_utils"
+version = "0.1.0"
 
 [[package]]
 name = "servo_arc"

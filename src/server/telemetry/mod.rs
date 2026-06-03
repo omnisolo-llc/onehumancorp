@@ -6,6 +6,7 @@ use opentelemetry::global;
 use serde_json::{Map, Value};
 use sqlx::{PgPool, query};
 use std::sync::OnceLock;
+use regex::Regex;
 
 use opentelemetry::metrics::Histogram;
 
@@ -193,6 +194,7 @@ pub fn record_harness_execution_latency(latency_seconds: f64) {
 #[cfg(test)]
 mod harness_execution_tests {
     use super::*;
+
 
     #[test]
     fn test_get_harness_execution_latency() {
@@ -1024,12 +1026,29 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::String(s) => {
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
+            } else if is_pii_value_pattern(&s) {
+                Value::String("[REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
         }
         _ => val,
     }
+}
+
+
+pub fn is_pii_value_pattern(s: &str) -> bool {
+    static SSN_RE: OnceLock<Regex> = OnceLock::new();
+    static CC_RE: OnceLock<Regex> = OnceLock::new();
+    static API_KEY_RE: OnceLock<Regex> = OnceLock::new();
+    static PHONE_RE: OnceLock<Regex> = OnceLock::new();
+
+    let ssn_re = SSN_RE.get_or_init(|| Regex::new(r"^\d{3}-\d{2}-\d{4}$").unwrap());
+    let cc_re = CC_RE.get_or_init(|| Regex::new(r"^(\d{4}[- ]?){3,4}\d{1,4}$").unwrap());
+    let api_key_re = API_KEY_RE.get_or_init(|| Regex::new(r"^(sk-|ak-|tok_)[a-zA-Z0-9]{10,}").unwrap());
+    let phone_re = PHONE_RE.get_or_init(|| Regex::new(r"^\+?(\d{1,3})?[-. (]*\d{3}[-. )]*\d{3}[-. ]*\d{4}$").unwrap());
+
+    ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s)
 }
 
 pub fn is_sensitive_key(key: &str) -> bool {
@@ -1078,6 +1097,7 @@ pub fn is_email(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_get_queue_length_gauge() {
@@ -1291,6 +1311,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 mod additional_tests {
     use super::*;
 
+
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
@@ -1386,6 +1407,7 @@ pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
 #[cfg(test)]
 mod harness_io_bytes_tests {
     use super::*;
+
 
     #[test]
     fn test_record_harness_io_bytes() {
