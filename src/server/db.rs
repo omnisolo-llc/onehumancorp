@@ -895,6 +895,57 @@ impl DB {
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_builder_brand_toolboxes_tenant_id ON builder_brand_toolboxes(tenant_id);
+                    CREATE TABLE IF NOT EXISTS vendors (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        contact_info TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS raw_materials (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        current_quantity INT DEFAULT 0,
+                        reorder_threshold INT DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS bom_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        finished_good_id TEXT,
+                        raw_material_id TEXT,
+                        quantity_required INT DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS purchase_orders (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        vendor_id TEXT,
+                        status TEXT DEFAULT 'DRAFT',
+                        total_cost DECIMAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS po_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        purchase_order_id TEXT,
+                        raw_material_id TEXT,
+                        quantity INT DEFAULT 1,
+                        unit_price DECIMAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS depletion_logs (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        raw_material_id TEXT,
+                        sales_event_id TEXT,
+                        quantity_deducted INT DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
