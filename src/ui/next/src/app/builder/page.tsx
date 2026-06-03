@@ -685,7 +685,6 @@ export default function BuilderPage() {
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
-<<<<<<< HEAD
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
               <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
                 <path d="M4 7h16" />
@@ -705,15 +704,6 @@ export default function BuilderPage() {
                   <path d="M7 5l12 12" />
                 </svg>
                 <span>Remove Branding</span>
-=======
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
-            {!isPremium && (
-              <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px]"
-                onClick={() => setShowUpgradeModal(true)}
-              >
-                Remove Branding ✨
->>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
               </button>
             )}
           </div>

@@ -15,11 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-<<<<<<< HEAD
     "jsx": "preserve",
-=======
-    "jsx": "react-jsx",
->>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
     "plugins": [
       {
         "name": "next"

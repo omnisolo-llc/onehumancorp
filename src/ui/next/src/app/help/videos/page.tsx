@@ -2,11 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-<<<<<<< HEAD
 import { VideoTutorialList } from '../../../components/VideoTutorialList';
-=======
-import { VideoTutorialList } from '@/components/VideoTutorialList';
->>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 
 export default function VideoTutorialsPage() {
   return (

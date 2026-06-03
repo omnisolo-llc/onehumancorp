@@ -507,7 +507,6 @@ jobs:
           docker version
           docker info
 
-<<<<<<< HEAD
       - name: Restore Docker Compose image cache
         uses: actions/cache@v5.0.5
         with:
@@ -532,8 +531,6 @@ jobs:
             valkey/valkey:8-alpine \
             -o /tmp/ohc-docker-compose-images/images.tar
 
-=======
->>>>>>> 14c56ff4 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
 
