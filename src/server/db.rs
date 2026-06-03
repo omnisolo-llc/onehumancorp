@@ -433,6 +433,8 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
                     );
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_org_status ON shared_tasks(organization_id, status);
+
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
