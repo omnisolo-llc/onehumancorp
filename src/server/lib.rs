@@ -1048,7 +1048,7 @@ impl HubService for MyHubService {
             tenant_id: req.organization_id.clone(),
             department: crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
             description: format!("Draft Confirmation for {}", req.customer_name),
-            status: crate::orchestration::departments::types::ApprovalStatus::PendingApproval,
+            status: crate::orchestration::departments::types::ApprovalStatus::Draft,
             action_risk: crate::orchestration::departments::types::ActionRisk::DraftForReview,
             payload: Some(serde_json::json!({
                 "draft_copy": format!("Hi {}, thank you for your custom order!", req.customer_name),
@@ -1831,7 +1831,7 @@ async fn get_pending_approvals(
                 title: format!("{:?}", task.department),
                 description: task.description,
                 status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Draft => "DRAFT".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
                 },
@@ -1846,7 +1846,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ActionRisk::DraftForReview => 2,
                 },
                 approval_status: match task.status {
-                    crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Draft => "PENDING".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
                 },
@@ -2161,12 +2161,23 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
     consolidation_worker.start();
 
+    // Start Mesh API server
+    let is_cloud = !is_standalone_runtime();
+    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        is_cloud
+    ).await.expect("Failed to create MeshTransport");
+
+    // Initialize Handoff Manager
+    let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
-    let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
+    let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone(), dept_orchestrator.clone());
     promoter_worker.start();
 
     ops_worker.start();
@@ -2260,16 +2271,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Start Mesh API server
-    let is_cloud = !is_standalone_runtime();
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        is_cloud
-    ).await.expect("Failed to create MeshTransport");
-
-    // Initialize Handoff Manager
-    let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
-    let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));

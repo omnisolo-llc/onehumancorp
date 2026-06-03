@@ -797,20 +797,23 @@ pub struct PromoterWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
     pub hub: Arc<crate::hub::Hub>,
+    pub orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
 }
 
 impl PromoterWorker {
-    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>, orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),
             hub,
+            orchestrator,
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let hub = self.hub.clone();
+        let orchestrator = self.orchestrator.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
 
@@ -910,55 +913,26 @@ impl PromoterWorker {
                                     _ => {
                                         attempts += 1;
                                         if attempts == MAX_RETRIES {
-                                            let _ = sqlx::query(
-                                                r#"
-                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                VALUES ($1, $2, 'AI Agent Paused: The Promoter', 'The AI agent responsible for social calendars is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually create social content.')
-                                                "#
-                                            )
-                                            .bind(Uuid::new_v4().to_string())
-                                            .bind(org_id)
-                                            .execute(&db_social.pool)
-                                            .await;
+                                            let _ = orchestrator.execute_action(
+                                                crate::orchestration::departments::types::DepartmentType::Marketing,
+                                                "The AI agent responsible for social calendars is paused because the AI service is unavailable.".to_string(),
+                                                org_id.to_string(),
+                                                crate::orchestration::departments::types::ActionRisk::AutoExecute,
+                                                serde_json::json!({"feature_type": "social_calendar_error", "draft_copy": "System is paused. Please manually create social content."})
+                                            ).await;
                                         }
                                         tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                                     }
                                 }
                             }
 
-                            let task_id = Uuid::new_v4().to_string();
-                            let title = format!("7-Day Social Calendar: {}", product_name);
-
-                            match &db_social.store {
-                                crate::db::DbStore::Postgres => {
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
-                                    .execute(&db_social.pool)
-                                    .await;
-                                },
-                                crate::db::DbStore::Sqlite(pool) => {
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(org_id)
-                                    .bind(&title)
-                                    .bind(&drafted_post)
-                                    .execute(pool)
-                                    .await;
-                                }
-                            }
+                            let _ = orchestrator.execute_action(
+                                crate::orchestration::departments::types::DepartmentType::Marketing,
+                                "The Promoter drafted a 7-day social media calendar for your review.".to_string(),
+                                org_id.to_string(),
+                                crate::orchestration::departments::types::ActionRisk::DraftForReview,
+                                serde_json::json!({"feature_type": "social_calendar", "draft_copy": drafted_post})
+                            ).await;
                         }
                     }
                 }
