@@ -5643,6 +5643,11 @@ dependencies = [
 [[package]]
 name = "ohc_builtin_agent"
 version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "oid-registry"
@@ -8393,6 +8398,10 @@ version = "0.1.0"
 [[package]]
 name = "server_oidc"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde_json",
+]
 
 [[package]]
 name = "server_pricing"

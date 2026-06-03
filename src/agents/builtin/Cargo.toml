@@ -5,3 +5,8 @@ edition = "2024"
 
 [lib]
 path = "lib.rs"
+
+[dependencies]
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true

@@ -5320,7 +5320,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         async function fetchActivityFeed() {
                             try {
-                                const container = document.getElementById('activity-feed');
+                                const container = document.getElementById('agent-activity-feed');
                                 if (!container) return;
                                 const res = await fetch('/api/agents/approvals/activity', {
                                     headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
@@ -5373,7 +5373,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             `;
                                         });
                                     } else {
-                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                        container.innerHTML = '<p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
                                     }
                                 }
                             } catch (e) {
@@ -6499,8 +6499,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let label = key;
                                 let idKey = key;
                                 if (block.type === 'HeroBlock' && key === 'headline') {
-                                    label = 'title';
                                     idKey = 'title';
+                                    label = 'title';
                                 }
                                 html += `<label style="display:block; margin-top:8px;">${label}</label>`;
                                 html += `<input type="text" id="edit-${idKey}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
@@ -6523,7 +6523,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     block.content[key] = input.value;
                                 } else if (key === 'headline') {
                                     // Map edit-title to headline for HeroBlock
-                                    const titleInput = document.getElementById('edit-title');
+                                    const titleInput = document.getElementById('edit-title'); // dynamically constructed
                                     if (titleInput) {
                                         block.content[key] = titleInput.value;
                                     }

@@ -5,3 +5,7 @@ edition = "2024"
 
 [lib]
 path = "mod.rs"
+
+[dependencies]
+chrono.workspace = true
+serde_json.workspace = true
