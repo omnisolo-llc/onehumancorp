@@ -27,11 +27,11 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Art');
     await page.getByPlaceholder('you@email.com').fill(email);
     await page.getByPlaceholder('Password').fill('password123');
-    await page.locator('#step-7').getByRole('button', { name: /Next/ }).click();
+    await page.locator('#step-7').getByRole('button', { name: /Next/ }).first().click();
     await page.getByRole('button', { name: 'Modern' }).click();
-    await page.locator('#step-8').getByRole('button', { name: /Next/ }).click();
+    await page.locator('#step-8').getByRole('button', { name: /Next/ }).first().click();
     await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
+    await page.locator('#step-9').getByRole('button', { name: /Next/ }).first().click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
     await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
