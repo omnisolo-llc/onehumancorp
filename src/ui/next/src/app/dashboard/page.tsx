@@ -484,6 +484,9 @@ export default function Dashboard() {
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
+             <Link href="/flash-sale" className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors">
+               Flash Sales ⚡️
+             </Link>
              <Link href="/wrapped" className="px-4 py-2 rounded-md text-sm font-medium text-white transition-colors border border-pink-300 shadow-sm" style={{ background: 'linear-gradient(135deg, #FF0066 0%, #A445B2 100%)' }}>
                Store Wrapped 🎁
              </Link>
@@ -1312,6 +1315,32 @@ export default function Dashboard() {
                     <div className="text-4xl mb-2">🎉</div>
                     <div className="text-sm font-semibold opacity-90 uppercase tracking-widest">Share to earn</div>
                     <div className="text-xs font-medium mt-1">Get $50 credit for every new store created from your link</div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Flash Sales */}
+         <section className="mb-8 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Flash Sales ⚡️</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-red-50 rounded-full border border-red-100">
+                        <span className="text-xs font-medium text-red-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center bg-gradient-to-r from-red-50 to-orange-50 border-red-100">
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Drive Urgent Sales with Countdown Banners</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Instantly generate high-converting promotional copy and an embeddable countdown timer for your storefront to create urgency and spike revenue.</p>
+                    <Link href="/flash-sale" className="inline-flex px-5 py-2.5 bg-red-600 text-white font-bold rounded-xl shadow-md hover:bg-red-700 hover:shadow-lg transition-all font-inter text-sm items-center gap-2 hover:-translate-y-0.5">
+                        <span className="text-lg">⚡️</span> Launch Flash Sale
+                    </Link>
+                </div>
+                <div className="hidden md:block">
+                    <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center text-4xl shadow-inner border border-red-200">
+                        ⏱️
+                    </div>
                 </div>
             </div>
          </section>
