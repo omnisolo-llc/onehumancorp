@@ -5619,7 +5619,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>5GB Storage Quota</li>
                                 <li>100 Products Limit</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            <button onclick="selectPlan('Starter')">Upgrade to Starter via Stripe</button>
                         </div>
 
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -5631,7 +5631,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>50GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <button onclick="selectPlan('Pro')">Upgrade to Pro via Stripe</button>
                         </div>
 
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -5643,7 +5643,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>500GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                            <button onclick="selectPlan('Business')">Upgrade to Business via Stripe</button>
                         </div>
 
                         <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -7153,6 +7153,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'cost-dashboard-screen': '/cost-dashboard',
                             'advisory-dashboard-screen': '/advisory-dashboard'
                         };
+
+
+                        async function selectPlan(planId) {
+                            try {
+                                const response = await fetch('/api/billing/select-plan', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+                                    },
+                                    body: JSON.stringify({ plan_id: planId })
+                                });
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    if (data.url) {
+                                        window.location.href = data.url;
+                                    } else {
+                                        alert('No checkout URL returned.');
+                                    }
+                                } else {
+                                    alert('Error selecting plan.');
+                                }
+                            } catch (e) {
+                                console.error('Error in selectPlan:', e);
+                                alert('Error selecting plan.');
+                            }
+                        }
 
                         async function handleLogin(btn) {
                             btn.textContent = 'Logging in...';

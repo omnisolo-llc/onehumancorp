@@ -26,10 +26,21 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct SelectPlanRequest {
+    pub plan_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct SelectPlanResponse {
+    pub url: String,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/select-plan", axum::routing::post(select_plan_handler))
         .with_state(hub)
 }
 
@@ -161,4 +172,60 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn select_plan_handler(
+    State(_hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<SelectPlanResponse>, axum::http::StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Err(axum::http::StatusCode::UNAUTHORIZED),
+    };
+
+    let (_parts, body) = request.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX).await.map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+    let payload: SelectPlanRequest = serde_json::from_slice(&bytes).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    if stripe_key.is_empty() {
+        tracing::error!("STRIPE_API_KEY is not set");
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+    let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+    let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
+
+    let amount = match payload.plan_id.as_str() {
+        "Starter" => 9.0,
+        "Pro" => 29.0,
+        "Business" => 79.0,
+        _ => 0.0
+    };
+
+    let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount);
+    let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount);
+    if savings > 0.0 {
+        tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
+    }
+
+    let is_china = payload.plan_id.ends_with("_china");
+    let is_latam = payload.plan_id.ends_with("_latam");
+
+    let url = if let Some(alipay_client) = alipay_client.filter(|_| is_china) {
+        alipay_client.create_checkout_preference(&payload.plan_id, &tenant_id).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
+        mp_client.create_checkout_preference(&payload.plan_id, &tenant_id).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    } else {
+        client.create_checkout_session(&payload.plan_id, &tenant_id, amount).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    };
+
+    Ok(Json(SelectPlanResponse { url }))
 }
