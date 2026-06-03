@@ -1,0 +1,9 @@
+title: Autonomous Omnichannel Pre-Order and Waitlist Engine
+status: completed
+summary: >
+  Research report detailing the architectural design for an autonomous omnichannel pre-order and waitlist engine in OHC.
+details:
+  - "Objective: Architect an omnichannel waitlist and pre-order engine that bridges the gap between IG DMs and storefront, managing capacity and demand automatically."
+  - "Data Model: Designed `WAITLIST_CAMPAIGN` and `PRE_ORDER_ENTRY` tables, with mandatory `tenant_id` enforced by Row-Level Security."
+  - "AI Integration: Outlined responsibilities for Promoter (marketing creation), Ambassador (DM handling and intake), and Manager (capacity handling and final fulfillment)."
+  - "Frictionless UX: Ensures seamless operations via mobile-first constraints: No complex forms; agents convert interest via DM into entries."
