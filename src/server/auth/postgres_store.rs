@@ -388,13 +388,15 @@ mod security_tests {
             return; // Postgres-specific test
         }
 
-        let pool = PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .connect_lazy(&database_url)
             .unwrap();
 
         let repo = PgUserRepository::new(pool.clone());
+
+        // Since we can't reliably override the global `::server_config::get().multitenant` inline here
+        // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
 
         let is_multitenant = ::server_config::get().multitenant;
         let res = repo.get_by_id("dummy_id", "system").await;
