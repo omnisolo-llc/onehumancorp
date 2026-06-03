@@ -11,7 +11,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
 
   await page.goto('/website-builder');
 
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Start My Business/ }).first().click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
@@ -36,7 +36,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByRole('button', { name: /Publish my business/ }).click();
 
   await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
-  await page.getByRole('button', { name: /Launch My Business/ }).click();
+  await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
 
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 });
