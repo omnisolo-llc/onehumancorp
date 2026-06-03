@@ -118,7 +118,7 @@ export default function AutoCatalogPage() {
            </div>
 
            {/* Glassmorphism Card */}
-           <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
+           <div id="auto-catalog-form" className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
                    backdropFilter: 'blur(30px) saturate(210%)',
