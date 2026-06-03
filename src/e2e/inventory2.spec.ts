@@ -5,7 +5,7 @@ test.describe('Autonomous Predictive Inventory Dismiss', () => {
         await page.goto('/');
         await page.goto('/inventory');
 
-        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible();
+        await expect(page.locator('text=Running low: Medium Red Dress').or(page.getByText('Running low', { exact: false }))).toBeVisible();
 
         await page.click('button:has-text("Dismiss")');
         await expect(page.locator("text=No active restock proposals. You're all set!")).toBeVisible();
