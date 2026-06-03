@@ -43,7 +43,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment"],
+            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment", "printful_create_order"],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -55,7 +55,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
+            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility", "printful_generate_mockup"],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {
@@ -78,7 +78,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment"],
+            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment", "printful_generate_mockup"],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {

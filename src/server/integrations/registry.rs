@@ -692,6 +692,25 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn printful_create_order(&self, integration_id: &str, product_id: &str, design_url: &str, address: &str) -> Result<String, String> {
+        let printful_integration = crate::integrations::catalog::get_catalog().into_iter().find(|p| p.metadata.id == integration_id);
+        if let Some(_) = printful_integration {
+            let _dummy_provider = crate::integrations::printful::provider::PrintfulProvider::new("dummy_token".to_string());
+            return _dummy_provider.create_order(product_id, design_url, address).await;
+        }
+        Err("Printful integration not found".to_string())
+    }
+
+    pub async fn printful_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let printful_integration = crate::integrations::catalog::get_catalog().into_iter().find(|p| p.metadata.id == integration_id);
+        if let Some(_) = printful_integration {
+            // Mock webhook processing logic (e.g. updating order status in DB)
+            let _dummy_provider = crate::integrations::printful::provider::PrintfulProvider::new("dummy_token".to_string());
+            return _dummy_provider.handle_webhook(payload).await;
+        }
+        Err("Printful integration not found".to_string())
+    }
+
     pub async fn mercadopago_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mercadopago" {

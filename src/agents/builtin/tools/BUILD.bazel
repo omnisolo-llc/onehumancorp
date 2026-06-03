@@ -23,6 +23,7 @@ rust_library(
         "mod.rs",
         "marketplace.rs",
         "marketplace_tool.rs",
+        "printful.rs",
         "pydantic.rs",
         "native_state.rs",
         "repo_map.rs",

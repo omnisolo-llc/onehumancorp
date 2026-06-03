@@ -87,5 +87,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
     catalog.push(restic_provider.to_integration_provider());
 
+    let printful_provider = crate::integrations::printful::provider::PrintfulProvider::new("dummy_token".to_string());
+    catalog.push(printful_provider.to_integration_provider());
+
     catalog
 }
