@@ -341,7 +341,7 @@ impl DB {
                             .await;
                         }
                         tokio::time::sleep(backoff).await;
-                        backoff *= 2;
+                        backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                     } else {
                         return Err(err);
                     }

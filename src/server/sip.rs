@@ -65,7 +65,7 @@ impl SipDB {
                         return Err(err);
                     }
                     tokio::time::sleep(backoff).await;
-                    backoff *= 2;
+                    backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                 }
                 Err(_) => {
                     attempt += 1;
@@ -73,7 +73,7 @@ impl SipDB {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "handoff_mission timed out")));
                     }
                     tokio::time::sleep(backoff).await;
-                    backoff *= 2;
+                    backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                 }
             }
         }
@@ -146,7 +146,7 @@ impl SipDB {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
-                        backoff *= 2;
+                        backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                     } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
                         return Err(err);
                     } else {
@@ -159,7 +159,7 @@ impl SipDB {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;
-                    backoff *= 2;
+                    backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                 }
             }
         }
@@ -208,7 +208,7 @@ impl SipDB {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
-                        backoff *= 2;
+                        backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                     } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
                         return Err(err);
                     } else {
@@ -323,7 +323,7 @@ impl SipDB {
                             crate::telemetry::record_postgres_lock_contention("upsert_mission");
                         }
                         tokio::time::sleep(backoff).await;
-                        backoff *= 2;
+                        backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                     } else {
                         return Err(err);
                     }
@@ -337,7 +337,7 @@ impl SipDB {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;
-                    backoff *= 2;
+                    backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                 }
             }
         }

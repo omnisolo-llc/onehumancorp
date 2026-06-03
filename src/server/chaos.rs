@@ -15,6 +15,9 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
+        let start_total = std::time::Instant::now();
+        tracing::info!("Starting test_sipdb_chaos_parity");
+
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -25,18 +28,25 @@ mod tests {
         let threshold = chrono::Duration::hours(2);
 
         // When DB is down or connection times out, prune_stale_missions must fail gracefully instead of panic.
+        let start_prune = std::time::Instant::now();
         let result = sip_db.prune_stale_missions(threshold).await;
+        tracing::info!("prune_stale_missions took: {:?}", start_prune.elapsed());
         assert!(result.is_err());
 
+        let start_upsert = std::time::Instant::now();
         let upsert_res = sip_db.upsert_mission("test_mission", "PENDING", "data", true).await;
+        tracing::info!("upsert_mission took: {:?}", start_upsert.elapsed());
         assert!(upsert_res.is_err(), "upsert_mission should fail gracefully without panic");
 
+        let start_delegate = std::time::Instant::now();
         let delegate_res = async {
             let mut tx = pool.begin().await?;
             sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None).await
         }.await;
+        tracing::info!("delegate_mission_with_tx took: {:?}", start_delegate.elapsed());
         assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
 
+        let start_sqlite = std::time::Instant::now();
         // Parity test: verify both SQLite and Postgres schema behaviors for NULL and Timezone fallback parity.
         // We use an in-memory SQLite to mock the Standalone parity boundary.
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
@@ -63,7 +73,10 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
+        tracing::info!("SQLite ops took: {:?}", start_sqlite.elapsed());
+        tracing::info!("Total test_sipdb_chaos_parity took: {:?}", start_total.elapsed());
     }
+
 
 
     // Testing graceful degradation during network latency
@@ -154,7 +167,7 @@ mod tests {
                                     panic!("Stress test failed: {:?}", e);
                                 }
                                 tokio::time::sleep(backoff).await;
-                                backoff *= 2;
+                                backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
                             } else {
                                 panic!("Unexpected error: {:?}", e);
                             }
@@ -197,7 +210,7 @@ mod tests {
                 break;
             }
             tokio::time::sleep(backoff).await;
-            backoff *= 2;
+            backoff = std::cmp::min(backoff * 2, std::time::Duration::from_millis(500));
         }
 
         assert!(!success, "Lock should not acquire and gracefully exit loop");
