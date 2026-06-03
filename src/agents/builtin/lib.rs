@@ -202,6 +202,36 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     svc_impl.init_memory().await;
 
     if let Some(t) = task {
+        if t.starts_with("Execute block-based visual workflow: ") {
+            let json_str = t.trim_start_matches("Execute block-based visual workflow: ");
+            if let Ok(graph) = serde_json::from_str::<crate::visual_workflow::WorkflowGraph>(json_str) {
+                use crate::visual_workflow::WorkflowExecutor;
+                use crate::agent::{Agent, AgentRunConfig};
+                use std::collections::HashMap;
+                use std::sync::Arc;
+
+                let llm = std::sync::Arc::new(crate::llm::openai::OpenAIClient::new("dummy"));
+                let agent = Arc::new(Agent::new(llm, vec![]));
+                let run_cfg = AgentRunConfig::default();
+
+                let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), run_cfg);
+
+                match executor.execute(HashMap::new()).await {
+                    Ok(result) => {
+                        println!("{}", result);
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        eprintln!("Visual Workflow Execution Failed: {}", e);
+                        return Err(e.into());
+                    }
+                }
+            } else {
+                return Err("Failed to parse visual workflow graph JSON.".into());
+            }
+        }
+
+
         // Run as a subagent (Fork, Worktree, Teammate)
         let working_dir = worktree.or(mailbox).unwrap_or_default();
 
