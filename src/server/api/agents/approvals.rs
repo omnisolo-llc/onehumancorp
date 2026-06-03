@@ -7,10 +7,15 @@ use axum::{
     Json,
 };
 use std::sync::Arc;
+use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
+use ::server_utils::cache::HybridCache;
+
+static APPROVALS_CACHE: OnceLock<HybridCache<Vec<ApprovalRequest>>> = OnceLock::new();
+static ACTIVITY_CACHE: OnceLock<HybridCache<Vec<ApprovalRequest>>> = OnceLock::new();
 
 #[derive(Serialize)]
 pub struct ApprovalsResponse {
@@ -57,8 +62,24 @@ async fn list_approvals(
 
     let limit = query.limit.unwrap_or(20);
 
+    let cache_key = format!("approvals:{}:{:?}:{}", tenant_id, query.cursor, limit);
+    let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_approvals) = cache.get(&cache_key).await {
+        let next_cursor = if cached_approvals.len() == limit {
+            cached_approvals.last().map(|a| a.id.clone())
+        } else {
+            None
+        };
+        return (StatusCode::OK, Json(ApprovalsResponse {
+            pending_approvals: cached_approvals,
+            next_cursor,
+        })).into_response();
+    }
+
     // Fetch from DB using cursor pagination
     let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+
+    cache.set(&cache_key, approvals.clone(), std::time::Duration::from_secs(10)).await;
 
     let next_cursor = if approvals.len() == limit {
         approvals.last().map(|a| a.id.clone())
@@ -85,7 +106,23 @@ async fn list_activity_feed(
 
     let limit = query.limit.unwrap_or(20);
 
+    let cache_key = format!("activity:{}:{:?}:{}", tenant_id, query.cursor, limit);
+    let cache = ACTIVITY_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_activities) = cache.get(&cache_key).await {
+        let next_cursor = if cached_activities.len() == limit {
+            cached_activities.last().map(|a| a.id.clone())
+        } else {
+            None
+        };
+        return (StatusCode::OK, Json(ApprovalsResponse {
+            pending_approvals: cached_activities,
+            next_cursor,
+        })).into_response();
+    }
+
     let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+
+    cache.set(&cache_key, activities.clone(), std::time::Duration::from_secs(10)).await;
 
     let next_cursor = if activities.len() == limit {
         activities.last().map(|a| a.id.clone())

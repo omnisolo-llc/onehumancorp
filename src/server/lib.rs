@@ -4925,66 +4925,62 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        async function fetchActivityFeed() {
-                            try {
-                                const container = document.getElementById('activity-feed');
-                                if (!container) return;
-                                const res = await fetch('/api/agents/approvals/activity', {
-                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
-                                });
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Activity Feed</h3>';
-                                        data.pending_approvals.forEach(activity => {
-                                            container.innerHTML += `
-                                                <div style="background: rgba(255,255,255,0.4); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Auto-Executed by ${activity.department}: ${activity.description}</p>
-                                                </div>
-                                            `;
-                                        });
-                                    } else {
-                                        container.innerHTML = '<h3>Activity Feed</h3><p style="font-size: 13px; color: var(--text-secondary);">No recent activities.</p>';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching activity feed:', e);
-                            }
-                        }
+                        async function fetchActivityFeed() {}
+                        async function fetchApprovals() {}
 
-                        async function fetchApprovals() {
+                        async function fetchApprovalsAndActivityFeed() {
                             try {
-                                const res = await fetch('/api/agents/approvals', {
-                                    method: 'GET',
-                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
-                                });
-                                if (res.ok) {
-                                    const data = await res.json();
+                                const [approvalsRes, activityRes] = await Promise.all([
+                                    fetch('/api/agents/approvals', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') } }),
+                                    fetch('/api/agents/approvals/activity', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') } })
+                                ]);
+
+                                if (approvalsRes.ok) {
+                                    const data = await approvalsRes.json();
                                     const container = document.getElementById('approval-inbox');
-                                    if (!container) return;
-
-                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Pending Actions Hub</h3>';
-                                        data.pending_approvals.forEach(approval => {
-                                            const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
-                                            container.innerHTML += `
-                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
-                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
-                                                    ${payloadStr}
-                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                    if (container) {
+                                        if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                            container.innerHTML = '<h3>Pending Actions Hub</h3>';
+                                            data.pending_approvals.forEach(approval => {
+                                                const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
+                                                container.innerHTML += `
+                                                    <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                        <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
+                                                        ${payloadStr}
+                                                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                                            <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                            <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            `;
-                                        });
-                                    } else {
-                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                                `;
+                                            });
+                                        } else {
+                                            container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                        }
+                                    }
+                                }
+
+                                if (activityRes.ok) {
+                                    const data = await activityRes.json();
+                                    const container = document.getElementById('activity-feed');
+                                    if (container) {
+                                        if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                            container.innerHTML = '<h3>Activity Feed</h3>';
+                                            data.pending_approvals.forEach(activity => {
+                                                container.innerHTML += `
+                                                    <div style="background: rgba(255,255,255,0.4); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                                                        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Auto-Executed by ${activity.department}: ${activity.description}</p>
+                                                    </div>
+                                                `;
+                                            });
+                                        } else {
+                                            container.innerHTML = '<h3>Activity Feed</h3><p style="font-size: 13px; color: var(--text-secondary);">No recent activities.</p>';
+                                        }
                                     }
                                 }
                             } catch (e) {
-                                console.error('Error fetching approvals:', e);
+                                console.error('Error fetching approvals and activity feed:', e);
                             }
                         }
 
@@ -7190,9 +7186,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                         body: JSON.stringify({ tenant_id: tenant })
-                                    }).then(res => res.json())
+                                    }).then(res => res.json()),
+                                    fetchMilestones(),
+                                    fetchApprovalsAndActivityFeed()
                                 ])
-                                .then(([metricsData]) => {
+                                .then(([metricsData, _m, _aaf]) => {
                                     const salesEl = document.getElementById('todays-sales');
                                     if (salesEl) salesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
 
@@ -7218,9 +7216,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
-                                fetchApprovals();
-                                fetchActivityFeed();
                             }
 
                             if (id === 'my-plan-screen') {
