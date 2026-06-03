@@ -1152,7 +1152,7 @@ impl HubService for MyHubService {
                 let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
                 let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
                 let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
-                let bw_savings = 0.0;
+                let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);
                 let network_cost = auditor.get_tenant_network_cost(&tenant_id_clone_2);
                 (llm, rev, fees, bw_savings, network_cost)
             }),
