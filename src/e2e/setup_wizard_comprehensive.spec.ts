@@ -12,6 +12,8 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/website-builder');
     await page.waitForTimeout(1000);
 
+    await page.waitForLoadState('networkidle');
+
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
