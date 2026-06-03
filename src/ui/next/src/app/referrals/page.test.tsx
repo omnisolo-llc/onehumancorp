@@ -34,7 +34,7 @@ describe('ReferralsPage', () => {
   it('fetches and displays dynamic referral link', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+      json: async () => ({ referral_link: 'https://ohc.store/join?ref=test1234' }),
     });
 
     render(<ReferralsPage />);
@@ -45,7 +45,7 @@ describe('ReferralsPage', () => {
     });
 
     const referralSpan = document.getElementById('referral-link');
-    expect(referralSpan?.textContent).toBe('https://ohc.app/ref/test1234');
+    expect(referralSpan?.textContent).toBe('https://ohc.store/join?ref=test1234');
 
     // Copy button should be enabled
     const copyButton = screen.getByText('Copy');

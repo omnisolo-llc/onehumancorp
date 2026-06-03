@@ -41,3 +41,25 @@ test.describe('Automated Review Campaign Growth Loop', () => {
         expect(msg).toContain('https://ohc.store/review/recent');
     });
 });
+
+    test('review campaign page shows soft paywall when trying to send without pro', async ({ page }) => {
+        await page.goto('http://localhost:3000/review-campaigns');
+
+        // Ensure not on pro
+        await page.evaluate(() => {
+            localStorage.setItem('has_pro', 'false');
+        });
+        await page.reload();
+
+        // Generate draft
+        await page.click('button:has-text("Generate Email Draft")');
+
+        // Click send
+        await page.click('button:has-text("Send to Audience")');
+
+        // Verify soft paywall opens
+        await expect(page.locator('h2:has-text("Unlock Automated Campaigns")')).toBeVisible();
+
+        // Verify Share on X button is present
+        await expect(page.locator('button:has-text("Share on X to unlock 7 Days Free")')).toBeVisible();
+    });

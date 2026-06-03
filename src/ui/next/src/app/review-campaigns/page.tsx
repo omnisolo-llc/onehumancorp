@@ -165,11 +165,11 @@ export default function ReviewCampaignsPage() {
       {/* Upgrade Soft Paywall Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter text-center">
+          <div className="bg-white/80 backdrop-blur-md w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter text-center border border-white/40">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+            <div className="w-16 h-16 bg-indigo-100/50 backdrop-blur-sm rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6 border border-indigo-200/50">
               🚀
             </div>
 
@@ -180,14 +180,33 @@ export default function ReviewCampaignsPage() {
 
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => router.push('/pricing')}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all"
+                onClick={() => { setShowUpgradeModal(false); router.push('/pricing'); }}
+                className="w-full py-3 rounded-xl font-bold text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
               >
-                View Plans & Upgrade
+                Upgrade to Pro ($79/mo)
               </button>
+
+              <div className="my-2 text-gray-400 font-medium text-xs">OR</div>
+
+              <button
+                onClick={() => {
+                  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('I just unlocked powerful AI review campaigns for my business on One Human Corp! Start your own business today: https://ohc.store/join?ref=' + (typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store')), '_blank');
+                  if (typeof localStorage !== 'undefined') localStorage.setItem('has_pro', 'true');
+                  setHasPro(true);
+                  setShowUpgradeModal(false);
+                  alert('🎉 7-day Pro Trial activated! You now have access to automated review campaigns.');
+                }}
+                className="w-full py-3 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+                style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                Share on X to unlock 7 Days Free
+              </button>
+
               <button
                 onClick={() => setShowUpgradeModal(false)}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-xl transition-all"
+                className="w-full py-2 text-gray-500 hover:text-gray-800 font-medium rounded-xl transition-all text-sm mt-2"
               >
                 Maybe Later
               </button>

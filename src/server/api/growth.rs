@@ -797,7 +797,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg);
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://ohc.app/ref/{}", ref_code),
+                referral_link: format!("https://ohc.store/join?ref={}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -1039,7 +1039,7 @@ mod tests {
 
         let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+        assert!(ref_link.starts_with("https://ohc.store/join?ref="));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
