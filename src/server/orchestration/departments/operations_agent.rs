@@ -62,7 +62,11 @@ impl Department for OperationsAgent {
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
+        Some(DepartmentConfig {
+            tone_of_voice: "professional".to_string(),
+            auto_approve_limits: 10.0,
+            ..Default::default()
+        })
     }
 
     fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {

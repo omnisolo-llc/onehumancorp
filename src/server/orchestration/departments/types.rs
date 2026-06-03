@@ -43,7 +43,7 @@ impl std::fmt::Display for DepartmentType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DepartmentConfig {
     #[serde(default)]
     pub tone_of_voice: String,
