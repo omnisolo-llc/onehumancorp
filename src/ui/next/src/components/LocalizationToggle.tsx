@@ -23,7 +23,7 @@ export const LocalizationToggle: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm hover:bg-white/80 transition-all text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg mac-glass-container hover:bg-white/80 dark:hover:bg-black/40 transition-all text-sm font-medium"
       >
         <span>{locales.find(l => l.code === locale)?.flag}</span>
         <span className="text-gray-900">{currency}</span>
@@ -35,7 +35,7 @@ export const LocalizationToggle: React.FC = () => {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full mt-2 right-0 w-48 rounded-2xl bg-white/70 backdrop-blur-2xl border border-white/50 shadow-2xl z-50 p-2 animate-in fade-in zoom-in duration-200">
+          <div className="absolute top-full mt-2 right-0 w-48 rounded-2xl mac-glass-container shadow-2xl z-50 p-2 animate-in fade-in zoom-in duration-200">
             <div className="mb-2">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">Language</p>
               {locales.map((l) => (
