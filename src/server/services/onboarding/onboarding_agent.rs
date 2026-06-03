@@ -235,7 +235,7 @@ impl OnboardingAgent {
                 "task": "weekly_health_report",
                 "tenant_id": org_id_clone3.clone()
             });
-            if let Err(e) = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, parent_task_id, job_type, payload, status, next_retry_at, created_at, updated_at) VALUES ($1, $2, NULL, 'sub_agent', $3::jsonb, 'PENDING', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .bind(uuid::Uuid::new_v4().to_string())
                 .bind(&org_id_clone3)
                 .bind(serde_json::to_string(&payload).unwrap_or_default())

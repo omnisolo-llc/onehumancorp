@@ -2920,7 +2920,7 @@ async fn create_ui_bom_item_handler(
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let is_standalone = is_standalone_runtime();
-    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+    let ohc_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
     } else {
         match &db.store {
@@ -2929,12 +2929,12 @@ async fn create_ui_bom_item_handler(
         }
     };
 
-    let sub_agent_queue_clone = sub_agent_queue.clone();
+    let ohc_job_queue_clone = ohc_job_queue.clone();
     tokio::spawn(async move {
         loop {
-            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
+            if let Ok(Some(job)) = ohc_job_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
                 tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+                let _ = ohc_job_queue_clone.complete(&job.id, &job.tenant_id).await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
