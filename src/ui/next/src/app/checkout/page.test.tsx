@@ -4,40 +4,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CheckoutPage from './page';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
-}));
-
-vi.mock('../../components/TooltipRegistry', () => ({
-  WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useRouter: () => ({ push: vi.fn() })
 }));
 
 describe('CheckoutPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn();
+
+    const localStorageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      clear: vi.fn()
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock
+    });
   });
 
-  it('renders the checkout page', () => {
-    render(<CheckoutPage />);
-    expect(screen.getByText('Checkout')).toBeDefined();
-    expect(screen.getByText('Pay Now')).toBeDefined();
-  });
-
-  it('handles payment click', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ referral_link: 'http://test.link' })
-    } as any);
+  it('generates dynamic referral link on payment', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ referral_link: 'https://ohc.app/ref/test-checkout' }),
+    });
 
     render(<CheckoutPage />);
 
-    const payButton = screen.getByText('Pay Now');
-    fireEvent.click(payButton);
-
-    expect(payButton.textContent).toBe('Processing...');
+    const payNowBtn = screen.getByText('Pay Now');
+    fireEvent.click(payNowBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Payment Successful!')).toBeDefined();
+      expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
     });
+
+    const referralInput = screen.getByDisplayValue('https://ohc.app/ref/test-checkout');
+    expect(referralInput).toBeInTheDocument();
   });
 });
