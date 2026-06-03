@@ -12,7 +12,7 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
 
     // Wait for AI Reply
     const aiBadge = page.getByText('AI Replied');
-    await expect(aiBadge).toBeVisible({ timeout: 30000 });
+    await expect(aiBadge).toBeVisible({ timeout: 10000 });
 
     // Verify reply content
     await expect(page.getByText('Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?')).toBeVisible();
