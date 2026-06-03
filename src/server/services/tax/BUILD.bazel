@@ -10,7 +10,7 @@ rust_library(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server:server_lib",
+
         "//src/server/domain:server_domain",
         "//src/server/domain/repository:server_domain_repository",
         "@crates//:chrono",
