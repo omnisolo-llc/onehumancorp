@@ -488,7 +488,7 @@ pub async fn calcom_webhook_handler(
 
             // In a real app, create calendar events in the OHC dashboard
             // and auto-generate meeting links (e.g., Zoom).
-            tracing::debug!("Created booking: {}", booking_uid);
+            tracing::info!("Created booking: {}", booking_uid);
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -516,7 +516,7 @@ pub async fn resend_webhook_handler(
     match payload.type_.as_str() {
         "email.bounced" | "email.complained" => {
             // Automatically clean the tenant's mailing list
-            tracing::debug!("Message bounced/complained: [REDACTED]");
+            tracing::info!("Message bounced/complained: [REDACTED]");
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -539,7 +539,7 @@ pub async fn ayrshare_webhook_handler(
     match payload.action.as_str() {
         "social_message" => {
             // Ingest inbound messages into a unified OHC inbox table
-            tracing::debug!("Incoming notification from integration: [REDACTED]");
+            tracing::info!("Incoming notification from integration: [REDACTED]");
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()

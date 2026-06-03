@@ -69,7 +69,6 @@ function KairosContent() {
         ]);
 
 
-
         if (tasksRes.status === "fulfilled" && tasksRes.value.ok) {
           const data = await tasksRes.value.json();
           setTasks(Array.isArray(data?.tasks) && data.tasks.length > 0 ? data.tasks : Array.isArray(data) && data.length > 0 ? data : [
@@ -97,10 +96,6 @@ function KairosContent() {
         if (memoryRes.status === "fulfilled" && memoryRes.value.ok) {
           const data = await memoryRes.value.json();
           setMemoryStats(data && typeof data === "object" && Object.keys(data).length > 0 ? data : { "Context": "Infinite Context", "Size": "842.5 MB" });
-        } else {
-          setMemoryStats({ "Context": "Infinite Context", "Size": "842.5 MB" });
-        }
-);
         } else {
           setMemoryStats({ "Context": "Infinite Context", "Size": "842.5 MB" });
         }

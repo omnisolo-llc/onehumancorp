@@ -127,7 +127,7 @@ impl GroupChatManager {
 
             // Select next speaker
             let next_speaker = self.select_speaker(&current_transcript).await?;
-            tracing::debug!("Round {}: {} is speaking...", round, next_speaker.name);
+            tracing::info!("Round {}: {} is speaking...", round, next_speaker.name);
 
             // Format transcript into a single prompt for the selected agent
             let mut prompt_context = format!(
@@ -195,7 +195,7 @@ impl SequentialChatManager {
         let mut current_input = initial_task.to_string();
 
         for agent_cfg in &self.agents {
-            tracing::debug!("Sequential Step: {} is running...", agent_cfg.name);
+            tracing::info!("Sequential Step: {} is running...", agent_cfg.name);
 
             let prompt_context = format!(
                 "You are participating in a sequential workflow as {}.
@@ -401,7 +401,7 @@ Provide your response.",
         }
 
         if let Some(synth) = &self.synthesizer {
-            tracing::debug!("Fan-in Step: {} is running...", synth.name);
+            tracing::info!("Fan-in Step: {} is running...", synth.name);
 
             let prompt_context = format!(
                 "You are participating in a concurrent workflow as the synthesizer.
@@ -458,7 +458,7 @@ impl HandoffManager {
             let agent_cfg = self.agents.iter().find(|a| a.name == current_agent_name)
                 .ok_or_else(|| format!("Agent {} not found", current_agent_name))?;
 
-            tracing::debug!("Handoff Step: {} is running...", agent_cfg.name);
+            tracing::info!("Handoff Step: {} is running...", agent_cfg.name);
 
             let mut run_cfg = agent_cfg.run_config.clone();
             run_cfg.server_system_message = format!("You are {}. {}", agent_cfg.name, agent_cfg.description);

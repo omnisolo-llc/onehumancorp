@@ -164,7 +164,7 @@ mod tests {
     async fn test_record_payout_with_pool() {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         if sqlx::PgPool::connect(&db_url).await.is_err() {
-            tracing::debug!("Skipping test due to no postgres");
+            println!("Skipping test due to no postgres");
             return;
         }
 

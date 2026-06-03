@@ -66,7 +66,7 @@ impl RalphLoop {
                 continue;
             }
 
-            tracing::debug!("Ralph Loop: Starting work on feature: {}", feature_name);
+            tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
 
             // Phase 2 (Coding Agent): Read git logs to orient itself
             let git_log_output = Command::new("git")
@@ -103,7 +103,7 @@ impl RalphLoop {
 
             match self.agent.run(&feature_config, &feature_prompt, &mut on_event).await {
                 Ok(result) => {
-                    tracing::debug!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
+                    tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
                     progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
@@ -129,19 +129,19 @@ impl RalphLoop {
             }
         }
 
-        tracing::debug!("Ralph Loop completely finished.");
+        tracing::info!("Ralph Loop completely finished.");
         Ok(())
     }
 
     async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
-                tracing::debug!("Ralph Loop: Resuming from existing progress file.");
+                tracing::info!("Ralph Loop: Resuming from existing progress file.");
                 return Ok(progress);
             }
         }
 
-        tracing::debug!("Ralph Loop: Initializing new progress file.");
+        tracing::info!("Ralph Loop: Initializing new progress file.");
 
         let breakdown_prompt = format!("Break down the following task into 3 distinct, manageable features to implement sequentially. Respond strictly with a JSON array of strings representing the feature names. Task: {}", task);
 

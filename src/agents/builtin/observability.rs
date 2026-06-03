@@ -26,22 +26,22 @@ impl LangSmithProvider {
 
 impl ObservabilityProvider for LangSmithProvider {
     fn log_run_start(&self, task: &str, run_id: &str) {
-        tracing::debug!("[LangSmith] Run start: {} (run_id: {})", task, run_id);
+        tracing::info!("[LangSmith] Run start: {} (run_id: {})", task, run_id);
     }
     fn log_llm_request(&self, run_id: &str, _req: &ChatRequest) {
-        tracing::debug!("[LangSmith] LLM request for run_id: {}", run_id);
+        tracing::info!("[LangSmith] LLM request for run_id: {}", run_id);
     }
     fn log_llm_response(&self, run_id: &str, _resp: &ChatResponse) {
-        tracing::debug!("[LangSmith] LLM response for run_id: {}", run_id);
+        tracing::info!("[LangSmith] LLM response for run_id: {}", run_id);
     }
     fn log_tool_call(&self, run_id: &str, tool_call: &ToolCall) {
-        tracing::debug!("[LangSmith] Tool call: {} (run_id: {})", tool_call.name, run_id);
+        tracing::info!("[LangSmith] Tool call: {} (run_id: {})", tool_call.name, run_id);
     }
     fn log_tool_result(&self, run_id: &str, tool_id: &str, _result: &str) {
-        tracing::debug!("[LangSmith] Tool result for {} (run_id: {})", tool_id, run_id);
+        tracing::info!("[LangSmith] Tool result for {} (run_id: {})", tool_id, run_id);
     }
     fn log_run_end(&self, run_id: &str, _final_output: &str) {
-        tracing::debug!("[LangSmith] Run end (run_id: {})", run_id);
+        tracing::info!("[LangSmith] Run end (run_id: {})", run_id);
     }
     fn log_error(&self, run_id: &str, error: &str) {
         tracing::error!("[LangSmith] Error: {} (run_id: {})", error, run_id);
@@ -61,22 +61,22 @@ impl LangfuseProvider {
 
 impl ObservabilityProvider for LangfuseProvider {
     fn log_run_start(&self, task: &str, run_id: &str) {
-        tracing::debug!("[Langfuse] Trace start: {} (trace_id: {})", task, run_id);
+        tracing::info!("[Langfuse] Trace start: {} (trace_id: {})", task, run_id);
     }
     fn log_llm_request(&self, run_id: &str, _req: &ChatRequest) {
-        tracing::debug!("[Langfuse] LLM generation start for trace_id: {}", run_id);
+        tracing::info!("[Langfuse] LLM generation start for trace_id: {}", run_id);
     }
     fn log_llm_response(&self, run_id: &str, _resp: &ChatResponse) {
-        tracing::debug!("[Langfuse] LLM generation end for trace_id: {}", run_id);
+        tracing::info!("[Langfuse] LLM generation end for trace_id: {}", run_id);
     }
     fn log_tool_call(&self, run_id: &str, tool_call: &ToolCall) {
-        tracing::debug!("[Langfuse] Span start: {} (trace_id: {})", tool_call.name, run_id);
+        tracing::info!("[Langfuse] Span start: {} (trace_id: {})", tool_call.name, run_id);
     }
     fn log_tool_result(&self, run_id: &str, tool_id: &str, _result: &str) {
-        tracing::debug!("[Langfuse] Span end for {} (trace_id: {})", tool_id, run_id);
+        tracing::info!("[Langfuse] Span end for {} (trace_id: {})", tool_id, run_id);
     }
     fn log_run_end(&self, run_id: &str, _final_output: &str) {
-        tracing::debug!("[Langfuse] Trace end (trace_id: {})", run_id);
+        tracing::info!("[Langfuse] Trace end (trace_id: {})", run_id);
     }
     fn log_error(&self, run_id: &str, error: &str) {
         tracing::error!("[Langfuse] Error: {} (trace_id: {})", error, run_id);
