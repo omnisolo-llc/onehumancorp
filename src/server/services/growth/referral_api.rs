@@ -21,6 +21,26 @@ pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     Ok(link)
 }
 
+pub fn generate_team_invite_link(team_id: &str, inviter_id: &str) -> Result<String, String> {
+    if team_id.is_empty() || inviter_id.is_empty() {
+        return Err("team_id and inviter_id cannot be empty".to_string());
+    }
+
+    let mut rng = rand::thread_rng();
+    let bytes: [u8; 8] = {
+        let mut buf = [0u8; 8];
+        rng.fill_bytes(&mut buf);
+        buf
+    };
+    let invite_code = hex::encode(bytes);
+
+    let link = format!(
+        "ohc://join?ref={}&utm_source=cloud_bridge&utm_medium=team_share&inviter={}&team={}",
+        invite_code, inviter_id, team_id
+    );
+    Ok(link)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -34,5 +54,21 @@ mod tests {
         
         let err = generate_referral_link("").unwrap_err();
         assert_eq!(err, "userID cannot be empty");
+    }
+
+    #[test]
+    fn test_generate_team_invite_link() {
+        let link = generate_team_invite_link("team123", "user123").unwrap();
+        assert!(link.starts_with("ohc://join?ref="));
+        assert!(link.contains("utm_source=cloud_bridge"));
+        assert!(link.contains("utm_medium=team_share"));
+        assert!(link.contains("inviter=user123"));
+        assert!(link.contains("team=team123"));
+
+        let err = generate_team_invite_link("", "user123").unwrap_err();
+        assert_eq!(err, "team_id and inviter_id cannot be empty");
+
+        let err2 = generate_team_invite_link("team123", "").unwrap_err();
+        assert_eq!(err2, "team_id and inviter_id cannot be empty");
     }
 }

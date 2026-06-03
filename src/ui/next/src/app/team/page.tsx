@@ -32,6 +32,7 @@ export default function TeamPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
   const fetchApprovals = async () => {
     try {
@@ -55,6 +56,33 @@ export default function TeamPage() {
       setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
     }
   }, []);
+
+  const openInviteModal = async () => {
+    setShowInviteModal(true);
+    setIsGeneratingInvite(true);
+    try {
+      const tenantId = typeof window !== 'undefined' && window.localStorage
+          ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default'
+          : 'team-default';
+
+      const response = await fetch('/api/v1/growth/team-invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: tenantId, inviter_id: 'current_user', invitee_id: 'new_user' })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.invite_link) {
+          setInviteLink(data.invite_link);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to generate team invite link', e);
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -130,10 +158,11 @@ export default function TeamPage() {
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
               <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
               <button
-                onClick={() => setShowInviteModal(true)}
-                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
+                onClick={openInviteModal}
+                disabled={isGeneratingInvite}
+                className={`w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md transition-all active:scale-[0.98] ${isGeneratingInvite ? 'hover:bg-gray-800 opacity-80 cursor-not-allowed' : 'hover:bg-black'}`}
               >
-                Invite to Cloud Team
+                {isGeneratingInvite ? 'Generating Invite...' : 'Invite to Cloud Team'}
               </button>
             </div>
           </div>
