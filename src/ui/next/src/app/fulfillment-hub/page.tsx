@@ -138,6 +138,14 @@ export default function FulfillmentHub() {
                           )}
                         </div>
                         <div className="mt-4">
+                          {order.fulfillment_mode === 'LocalDelivery' && order.status !== 'Driver Dispatched' ? (
+                            <button
+                               onClick={() => handleAction(order.id, 'request_driver')}
+                               className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm mb-2"
+                             >
+                               Request Driver (DoorDash)
+                             </button>
+                          ) : null}
                            <button
                               onClick={() => handleAction(order.id, 'hand_off')}
                               className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"

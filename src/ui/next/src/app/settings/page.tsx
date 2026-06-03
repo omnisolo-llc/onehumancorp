@@ -200,6 +200,48 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Local Delivery Settings */}
+        <section className="mb-8 border-b pb-8">
+          <h2 className="text-xl font-semibold mb-2 text-gray-800">Local Delivery (Powered by DoorDash)</h2>
+          <p className="text-sm text-gray-500 mb-4">Offer local delivery directly from your storefront. We dispatch a Dasher automatically when your order is ready.</p>
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-gray-700">
+              <input type="checkbox" className="rounded" /> Enable Local Delivery
+            </label>
+
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Delivery Radius (miles)</p>
+              <input
+                type="number"
+                placeholder="e.g. 5"
+                defaultValue={5}
+                className="border rounded px-3 py-2 w-full max-w-xs text-gray-700"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Preparation Time (minutes)</p>
+              <input
+                type="number"
+                placeholder="e.g. 30"
+                defaultValue={30}
+                className="border rounded px-3 py-2 w-full max-w-xs text-gray-700"
+              />
+            </div>
+
+             <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Flat Delivery Fee ($)</p>
+              <input
+                type="number"
+                placeholder="e.g. 7.50"
+                defaultValue={7.50}
+                className="border rounded px-3 py-2 w-full max-w-xs text-gray-700"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Profile */}
         <section className="mb-8 border-b pb-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Profile</h2>

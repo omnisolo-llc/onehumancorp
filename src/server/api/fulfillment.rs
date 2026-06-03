@@ -32,6 +32,16 @@ pub struct ExecuteActionRequest {
     pub action: String, // e.g. "print_label", "mark_ready", "hand_off"
 }
 
+#[derive(Deserialize)]
+pub struct DeliveryQuoteRequest {
+    pub address: String,
+}
+
+#[derive(Serialize)]
+pub struct DeliveryQuoteResponse {
+    pub fee: f64,
+}
+
 struct AppState {
     orders: RwLock<Vec<Order>>,
 }
@@ -75,7 +85,19 @@ where
     Router::new()
         .route("/", get(get_queue))
         .route("/execute/:id", post(execute_action))
+        .route("/delivery-quote", post(get_delivery_quote))
         .with_state(state)
+}
+
+async fn get_delivery_quote(
+    Json(payload): Json<DeliveryQuoteRequest>,
+) -> impl IntoResponse {
+    // Mock DoorDash Drive API quote generation
+    if payload.address.to_lowercase().contains("outside") {
+        (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Address is outside the delivery radius"}))).into_response()
+    } else {
+        (StatusCode::OK, Json(DeliveryQuoteResponse { fee: 7.50 })).into_response()
+    }
 }
 
 async fn get_queue(
@@ -100,7 +122,7 @@ async fn get_queue(
             "Preparing" => {
                 to_pack.push(order.clone());
             }
-            "ReadyForPickup" => {
+            "ReadyForPickup" | "Driver Dispatched" => {
                 awaiting_pickup.push(order.clone());
             }
             _ => {}
@@ -141,8 +163,13 @@ async fn execute_action(
                     }
                 }
                 "hand_off" => {
-                    if order.status == "ReadyForPickup" {
+                    if order.status == "ReadyForPickup" || order.status == "Driver Dispatched" {
                         order.status = "Delivered".to_string();
+                    }
+                }
+                "request_driver" => {
+                    if order.fulfillment_mode == "LocalDelivery" {
+                        order.status = "Driver Dispatched".to_string();
                     }
                 }
                 _ => {}

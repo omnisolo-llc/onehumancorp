@@ -11,6 +11,37 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Local delivery state
+  const [enableLocalDelivery, setEnableLocalDelivery] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
+
+  const checkLocalDelivery = async () => {
+    if (!deliveryAddress) return;
+    setCheckingDelivery(true);
+    try {
+      // Mocked endpoint to get a quote
+      const response = await fetch('/api/fulfillment/delivery-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: deliveryAddress })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDeliveryFee(data.fee);
+      } else {
+        alert('Address is outside the delivery radius.');
+        setDeliveryFee(null);
+      }
+    } catch (e) {
+      console.error(e);
+      setDeliveryFee(null);
+    } finally {
+      setCheckingDelivery(false);
+    }
+  };
+
   const handlePayment = async () => {
     setIsProcessing(true);
 
@@ -18,18 +49,19 @@ export default function CheckoutPage() {
     try {
       const response = await fetch("/api/v1/growth/referrals/generate", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "checkout_success_modal"
+        })
       });
-      const data = await response.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
+      if (response.ok) {
+        const data = await response.json();
+        setReferralLink(data.referral_url);
       } else {
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink("https://ohc.store/ref/default123");
       }
     } catch (e) {
-      console.error("Failed to generate dynamic referral link", e);
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink("https://ohc.store/ref/default123");
     }
 
     setIsProcessing(false);
@@ -46,6 +78,43 @@ export default function CheckoutPage() {
         <p className="text-gray-700">Please enter your payment details below.</p>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+
+          {/* Local Delivery Option */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-white/50">
+            <label className="flex items-center gap-2 text-gray-800 font-medium cursor-pointer mb-2">
+              <input
+                type="checkbox"
+                checked={enableLocalDelivery}
+                onChange={(e) => setEnableLocalDelivery(e.target.checked)}
+                className="w-4 h-4 text-indigo-600"
+              />
+              Include Local Delivery (Powered by DoorDash)
+            </label>
+            {enableLocalDelivery && (
+              <div className="mt-3 flex flex-col gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter your delivery address"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={checkLocalDelivery}
+                  disabled={checkingDelivery || !deliveryAddress}
+                  className="w-full py-2 bg-gray-100 text-gray-800 rounded font-medium hover:bg-gray-200 disabled:opacity-50 text-sm"
+                >
+                  {checkingDelivery ? 'Checking...' : 'Check Availability & Fee'}
+                </button>
+                {deliveryFee !== null && (
+                  <p className="text-sm text-green-600 font-semibold mt-1">
+                    Local delivery available! Flat fee: ${deliveryFee.toFixed(2)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
