@@ -14,7 +14,7 @@ describe('HelpArticlePage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders loading state initially', () => {
+  it('renders loading state initially', async () => {
     vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started' });
     global.fetch = vi.fn(() => new Promise(() => {})); // Never resolves
 

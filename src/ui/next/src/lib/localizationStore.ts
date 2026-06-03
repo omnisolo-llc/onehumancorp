@@ -36,8 +36,9 @@ export const useLocalizationStore = create<LocalizationState>()(
         if (from === to) return { amount, rate: 1.0, isOffline: false };
         const rateEntry = get().fxRates.find(r => r.from === from && r.to === to);
         if (rateEntry) {
+          const converted = amount * rateEntry.rate;
           return {
-            amount: Math.round(amount * rateEntry.rate),
+            amount: converted >= 1 ? Math.ceil(converted) - 0.01 : Number(converted.toFixed(2)),
             rate: rateEntry.rate,
             isOffline: !navigator.onLine
           };
