@@ -53,14 +53,16 @@ impl MetaProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
+    use std::future::Future;
+    use std::pin::Pin;
 
     struct MockMetaClient;
 
-    #[async_trait]
     impl MetaClientWrapper for MockMetaClient {
-        async fn send_message(&self, _platform: &str, _to: &str, _body: &str) -> Result<(), String> {
-            Ok(())
+        fn send_message<'a>(&'a self, _platform: &'a str, _to: &'a str, _body: &'a str) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send + 'a>> {
+            Box::pin(async move {
+                Ok(())
+            })
         }
     }
 
