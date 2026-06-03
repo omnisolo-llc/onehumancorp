@@ -17,3 +17,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE epics ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_epics ON epics;
+CREATE POLICY tenant_isolation_epics ON epics USING (tenant_id::text = current_setting('app.current_tenant', true));
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_tasks ON tasks;
+CREATE POLICY tenant_isolation_tasks ON tasks USING (tenant_id::text = current_setting('app.current_tenant', true));

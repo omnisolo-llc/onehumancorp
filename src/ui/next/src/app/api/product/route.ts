@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
     const data = await request.json();
-    console.log("Publishing product:", data);
 
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));

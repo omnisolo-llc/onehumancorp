@@ -16,3 +16,6 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     _sync_status TEXT DEFAULT 'pending',
     version INTEGER DEFAULT 1
 );
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
+CREATE POLICY tenant_isolation_swarm_tasks ON swarm_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
