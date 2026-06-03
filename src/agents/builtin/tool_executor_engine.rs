@@ -44,12 +44,21 @@ impl ToolExecutionEngine {
     ) -> Result<String, ToolError> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
+        let mut retry_history: Vec<String> = Vec::new();
 
         loop {
             match tool.execute.execute(tc.arguments.clone()).await {
-                Ok(res) => return Ok(res),
+                Ok(res) => {
+                    if retry_count > 0 {
+                        let history_str = retry_history.join(" | ");
+                        return Ok(format!("[Note: Tool succeeded after {} transient retries. History: {}]\n{}", retry_count, history_str, res));
+                    }
+                    return Ok(res);
+                }
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
+                    retry_history.push(msg.clone());
+
                     if retry_count < max_retries {
                         retry_count += 1;
                         let base_backoff = 500 * (1 << retry_count);
@@ -59,8 +68,12 @@ impl ToolExecutionEngine {
                         sleep(backoff).await;
                         continue;
                     } else {
-                        // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
-                        return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                        // After retries are exhausted, feed the context back to the LLM as LlmRecoverable
+                        let history_str = retry_history.join(" | ");
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Transient error exhausted after {} retries. The system may be unstable. History: {}",
+                            max_retries, history_str
+                        )));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {

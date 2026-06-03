@@ -33,7 +33,9 @@ mod tests {
         let res = handle.await.unwrap();
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        let res_str = res.unwrap();
+        assert!(res_str.contains("[Note: Tool succeeded after 1 transient retries. History: transient error attempt 0]"));
+        assert!(res_str.contains("success"));
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 
@@ -129,7 +131,9 @@ mod tests {
         let res = handle.await.unwrap();
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "success");
+        let res_str = res.unwrap();
+        assert!(res_str.contains("[Note: Tool succeeded after 2 transient retries. History: transient error attempt 0 | transient error attempt 1]"));
+        assert!(res_str.contains("success"));
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
@@ -163,8 +167,8 @@ mod tests {
 
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
-            _ => panic!("Expected Unexpected error"),
+            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "Transient error exhausted after 2 retries. The system may be unstable. History: transient error attempt 0 | transient error attempt 1 | transient error attempt 2"),
+            _ => panic!("Expected LlmRecoverable error"),
         }
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
     }
