@@ -34,7 +34,14 @@ async fn process_intake_handler(
         Err(error) => {
             tracing::warn!("onboarding intake fallback used after agent error: {}", error);
             Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
-                business_name: payload.description.trim().to_string(),
+                business_name: {
+                    let desc = payload.description.trim();
+                    if desc.len() > 30 {
+                        format!("{}...", &desc[..27])
+                    } else {
+                        desc.to_string()
+                    }
+                },
                 business_type: "Local Business".to_string(),
                 categories: vec!["services".to_string()],
                 initial_products: Vec::new(),
@@ -47,8 +54,8 @@ async fn get_draft(
     State(agent): State<Arc<OnboardingAgent>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
     match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Ok(Json(serde_json::json!({}))), // fallback
@@ -60,8 +67,8 @@ async fn save_draft(
     headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
@@ -89,8 +96,8 @@ async fn launch_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
     let current_step = 5; // Launch step
 
     let state = serde_json::json!({
@@ -106,8 +113,8 @@ async fn get_state(
     State(agent): State<Arc<OnboardingAgent>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
     match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
@@ -119,8 +126,8 @@ async fn save_state(
     headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))

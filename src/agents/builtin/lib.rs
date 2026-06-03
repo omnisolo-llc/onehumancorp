@@ -29,6 +29,8 @@ pub mod observability;
 pub mod verification_loops;
 pub mod agent;
 pub mod tools_gating;
+pub mod human_in_loop;
+
 pub mod service;
 pub mod departments;
 pub mod guardrails;
