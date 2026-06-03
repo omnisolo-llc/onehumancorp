@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "chaos",
     srcs = ["chaos.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/pkg/chaos",
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration/chaos",
     visibility = ["//visibility:public"],
 )
 

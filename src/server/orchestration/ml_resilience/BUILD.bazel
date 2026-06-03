@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "ml_resilience",
     srcs = ["ml_resilience.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/pkg/ml_resilience",
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration/ml_resilience",
     visibility = ["//visibility:public"],
 )
 
