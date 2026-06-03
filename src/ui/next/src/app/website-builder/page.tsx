@@ -598,14 +598,22 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
                   <div id="step-9" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => setWizardStep('8.5')}
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mac-glass-container"
+                      style={{ backdropFilter: 'blur(30px) saturate(210%)', background: 'rgba(0, 113, 227, 0.9)' }}
+                      onClick={() => {
+                        setDomainChoice('subdomain');
+                        setWizardStep('8.5');
+                      }}
                     >
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                      onClick={() => setWizardStep('8.5')}
+                      className="w-full text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50/50 transition-all mac-glass-container"
+                      style={{ backdropFilter: 'blur(30px) saturate(210%)', background: 'rgba(255, 255, 255, 0.65)' }}
+                      onClick={() => {
+                        setDomainChoice('custom');
+                        setWizardStep('8.5');
+                      }}
                     >
                       Connect Custom Domain
                     </button>

@@ -662,16 +662,18 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'} mac-glass-container`}
+                      style={domainChoice === 'subdomain' ? { backdropFilter: 'blur(30px) saturate(210%)' } : {}}
                     >
-                      <span className="font-semibold text-sm mb-1">Free Subdomain</span>
+                      <span className="font-semibold text-sm mb-1">Free OHC Domain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.store</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'} mac-glass-container`}
+                      style={domainChoice === 'custom' ? { backdropFilter: 'blur(30px) saturate(210%)' } : {}}
                     >
-                      <span className="font-semibold text-sm mb-1">Custom Domain</span>
+                      <span className="font-semibold text-sm mb-1">Connect Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
                     </div>
                   </div>

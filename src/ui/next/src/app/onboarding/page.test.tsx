@@ -391,8 +391,8 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
-    const customOption = screen.getByText('Custom Domain');
+    const subdomainOption = screen.getByText('Free OHC Domain');
+    const customOption = screen.getByText('Connect Custom Domain');
     expect(subdomainOption).toBeInTheDocument();
     expect(customOption).toBeInTheDocument();
 
