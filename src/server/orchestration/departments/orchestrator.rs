@@ -447,7 +447,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
-                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -548,7 +548,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
-                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -627,7 +627,7 @@ impl DepartmentOrchestrator {
                         use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
-                        let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_val = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         Some((dep, payload_val))
                     }
                     Ok(None) => {
@@ -803,7 +803,7 @@ impl DepartmentOrchestrator {
                         email: r.get("email"),
                         phone: r.get("phone"),
                         mood: r.get("mood"),
-                        preferences: prefs_str.and_then(|s| serde_json::from_str(&s).ok()),
+                        preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
                         created_at: Some(r.get("created_at")),
                         updated_at: Some(r.get("updated_at")),
                     }))
@@ -828,7 +828,7 @@ impl DepartmentOrchestrator {
                         email: r.get("email"),
                         phone: r.get("phone"),
                         mood: r.get("mood"),
-                        preferences: prefs_str.and_then(|s| serde_json::from_str(&s).ok()),
+                        preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
                         created_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").unwrap_or_else(|_| chrono::Utc::now())),
                         updated_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now())),
                     }))
