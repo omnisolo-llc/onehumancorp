@@ -3064,6 +3064,8 @@ async fn create_ui_bom_item_handler(
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
+        .route("/link-in-bio-generator", axum::routing::get(ui_handler))
+        .route("/bio/:tenant", axum::routing::get(bio_handler))
         .route("/brand-studio", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
@@ -3589,6 +3591,100 @@ async fn create_ui_bom_item_handler(
         .await?;
 
     Ok(())
+}
+async fn bio_handler(
+    axum::extract::Path(tenant): axum::extract::Path<String>,
+) -> impl axum::response::IntoResponse {
+    let tenant_safe = tenant.replace("<", "").replace(">", "");
+    let html = format!(r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link-in-Bio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        body {{
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+        .font-outfit {{ font-family: 'Outfit', sans-serif; }}
+        #container {{
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            padding: 64px 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s;
+        }}
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div style="width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; font-size: 40px; border: 1px solid rgba(255,255,255,0.3); margin-bottom: 16px;">✨</div>
+        <h1 id="title" class="font-outfit" style="font-size: 24px; font-weight: 700; margin-bottom: 8px; text-align: center;">My Store</h1>
+        <p id="bio" style="font-size: 14px; text-align: center; opacity: 0.9; margin-bottom: 32px;">Welcome to my storefront!</p>
+
+        <div id="links" style="width: 100%; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+        </div>
+
+        <div style="margin-top: 40px; padding-bottom: 24px;">
+            <a id="footer" href="https://ohc.store/join?ref={tenant}" target="_blank" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; text-decoration: none;">Powered by OHC</a>
+        </div>
+    </div>
+    <script>
+        const escapeHtml = (unsafe) => {{
+            return (unsafe || '').toString()
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }};
+
+        const tenant = '{tenant}';
+        const saved = localStorage.getItem('ohc_bio_' + tenant);
+        if (saved) {{
+            try {{
+                const data = JSON.parse(saved);
+                document.getElementById('title').textContent = data.storeName || 'My Store';
+                document.getElementById('bio').textContent = data.bio || 'Welcome to my storefront!';
+
+                const container = document.getElementById('container');
+                let bg = '', color = '';
+                const theme = data.theme || 'gradient';
+                if (theme === 'gradient') {{ bg = 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'; color = '#111'; }}
+                else if (theme === 'dark') {{ bg = '#1D1D1F'; color = '#fff'; }}
+                else if (theme === 'light') {{ bg = '#fff'; color = '#111'; }}
+                else if (theme === 'purple') {{ bg = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; color = '#fff'; }}
+
+                document.body.style.background = bg;
+                document.body.style.color = color;
+                document.getElementById('footer').style.color = color;
+
+                if (data.links && Array.isArray(data.links)) {{
+                    const btnBg = theme === 'light' ? '#f3f4f6' : 'rgba(255, 255, 255, 0.15)';
+                    const btnBorder = theme === 'light' ? '1px solid #e5e7eb' : '1px solid rgba(255, 255, 255, 0.3)';
+                    document.getElementById('links').innerHTML = data.links.map(link => `
+                        <a href="${{escapeHtml(link.url)}}" target="_blank" style="width: 100%; padding: 16px 24px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 14px; text-decoration: none; color: inherit; background: ${{btnBg}}; border: ${{btnBorder}}; backdrop-filter: blur(10px); box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: block; box-sizing: border-box;">
+                            ${{escapeHtml(link.title) || 'Untitled Link'}}
+                        </a>
+                    `).join('');
+                }}
+            }} catch (e) {{ console.error(e); }}
+        }}
+    </script>
+</body>
+</html>"#, tenant=tenant_safe);
+    axum::response::Html(html)
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
@@ -4272,6 +4368,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
                         <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
+                        <button class="nav-item" onclick="showScreen('link-in-bio-screen')">Link in Bio</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
                     </div>
@@ -4514,6 +4611,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
                             <button onclick="showScreen('supply-chain-screen')">Supply</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
+                            <button onclick="showScreen('link-in-bio-screen')">Link in Bio 🔗</button>
                             <a href="/products/new" onclick="event.preventDefault(); showScreen('product-new-screen')" style="display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px;margin-bottom:8px;">✨ Auto-Catalog</a>
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
@@ -5805,6 +5903,67 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
+                    <!-- Link-in-Bio Generator -->
+                    <div id="link-in-bio-screen" class="screen glass" style="margin-bottom: 80px; max-width: 1000px; margin-left: auto; margin-right: auto; padding: 24px;">
+                        <h1 style="margin-bottom: 24px;">Link-in-Bio Generator 🔗</h1>
+
+                        <div style="display: flex; flex-direction: row; gap: 24px; flex-wrap: wrap;">
+                            <!-- Settings -->
+                            <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 24px;">
+                                <div class="card glass">
+                                    <h3>Profile Details</h3>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Business Name</label>
+                                    <input type="text" id="lib-store-name" placeholder="My Awesome Store" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);" oninput="updateLibPreview()">
+
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Bio / Tagline</label>
+                                    <textarea id="lib-bio" placeholder="The best automated business in town." style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); resize: none; min-height: 80px;" oninput="updateLibPreview()"></textarea>
+
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Theme</label>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button onclick="setLibTheme('gradient')" id="lib-theme-gradient" style="width: 32px; height: 32px; border-radius: 50%; padding: 0; background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); border: 2px solid transparent;"></button>
+                                        <button onclick="setLibTheme('dark')" id="lib-theme-dark" style="width: 32px; height: 32px; border-radius: 50%; padding: 0; background: #1D1D1F; border: 2px solid transparent;"></button>
+                                        <button onclick="setLibTheme('light')" id="lib-theme-light" style="width: 32px; height: 32px; border-radius: 50%; padding: 0; background: #ffffff; border: 2px solid #e5e7eb;"></button>
+                                        <button onclick="setLibTheme('purple')" id="lib-theme-purple" style="width: 32px; height: 32px; border-radius: 50%; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 2px solid transparent;"></button>
+                                    </div>
+                                </div>
+
+                                <div class="card glass">
+                                    <h3>Links</h3>
+                                    <div id="lib-links-container" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
+                                        <!-- Links will be added here via JS -->
+                                    </div>
+                                    <button onclick="addLibLink()" style="width: 100%; padding: 12px; border-radius: 8px; background: transparent; border: 2px dashed rgba(0,0,0,0.2); color: var(--text-secondary); font-weight: 600;">+ Add Another Link</button>
+                                </div>
+
+                                <div class="card glass">
+                                    <h3>Publish & Share</h3>
+                                    <button id="lib-copy-btn" onclick="copyLibUrl()" class="primary" style="width: 100%; font-size: 16px; padding: 16px; margin-bottom: 8px;">Copy Link-in-Bio URL</button>
+                                    <p style="font-size: 12px; color: var(--text-secondary); text-align: center; margin: 0;">Add this link to your Instagram, TikTok, or Twitter profile.</p>
+                                </div>
+                            </div>
+
+                            <!-- Preview -->
+                            <div style="flex: 1; min-width: 350px; display: flex; justify-content: center; align-items: flex-start; position: sticky; top: 24px;">
+                                <div style="width: 375px; height: 812px; background: white; border-radius: 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 8px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center;">
+                                    <div style="position: absolute; top: 0; width: 160px; height: 24px; background: #111; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; z-index: 50;"></div>
+
+                                    <div id="lib-preview-container" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 64px 24px 48px; overflow-y: auto; transition: all 0.3s;">
+                                        <div style="width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; font-size: 40px; border: 1px solid rgba(255,255,255,0.3); margin-bottom: 16px;">✨</div>
+                                        <h1 id="lib-preview-title" style="font-size: 24px; font-weight: 700; margin-bottom: 8px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">My Store</h1>
+                                        <p id="lib-preview-bio" style="font-size: 14px; text-align: center; opacity: 0.9; margin-bottom: 32px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">Welcome to my storefront!</p>
+
+                                        <div id="lib-preview-links" style="width: 100%; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                                            <!-- Preview links rendered here -->
+                                        </div>
+
+                                        <div style="margin-top: 40px; padding-bottom: 24px;">
+                                            <a id="lib-preview-footer" href="#" target="_blank" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; text-decoration: none; transition: opacity 0.2s;">Powered by OHC</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -7579,6 +7738,137 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('promo-result').style.display = 'block';
                         }
 
+
+                        // --- Link in Bio Logic ---
+                        let libTheme = 'gradient';
+                        let libLinks = [
+                            { id: '1', title: 'Visit my Shop', url: 'https://' }
+                        ];
+
+                        function initLib() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const saved = localStorage.getItem('ohc_bio_' + tenant);
+                            if (saved) {
+                                try {
+                                    const parsed = JSON.parse(saved);
+                                    if (parsed.storeName) document.getElementById('lib-store-name').value = parsed.storeName;
+                                    if (parsed.bio) document.getElementById('lib-bio').value = parsed.bio;
+                                    if (parsed.theme) libTheme = parsed.theme;
+                                    if (parsed.links && Array.isArray(parsed.links)) libLinks = parsed.links;
+                                } catch (e) { console.error('Failed to parse lib saved data', e); }
+                            }
+                            setLibTheme(libTheme);
+                            renderLibLinksEditor();
+                            updateLibPreview();
+                        }
+
+                        function renderLibLinksEditor() {
+                            const container = document.getElementById('lib-links-container');
+                            if (!container) return;
+
+                            container.innerHTML = libLinks.map((link, index) => `
+                                <div style="padding: 16px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <span style="font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Link ${index + 1}</span>
+                                        <button onclick="removeLibLink('${link.id}')" style="background: transparent; color: #ef4444; border: none; padding: 0; font-size: 12px; font-weight: 500;">Remove</button>
+                                    </div>
+                                    <input type="text" value="${escapeHtml(link.title)}" placeholder="Title (e.g. Visit my Shop)" onchange="updateLibLink('${link.id}', 'title', this.value)" style="width: 100%; margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); font-size: 14px;">
+                                    <input type="url" value="${escapeHtml(link.url)}" placeholder="URL (e.g. https://...)" onchange="updateLibLink('${link.id}', 'url', this.value)" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); font-size: 14px;">
+                                </div>
+                            `).join('');
+                        }
+
+                        function addLibLink() {
+                            libLinks.push({ id: Math.random().toString(36).substring(2, 9), title: '', url: 'https://' });
+                            renderLibLinksEditor();
+                            updateLibPreview();
+                        }
+
+                        function removeLibLink(id) {
+                            libLinks = libLinks.filter(l => l.id !== id);
+                            renderLibLinksEditor();
+                            updateLibPreview();
+                        }
+
+                        function updateLibLink(id, field, value) {
+                            const link = libLinks.find(l => l.id === id);
+                            if (link) {
+                                link[field] = value;
+                                updateLibPreview();
+                            }
+                        }
+
+                        function setLibTheme(theme) {
+                            libTheme = theme;
+                            ['gradient', 'dark', 'light', 'purple'].forEach(t => {
+                                const btn = document.getElementById('lib-theme-' + t);
+                                if (btn) {
+                                    btn.style.borderColor = (t === theme) ? 'var(--primary)' : (t === 'light' ? '#e5e7eb' : 'transparent');
+                                }
+                            });
+                            updateLibPreview();
+                        }
+
+                        function updateLibPreview() {
+                            const storeName = document.getElementById('lib-store-name')?.value || 'My Store';
+                            const bio = document.getElementById('lib-bio')?.value || 'Welcome to my storefront!';
+
+                            const titleEl = document.getElementById('lib-preview-title');
+                            const bioEl = document.getElementById('lib-preview-bio');
+                            const containerEl = document.getElementById('lib-preview-container');
+                            const linksEl = document.getElementById('lib-preview-links');
+                            const footerEl = document.getElementById('lib-preview-footer');
+
+                            if (titleEl) titleEl.textContent = storeName;
+                            if (bioEl) bioEl.textContent = bio;
+
+                            if (containerEl) {
+                                let bg = '', color = '';
+                                if (libTheme === 'gradient') { bg = 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'; color = '#111'; }
+                                else if (libTheme === 'dark') { bg = '#1D1D1F'; color = '#fff'; }
+                                else if (libTheme === 'light') { bg = '#fff'; color = '#111'; }
+                                else if (libTheme === 'purple') { bg = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; color = '#fff'; }
+
+                                containerEl.style.background = bg;
+                                containerEl.style.color = color;
+                                if (footerEl) footerEl.style.color = color;
+                            }
+
+                            if (linksEl) {
+                                const btnBg = libTheme === 'light' ? '#f3f4f6' : 'rgba(255, 255, 255, 0.15)';
+                                const btnBorder = libTheme === 'light' ? '1px solid #e5e7eb' : '1px solid rgba(255, 255, 255, 0.3)';
+
+                                linksEl.innerHTML = libLinks.map(link => `
+                                    <a href="${escapeHtml(link.url)}" target="_blank" style="width: 100%; padding: 16px 24px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 14px; text-decoration: none; color: inherit; background: ${btnBg}; border: ${btnBorder}; backdrop-filter: blur(10px); box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: block; box-sizing: border-box;">
+                                        ${escapeHtml(link.title) || 'Untitled Link'}
+                                    </a>
+                                `).join('');
+                            }
+
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            if (footerEl) footerEl.href = `https://ohc.store/join?ref=${encodeURIComponent(tenant)}`;
+
+                            // Save to localStorage
+                            const payload = { storeName, bio, theme: libTheme, links: libLinks };
+                            localStorage.setItem('ohc_bio_' + tenant, JSON.stringify(payload));
+                        }
+
+                        function copyLibUrl() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            // We construct the URL with current origin
+                            const url = window.location.origin + '/bio/' + encodeURIComponent(tenant);
+                            navigator.clipboard.writeText(url);
+                            const btn = document.getElementById('lib-copy-btn');
+                            if (btn) {
+                                const origText = btn.textContent;
+                                btn.textContent = 'Copied Link!';
+                                btn.style.background = '#10b981'; // green
+                                setTimeout(() => {
+                                    btn.textContent = origText;
+                                    btn.style.background = '';
+                                }, 2000);
+                            }
+                        }
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -7679,6 +7969,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (id === 'setup-screen') {
                                     nextStep(currentStep || 1);
                                 }
+                                if (id === 'link-in-bio-screen') {
+                                    initLib();
+                                }
                                 if (id === 'storefront-builder-screen') {
                                     renderStorefrontPreview();
                                 }
@@ -7760,7 +8053,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'advisory-dashboard-screen') {
+                            if (id === 'advisory-dashboard-screen' || id === 'link-in-bio-screen') {
                                 fetch('/api/v1/advisory/insights', {
                                     headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
                                 })
@@ -7787,7 +8080,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 loadSupplyData();
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'supply-chain-screen' || id === 'inventory-screen' || id === 'orders-screen' || id === 'product-new-screen' || id === 'share-cards-screen' || id === 'win-back-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'supply-chain-screen' || id === 'inventory-screen' || id === 'orders-screen' || id === 'product-new-screen' || id === 'share-cards-screen' || id === 'win-back-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen' || id === 'link-in-bio-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -7849,6 +8142,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 '/api-docs': 'api-docs-screen',
                                 '/changelog': 'changelog-screen',
                                 '/builder': 'storefront-builder-screen',
+                                '/link-in-bio-generator': 'link-in-bio-screen',
                                 '/calendar': 'calendar-screen',
                                 '/brand-studio': 'brand-studio-screen',
                                 '/website-builder': 'setup-screen',
