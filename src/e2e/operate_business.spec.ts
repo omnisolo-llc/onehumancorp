@@ -11,7 +11,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
 
   await page.goto('/website-builder');
 
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
