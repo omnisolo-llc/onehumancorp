@@ -810,6 +810,8 @@ impl PromoterWorker {
 
     pub fn start(&self) {
         let _db = self.db.clone();
+        let _ = &_db;
+        let _ = _db;
         let hub = self.hub.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
