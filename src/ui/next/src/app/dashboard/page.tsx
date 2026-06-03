@@ -498,10 +498,8 @@ export default function Dashboard() {
                  <span>⚡️</span> KAIROS
                </Link>
              </WithTooltip>
-             <Link href="/plan" passHref legacyBehavior>
-               <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-                 Billing
-               </button>
+             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm flex items-center justify-center">
+               Billing
              </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
