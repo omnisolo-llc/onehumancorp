@@ -57,6 +57,7 @@ export default function InboxPage() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
+  const [autoResponderEnabled, setAutoResponderEnabled] = useState(true);
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: true,
@@ -96,24 +97,39 @@ export default function InboxPage() {
     setShowScheduler(false);
   };
 
-  const simulateIncomingMessage = () => {
+  const simulateIncomingMessage = async (messageText = 'Are you open today?') => {
     const incomingMsgId = Date.now();
     setMessages(prev => [...prev, {
       id: incomingMsgId,
       sender: 'Customer',
       source: 'SMS',
       icon: '📱',
-      content: 'Are you open today?',
+      content: messageText,
       date: 'Just now'
     }]);
 
-    setTimeout(() => {
+    if (!autoResponderEnabled) return;
+
+    try {
+      const res = await fetch('/api/inbox/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageText })
+      });
+      const data = await res.json();
+
       setMessages(prev => prev.map(m =>
         m.id === incomingMsgId
-          ? { ...m, draft: 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?' }
+          ? {
+              ...m,
+              draft: data.escalateToHuman ? undefined : data.reply,
+              escalated: data.escalateToHuman
+            }
           : m
       ));
-    }, 500);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -132,7 +148,7 @@ export default function InboxPage() {
             ⚙️
           </button>
           <button
-            onClick={simulateIncomingMessage}
+            onClick={() => simulateIncomingMessage()}
             className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
             title="Simulate Incoming Message"
           >
@@ -205,9 +221,9 @@ export default function InboxPage() {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
+              <h2 className="text-xl font-bold text-gray-900">Inbox Settings</h2>
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-1"
@@ -225,6 +241,16 @@ export default function InboxPage() {
             )}
 
             <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-blue-50">
+                <span className="text-sm font-bold text-blue-900">AI Auto-Reply</span>
+                <button
+                  onClick={() => setAutoResponderEnabled(!autoResponderEnabled)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${autoResponderEnabled ? 'bg-[#0066FF]' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${autoResponderEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+
               {Object.entries(twilioChannels).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
                   <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
@@ -309,7 +335,20 @@ export default function InboxPage() {
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
-            {msg.draft && msg.sender !== 'Me' && (
+            {msg.escalated && msg.sender !== 'Me' && (
+               <div className="mt-3 ml-4 bg-red-50 border border-red-200 rounded-xl p-3 shadow-sm relative">
+                  <div className="absolute -top-3 left-4 bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                     Escalated to Human
+                  </div>
+                  <p className="text-sm text-gray-800 mt-2 italic">This message could not be handled automatically and has been escalated for your review.</p>
+                  <div className="flex justify-end mt-2">
+                     <button onClick={() => { setEditingId(msg.id); setReplyInput(''); }} className="bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-700 transition-colors">Reply Now</button>
+                  </div>
+               </div>
+            )}
+
+            {msg.draft && msg.sender !== 'Me' && !msg.escalated && (
                <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
                   <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -372,6 +411,8 @@ export default function InboxPage() {
            <button onClick={generateDraft}>✨ AI Draft</button>
            <button onClick={() => sendReply()}>Send</button>
            <input type="text" id="reply-input" value={replyInput} onChange={e => setReplyInput(e.target.value)} />
+           <button id="simulate-vegan" onClick={() => simulateIncomingMessage('do you have anything vegan?')}>Simulate Vegan</button>
+           <button id="simulate-order" onClick={() => simulateIncomingMessage('where is my order?')}>Simulate Order</button>
         </div>
       </div>
     </div>
