@@ -202,8 +202,8 @@ impl MinimaxClient {
                         }
                         cb.record_failure();
                         let status = resp.status();
-                        let text = resp.text().await.unwrap_or_default();
-                        last_err = format!("API error (status {}): {}", status, text);
+                        let _text = resp.text().await.unwrap_or_default();
+                        last_err = format!("Our AI assistant is temporarily unavailable. Please try again in a few moments.");
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -347,8 +347,8 @@ impl MinimaxClient {
                             let code = base_resp.get("status_code").and_then(|c| c.as_i64()).unwrap_or(0);
                             if code != 0 && code != 1000 {
                                 cb.record_failure();
-                                let msg = base_resp.get("status_msg").and_then(|m| m.as_str()).unwrap_or("unknown error");
-                                last_err = format!("API error (status {}): {}", code, msg);
+                                let _msg = base_resp.get("status_msg").and_then(|m| m.as_str()).unwrap_or("unknown error");
+                                last_err = format!("Our AI assistant is temporarily unavailable. Please try again in a few moments.");
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                                 continue;
                             }
@@ -366,12 +366,12 @@ impl MinimaxClient {
                         return Err("invalid response format".to_string());
                     } else {
                         if resp.status().as_u16() >= 500 {
-                            last_err = format!("API overloaded (status {})", resp.status());
+                            last_err = format!("Our AI assistant is temporarily unavailable. Please try again in a few moments.");
                             tokio::time::sleep(Duration::from_secs(2)).await;
                             continue;
                         }
                         cb.record_failure();
-                        last_err = format!("API error (status {})", resp.status());
+                        last_err = format!("Our AI assistant is temporarily unavailable. Please try again in a few moments.");
                         tokio::time::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
