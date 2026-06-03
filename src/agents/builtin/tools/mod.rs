@@ -8,6 +8,7 @@ pub mod bash;
 pub mod read;
 pub mod write;
 pub mod edit;
+pub mod jit_retrieve;
 pub mod glob;
 pub mod grep;
 pub mod webfetch;
@@ -113,6 +114,7 @@ pub fn all_tools(
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
+        jit_retrieve::jit_retrieve_tool(working_dir.clone()),
         write::write_tool(working_dir.clone(), runner.clone()),
         edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),

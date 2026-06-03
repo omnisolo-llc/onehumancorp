@@ -14,6 +14,7 @@ rust_library(
         "glob.rs",
         "grep.rs",
         "head.rs",
+        "jit_retrieve.rs",
         "hybrid_blob.rs",
         "lazy_load.rs",
         "local_fs_sync.rs",
