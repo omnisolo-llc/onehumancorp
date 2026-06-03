@@ -339,13 +339,15 @@ impl RedisRateLimiter {
         let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
 
         if let Some(store) = &self.telemetry_store {
-            store.storage_bytes_counter.add(
-                delta_bytes as u64,
-                &[
-                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
-                ],
-            );
+            if delta_bytes > 0 {
+                store.storage_bytes_counter.add(
+                    delta_bytes as u64,
+                    &[
+                        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+                        opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                    ],
+                );
+            }
         }
 
         if let Some(limit_mb) = tier.storage_limit_mb() {
@@ -479,6 +481,14 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // But flag is set
                 assert!(status.user_message.unwrap().contains("500MB storage"));
+
+                // Decrement storage (negative delta) to ensure it handles it without crashing or underflow
+                let negative_delta: i64 = -100 * 1024 * 1024; // Free up 100MB
+                let status = limiter.check_storage_quota(tenant_id, negative_delta).await.unwrap();
+                assert!(status.is_allowed);
+                // Note: whether soft_limit_reached is true depends on whether total storage is still > 500MB.
+                // 100MB + 450MB - 100MB = 450MB, which is < 500MB. So it should not trigger soft_limit_reached.
+                assert!(!status.soft_limit_reached);
             }
         }
     }
