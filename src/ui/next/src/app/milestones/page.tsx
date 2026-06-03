@@ -46,7 +46,7 @@ export default function MilestonesPage() {
   const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: ohc://join?ref=milestone";
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
+    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Success Milestones 🏆</h1>
@@ -68,10 +68,10 @@ export default function MilestonesPage() {
                     <div
                         key={m.id}
                         onClick={() => m.unlocked && setSelectedMilestone(m.id)}
-                        className={`p-4 rounded-2xl border transition-all ${
+                        className={`p-4 rounded-2xl transition-all ${
                             m.unlocked
-                            ? 'bg-white border-indigo-100 hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                            : 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                            ? 'mac-glass-container hover:border-indigo-300 hover:shadow-md cursor-pointer'
+                            : 'mac-glass-container opacity-60 cursor-not-allowed'
                         } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
                     >
                         <div className="flex items-center gap-4">
@@ -125,7 +125,7 @@ export default function MilestonesPage() {
                                         setCopied(true);
                                         setTimeout(() => setCopied(false), 2000);
                                     }}
-                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50'}`}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'mac-glass-container text-gray-800 hover:brightness-95'}`}
                                 >
                                     {copied ? 'Copied Message!' : 'Copy Share Message'}
                                 </button>
@@ -142,7 +142,7 @@ export default function MilestonesPage() {
                         </div>
                     );
                 })() : (
-                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 bg-white/50">
+                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 mac-glass-container">
                         <span className="text-4xl mb-4">🏆</span>
                         <p className="font-medium text-sm">Select an unlocked milestone</p>
                     </div>
