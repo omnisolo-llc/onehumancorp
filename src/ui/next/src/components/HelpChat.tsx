@@ -89,9 +89,7 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
-    return null; // Disable in E2E
-  }
+  // Widget previously disabled in E2E to prevent interference, but it must be tested now.
 
   return (
     <div className="help-chat-wrapper">

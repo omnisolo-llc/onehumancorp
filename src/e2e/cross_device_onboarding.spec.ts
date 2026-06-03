@@ -3,19 +3,19 @@
 
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Cross Device Onboarding CUJ', () => {
+test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
     // 1. Owner starts from the home page
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
     await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
+    await page.getByRole('button', { name: /Login/i }).click();
 
-    await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
+    // The application automatically redirects new users to the onboarding page.
+    await page.waitForURL('**/onboarding');
 
     // Verify it landed on the Onboarding page
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    await expect(page.getByText('Tell us about your business')).toBeVisible({ timeout: 15000 });
 
     // 2. Owner enters business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
