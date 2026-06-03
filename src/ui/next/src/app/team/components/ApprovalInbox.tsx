@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ApprovalRequest } from "../page";
 
 type Props = {
@@ -21,9 +21,30 @@ export default function ApprovalInbox({
   onReject,
 }: Props) {
   const [reviewAll, setReviewAll] = useState(true);
+  const [basePricingRules, setBasePricingRules] = useState("");
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
+
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const res = await fetch(`/api/agents/settings/${departmentId}`);
+        if (res.ok) {
+          const config = await res.json();
+          if (config) {
+            setReviewAll(config.auto_approve_limits === 0.0);
+            if (config.base_pricing_rules) {
+              setBasePricingRules(config.base_pricing_rules);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch settings", e);
+      }
+    }
+    fetchConfig();
+  }, [departmentId]);
 
   const handleToggle = async () => {
     const newValue = !reviewAll;
@@ -35,11 +56,28 @@ export default function ApprovalInbox({
         body: JSON.stringify({
           tone_of_voice: "Friendly",
           auto_approve_limits: newValue ? 0.0 : 1000.0,
+          base_pricing_rules: basePricingRules || undefined,
         }),
       });
     } catch (e) {
       console.error(e);
       setReviewAll(!newValue); // Revert on failure
+    }
+  };
+
+  const handleBlurPricingRules = async () => {
+    try {
+      await fetch(`/api/agents/settings/${departmentId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tone_of_voice: "Friendly",
+          auto_approve_limits: reviewAll ? 0.0 : 1000.0,
+          base_pricing_rules: basePricingRules || undefined,
+        }),
+      });
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -89,18 +127,32 @@ export default function ApprovalInbox({
         </div>
 
         {/* Settings Toggle */}
-        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">
-            Review all messages before sending
-          </span>
-          <button
-            onClick={handleToggle}
-            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"}`}
-          >
-            <div
-              className={`w-4 h-4 bg-white rounded-full transition-transform`}
-            />
-          </button>
+        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">
+              {departmentId === "sales" ? "Autonomous Quoting" : "Review all messages before sending"}
+            </span>
+            <button
+              onClick={handleToggle}
+              className={`w-12 h-6 rounded-full p-1 transition-colors flex ${(departmentId === "sales" ? !reviewAll : reviewAll) ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"}`}
+            >
+              <div
+                className={`w-4 h-4 bg-white rounded-full transition-transform`}
+              />
+            </button>
+          </div>
+          {departmentId === "sales" && (
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Base Pricing Rules</label>
+              <textarea
+                value={basePricingRules}
+                onChange={(e) => setBasePricingRules(e.target.value)}
+                onBlur={handleBlurPricingRules}
+                placeholder="e.g. $50/hr base, plus materials"
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none min-h-[60px]"
+              />
+            </div>
+          )}
         </div>
 
         {/* Content */}

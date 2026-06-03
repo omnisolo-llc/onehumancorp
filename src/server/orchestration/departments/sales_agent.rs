@@ -4,11 +4,15 @@ use serde_json::Value;
 
 pub struct SalesAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    configs: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, DepartmentConfig>>>,
 }
 
 impl SalesAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+        Self {
+            orchestrator,
+            configs: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+        }
     }
 }
 
@@ -27,7 +31,16 @@ impl Department for SalesAgent {
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
-        let risk = ActionRisk::DraftForReview;
+        let config = self.get_config(&event.tenant_id);
+        let risk = if let Some(cfg) = config {
+            if cfg.auto_approve_limits > 0.0 {
+                ActionRisk::AutoExecute
+            } else {
+                ActionRisk::DraftForReview
+            }
+        } else {
+            ActionRisk::DraftForReview
+        };
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
@@ -40,11 +53,14 @@ impl Department for SalesAgent {
         ).await.map(|_| ())
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        None
+    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
+        let lock = self.configs.read().unwrap();
+        lock.get(tenant_id).cloned()
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
+        let mut lock = self.configs.write().unwrap();
+        lock.insert(tenant_id, config);
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
