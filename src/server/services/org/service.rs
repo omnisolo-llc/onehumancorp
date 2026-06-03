@@ -123,9 +123,9 @@ impl OrgService for MyOrgService {
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
-        let mut agent_set = std::collections::HashSet::new();
+        let mut agent_set: std::collections::HashSet<&String> = std::collections::HashSet::new();
         for a in agents.iter() {
-            agent_set.insert(a.id.clone());
+            agent_set.insert(&a.id);
         }
         
         for m in meetings.iter() {

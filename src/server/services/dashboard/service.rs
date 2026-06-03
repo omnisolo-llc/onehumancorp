@@ -286,10 +286,11 @@ impl DashboardService for MyDashboardService {
 
 
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::with_capacity(_meetings.len());
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
+                transcript.reserve(m.transcript.len());
                 for msg in &m.transcript {
                     transcript.push(::server_ohc::agent::AgentMessage {
                         id: msg.id.clone(),
@@ -309,20 +310,19 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let final_meetings = out_meetings;
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-            .iter()
+        let final_agents: Vec<::server_ohc::orchestration::Agent> = agents
+            .into_iter()
             .filter(|a| {
                 a.organization_id == req.organization_id
                     || a.id.starts_with(&format!("{}-", req.organization_id))
             })
-            .cloned()
             .collect();
 
-        let final_agents_payload = _filtered_agents
+        let final_agents_payload: Vec<::server_ohc::agent::Agent> = final_agents
             .iter()
             .map(|a| {
                 let status_val = match a.status.to_uppercase().as_str() {
@@ -357,7 +357,7 @@ impl DashboardService for MyDashboardService {
 
         if !req.mobile_optimized {
             let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
+            for a in final_agents.iter() {
                 *status_map.entry(a.status.clone()).or_insert(0) += 1;
             }
             final_statuses = status_map
@@ -369,7 +369,7 @@ impl DashboardService for MyDashboardService {
             let mut original_prompts_len = 0;
             let mut compressed_prompts_len = 0;
 
-            for agent in &_filtered_agents {
+            for agent in &final_agents {
                 let prompt = &agent.name;
                 let orig_len = prompt.len();
                 if orig_len > 0 {
