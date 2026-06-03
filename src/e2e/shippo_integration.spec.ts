@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('User can purchase and print shipping labels for an order', async ({ page }) => {
   // Navigate to the orders page
   await page.goto('/orders');
 
   // Check if the orders page loads correctly
-  await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Orders' }).first()).toBeVisible();
 
   // Check if there are unfulfilled orders
   await expect(page.getByText('Unfulfilled').first()).toBeVisible();
