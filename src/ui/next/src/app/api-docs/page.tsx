@@ -173,7 +173,7 @@ export default function ApiDocsPage() {
     <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[20px] saturate-200 font-inter">
       <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <p className="text-yellow-700 text-sm">
-          <strong className="font-outfit">Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
+          <strong className="font-outfit">Advanced:</strong> This section is for developers directly integrating with our APIs.
         </p>
       </div>
       {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40"><SwaggerUI spec={spec} /></div>}

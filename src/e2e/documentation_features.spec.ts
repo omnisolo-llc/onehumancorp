@@ -10,7 +10,7 @@ test.describe('Help Center Page', () => {
 
     await page.locator('h2:has-text("Getting Started")').click();
 
-    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible();
 
     await expect(page.locator('text=Welcome to OneHumanCorp!')).toBeVisible();
   });
