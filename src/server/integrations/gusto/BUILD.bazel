@@ -1,0 +1,41 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_gusto",
+    srcs = [
+        "bazel_lib.rs",
+        "client.rs",
+        "client_test.rs",
+        "models.rs",
+        "jobs/sync.rs",
+        "jobs/mod.rs",
+        "mod.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/common:server_common",
+        "//src/server/config:server_config",
+        "//src/server/utils:server_utils",
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_gusto_test",
+    size = "small",
+    crate = ":server_integrations_gusto",
+    edition = "2024",
+)
