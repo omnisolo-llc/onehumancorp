@@ -44,13 +44,13 @@ impl SubscriptionService {
         Ok(plan)
     }
 
-    pub async fn subscribe_customer(&self, tenant_id: &str, plan_id: &str, customer_id: &str, _stripe_sub_id: &str) -> Result<Subscriber, String> {
+    pub async fn subscribe_customer(&self, tenant_id: &str, plan_id: &str, customer_id: &str, stripe_sub_id: &str) -> Result<Subscriber, String> {
         let subscriber = Subscriber {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
             plan_id: plan_id.to_string(),
             customer_id: customer_id.to_string(),
-            stripe_subscription_id: _stripe_sub_id.to_string(),
+            stripe_subscription_id: stripe_sub_id.to_string(),
             status: SubscriptionStatus::Active,
             current_period_end: Utc::now().timestamp() + 30 * 24 * 60 * 60, // 30 days
             created_at: Utc::now().timestamp(),
