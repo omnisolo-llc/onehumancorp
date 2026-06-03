@@ -43,6 +43,54 @@ async fn execute_publish_site_job(
     for page in &pages {
         let blocks = super::db::list_blocks(pool, tenant_id, page.id).await?;
 
+        // --- Autonomous Generative CRO Engine ---
+        // Generate an A/B test experiment for the hero headline using AI
+        if let Some(hero_block) = blocks.iter().find(|b| b.block_type == "HeroBlock" || b.block_type == "Hero") {
+            if let Some(original_headline) = hero_block.content.get("headline").and_then(|v| v.as_str()) {
+                let cro_engine = super::cro::CroEngine::new(pool.clone());
+
+                // Check if we already have a running experiment for this element
+                let existing_experiments = cro_engine.get_experiments_for_site(tenant_id, site_id).await.unwrap_or_default();
+                let has_hero_exp = existing_experiments.iter().any(|e| e.target_element == "hero_headline");
+
+                if !has_hero_exp {
+                    tracing::info!("Generating CRO micro-variants for hero headline...");
+                    let prompt = format!(
+                        "You are an expert conversion rate optimizer. Given the current hero headline '{}', generate exactly 2 highly compelling, alternative headlines to run in an A/B test. The variants should try to trigger different psychological hooks (e.g. urgency, value, clarity). Return ONLY a JSON array of strings containing the 2 new headlines.",
+                        original_headline
+                    );
+
+                    if let Ok(res) = minimax.reason(&prompt).await {
+                        let cleaned = res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                        if let Ok(generated_headlines) = serde_json::from_str::<Vec<String>>(cleaned) {
+                            if generated_headlines.len() >= 1 {
+                                let mut variants = vec![
+                                    ("Control".to_string(), serde_json::Value::String(original_headline.to_string())),
+                                ];
+
+                                for (i, hl) in generated_headlines.iter().enumerate() {
+                                    variants.push((format!("Treatment {}", i+1), serde_json::Value::String(hl.clone())));
+                                }
+
+                                match cro_engine.create_experiment(
+                                    tenant_id,
+                                    site_id,
+                                    "Hero Headline Optimization",
+                                    "hero_headline",
+                                    variants,
+                                ).await {
+                                    Ok(exp_id) => tracing::info!("Created CRO experiment {} with {} variants", exp_id, generated_headlines.len() + 1),
+                                    Err(e) => tracing::error!("Failed to create CRO experiment: {:?}", e),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // -----------------------------------------
+
+
         let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
 
         if should_generate_seo {

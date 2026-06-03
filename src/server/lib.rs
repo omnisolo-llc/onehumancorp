@@ -2511,6 +2511,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
 
+    let pool_cro = pool.clone();
+    tokio::spawn(async move { crate::builder::cro_background::start_cro_evaluation_loop(pool_cro).await; });
+
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {

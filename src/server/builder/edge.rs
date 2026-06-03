@@ -68,12 +68,19 @@ pub async fn handle_edge_request_impl(
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
+
     let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
+
+    // Extract a stable user identifier, e.g. from cookies or IP, for CRO Thompson sampling
+    let user_id = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()).unwrap_or("anonymous").to_string();
+
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
-        let mut response = Html(cached_html).into_response();
+        // Try personalization (CRO)
+        let html_string = apply_cro_personalization(state.pool.clone(), tenant_id, site_id, &user_id, cached_html).await;
+        let mut response = Html(html_string).into_response();
         let cache_tag = format!("tenant-id:{}", tenant_id);
         if let Ok(val) = cache_tag.parse() {
             response.headers_mut().insert("Cache-Tag", val);
@@ -117,7 +124,9 @@ pub async fn handle_edge_request_impl(
         // A real system would use a broadcast channel, but for edge workers returning a slightly delayed or stale is better
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
-            let mut response = Html(cached_html).into_response();
+            // Try personalization (CRO)
+            let html_string = apply_cro_personalization(state.pool.clone(), tenant_id, site_id, &user_id, cached_html).await;
+            let mut response = Html(html_string).into_response();
         let cache_tag = format!("tenant-id:{}", tenant_id);
         if let Ok(val) = cache_tag.parse() {
             response.headers_mut().insert("Cache-Tag", val);
@@ -139,7 +148,10 @@ pub async fn handle_edge_request_impl(
 
     let (html, tags) = result?;
 
-    let mut response = Html(html).into_response();
+    // Try personalization (CRO)
+    let html_string = apply_cro_personalization(state.pool.clone(), tenant_id, site_id, &user_id, html).await;
+
+    let mut response = Html(html_string).into_response();
     if !tags.is_empty() {
         if let Ok(cache_tag) = tags.join(", ").parse() {
             response.headers_mut().insert("Cache-Tag", cache_tag);
@@ -150,6 +162,68 @@ pub async fn handle_edge_request_impl(
         "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
     );
     Ok(response)
+}
+
+
+async fn apply_cro_personalization(pool: PgPool, tenant_id: Uuid, site_id: Uuid, user_id: &str, html: String) -> String {
+    let cro_engine = super::cro::CroEngine::new(pool.clone());
+
+    if let Ok(experiments) = cro_engine.get_experiments_for_site(tenant_id, site_id).await {
+        let mut modified_html = html;
+        for exp in experiments {
+            if let Ok(variants) = cro_engine.get_variants_for_experiment(tenant_id, exp.id).await {
+                if let Some(selected_variant) = cro_engine.select_variant_thompson(&variants, user_id, exp.id) {
+                    let pool_clone = pool.clone();
+                    let vid = selected_variant.id;
+                    tokio::spawn(async move {
+                        let engine = super::cro::CroEngine::new(pool_clone);
+                        let _ = engine.record_view(vid).await;
+                    });
+
+                    if let Some(content_str) = selected_variant.content.as_str() {
+                        if exp.target_element == "hero_headline" {
+                            let start_tag = r#"<h1 class="hero-title font-outfit">"#;
+                            if let Some(start_idx) = modified_html.find(start_tag) {
+                                if let Some(end_idx) = modified_html[start_idx..].find("</h1>") {
+                                    let actual_end_idx = start_idx + end_idx;
+                                    let before = &modified_html[..start_idx + start_tag.len() - 1];
+                                    let after = &modified_html[actual_end_idx..];
+
+                                    modified_html = format!(
+                                        r#"{} data-cro-variant="{}">{}&#x200B;{}"#,
+                                        before,
+                                        selected_variant.id,
+                                        escape_html(content_str),
+                                        after
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let script = r#"
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const variantElements = document.querySelectorAll('[data-cro-variant]');
+            variantElements.forEach(el => {
+                document.querySelectorAll('button, a').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const variantId = el.getAttribute('data-cro-variant');
+                        fetch(`/builder/edge/cro/${variantId}/convert`, { method: 'POST' }).catch(e => console.error(e));
+                    });
+                });
+            });
+        });
+        </script>
+        </body>
+        "#;
+        modified_html = modified_html.replace("</body>", script);
+        return modified_html;
+    }
+    html
 }
 
 async fn regenerate_cache(

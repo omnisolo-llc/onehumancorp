@@ -229,7 +229,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+                .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+        .route("/edge/cro/{variant_id}/convert", post(handle_cro_convert))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
@@ -1425,4 +1426,16 @@ async fn publish_store_profile(
     }
 
     Ok(site)
+}
+
+async fn handle_cro_convert(
+    axum::extract::Extension(pool): axum::extract::Extension<PgPool>,
+    axum::extract::Path(variant_id_str): axum::extract::Path<String>,
+) -> Result<axum::response::Response<axum::body::Body>, axum::http::StatusCode> {
+    let variant_id = uuid::Uuid::parse_str(&variant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+    let engine = super::cro::CroEngine::new(pool);
+    match engine.record_conversion(variant_id).await {
+        Ok(_) => Ok(axum::response::Response::builder().status(200).body(axum::body::Body::empty()).unwrap()),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
