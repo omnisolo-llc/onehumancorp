@@ -300,8 +300,9 @@ pub async fn stripe_webhook_handler(
                 .and_then(|id| id.as_str());
 
             if let Some(tenant_id) = tenant_id_opt {
+                let tid = tenant_id.to_string();
                 tokio::spawn(async move {
-                    tracing::info!("Created subscription for tenant {}", tenant_id);
+                    tracing::info!("Created subscription for tenant {}", tid);
                 });
                 StatusCode::OK.into_response()
             } else {
