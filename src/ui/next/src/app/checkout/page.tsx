@@ -22,8 +22,15 @@ export default function CheckoutPage() {
 
     // Simulate checking if address is within radius
     setTimeout(() => {
-      // Mock DoorDash Drive API call
-      setDeliveryFee(8.50); // Flat fee from DoorDash
+      const res = await fetch("/api/doordash/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pickup_address: "store", dropoff_address: deliveryAddress }) });
+      if (res.ok) {
+        const data = await res.json();
+        setDeliveryFee(data.fee);
+      } else {
+        setDeliveryFee(null);
+        alert("Could not get delivery fee");
+      }
+
       setIsCheckingDelivery(false);
     }, 800);
   };

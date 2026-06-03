@@ -8,6 +8,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
+use crate::integrations::doordash::provider::DoorDashProvider;
 use std::sync::Arc;
 use ::server_common::Claims;
 
@@ -142,7 +143,15 @@ async fn execute_action(
                 }
                 "request_driver" => {
                     if order.fulfillment_mode == "LocalDelivery" {
-                        // Mocking driver dispatch via DoorDash Drive
+                        // Requesting driver dispatch via DoorDash Drive
+                        let provider = DoorDashProvider::new("dummy_key".to_string());
+
+                        // We are spawning a blocking task to avoid making execute_action async block long.
+                        let order_id = order.id.clone();
+                        tokio::spawn(async move {
+                            let _ = provider.dispatch_delivery("Store Address", "Customer Address", &order_id).await;
+                        });
+
                         order.status = "DriverRequested".to_string();
                     }
                 }

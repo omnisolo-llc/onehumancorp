@@ -181,6 +181,21 @@ export default function SettingsPage() {
 
         <section className="app-panel">
           <div className="app-panel-header">
+            <div className="app-panel-title">Local Delivery (DoorDash Drive)</div>
+            <div className="app-list-subtitle">Configure white-label local delivery powered by DoorDash.</div>
+          </div>
+          <div className="app-panel-body grid gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="rounded" /> Enable Local Delivery via DoorDash Drive
+            </label>
+            <input type="number" placeholder="Delivery Radius (miles)" defaultValue={5} className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input type="number" placeholder="Flat Fee ($) (passed to customer)" defaultValue={8.50} step="0.50" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <button onClick={() => alert("Settings saved")} className="app-button primary w-fit" type="button">Save Delivery Settings</button>
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
             <div className="app-panel-title">Profile</div>
           </div>
           <div className="app-panel-body grid gap-3">
