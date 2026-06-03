@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import UpsellDrawer from './UpsellDrawer';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -15,6 +16,28 @@ export default function CheckoutPage() {
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
+  const [cartItems, setCartItems] = useState<{name: string, price: number}[]>([]);
+  const [subtotal, setSubtotal] = useState(0);
+
+  React.useEffect(() => {
+    const savedCart = typeof localStorage !== 'undefined' ? localStorage.getItem('ohc_cart') : null;
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        setCartItems(parsed);
+        setSubtotal(parsed.reduce((sum: number, item: any) => sum + item.price, 0));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleAddUpsell = (item: any) => {
+    const newCart = [...cartItems, { name: item.name, price: item.price }];
+    setCartItems(newCart);
+    setSubtotal(subtotal + item.price);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('ohc_cart', JSON.stringify(newCart));
+    }
+  };
 
   const checkDeliveryEligibility = async () => {
     if (!deliveryAddress) return;
@@ -63,6 +86,7 @@ export default function CheckoutPage() {
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
+        <UpsellDrawer cartItems={cartItems} onAdd={handleAddUpsell} />
         <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <h2 className="text-lg font-semibold text-gray-900">Local Delivery</h2>
           <p className="text-sm text-gray-600">Enter your address to see if we can deliver to you via DoorDash Drive (flat fee).</p>

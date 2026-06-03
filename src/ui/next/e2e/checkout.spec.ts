@@ -9,11 +9,22 @@ test.describe('Checkout Flow', () => {
     });
   });
 
-  test('completes payment successfully', async ({ page }) => {
+  test('completes payment successfully and supports upsell drawer', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+    await page.evaluate(() => {
+      localStorage.setItem('ohc_cart', JSON.stringify([{ name: 'Soy Candle', price: 20.00 }]));
+    });
     await page.goto('http://localhost:3000/checkout');
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
 
     // Test the Pay Now button
+    // Wait for Upsell Drawer
+    await expect(page.getByText('Frequently Bought Together')).toBeVisible();
+    await expect(page.getByText('Premium Matches')).toBeVisible();
+
+    // Verify Add to Cart button for upsell
+    await page.getByRole('button', { name: 'Add' }).first().click();
+
     await page.getByRole('button', { name: 'Pay Now' }).click();
 
     // In e2e, the fetch may be too fast to see Processing... text, we just verify success modal shows.
