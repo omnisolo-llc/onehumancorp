@@ -86,6 +86,7 @@ export default function Dashboard() {
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [dailyBriefing, setDailyBriefing] = useState<string>("");
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -281,6 +282,21 @@ export default function Dashboard() {
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
+
+            // Also fetch dashboard snapshot for briefing
+            try {
+                const snapRes = await fetch('/api/v1/dashboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ organization_id: tenant, mobile_optimized: true })
+                });
+                if (snapRes.ok) {
+                    const snapData = await snapRes.json();
+                    if (snapData.daily_briefing) {
+                        setDailyBriefing(snapData.daily_briefing);
+                    }
+                }
+            } catch (e) {}
 
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
@@ -509,14 +525,16 @@ export default function Dashboard() {
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Daily Business Briefing */}
-         <section className="mb-6 animate-fade-in">
-           <div className="p-6 shadow-sm border rounded-2xl bg-indigo-50/50 flex flex-col gap-2">
-             <h2 className="text-xl font-semibold font-outfit text-indigo-900">Your Daily Briefing</h2>
-             <p className="text-gray-700 leading-relaxed">
-               You had {pendingOrders || 0} orders recently. Consider reviewing your inventory.
-             </p>
-           </div>
-         </section>
+         {dailyBriefing && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-sm border rounded-2xl bg-indigo-50/50 flex flex-col gap-2">
+               <h2 className="text-xl font-semibold font-outfit text-indigo-900">Your Daily Briefing</h2>
+               <p className="text-gray-700 leading-relaxed">
+                 {dailyBriefing}
+               </p>
+             </div>
+           </section>
+         )}
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
