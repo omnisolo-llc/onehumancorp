@@ -1,4 +1,4 @@
-use axum::{body::Body,
+use axum::{
     http::{Request, header::ACCEPT_LANGUAGE},
     middleware::Next,
     response::Response,
@@ -36,7 +36,7 @@ mod tests {
     async fn test_localization_middleware_usd() {
         let req = Request::builder()
             .header(ACCEPT_LANGUAGE, "en-US,en;q=0.9")
-            .body(Body::empty())
+            .body(axum::body::Body::empty())
             .unwrap();
 
         let (parts, _) = req.into_parts();
@@ -63,7 +63,7 @@ mod tests {
     async fn test_localization_middleware_eur() {
         let req = Request::builder()
             .header(ACCEPT_LANGUAGE, "de-DE,de;q=0.9")
-            .body(Body::empty())
+            .body(axum::body::Body::empty())
             .unwrap();
 
         let (parts, _) = req.into_parts();
