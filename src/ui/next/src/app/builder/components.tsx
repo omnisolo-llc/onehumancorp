@@ -246,3 +246,50 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   return null;
 }
+
+export function PoweredByBanner({
+  tenantId,
+  isVisible,
+}: {
+  tenantId: string;
+  isVisible: boolean;
+}) {
+  if (!isVisible) return null;
+
+  const handleBannerClick = async () => {
+    try {
+      await fetch('/api/v1/growth/powered-by-banner/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
+    } catch (e) {
+      console.error('Error tracking banner click:', e);
+    }
+  };
+
+  return (
+    <div className="w-full py-6 mt-10 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center gap-2 text-center max-w-md mx-auto">
+        <div className="px-4 py-2 bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+                OHC
+            </div>
+            <div className="flex flex-col text-left">
+               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Powered by</span>
+               <a
+                href={`https://ohc.store/join?ref=${tenantId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleBannerClick}
+                className="text-sm font-bold font-outfit text-gray-900 group-hover:text-indigo-600 transition-colors"
+               >
+                 One Human Corp
+               </a>
+            </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Create your own business online in 10 minutes. Zero code required.</p>
+      </div>
+    </div>
+  );
+}

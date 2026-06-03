@@ -127,6 +127,8 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/powered-by-banner/toggle", post(handle_toggle_banner))
+        .route("/powered-by-banner/click", post(handle_click_banner))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
         .layer(Extension(GrowthState { pool, hub }))
@@ -1200,4 +1202,40 @@ async fn handle_aggregated_team_invites_metrics(
         })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BannerToggleRequest {
+    pub enabled: bool,
+    pub tenant_id: String,
+}
+
+pub async fn handle_toggle_banner(
+    Extension(_state): Extension<GrowthState>,
+    Json(payload): Json<BannerToggleRequest>,
+) -> impl IntoResponse {
+    // In a real database we would update the settings for the tenant
+    // For now we just return success
+    (axum::http::StatusCode::OK, Json(serde_json::json!({
+        "status": "success",
+        "enabled": payload.enabled,
+        "message": "Banner setting updated"
+    })))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BannerClickRequest {
+    pub tenant_id: String,
+}
+
+pub async fn handle_click_banner(
+    Extension(_state): Extension<GrowthState>,
+    Json(_payload): Json<BannerClickRequest>,
+) -> impl IntoResponse {
+    // In a real database we would increment a counter for the tenant
+    // For now we just return success
+    (axum::http::StatusCode::OK, Json(serde_json::json!({
+        "status": "success",
+        "message": "Banner click recorded"
+    })))
 }
