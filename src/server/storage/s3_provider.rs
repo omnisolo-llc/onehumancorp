@@ -56,6 +56,8 @@ impl Provider for S3Provider {
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
         let mut key_str = key.to_string();
 
+        let t_id = key.split('/').next().unwrap_or("default");
+
         // Auto-optimization for images: Resize and convert to WebP
         let extension = std::path::Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
         let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
@@ -72,6 +74,9 @@ impl Provider for S3Provider {
                         saved = original_size - compressed_size,
                         "S3Provider: Auto-optimized image to WebP via compression utility"
                     );
+                    // Record the bandwidth savings due to smaller WebP sizes traversing the network/CDN later.
+                    // We use self.tracker since it holds a reference to the auditor
+                    self.tracker.record_bandwidth_savings(t_id, original_size as i64, compressed_size as i64);
                     compressed_size
                 }
                 Err(e) => {
@@ -83,7 +88,6 @@ impl Provider for S3Provider {
             data.len()
         };
 
-        let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
             if status.soft_limit_reached {

@@ -110,6 +110,8 @@ impl Provider for LocalProvider {
         let mut key_str = key.to_string();
         let mut final_data = data.to_vec();
 
+        let t_id = key.split('/').next().unwrap_or("default");
+
         // Auto-optimization for images: Resize and convert to WebP
         let extension = Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
         let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
@@ -126,6 +128,7 @@ impl Provider for LocalProvider {
                         saved = original_size - compressed_size,
                         "Auto-optimized image to WebP via compression utility"
                     );
+                    self.tracker.record_bandwidth_savings(t_id, original_size as i64, compressed_size as i64);
                     compressed_size
                 }
                 Err(e) => {
@@ -143,7 +146,6 @@ impl Provider for LocalProvider {
         }
 
         // Quota Enforcement
-        let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
             if status.soft_limit_reached {
