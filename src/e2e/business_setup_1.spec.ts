@@ -25,7 +25,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Online Store/ }).click();
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
+    await page.getByPlaceholder("e.g. Maya's Cakes", { exact: false }).fill('Custom cookies and cakes');
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
@@ -35,7 +35,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
+    await page.getByPlaceholder("e.g. Maya's Cakes", { exact: false }).fill('Custom cookies and cakes');
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
@@ -54,7 +54,7 @@ test.describe('Business Setup Wizard', () => {
     await page.locator('#step-9').getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });

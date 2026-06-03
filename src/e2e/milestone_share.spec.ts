@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Growth Loop: Milestone Viral Share', () => {
   test('User can share milestone and unlock reward', async ({ page }) => {
@@ -6,11 +6,11 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     await page.goto('/dashboard');
 
     // Wait for the Milestone Growth Loop component to appear
-    await page.locator('text=Milestone Unlocked').first().waitFor();
+    await page.locator('text=Milestone Unlocked: Your First Customers!').first().waitFor({ state: 'visible' });
 
     // Verify the share button is visible
-    const shareBtn = page.locator('text=Share & Claim Reward');
-    await shareBtn.first().waitFor();
+    const shareBtn = page.locator('button:has-text("Share & Claim Reward")');
+    await shareBtn.first().waitFor({ state: 'visible' });
 
     // Handle any window dialogs (e.g., window.alert for success message)
     page.on('dialog', async dialog => {
@@ -29,7 +29,7 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     // Click the share button
     await shareBtn.first().click();
 
-    // Verify the reward text updates on the frontend
-
+    // After clicking, the banner should disappear after the timeout in the code
+    await expect(page.locator('text=Milestone Unlocked: Your First Customers!')).toBeHidden({ timeout: 5000 });
   });
 });
