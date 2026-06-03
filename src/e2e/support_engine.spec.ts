@@ -4,7 +4,7 @@ test.describe('Unified Support Engine E2E', () => {
   test('Owner can view open tickets, review AI drafts, and send them', async ({ page }) => {
 
     // First, let's inject a ticket directly via the API webhook route so we have something in the inbox
-    const res = await page.request.post('http://localhost:18789/api/webhook', {
+    const res = await page.request.post('/api/webhook', {
       data: {
         tenant_id: 'e2e-tenant',
         channel: 'instagram',
