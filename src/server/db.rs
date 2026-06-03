@@ -192,12 +192,21 @@ impl DB {
                     {
                         use std::io::Write;
                         use std::os::unix::fs::OpenOptionsExt;
+                        use std::os::unix::fs::PermissionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
+                            .read(true)
                             .write(true)
                             .create_new(true)
                             .mode(0o600)
-                            .open(secret_path)
+                            .open(&secret_path)
                         {
+                            if let Ok(metadata) = file.metadata() {
+                                let mut perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    perms.set_mode(0o600);
+                                    let _ = file.set_permissions(perms);
+                                }
+                            }
                             let _ = file.write_all(new_key.as_bytes());
                         }
                     }

@@ -172,13 +172,22 @@ impl Store {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::OpenOptionsExt;
+                    use std::os::unix::fs::PermissionsExt;
                     use std::io::Write;
                     if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .read(true)
                         .write(true)
                         .create(true)
                         .mode(0o600)
                         .open(secret_path)
                     {
+                        if let Ok(metadata) = file.metadata() {
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = file.set_permissions(perms);
+                            }
+                        }
                         let _ = file.write_all(&new_secret);
                     }
                 }
