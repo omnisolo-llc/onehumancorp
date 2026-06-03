@@ -29,6 +29,7 @@ async function waitForPort(port, maxAttempts = 30) {
 async function main() {
   console.log('[run-playwright] Starting infrastructure...');
   if (process.env.E2E_SKIP_DOCKER !== 'true') {
+    await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'pull']);
     await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'up', '-d']);
   }
 
