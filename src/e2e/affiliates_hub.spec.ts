@@ -5,7 +5,7 @@ test.describe('Affiliate Hub Growth Loop', () => {
     const page = adminPage;
 
     // Check that we are on the dashboard
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
     // 2. Navigate to Affiliate & Partner Hub via the new card
     // The link is on the "Open Partner Hub" button
